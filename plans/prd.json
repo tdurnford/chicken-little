@@ -10,7 +10,7 @@
       "category": "Infrastructure",
       "title": "Create Player Data Structure",
       "description": "Define and implement the data structure for storing player information including inventory, money, chickens, eggs, traps, and upgrades.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create PlayerData module in shared folder",
         "Define data schema with money, inventory, chickens, eggs, traps, upgrades",
@@ -855,7 +855,10 @@
         "Volume levels are balanced",
         "Sounds can be muted"
       ],
-      "tests": ["Test all sound triggers", "Test mute functionality"]
+      "tests": [
+        "Test all sound triggers",
+        "Test mute functionality"
+      ]
     },
     {
       "id": 35,
@@ -876,7 +879,10 @@
         "Animations play correctly",
         "Money visual is clear"
       ],
-      "tests": ["Test all models load", "Test animations play"]
+      "tests": [
+        "Test all models load",
+        "Test animations play"
+      ]
     },
     {
       "id": 36,
@@ -897,7 +903,10 @@
         "Rare hatches have special effects",
         "Animations are smooth"
       ],
-      "tests": ["Test all egg models", "Test hatch animation"]
+      "tests": [
+        "Test all egg models",
+        "Test hatch animation"
+      ]
     },
     {
       "id": 37,
@@ -918,7 +927,10 @@
         "Predators are visually threatening",
         "Trapped state is clear"
       ],
-      "tests": ["Test all predator models", "Test animations"]
+      "tests": [
+        "Test all predator models",
+        "Test animations"
+      ]
     },
     {
       "id": 38,
@@ -964,7 +976,10 @@
         "Late game reaches trillions",
         "No exploits or dead ends"
       ],
-      "tests": ["Test full progression playthrough", "Test edge cases"]
+      "tests": [
+        "Test full progression playthrough",
+        "Test edge cases"
+      ]
     },
     {
       "id": 40,
@@ -985,7 +1000,9 @@
         "Edge cases covered",
         "Tests pass consistently"
       ],
-      "tests": ["Meta: verify test coverage"]
+      "tests": [
+        "Meta: verify test coverage"
+      ]
     }
   ],
   "categories": [
@@ -1012,27 +1029,72 @@
     {
       "name": "MVP Core Loop",
       "description": "Basic playable game with chickens, eggs, and money",
-      "workItemIds": [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 16]
+      "workItemIds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        10,
+        11,
+        12,
+        16
+      ]
     },
     {
       "name": "Economy & Store",
       "description": "Full economy with store and selling",
-      "workItemIds": [13, 14, 15, 17]
+      "workItemIds": [
+        13,
+        14,
+        15,
+        17
+      ]
     },
     {
       "name": "Predators & Defense",
       "description": "PvE content with predators and traps",
-      "workItemIds": [18, 19, 20, 21, 22, 23, 24]
+      "workItemIds": [
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24
+      ]
     },
     {
       "name": "PvP & Social",
       "description": "Player interaction features",
-      "workItemIds": [9, 25, 26, 27, 28, 29, 30]
+      "workItemIds": [
+        9,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ]
     },
     {
       "name": "Polish & Launch",
       "description": "Final polish, mobile support, and balancing",
-      "workItemIds": [31, 32, 33, 34, 35, 36, 37, 38, 39, 40]
+      "workItemIds": [
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40
+      ]
     }
   ]
 }
