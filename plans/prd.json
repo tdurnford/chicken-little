@@ -388,7 +388,9 @@
       "category": "Economy",
       "title": "Implement Chicken Selling with F Key",
       "description": "Allow players to sell chickens by walking up to them and pressing F.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
+      "completedDate": "2026-01-13",
       "steps": [
         "Detect F key press near owned chicken",
         "Show sell confirmation with price",

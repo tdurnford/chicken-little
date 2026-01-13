@@ -396,3 +396,21 @@
 - Integrates with ChickenPlacement and ChickenConfig modules
 - Format check and build pass
 - Next: Work Item #15 (Chicken Selling with F Key) or #3/#4 (Map) are good candidates
+[2026-01-13] Completed Work Item #15: Implement Chicken Selling with F Key
+- Created src/client/ChickenSelling.lua module
+- Type exports: SellConfig, SellState, SellResult
+- F key binding: press F near owned chicken to show sell confirmation
+- Confirmation UI: modal popup with chicken icon, name, rarity-colored border, and price display
+- Shows sell price with MoneyScaling.formatCurrency() + accumulated money bonus
+- Escape key or backdrop click to cancel sale
+- Confirm button or F key again to complete sale
+- Timeout: auto-cancel after 10 seconds (configurable)
+- Integrates with Store.sellChicken() for actual transaction
+- Callback system: setOnSell(), setOnCancel() for game integration
+- Detection callbacks: setGetNearbyChicken(), setGetPlayerData(), setUpdatePlayerData()
+- Mobile support: touchSell(), touchCancel() for mobile touch controls
+- Utility: showSellPrompt() shows "[F] Sell ($X)" near chickens, getSellValue(), getTotalSellValue()
+- Animation: backdrop fades in, popup scales in with Back easing
+- Hover effects on confirm/cancel buttons
+- Format check and build pass
+- Next: Work Item #3/#4 (Map), #27 (Chicken Stealing), or #33 (Mobile Touch Controls)
