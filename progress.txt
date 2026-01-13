@@ -99,3 +99,17 @@
 - Type exports: FormattedMoney, MultiplierBreakdown
 - Format check and build pass
 - Next: Work Item #16 (Main HUD) can use this formatting, or #2 (Data Persistence)
+[2026-01-13] Completed Work Item #14: Create Store System
+- Created src/shared/Store.lua module
+- Implemented buyEgg(playerData, eggType, quantity) - validates egg type, checks funds, deducts money, adds eggs to inventory
+- Implemented sellEgg(playerData, eggId) - finds egg, calculates sell price from EggConfig, removes from inventory, adds money
+- Implemented sellChicken(playerData, chickenId) - works for both inventory and placed chickens, includes accumulated money
+- Implemented sellPredator(playerData, trapId) - sells caught predators from traps (placeholder prices until PredatorConfig)
+- Implemented sellEggsByType(playerData, eggType, quantity) - bulk sell eggs by type
+- Helper functions: getChickenValue(), getPredatorValue(), canAffordEgg(), getEggPrice(), getEggSellPrice()
+- Query functions: getAvailableEggs() returns sorted store items, getInventoryValue() calculates total inventory worth
+- Type exports: TransactionResult, StoreItem
+- Chicken value = moneyPerSecond * 60 * 0.5 (sell multiplier)
+- All transactions return {success, message, newBalance, itemId}
+- Format check and build pass
+- Next: Work Item #16 (Main HUD) or #2 (Data Persistence) are good candidates

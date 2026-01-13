@@ -353,7 +353,7 @@
       "category": "Economy",
       "title": "Create Store System",
       "description": "Implement the store where players can buy eggs and sell eggs, chickens, and trapped predators.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create store UI",
         "Implement buy eggs functionality",
@@ -373,7 +373,9 @@
         "Test selling eggs",
         "Test selling chickens",
         "Test insufficient funds handling"
-      ]
+      ],
+      "status": "completed",
+      "completedDate": "2026-01-13"
     },
     {
       "id": 15,
