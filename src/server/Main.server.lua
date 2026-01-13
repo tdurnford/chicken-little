@@ -19,6 +19,9 @@ local CageLocking = require(Shared:WaitForChild("CageLocking"))
 local ChickenStealing = require(Shared:WaitForChild("ChickenStealing"))
 local RandomChickenSpawn = require(Shared:WaitForChild("RandomChickenSpawn"))
 
+-- Store module for buy/sell operations
+local Store = require(Shared:WaitForChild("Store"))
+
 -- Player Data Sync Configuration
 local DATA_SYNC_THROTTLE_INTERVAL = 0.1 -- Minimum seconds between data updates per player
 local lastDataSyncTime: { [number]: number } = {} -- Tracks last sync time per player
@@ -79,6 +82,89 @@ if getPlayerDataFunc then
     local userId = player.UserId
     local data = DataPersistence.getData(userId)
     return data
+  end
+end
+
+--[[
+  Store Server Handlers
+  Handles BuyEgg, SellChicken, SellEgg, and SellPredator RemoteFunctions.
+  All operations validate player data and fire PlayerDataChanged on success.
+]]
+
+-- BuyEgg RemoteFunction handler
+local buyEggFunc = RemoteSetup.getFunction("BuyEgg")
+if buyEggFunc then
+  buyEggFunc.OnServerInvoke = function(player: Player, eggType: string, quantity: number?)
+    local userId = player.UserId
+    local playerData = DataPersistence.getData(userId)
+    if not playerData then
+      return { success = false, message = "Player data not found" }
+    end
+
+    local result = Store.buyEgg(playerData, eggType, quantity)
+    if result.success then
+      syncPlayerData(player, playerData, true)
+    end
+    return result
+  end
+end
+
+-- SellChicken RemoteFunction handler
+local sellChickenFunc = RemoteSetup.getFunction("SellChicken")
+if sellChickenFunc then
+  sellChickenFunc.OnServerInvoke = function(player: Player, chickenId: string)
+    local userId = player.UserId
+    local playerData = DataPersistence.getData(userId)
+    if not playerData then
+      return { success = false, message = "Player data not found" }
+    end
+
+    local result = Store.sellChicken(playerData, chickenId)
+    if result.success then
+      -- Fire ChickenSold event to update clients
+      local chickenSoldEvent = RemoteSetup.getEvent("ChickenSold")
+      if chickenSoldEvent then
+        chickenSoldEvent:FireClient(player, { chickenId = chickenId, message = result.message })
+      end
+      syncPlayerData(player, playerData, true)
+    end
+    return result
+  end
+end
+
+-- SellEgg RemoteFunction handler
+local sellEggFunc = RemoteSetup.getFunction("SellEgg")
+if sellEggFunc then
+  sellEggFunc.OnServerInvoke = function(player: Player, eggId: string)
+    local userId = player.UserId
+    local playerData = DataPersistence.getData(userId)
+    if not playerData then
+      return { success = false, message = "Player data not found" }
+    end
+
+    local result = Store.sellEgg(playerData, eggId)
+    if result.success then
+      syncPlayerData(player, playerData, true)
+    end
+    return result
+  end
+end
+
+-- SellPredator RemoteFunction handler
+local sellPredatorFunc = RemoteSetup.getFunction("SellPredator")
+if sellPredatorFunc then
+  sellPredatorFunc.OnServerInvoke = function(player: Player, trapId: string)
+    local userId = player.UserId
+    local playerData = DataPersistence.getData(userId)
+    if not playerData then
+      return { success = false, message = "Player data not found" }
+    end
+
+    local result = Store.sellPredator(playerData, trapId)
+    if result.success then
+      syncPlayerData(player, playerData, true)
+    end
+    return result
   end
 end
 

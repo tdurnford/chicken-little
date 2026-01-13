@@ -206,7 +206,7 @@
       "category": "Server-Gameplay",
       "title": "Wire Up Store Server Handlers",
       "description": "Connect store buying and selling operations to Store module.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Require Store module",

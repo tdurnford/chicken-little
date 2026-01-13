@@ -783,3 +783,31 @@
   - Large numbers formatted correctly (K, M, B, T via MoneyScaling)
 - Format check and build pass
 - Next: Work Items #4-9 (high priority server gameplay handlers)
+
+[2026-01-13] Completed Work Item #9: Wire Up Store Server Handlers
+- Updated src/server/Main.server.lua to require Store module
+- Added SellEgg and SellPredator to RemoteSetup.lua remote functions
+- Wired BuyEgg RemoteFunction handler:
+  - Validates player data exists
+  - Calls Store.buyEgg() with eggType and optional quantity
+  - Syncs player data on success
+- Wired SellChicken RemoteFunction handler:
+  - Validates player data exists
+  - Calls Store.sellChicken() with chickenId
+  - Fires ChickenSold event to client on success
+  - Syncs player data on success
+- Wired SellEgg RemoteFunction handler:
+  - Validates player data exists
+  - Calls Store.sellEgg() with eggId
+  - Syncs player data on success
+- Wired SellPredator RemoteFunction handler:
+  - Validates player data exists
+  - Calls Store.sellPredator() with trapId
+  - Syncs player data on success
+- Acceptance criteria met:
+  - Players can buy eggs if they have enough money
+  - Players can sell chickens for money
+  - Prices match configuration (Store module uses EggConfig/ChickenConfig)
+  - Player data updates after transactions (via syncPlayerData with forceSync)
+- Format check and build pass
+- Next: Work Items #4-8 (high priority chicken/egg handlers), or #40 (Store UI)

@@ -36,6 +36,8 @@ local REMOTE_FUNCTIONS = {
   "PlaceChicken",
   "PickupChicken",
   "SellChicken",
+  "SellEgg",
+  "SellPredator",
   "HatchEgg",
   "CollectMoney",
   "BuyEgg",
