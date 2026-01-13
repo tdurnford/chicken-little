@@ -895,3 +895,20 @@
   - Players are notified when eggs are laid (via EggLaid event)
 - Format check and build pass
 - Next: Work Item #20 (Offline Earnings on Join - high priority) or #10-19 (medium priority)
+
+[2026-01-13] Completed Work Item #20: Wire Up Offline Earnings on Join
+- Added OfflineEarningsAwarded event to RemoteSetup.lua (REMOTE_EVENTS list)
+- Added OfflineEarnings module require to Main.server.lua
+- Updated PlayerAdded handler to calculate and apply offline earnings:
+  - Checks OfflineEarnings.hasEarnings() after data loads
+  - Calculates earnings using OfflineEarnings.calculate()
+  - Applies earnings using OfflineEarnings.apply()
+  - Fires OfflineEarningsAwarded event to client with earnings summary
+  - Summary includes totalMoney, totalEggs, offlineHours, wasCapped, message, moneyPerChicken, eggsEarned
+- Acceptance criteria met:
+  - Offline money is calculated on rejoin (via OfflineEarnings.calculate)
+  - Offline eggs are added to inventory (via OfflineEarnings.apply)
+  - Caps prevent excessive offline gains (MAX_OFFLINE_HOURS=24, MAX_OFFLINE_EGGS_PER_CHICKEN=10)
+  - Client receives earnings summary for UI (via OfflineEarningsAwarded event)
+- Format check and build pass
+- Next: Medium priority items (#10-19) or remaining high priority client-side items (#23, #25-29, #34-36, #38, #40)

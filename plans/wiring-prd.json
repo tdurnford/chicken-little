@@ -497,7 +497,7 @@
       "category": "Server-Gameplay",
       "title": "Wire Up Offline Earnings on Join",
       "description": "Apply offline earnings when players rejoin using OfflineEarnings module.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Require OfflineEarnings module",

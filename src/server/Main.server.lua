@@ -33,6 +33,9 @@ local Chicken = require(Shared:WaitForChild("Chicken"))
 local EggConfig = require(Shared:WaitForChild("EggConfig"))
 local PlayerData = require(Shared:WaitForChild("PlayerData"))
 
+-- Offline earnings module
+local OfflineEarnings = require(Shared:WaitForChild("OfflineEarnings"))
+
 -- Player Data Sync Configuration
 local DATA_SYNC_THROTTLE_INTERVAL = 0.1 -- Minimum seconds between data updates per player
 local lastDataSyncTime: { [number]: number } = {} -- Tracks last sync time per player
@@ -393,6 +396,38 @@ Players.PlayerAdded:Connect(function(player)
   task.defer(function()
     local data = DataPersistence.getData(player.UserId)
     if data then
+      -- Calculate and apply offline earnings before syncing
+      local joinTime = os.time()
+      if OfflineEarnings.hasEarnings(data, joinTime) then
+        local earnings = OfflineEarnings.calculate(data, joinTime)
+        local applyResult = OfflineEarnings.apply(data, earnings)
+
+        if applyResult.success and (applyResult.moneyAdded > 0 or applyResult.eggsAdded > 0) then
+          -- Fire OfflineEarningsAwarded event to client with earnings summary
+          local offlineEarningsEvent = RemoteSetup.getEvent("OfflineEarningsAwarded")
+          if offlineEarningsEvent then
+            offlineEarningsEvent:FireClient(player, {
+              totalMoney = earnings.cappedMoney,
+              totalEggs = #earnings.eggsEarned,
+              offlineHours = earnings.cappedSeconds / 3600,
+              wasCapped = earnings.wasCapped,
+              message = applyResult.message,
+              moneyPerChicken = earnings.moneyPerChicken,
+              eggsEarned = earnings.eggsEarned,
+            })
+          end
+          print(
+            string.format(
+              "[Main.server] Applied offline earnings to %s: $%.2f, %d eggs (%.1f hours)",
+              player.Name,
+              applyResult.moneyAdded,
+              applyResult.eggsAdded,
+              earnings.cappedSeconds / 3600
+            )
+          )
+        end
+      end
+
       syncPlayerData(player, data, true) -- Force sync on join
       print(string.format("[Main.server] Synced player data to %s", player.Name))
     end
