@@ -744,3 +744,30 @@
   - Data sync is throttled to prevent spam (100ms minimum between updates)
 - Format check and build pass
 - Next: Work Items #4-6, #9 (high priority gameplay handlers), or #24 (critical Main HUD)
+
+[2026-01-13] Completed Work Item #21: Create Main Server Game Loop
+- Updated src/server/Main.server.lua with full game loop implementation
+- Added RunService import for Heartbeat connection
+- Required game loop modules: MoneyCollection, PredatorSpawning, PredatorAttack, CageLocking, ChickenStealing, RandomChickenSpawn
+- Created PlayerGameState type tracking: spawnState, lockState, stealState per player
+- Global randomChickenSpawnState for shared spawn events
+- Helper functions: createPlayerGameState(), getPlayerGameState()
+- Player lifecycle: game state created on PlayerAdded, cleaned up on PlayerRemoving
+- Main runGameLoop function connected to RunService.Heartbeat:
+  1. Updates RandomChickenSpawn globally, fires RandomChickenSpawned to all players on spawn
+  2. For each player:
+     - Updates chicken money generation via MoneyCollection.updateAllChickenMoney()
+     - Updates cage lock expiration via CageLocking.update()
+     - Updates steal progress via ChickenStealing.update()
+     - Spawns predators when PredatorSpawning.shouldSpawn() returns true
+     - Transitions predator states via PredatorAttack.updatePredatorStates()
+     - Executes attacks and fires AlertTriggered/PredatorDefeated events
+     - Syncs player data on changes (throttled)
+  3. Periodic predator cleanup every PREDATOR_CLEANUP_INTERVAL (10s)
+- Acceptance criteria met:
+  - All time-based systems update smoothly via Heartbeat
+  - Game loop designed for 12 players (iterates Players:GetPlayers())
+  - State updates synced to clients via RemoteEvents
+  - No memory leaks (cleanup on player leave, predator cleanup)
+- Format check and build pass
+- Next: Work Item #24 (Main HUD) - critical priority, or other high-priority items
