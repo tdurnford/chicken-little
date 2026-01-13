@@ -253,3 +253,22 @@
 - Integrates with PlayerData.upgrades.lockDurationMultiplier for cage upgrades
 - Format check and build pass
 - Next: Work Item #26 (Cage Upgrade System) builds on this, or #27 (Chicken Stealing) uses it
+[2026-01-13] Completed Work Item #26: Implement Cage Upgrade System
+- Created src/shared/CageUpgrades.lua module
+- Defined 6 cage upgrade tiers: Basic, Reinforced, Steel, Titanium, Fortress, Ultimate
+- Prices scale exponentially: 0 -> 5000 -> 25000 -> 100000 -> 500000 -> 2500000
+- Lock duration multipliers per tier: 1x -> 1.5x -> 2x -> 2.5x -> 3x -> 4x (60s base = 60s to 240s)
+- Predator resistance per tier: 0% -> 10% -> 20% -> 30% -> 45% -> 60%
+- Type exports: UpgradeTierConfig, UpgradeResult, UpgradeInfo
+- API: getTierConfig(), getAllTiers(), getMaxTier(), isValidTier()
+- Multiplier functions: getLockDurationMultiplier(), getPredatorResistance(), getLockDuration()
+- Pricing: getTierPrice(), getNextTierPrice(), canAffordNextTier(), getTotalCostToTier()
+- Purchase: purchaseUpgrade() - validates funds, deducts money, applies upgrade to PlayerData
+- purchaseSpecificTier() - enforces one-tier-at-a-time upgrade path
+- UI helpers: getUpgradeInfo(), getDisplayInfo(), getUpgradeComparison()
+- getAffordableTiers() for store display
+- Utility: validateConfig() verifies all tiers have valid ascending values
+- getTierByName(), getTierNames() for lookup and UI dropdowns
+- Integrates with PlayerData.upgrades (cageTier, lockDurationMultiplier, predatorResistance)
+- Format check and build pass
+- Next: Work Item #27 (Chicken Stealing) uses cage lock/upgrade system, or #2 (Data Persistence)

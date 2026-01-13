@@ -673,7 +673,7 @@
       "category": "Defense",
       "title": "Implement Cage Upgrade System",
       "description": "Allow players to upgrade their cage to extend lock duration and improve predator resistance.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Define cage upgrade tiers",
         "Create upgrade purchase UI",
@@ -691,7 +691,9 @@
         "Test upgrade purchase",
         "Test lock duration per tier",
         "Test predator resistance"
-      ]
+      ],
+      "status": "completed",
+      "completedDate": "2026-01-13"
     },
     {
       "id": 27,
