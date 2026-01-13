@@ -795,7 +795,9 @@
       "category": "Trading",
       "title": "Implement Trade Item Exchange",
       "description": "Handle the actual exchange of eggs and chickens between players.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
+      "completedDate": "2026-01-13",
       "steps": [
         "Validate both players have offered items",
         "Lock items during trade",
