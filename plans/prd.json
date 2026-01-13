@@ -272,7 +272,7 @@
       "category": "Eggs",
       "title": "Implement Egg Hatching Logic",
       "description": "Create the hatching system that randomly selects a chicken based on probabilities and spawns it.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Implement weighted random selection",
         "Create hatch animation sequence",
@@ -290,7 +290,9 @@
         "Test probability distribution over many hatches",
         "Test egg consumption",
         "Test correct chicken spawns"
-      ]
+      ],
+      "status": "completed",
+      "completedDate": "2026-01-13"
     },
     {
       "id": 12,

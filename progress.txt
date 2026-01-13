@@ -55,3 +55,18 @@
 - All functions return PlacementResult type with success, message, and chicken data
 - Format check and build pass
 - Next: Work Item #10/#11 (Egg Placement/Hatching) or #2 (Data Persistence)
+[2026-01-13] Completed Work Item #11: Implement Egg Hatching Logic
+- Created src/shared/EggHatching.lua module
+- Implements weighted random selection via EggConfig.selectHatchOutcome()
+- Core function: hatch(playerData, eggId) - removes egg from inventory, spawns chicken
+- Alternative: hatchByType(playerData, eggType) - hatches first matching egg
+- Validation: canHatch() checks egg exists and type is valid
+- Returns HatchResult with success, chickenType, chickenRarity, chickenId, isRareHatch, celebrationTier
+- Celebration tiers: 0=Common, 1=Uncommon, 2=Rare, 3=Epic, 4=Legendary, 5=Mythic
+- getCelebrationEffects() provides particle count, sound, screen flash, server announce per tier
+- Rare hatches (tier >= 2) trigger special effects
+- getHatchPreview() returns outcomes for UI display before hatching
+- Utility: getEggCount(), getTotalEggCount(), simulateHatches() for testing
+- Rollback mechanism if chicken creation fails after egg removal
+- Format check and build pass
+- Next: Work Item #10 (Egg Placement UI) or #12 (Money Collection) are good follow-ups
