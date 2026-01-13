@@ -968,3 +968,33 @@
   - Rarity affects visual appearance (handled internally by ChickenVisuals module using ChickenConfig)
 - Format check and build pass
 - Next: Work Items #23, #25 (high priority, now unblocked), or #27, #29, #35 (now unblocked by #28)
+
+[2026-01-13] Completed Work Item #35: Create Client Game Loop
+- Added RunService require for Heartbeat connection
+- Added ChickenPickup and ChickenSelling module requires
+- Created findNearbyPlacedChicken() helper function to find nearest chicken within pickup range
+- Created findNearbyAvailableSpot() helper function to find available coop spots for placing
+- Initialized ChickenPickup system with callbacks:
+  - setGetNearbyChicken: Uses findNearbyPlacedChicken
+  - setGetAvailableSpot: Uses findNearbyAvailableSpot
+  - setGetPlayerData: Returns playerDataCache
+- Initialized ChickenSelling system with callbacks:
+  - setGetNearbyChicken: Uses findNearbyPlacedChicken
+  - setGetPlayerData: Returns playerDataCache
+- Created updateProximityPrompts() function that:
+  - Checks if player is holding a chicken
+  - Shows place prompt when holding and near available spot
+  - Shows pickup prompt when not holding and near a chicken
+  - Shows sell prompt when near chicken with accumulated money
+  - Hides prompts when out of range
+- Created updateLockTimerDisplay() function for lock timer display
+- Created Heartbeat game loop connection with throttled updates:
+  - Proximity check every 0.1 seconds for responsive prompts
+  - Lock timer update every 1.0 seconds
+- Acceptance criteria met:
+  - Visual updates are smooth (Heartbeat-based updates)
+  - Prompts appear/disappear based on proximity (via updateProximityPrompts)
+  - Timers count down accurately (via updateLockTimerDisplay)
+  - No frame rate issues (throttled update intervals)
+- Format check and build pass
+- Next: Work Items #23, #25, #27, #29 (high priority, now unblocked by #35)

@@ -907,7 +907,7 @@
       "category": "Client-Core",
       "title": "Create Client Game Loop",
       "description": "Set up client-side update loop for UI and visual updates.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Create RenderStepped or Heartbeat connection",
@@ -926,7 +926,8 @@
       "dependencies": [
         28
       ],
-      "codeLocation": "src/client/Main.client.lua"
+      "codeLocation": "src/client/Main.client.lua",
+      "status": "completed"
     },
     {
       "id": 36,
