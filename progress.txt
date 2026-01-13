@@ -832,3 +832,20 @@
   - All clients receive placement updates (via FireAllClients)
 - Format check and build pass
 - Next: Work Items #5-8 (egg hatching, money collection, chicken money generation, egg laying) - all high priority
+
+[2026-01-13] Completed Work Item #5: Wire Up Egg Hatching Server Handlers
+- Updated src/server/Main.server.lua to require EggHatching module
+- Wired HatchEgg RemoteFunction handler:
+  - Validates player data exists
+  - Calls EggHatching.hatch() with eggId parameter
+  - EggHatching.hatch() validates egg ownership, uses weighted probability to select chicken type
+  - Removes egg from inventory, adds hatched chicken to inventory
+  - Fires EggHatched event to player with result details (chickenType, chickenRarity, chickenId, isRareHatch, celebrationTier)
+  - Syncs player data on success
+- Acceptance criteria met:
+  - Players can hatch eggs they own
+  - Hatching uses weighted probability for chicken type (via EggConfig.selectHatchOutcome)
+  - Hatched chicken is added to inventory (EggHatching module handles this internally)
+  - Player receives notification of hatch result (via EggHatched event)
+- Format check and build pass
+- Next: Work Items #6-8 (money collection, chicken money generation, egg laying) - all high priority

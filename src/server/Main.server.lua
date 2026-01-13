@@ -25,6 +25,9 @@ local Store = require(Shared:WaitForChild("Store"))
 -- Chicken placement module
 local ChickenPlacement = require(Shared:WaitForChild("ChickenPlacement"))
 
+-- Egg hatching module
+local EggHatching = require(Shared:WaitForChild("EggHatching"))
+
 -- Player Data Sync Configuration
 local DATA_SYNC_THROTTLE_INTERVAL = 0.1 -- Minimum seconds between data updates per player
 local lastDataSyncTime: { [number]: number } = {} -- Tracks last sync time per player
@@ -227,6 +230,42 @@ if pickupChickenFunc then
           playerId = userId,
           chickenId = chickenId,
           spotIndex = spotIndex,
+        })
+      end
+      syncPlayerData(player, playerData, true)
+    end
+    return result
+  end
+end
+
+--[[
+  Egg Hatching Server Handlers
+  Handles HatchEgg RemoteFunction.
+  Validates egg ownership, performs hatch, adds chicken to inventory.
+]]
+
+-- HatchEgg RemoteFunction handler
+local hatchEggFunc = RemoteSetup.getFunction("HatchEgg")
+if hatchEggFunc then
+  hatchEggFunc.OnServerInvoke = function(player: Player, eggId: string)
+    local userId = player.UserId
+    local playerData = DataPersistence.getData(userId)
+    if not playerData then
+      return { success = false, message = "Player data not found" }
+    end
+
+    local result = EggHatching.hatch(playerData, eggId)
+    if result.success then
+      -- Fire EggHatched event to player with result
+      local eggHatchedEvent = RemoteSetup.getEvent("EggHatched")
+      if eggHatchedEvent then
+        eggHatchedEvent:FireClient(player, {
+          chickenType = result.chickenType,
+          chickenRarity = result.chickenRarity,
+          chickenId = result.chickenId,
+          isRareHatch = result.isRareHatch,
+          celebrationTier = result.celebrationTier,
+          message = result.message,
         })
       end
       syncPlayerData(player, playerData, true)

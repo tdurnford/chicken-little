@@ -102,7 +102,7 @@
       "category": "Server-Gameplay",
       "title": "Wire Up Egg Hatching Server Handlers",
       "description": "Connect RemoteFunctions for egg hatching operations to EggHatching module.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Require EggHatching module",
