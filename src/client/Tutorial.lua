@@ -66,8 +66,9 @@ local TUTORIAL_STEPS: { TutorialStep } = {
   {
     id = "place_egg",
     title = "Place Your Egg",
-    message = "Select your egg from the inventory and place it in an empty coop spot.",
+    message = "Click on your egg in the inventory, then click the Place button to put it in your coop!",
     icon = "🥚",
+    action = "Select egg and click Place",
     waitForAction = true,
   },
   {

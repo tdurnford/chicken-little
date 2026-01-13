@@ -188,11 +188,13 @@ function PredatorAttack.executeAttack(
   -- Select chickens to attack
   local chickensToAttack = selectChickensForAttack(playerData, config.chickensPerAttack)
   local chickenIds = {}
+  local chickenSpots = {} -- Map of chickenId to spotIndex
   local totalValueLost = 0
 
   -- Remove chickens from coop
   for _, chicken in ipairs(chickensToAttack) do
     table.insert(chickenIds, chicken.id)
+    chickenSpots[chicken.id] = chicken.spotIndex -- Store spot before removal
     totalValueLost = totalValueLost + calculateChickenValue(chicken)
 
     -- Find and remove the chicken from placed chickens
@@ -225,6 +227,7 @@ function PredatorAttack.executeAttack(
     message = message,
     chickensLost = #chickenIds,
     chickenIds = chickenIds,
+    chickenSpots = chickenSpots,
     predatorEscaped = predatorEscaped,
     totalValueLost = totalValueLost,
   }

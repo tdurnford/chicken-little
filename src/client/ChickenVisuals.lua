@@ -37,6 +37,7 @@ export type ChickenVisualState = {
   animationConnection: RBXScriptConnection?,
   moneyIndicator: BillboardGui?,
   accumulatedMoney: number,
+  moneyPerSecond: number,
   position: Vector3,
   spotIndex: number?,
 }
@@ -450,6 +451,7 @@ function ChickenVisuals.create(
     animationConnection = nil,
     moneyIndicator = moneyIndicator,
     accumulatedMoney = 0,
+    moneyPerSecond = config.moneyPerSecond or 1,
     position = position,
     spotIndex = spotIndex,
   }
@@ -463,6 +465,11 @@ function ChickenVisuals.create(
       for _, chickenState in pairs(activeChickens) do
         if chickenState.currentAnimation == "idle" then
           applyIdleAnimation(chickenState, deltaTime)
+        end
+        -- Client-side money accumulation for smooth counter
+        if chickenState.moneyPerSecond > 0 then
+          chickenState.accumulatedMoney = chickenState.accumulatedMoney + (chickenState.moneyPerSecond * deltaTime)
+          updateMoneyIndicator(chickenState)
         end
       end
     end)
@@ -509,6 +516,28 @@ end
 -- Get chicken visual state
 function ChickenVisuals.get(chickenId: string): ChickenVisualState?
   return activeChickens[chickenId]
+end
+
+-- Get accumulated money for a chicken (real-time client-side value)
+function ChickenVisuals.getAccumulatedMoney(chickenId: string): number
+  local state = activeChickens[chickenId]
+  if state then
+    return state.accumulatedMoney or 0
+  end
+  return 0
+end
+
+-- Reset accumulated money for a chicken (called after server collection)
+function ChickenVisuals.resetAccumulatedMoney(chickenId: string, remainder: number?)
+  local state = activeChickens[chickenId]
+  if state then
+    state.accumulatedMoney = remainder or 0
+    -- Update the money display immediately
+    if state.moneyLabel then
+      local displayAmount = math.floor(state.accumulatedMoney)
+      state.moneyLabel.Text = "$" .. tostring(displayAmount)
+    end
+  end
 end
 
 -- Get all active chicken visuals

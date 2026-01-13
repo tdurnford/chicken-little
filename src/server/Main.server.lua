@@ -4,17 +4,17 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
-local Server = ServerScriptService:WaitForChild("Server")
 
 local Util = require(Shared:WaitForChild("Util"))
-local RemoteSetup = require(Server:WaitForChild("RemoteSetup"))
-local DataPersistence = require(Server:WaitForChild("DataPersistence"))
+local RemoteSetup = require(ServerScriptService:WaitForChild("RemoteSetup"))
+local DataPersistence = require(ServerScriptService:WaitForChild("DataPersistence"))
 local MapGeneration = require(Shared:WaitForChild("MapGeneration"))
 
 -- Game loop modules
 local MoneyCollection = require(Shared:WaitForChild("MoneyCollection"))
 local PredatorSpawning = require(Shared:WaitForChild("PredatorSpawning"))
 local PredatorAttack = require(Shared:WaitForChild("PredatorAttack"))
+local PredatorConfig = require(Shared:WaitForChild("PredatorConfig"))
 local CageLocking = require(Shared:WaitForChild("CageLocking"))
 local ChickenStealing = require(Shared:WaitForChild("ChickenStealing"))
 local RandomChickenSpawn = require(Shared:WaitForChild("RandomChickenSpawn"))
@@ -97,7 +97,17 @@ local getPlayerDataFunc = RemoteSetup.getFunction("GetPlayerData")
 if getPlayerDataFunc then
   getPlayerDataFunc.OnServerInvoke = function(player: Player)
     local userId = player.UserId
+    local playerId = tostring(userId)
     local data = DataPersistence.getData(userId)
+    
+    -- Ensure section index is included from mapState
+    if data and not data.sectionIndex then
+      local sectionIndex = MapGeneration.getPlayerSection(mapState, playerId)
+      if sectionIndex then
+        data.sectionIndex = sectionIndex
+      end
+    end
+    
     return data
   end
 end
@@ -256,9 +266,10 @@ end
 ]]
 
 -- HatchEgg RemoteFunction handler
+-- Parameters: eggId, spotIndex (optional) - if spotIndex provided, place chicken there directly
 local hatchEggFunc = RemoteSetup.getFunction("HatchEgg")
 if hatchEggFunc then
-  hatchEggFunc.OnServerInvoke = function(player: Player, eggId: string)
+  hatchEggFunc.OnServerInvoke = function(player: Player, eggId: string, spotIndex: number?)
     local userId = player.UserId
     local playerData = DataPersistence.getData(userId)
     if not playerData then
@@ -267,6 +278,34 @@ if hatchEggFunc then
 
     local result = EggHatching.hatch(playerData, eggId)
     if result.success then
+      -- If spotIndex provided, move the chicken from inventory to placed
+      if spotIndex and result.chickenId then
+        -- Find the chicken in inventory
+        local chickenIndex = nil
+        for i, chicken in ipairs(playerData.inventory.chickens) do
+          if chicken.id == result.chickenId then
+            chickenIndex = i
+            break
+          end
+        end
+        
+        if chickenIndex then
+          -- Remove from inventory and add to placed chickens
+          local chicken = table.remove(playerData.inventory.chickens, chickenIndex)
+          chicken.spotIndex = spotIndex
+          table.insert(playerData.placedChickens, chicken)
+          
+          -- Fire ChickenPlaced event
+          local chickenPlacedEvent = RemoteSetup.getEvent("ChickenPlaced")
+          if chickenPlacedEvent then
+            chickenPlacedEvent:FireClient(player, {
+              chicken = chicken,
+              spotIndex = spotIndex,
+            })
+          end
+        end
+      end
+      
       -- Fire EggHatched event to player with result
       local eggHatchedEvent = RemoteSetup.getEvent("EggHatched")
       if eggHatchedEvent then
@@ -314,14 +353,11 @@ if collectMoneyFunc then
     if result.success then
       local amountCollected = result.amountCollected or result.totalCollected or 0
       if amountCollected > 0 then
-        -- Fire MoneyCollected event to update client HUD
+        -- Fire MoneyCollected event to update client visuals
         local moneyCollectedEvent = RemoteSetup.getEvent("MoneyCollected")
         if moneyCollectedEvent then
-          moneyCollectedEvent:FireClient(player, {
-            amountCollected = amountCollected,
-            newBalance = result.newBalance,
-            message = result.message,
-          })
+          -- Pass amount as number, position is optional (nil for collect all)
+          moneyCollectedEvent:FireClient(player, amountCollected, nil)
         end
         syncPlayerData(player, playerData, true)
       end
@@ -445,6 +481,11 @@ Players.PlayerAdded:Connect(function(player)
   task.defer(function()
     local data = DataPersistence.getData(player.UserId)
     if data then
+      -- Store section index in player data so client can build visuals
+      if sectionIndex then
+        data.sectionIndex = sectionIndex
+      end
+
       -- Calculate and apply offline earnings before syncing
       local joinTime = os.time()
       if OfflineEarnings.hasEarnings(data, joinTime) then
@@ -502,9 +543,27 @@ Players.PlayerRemoving:Connect(function(player)
   playerGameStates[player.UserId] = nil
 end)
 
-print("Server started. Clamp demo:", Util.clamp(10, 0, 5))
 print("[Main.server] " .. RemoteSetup.getSummary())
 print("[Main.server] " .. MapGeneration.getSummary(mapState))
+
+--[[
+  Tutorial Completion Handler
+  Marks the player's tutorial as complete when they finish or skip it.
+]]
+local completeTutorialEvent = RemoteSetup.getEvent("CompleteTutorial")
+if completeTutorialEvent then
+  completeTutorialEvent.OnServerEvent:Connect(function(player: Player)
+    local userId = player.UserId
+    local playerData = DataPersistence.getData(userId)
+    if not playerData then
+      return
+    end
+
+    playerData.tutorialComplete = true
+    syncPlayerData(player, playerData, true)
+    print("[Main.server] Tutorial completed for player:", player.Name)
+  end)
+end
 
 --[[
   Main Server Game Loop
@@ -551,11 +610,8 @@ local function runGameLoop(deltaTime: number)
     local playerId = tostring(userId)
     local dataChanged = false
 
-    -- 1. Update chicken money generation
-    local moneyGenerated = MoneyCollection.updateAllChickenMoney(playerData, deltaTime)
-    if moneyGenerated > 0 then
-      dataChanged = true
-    end
+    -- 1. Update chicken money generation (accumulates locally, don't sync for this)
+    MoneyCollection.updateAllChickenMoney(playerData, deltaTime)
 
     -- 1.5. Update egg laying for all placed chickens
     local currentTimeSeconds = os.time()
@@ -620,10 +676,26 @@ local function runGameLoop(deltaTime: number)
         -- Notify player of predator spawn
         local predatorSpawnedEvent = RemoteSetup.getEvent("PredatorSpawned")
         if predatorSpawnedEvent then
-          predatorSpawnedEvent:FireClient(player, {
-            predator = result.predator,
-            message = result.message,
-          })
+          local predator = result.predator
+          -- Get threat level from config
+          local predatorConfig = PredatorConfig.get(predator.predatorType)
+          local threatLevel = predatorConfig and predatorConfig.threatLevel or "Minor"
+          
+          -- Generate spawn position near player's section edge
+          local sectionCenter = MapGeneration.getSectionPosition(playerData.sectionIndex or 1)
+          local spawnPosition = Vector3.new(
+            sectionCenter.x + 25, -- Spawn at edge of section
+            sectionCenter.y + 1,
+            sectionCenter.z + (math.random() - 0.5) * 20
+          )
+          
+          -- Send predator data in the format the client expects
+          predatorSpawnedEvent:FireClient(player, 
+            predator.id,
+            predator.predatorType,
+            threatLevel,
+            spawnPosition
+          )
         end
       end
     end
@@ -637,6 +709,19 @@ local function runGameLoop(deltaTime: number)
         PredatorAttack.executeAttack(playerData, gameState.spawnState, predatorId)
       if attackResult.success and attackResult.chickensLost > 0 then
         dataChanged = true
+        
+        -- Notify client to remove chicken visuals for killed chickens
+        local chickenPickedUpEvent = RemoteSetup.getEvent("ChickenPickedUp")
+        if chickenPickedUpEvent and attackResult.chickenIds then
+          for _, chickenId in ipairs(attackResult.chickenIds) do
+            local spotIndex = attackResult.chickenSpots and attackResult.chickenSpots[chickenId]
+            chickenPickedUpEvent:FireClient(player, {
+              chickenId = chickenId,
+              spotIndex = spotIndex,
+            })
+          end
+        end
+        
         -- Notify player of attack
         local alertEvent = RemoteSetup.getEvent("AlertTriggered")
         if alertEvent then
@@ -651,10 +736,7 @@ local function runGameLoop(deltaTime: number)
         if attackResult.predatorEscaped then
           local predatorDefeatedEvent = RemoteSetup.getEvent("PredatorDefeated")
           if predatorDefeatedEvent then
-            predatorDefeatedEvent:FireClient(player, {
-              escaped = true,
-              message = attackResult.message,
-            })
+            predatorDefeatedEvent:FireClient(player, predatorId, false)
           end
         end
       end

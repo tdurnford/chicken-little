@@ -16,6 +16,7 @@ export type CollectionResult = {
   amountCollected: number,
   chickenId: string?,
   newBalance: number,
+  remainder: number?,
 }
 
 export type BulkCollectionResult = {
@@ -70,29 +71,32 @@ function MoneyCollection.collect(
     end
   end
 
-  -- Collect the accumulated money
-  local amountCollected = chicken.accumulatedMoney
+  -- Collect the accumulated money (only whole dollars)
+  local totalAccumulated = chicken.accumulatedMoney
+  local amountCollected = math.floor(totalAccumulated)
+  local remainder = totalAccumulated - amountCollected
 
-  if amountCollected <= 0 then
+  if amountCollected < 1 then
     return {
       success = true,
-      message = "No money to collect",
+      message = "Not enough money to collect (need at least $1)",
       amountCollected = 0,
       chickenId = chickenId,
       newBalance = playerData.money,
     }
   end
 
-  -- Reset chicken's accumulated money and add to player balance
-  chicken.accumulatedMoney = 0
+  -- Keep the remainder (change) in the chicken, collect only whole dollars
+  chicken.accumulatedMoney = remainder
   playerData.money = playerData.money + amountCollected
 
   return {
     success = true,
-    message = string.format("Collected $%.2f from chicken", amountCollected),
+    message = string.format("Collected $%d from chicken", amountCollected),
     amountCollected = amountCollected,
     chickenId = chickenId,
     newBalance = playerData.money,
+    remainder = remainder,
   }
 end
 
@@ -130,7 +134,7 @@ function MoneyCollection.collectAll(
   local message
   if chickensCollected > 0 then
     message = string.format(
-      "Collected $%.2f from %d chicken%s",
+      "Collected $%d from %d chicken%s",
       totalCollected,
       chickensCollected,
       chickensCollected == 1 and "" or "s"

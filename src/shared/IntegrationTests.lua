@@ -126,8 +126,8 @@ test("PlayerData: default has starter egg", function()
   end
   return assert_eq(
     data.inventory.eggs[1].eggType,
-    "BasicChickEgg",
-    "Starter egg should be BasicChickEgg"
+    "CommonEgg",
+    "Starter egg should be CommonEgg"
   )
 end)
 

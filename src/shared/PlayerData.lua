@@ -72,7 +72,7 @@ function PlayerData.createDefault(): PlayerDataSchema
       eggs = {
         {
           id = PlayerData.generateId(),
-          eggType = "BasicChickEgg",
+          eggType = "CommonEgg",
           rarity = "Common",
         },
       },

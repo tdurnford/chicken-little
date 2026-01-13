@@ -653,4 +653,206 @@ function HatchPreviewUI.getDefaultConfig(): PreviewConfig
   return copy
 end
 
+-- Show the result of a successful hatch
+function HatchPreviewUI.showResult(chickenType: string, rarity: string, onDismiss: (() -> ())?)
+  if not state.screenGui then
+    HatchPreviewUI.create()
+  end
+  
+  if not state.mainFrame then
+    return
+  end
+  
+  -- Clear existing content
+  for _, child in ipairs(state.mainFrame:GetChildren()) do
+    if not child:IsA("UICorner") and not child:IsA("UIStroke") then
+      child:Destroy()
+    end
+  end
+  
+  -- Get chicken config
+  local chickenConfig = ChickenConfig.get(chickenType)
+  if not chickenConfig then
+    warn("[HatchPreviewUI] Unknown chicken type:", chickenType)
+    return
+  end
+  
+  local rarityColor = RARITY_COLORS[rarity] or RARITY_COLORS.Common
+  
+  -- Create "You Got!" header
+  local header = Instance.new("TextLabel")
+  header.Name = "Header"
+  header.Size = UDim2.new(1, 0, 0, 40)
+  header.Position = UDim2.new(0, 0, 0, 15)
+  header.BackgroundTransparency = 1
+  header.Text = "🎉 You Got! 🎉"
+  header.TextSize = 24
+  header.TextColor3 = Color3.fromRGB(255, 220, 100)
+  header.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
+  header.ZIndex = 3
+  header.Parent = state.mainFrame
+  
+  -- Create large chicken card in center
+  local cardSize = 160
+  local card = Instance.new("Frame")
+  card.Name = "ResultCard"
+  card.Size = UDim2.new(0, cardSize, 0, cardSize + 40)
+  card.Position = UDim2.new(0.5, -cardSize/2, 0, 65)
+  card.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+  card.BorderSizePixel = 0
+  card.ZIndex = 3
+  card.Parent = state.mainFrame
+  
+  local cardCorner = Instance.new("UICorner")
+  cardCorner.CornerRadius = UDim.new(0, 12)
+  cardCorner.Parent = card
+  
+  -- Glowing border
+  local cardStroke = Instance.new("UIStroke")
+  cardStroke.Color = rarityColor
+  cardStroke.Thickness = 3
+  cardStroke.Transparency = 0
+  cardStroke.Parent = card
+  
+  -- Large chicken emoji
+  local icon = Instance.new("TextLabel")
+  icon.Name = "Icon"
+  icon.Size = UDim2.new(1, 0, 0, 80)
+  icon.Position = UDim2.new(0, 0, 0, 15)
+  icon.BackgroundTransparency = 1
+  icon.Text = "🐔"
+  icon.TextSize = 64
+  icon.TextColor3 = rarityColor
+  icon.ZIndex = 4
+  icon.Parent = card
+  
+  -- Chicken name
+  local nameLabel = Instance.new("TextLabel")
+  nameLabel.Name = "NameLabel"
+  nameLabel.Size = UDim2.new(1, -10, 0, 36)
+  nameLabel.Position = UDim2.new(0, 5, 0, 95)
+  nameLabel.BackgroundTransparency = 1
+  nameLabel.Text = chickenConfig.displayName
+  nameLabel.TextScaled = true
+  nameLabel.TextWrapped = true
+  nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+  nameLabel.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
+  nameLabel.ZIndex = 4
+  nameLabel.Parent = card
+  
+  -- Rarity badge
+  local rarityBadge = Instance.new("Frame")
+  rarityBadge.Name = "RarityBadge"
+  rarityBadge.Size = UDim2.new(0, 100, 0, 28)
+  rarityBadge.Position = UDim2.new(0.5, -50, 0, 135)
+  rarityBadge.BackgroundColor3 = rarityColor
+  rarityBadge.BorderSizePixel = 0
+  rarityBadge.ZIndex = 4
+  rarityBadge.Parent = card
+  
+  local badgeCorner = Instance.new("UICorner")
+  badgeCorner.CornerRadius = UDim.new(0, 6)
+  badgeCorner.Parent = rarityBadge
+  
+  local rarityLabel = Instance.new("TextLabel")
+  rarityLabel.Name = "RarityLabel"
+  rarityLabel.Size = UDim2.new(1, 0, 1, 0)
+  rarityLabel.BackgroundTransparency = 1
+  rarityLabel.Text = rarity
+  rarityLabel.TextSize = 14
+  rarityLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+  rarityLabel.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
+  rarityLabel.ZIndex = 5
+  rarityLabel.Parent = rarityBadge
+  
+  -- Stats display
+  local statsFrame = Instance.new("Frame")
+  statsFrame.Name = "StatsFrame"
+  statsFrame.Size = UDim2.new(0, 180, 0, 50)
+  statsFrame.Position = UDim2.new(0.5, -90, 0, 280)
+  statsFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+  statsFrame.BorderSizePixel = 0
+  statsFrame.ZIndex = 3
+  statsFrame.Parent = state.mainFrame
+  
+  local statsCorner = Instance.new("UICorner")
+  statsCorner.CornerRadius = UDim.new(0, 8)
+  statsCorner.Parent = statsFrame
+  
+  local moneyPerSecond = chickenConfig.moneyPerSecond or 1
+  local statsLabel = Instance.new("TextLabel")
+  statsLabel.Name = "StatsLabel"
+  statsLabel.Size = UDim2.new(1, -10, 1, 0)
+  statsLabel.Position = UDim2.new(0, 5, 0, 0)
+  statsLabel.BackgroundTransparency = 1
+  statsLabel.Text = string.format("💰 $%.2f/sec", moneyPerSecond)
+  statsLabel.TextSize = 16
+  statsLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+  statsLabel.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium)
+  statsLabel.ZIndex = 4
+  statsLabel.Parent = statsFrame
+  
+  -- Dismiss button
+  local dismissButton = Instance.new("TextButton")
+  dismissButton.Name = "DismissButton"
+  dismissButton.Size = UDim2.new(0, 160, 0, 45)
+  dismissButton.Position = UDim2.new(0.5, -80, 1, -60)
+  dismissButton.BackgroundColor3 = Color3.fromRGB(80, 140, 200)
+  dismissButton.Text = "Awesome! ✓"
+  dismissButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+  dismissButton.TextSize = 18
+  dismissButton.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
+  dismissButton.BorderSizePixel = 0
+  dismissButton.AutoButtonColor = true
+  dismissButton.ZIndex = 3
+  dismissButton.Parent = state.mainFrame
+  
+  local buttonCorner = Instance.new("UICorner")
+  buttonCorner.CornerRadius = UDim.new(0, 10)
+  buttonCorner.Parent = dismissButton
+  
+  -- Dismiss handler
+  dismissButton.MouseButton1Click:Connect(function()
+    HatchPreviewUI.hide()
+    if onDismiss then
+      onDismiss()
+    end
+  end)
+  
+  -- Show the UI
+  state.isVisible = true
+  state.mainFrame.Visible = true
+  state.screenGui.Enabled = true
+  
+  -- Animate in
+  local backdrop = state.screenGui:FindFirstChild("Backdrop")
+  if backdrop then
+    backdrop.BackgroundTransparency = 1
+    TweenService:Create(backdrop, TweenInfo.new(FADE_IN_DURATION), {
+      BackgroundTransparency = 0.5,
+    }):Play()
+  end
+  
+  state.mainFrame.Size = UDim2.new(0, 0, 0, 0)
+  state.mainFrame.Position = currentConfig.position
+  TweenService:Create(state.mainFrame, TweenInfo.new(SCALE_IN_DURATION, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    Size = currentConfig.size,
+  }):Play()
+  
+  -- Pulse animation on the card border
+  task.spawn(function()
+    while state.isVisible and card and card.Parent do
+      TweenService:Create(cardStroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+        Transparency = 0.5,
+      }):Play()
+      task.wait(0.8)
+      if not state.isVisible or not card or not card.Parent then break end
+      TweenService:Create(cardStroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+        Transparency = 0,
+      }):Play()
+      task.wait(0.8)
+    end
+  end)
+end
+
 return HatchPreviewUI

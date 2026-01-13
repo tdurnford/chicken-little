@@ -77,11 +77,14 @@ local state: InventoryState = {
   actionFrame = nil,
   selectedItem = nil,
   currentTab = "eggs",
-  isVisible = true,
+  isVisible = false, -- Start hidden, player opens with I key
   slots = {},
   onItemSelected = nil,
   onAction = nil,
 }
+
+-- Callback for visibility changes
+local onVisibilityChanged: ((boolean) -> ())? = nil
 
 local currentConfig: InventoryConfig = DEFAULT_CONFIG
 
@@ -334,11 +337,11 @@ local function updateActionButtons()
   end
 
   if state.selectedItem.itemType == "egg" then
-    -- Egg actions: Hatch, Sell
+    -- Egg actions: Place (to hatch in coop), Sell
     createActionButton(
       state.actionFrame,
-      "🐣 Hatch",
-      "hatch",
+      "📍 Place",
+      "place",
       UDim2.new(0, 0, 0, 0),
       Color3.fromRGB(80, 160, 80)
     ).Visible =
@@ -554,9 +557,9 @@ function InventoryUI.updateFromPlayerData(playerData: any)
     return
   end
 
-  -- Clear existing slots
+  -- Clear existing slots and empty labels
   for _, child in ipairs(state.contentFrame:GetChildren()) do
-    if child:IsA("Frame") then
+    if child:IsA("Frame") or (child:IsA("TextLabel") and child.Name == "EmptyLabel") then
       child:Destroy()
     end
   end
@@ -646,6 +649,9 @@ function InventoryUI.setVisible(visible: boolean)
   state.isVisible = visible
   if state.mainFrame then
     state.mainFrame.Visible = visible
+  end
+  if onVisibilityChanged then
+    onVisibilityChanged(visible)
   end
 end
 
@@ -739,6 +745,11 @@ function InventoryUI.getRarityColors(): { [string]: Color3 }
     copy[rarity] = color
   end
   return copy
+end
+
+-- Set callback for visibility changes
+function InventoryUI.onVisibilityChanged(callback: (boolean) -> ())
+  onVisibilityChanged = callback
 end
 
 return InventoryUI

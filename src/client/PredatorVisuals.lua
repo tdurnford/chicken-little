@@ -464,13 +464,13 @@ end
 function PredatorVisuals.create(
   predatorId: string,
   predatorType: string,
+  threatLevel: string,
   position: Vector3
 ): PredatorVisualState?
-  -- Get predator config for threat level
+  -- Get predator config
   local config = PredatorConfig.get(predatorType)
-  if not config then
-    return nil
-  end
+  -- Use provided threatLevel or fall back to config
+  local actualThreatLevel = threatLevel or (config and config.threatLevel) or "Minor"
 
   -- Remove existing predator with same ID
   if activePredators[predatorId] then
@@ -478,7 +478,7 @@ function PredatorVisuals.create(
   end
 
   -- Create model
-  local model = createPlaceholderModel(predatorType, config.threatLevel)
+  local model = createPlaceholderModel(predatorType, actualThreatLevel)
   model:SetPrimaryPartCFrame(CFrame.new(position))
   model.Parent = workspace
 
@@ -486,7 +486,7 @@ function PredatorVisuals.create(
   local state: PredatorVisualState = {
     model = model,
     predatorType = predatorType,
-    threatLevel = config.threatLevel,
+    threatLevel = actualThreatLevel,
     currentAnimation = "idle",
     animationConnection = nil,
     position = position,
