@@ -168,7 +168,7 @@
       "category": "Chickens",
       "title": "Implement Chicken Entity System",
       "description": "Create chicken objects that can be placed, generate money over time, and lay eggs at intervals.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create Chicken class/module",
         "Implement money generation loop",
@@ -186,7 +186,9 @@
         "Test money generation rate",
         "Test egg laying interval",
         "Test money accumulation display"
-      ]
+      ],
+      "status": "completed",
+      "completedDate": "2026-01-13"
     },
     {
       "id": 8,
