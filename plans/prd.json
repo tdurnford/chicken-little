@@ -804,7 +804,7 @@
       "category": "Offline",
       "title": "Implement Offline Earnings System",
       "description": "Calculate and award money and eggs earned while player was offline, with caps.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Store last logout timestamp",
         "Calculate offline duration on login",
@@ -822,7 +822,9 @@
         "Test offline money calculation",
         "Test offline egg calculation",
         "Test cap enforcement"
-      ]
+      ],
+      "status": "completed",
+      "completedDate": "2026-01-13"
     },
     {
       "id": 32,

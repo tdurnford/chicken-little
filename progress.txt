@@ -330,3 +330,20 @@
 - Utility: getItemCounts(), getRarityColors(), getCurrentTab()
 - Format check and build pass
 - Next: Work Item #31 (Offline Earnings System) or #10 (Egg Placement/Hatch Preview) are good candidates
+[2026-01-13] Completed Work Item #31: Implement Offline Earnings System
+- Created src/shared/OfflineEarnings.lua module
+- Calculates offline money earnings from placed chickens (50% of normal rate)
+- NEW: Calculates offline egg production based on chicken egg laying intervals
+- Caps: 24 hours max offline time, 10 eggs per chicken max
+- Type exports: EggEarned, ChickenEarnings, OfflineEarningsResult, ApplyResult
+- Core functions: calculate(), apply(), calculateAndApply()
+- Returns detailed breakdown: moneyPerChicken with individual earnings, eggsEarned array
+- Tracks eggs by type and rarity, links eggs to source chickens
+- Utility: hasEarnings(), getPreview() for UI preview, formatDuration() for display
+- getEarningsByRarity() groups earnings by rarity tier
+- validateResult() ensures calculation integrity
+- getMaxPotential() shows max hourly earnings for planning
+- Updated DataPersistence.lua to use OfflineEarnings module
+- LoadResult now includes offlineEggs count for UI display
+- Format check and build pass
+- Next: Work Item #32 (Offline Earnings Summary UI) or #10 (Egg Placement/Hatch Preview)

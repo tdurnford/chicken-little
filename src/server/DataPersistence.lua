@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local PlayerData = require(Shared:WaitForChild("PlayerData"))
 local ChickenConfig = require(Shared:WaitForChild("ChickenConfig"))
+local OfflineEarnings = require(Shared:WaitForChild("OfflineEarnings"))
 
 local DataPersistence = {}
 
@@ -36,16 +37,11 @@ export type LoadResult = {
   data: PlayerData.PlayerDataSchema?,
   isNewPlayer: boolean,
   offlineEarnings: number?,
+  offlineEggs: number?,
   offlineSeconds: number?,
 }
 
-export type OfflineEarningsResult = {
-  totalEarnings: number,
-  cappedEarnings: number,
-  elapsedSeconds: number,
-  cappedSeconds: number,
-  wasCapped: boolean,
-}
+export type OfflineEarningsResult = OfflineEarnings.OfflineEarningsResult
 
 -- Private state
 local dataStore: DataStore? = nil
@@ -94,60 +90,21 @@ local function retryOperation<T>(operation: () -> T, maxAttempts: number?): (boo
 end
 
 -- Calculate offline earnings for a player's placed chickens
+-- Delegates to OfflineEarnings module for full calculation including eggs
 function DataPersistence.calculateOfflineEarnings(
   data: PlayerData.PlayerDataSchema,
   currentTime: number
 ): OfflineEarningsResult
-  local lastLogout = data.lastLogoutTime or currentTime
-  local elapsedSeconds = math.max(0, currentTime - lastLogout)
-
-  -- Cap offline time
-  local maxOfflineSeconds = MAX_OFFLINE_HOURS * 3600
-  local cappedSeconds = math.min(elapsedSeconds, maxOfflineSeconds)
-  local wasCapped = elapsedSeconds > maxOfflineSeconds
-
-  -- Calculate earnings from placed chickens
-  local totalMoneyPerSecond = 0
-  for _, chicken in ipairs(data.placedChickens) do
-    local config = ChickenConfig.get(chicken.chickenType)
-    if config then
-      totalMoneyPerSecond = totalMoneyPerSecond + config.moneyPerSecond
-    end
-  end
-
-  local totalEarnings = totalMoneyPerSecond * elapsedSeconds * OFFLINE_EARNINGS_RATE
-  local cappedEarnings = totalMoneyPerSecond * cappedSeconds * OFFLINE_EARNINGS_RATE
-
-  return {
-    totalEarnings = totalEarnings,
-    cappedEarnings = cappedEarnings,
-    elapsedSeconds = elapsedSeconds,
-    cappedSeconds = cappedSeconds,
-    wasCapped = wasCapped,
-  }
+  return OfflineEarnings.calculate(data, currentTime)
 end
 
--- Apply offline earnings to player data
+-- Apply offline earnings to player data (money and eggs)
 local function applyOfflineEarnings(
   data: PlayerData.PlayerDataSchema,
   offlineResult: OfflineEarningsResult
 ): PlayerData.PlayerDataSchema
-  data.money = data.money + offlineResult.cappedEarnings
-
-  -- Update chicken accumulated money based on offline time
-  local currentTime = os.time()
-  for _, chicken in ipairs(data.placedChickens) do
-    local config = ChickenConfig.get(chicken.chickenType)
-    if config then
-      local offlineGenerated = config.moneyPerSecond
-        * offlineResult.cappedSeconds
-        * OFFLINE_EARNINGS_RATE
-      chicken.accumulatedMoney = chicken.accumulatedMoney + offlineGenerated
-      chicken.lastEggTime = currentTime -- Reset egg timers
-    end
-  end
-
-  return data
+  local result = OfflineEarnings.apply(data, offlineResult)
+  return result.updatedData or data
 end
 
 -- Load player data from DataStore
@@ -198,14 +155,16 @@ function DataPersistence.load(userId: number): LoadResult
 
   -- Calculate and apply offline earnings for returning players
   local offlineEarnings: number? = nil
+  local offlineEggs: number? = nil
   local offlineSeconds: number? = nil
 
   if not isNewPlayer and playerDataValue.lastLogoutTime then
     local offlineResult = DataPersistence.calculateOfflineEarnings(playerDataValue, currentTime)
 
-    if offlineResult.cappedEarnings > 0 then
+    if offlineResult.cappedMoney > 0 or #offlineResult.eggsEarned > 0 then
       playerDataValue = applyOfflineEarnings(playerDataValue, offlineResult)
-      offlineEarnings = offlineResult.cappedEarnings
+      offlineEarnings = offlineResult.cappedMoney
+      offlineEggs = #offlineResult.eggsEarned
       offlineSeconds = offlineResult.cappedSeconds
     end
   end
@@ -219,6 +178,7 @@ function DataPersistence.load(userId: number): LoadResult
     data = playerDataValue,
     isNewPlayer = isNewPlayer,
     offlineEarnings = offlineEarnings,
+    offlineEggs = offlineEggs,
     offlineSeconds = offlineSeconds,
   }
 end
@@ -405,12 +365,16 @@ function DataPersistence.setupPlayerConnections(): ()
     local result = DataPersistence.onPlayerJoin(player)
     if result.success then
       print(string.format("[DataPersistence] Loaded data for %s", player.Name))
-      if result.offlineEarnings and result.offlineEarnings > 0 then
+      if
+        (result.offlineEarnings and result.offlineEarnings > 0)
+        or (result.offlineEggs and result.offlineEggs > 0)
+      then
         print(
           string.format(
-            "[DataPersistence] %s earned $%.2f while offline (%d seconds)",
+            "[DataPersistence] %s earned $%.2f and %d eggs while offline (%d seconds)",
             player.Name,
-            result.offlineEarnings,
+            result.offlineEarnings or 0,
+            result.offlineEggs or 0,
             result.offlineSeconds or 0
           )
         )
