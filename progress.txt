@@ -1018,3 +1018,28 @@
   - Selecting chicken allows placing (via onAction "place" handler)
 - Format check and build pass
 - Next: Work Items #23, #26, #27, #29 (high priority, #26 now unblocked by #25)
+
+[2026-01-13] Completed Bugfix Work Item #1: Fix Store E Key Interaction Not Working
+- Created new StoreUI.lua client module with:
+  - create(): Creates store UI with scrollable list of all egg types
+  - open()/close()/toggle(): Control UI visibility
+  - updateMoney(): Updates player balance display and affordability indicators
+  - onPurchase(): Callback for when player clicks buy button
+  - Escape key closes the store
+  - X button closes the store
+  - Color-coded rarity indicators for each egg type
+  - Price display and buy buttons for each item
+- Updated Main.client.lua:
+  - Added StoreUI module require
+  - Call StoreUI.create() on client init
+  - Update StoreUI.updateMoney() on initial data load and PlayerDataChanged
+  - Connected store ProximityPrompt.Triggered to StoreUI.toggle()
+  - Wired StoreUI.onPurchase() callback to BuyEgg RemoteFunction
+  - Added tutorial step completion for "buy_egg" action
+  - Sound effects play on successful purchase or error
+- Acceptance criteria met:
+  - Pressing E near store opens the store UI (via ProximityPrompt trigger)
+  - Store UI displays available items (all egg types from EggConfig)
+  - Store UI can be closed with X button or pressing E again (toggle behavior)
+- Format check and build pass
+- Next: Work Items #2, #8, #12, #20 (other critical priority items)

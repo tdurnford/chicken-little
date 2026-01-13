@@ -23,6 +23,7 @@ local InventoryUI = require(ClientModules:WaitForChild("InventoryUI"))
 local HatchPreviewUI = require(ClientModules:WaitForChild("HatchPreviewUI"))
 local Tutorial = require(ClientModules:WaitForChild("Tutorial"))
 local SectionVisuals = require(ClientModules:WaitForChild("SectionVisuals"))
+local StoreUI = require(ClientModules:WaitForChild("StoreUI"))
 
 -- Get shared modules for position calculations
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -98,6 +99,10 @@ print("[Client] InventoryUI created")
 HatchPreviewUI.create()
 print("[Client] HatchPreviewUI created")
 
+-- Create Store UI
+StoreUI.create()
+print("[Client] StoreUI created")
+
 -- Create Tutorial UI
 Tutorial.create()
 print("[Client] Tutorial created")
@@ -129,7 +134,7 @@ if getPlayerDataFunc then
       end
       SectionVisuals.buildSection(initialData.sectionIndex, occupiedSpots)
       print("[Client] Section visuals built for section", initialData.sectionIndex)
-      
+
       -- Build the central store (shared by all players)
       SectionVisuals.buildCentralStore()
     else
@@ -150,7 +155,10 @@ if getPlayerDataFunc then
     end
 
     print("[Client] Initial player data loaded")
-    
+
+    -- Update StoreUI with initial money
+    StoreUI.updateMoney(initialData.money or 0)
+
     -- Start tutorial for new players
     if Tutorial.shouldShowTutorial(initialData) then
       Tutorial.start()
@@ -170,6 +178,8 @@ if playerDataChangedEvent then
     MainHUD.updateFromPlayerData(data)
     -- Update InventoryUI with new inventory data
     InventoryUI.updateFromPlayerData(data)
+    -- Update StoreUI with money balance
+    StoreUI.updateMoney(data.money or 0)
 
     -- Build section visuals if we have a section index but haven't built yet
     if data.sectionIndex and not SectionVisuals.getCurrentSection() then
@@ -183,7 +193,7 @@ if playerDataChangedEvent then
       end
       SectionVisuals.buildSection(data.sectionIndex, occupiedSpots)
       print("[Client] Section visuals built from PlayerDataChanged for section", data.sectionIndex)
-      
+
       -- Build the central store (shared by all players)
       SectionVisuals.buildCentralStore()
     else
@@ -227,7 +237,7 @@ if chickenPickedUpEvent then
     -- Handle both formats: string (chickenId) or table ({ chickenId, playerId, spotIndex })
     local chickenId: string
     local spotIndex: number?
-    
+
     if type(data) == "string" then
       chickenId = data
     elseif type(data) == "table" then
@@ -237,15 +247,15 @@ if chickenPickedUpEvent then
       warn("[Client] ChickenPickedUp: Invalid data format")
       return
     end
-    
+
     ChickenVisuals.destroy(chickenId)
     SoundEffects.play("chickenPickup")
-    
+
     -- Update the spot to show as available
     if spotIndex then
       SectionVisuals.updateSpotOccupancy(spotIndex, false)
     end
-    
+
     print("[Client] Chicken picked up:", chickenId)
   end)
 end
@@ -701,12 +711,12 @@ print("[Client] InventoryUI callbacks wired")
 -- Wire up HatchPreviewUI callbacks for egg hatching
 HatchPreviewUI.onHatch(function(eggId: string, eggType: string)
   print("[Client] Hatch confirmed for egg:", eggId, eggType)
-  
+
   if not placedEggData or placedEggData.id ~= eggId then
     warn("[Client] Placed egg data mismatch")
     return
   end
-  
+
   -- Hatch egg via server with the spot index
   local hatchEggFunc = getFunction("HatchEgg")
   if hatchEggFunc then
@@ -718,7 +728,7 @@ HatchPreviewUI.onHatch(function(eggId: string, eggType: string)
         Tutorial.completeStep("hatch_egg")
       end
       print("[Client] Egg hatched successfully:", result.chickenType, result.rarity)
-      
+
       -- Show the result screen with what they got
       HatchPreviewUI.showResult(result.chickenType, result.rarity)
     else
@@ -726,7 +736,7 @@ HatchPreviewUI.onHatch(function(eggId: string, eggType: string)
       warn("[Client] Hatch failed:", result and result.error or "Unknown error")
     end
   end
-  
+
   -- Clear placed egg data
   placedEggData = nil
 end)
@@ -774,7 +784,7 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
   if gameProcessed then
     return
   end
-  
+
   if input.KeyCode == Enum.KeyCode.I then
     InventoryUI.toggle()
   end
@@ -849,21 +859,26 @@ local function updateProximityPrompts()
       if accumulatedMoney and accumulatedMoney >= 1 then
         local currentTime = os.clock()
         local lastCollectTime = lastCollectedChickenTimes[chickenId] or 0
-        
+
         -- Check cooldown to prevent spam
         if currentTime - lastCollectTime >= MONEY_COLLECTION_COOLDOWN then
           lastCollectedChickenTimes[chickenId] = currentTime
-          
+
           -- Call server to collect money from this specific chicken
           local collectMoneyFunc = getFunction("CollectMoney")
           if collectMoneyFunc then
             -- Run in a separate thread to not block the game loop
             task.spawn(function()
               local result = collectMoneyFunc:InvokeServer(chickenId)
-              if result and result.success and result.amountCollected and result.amountCollected > 0 then
+              if
+                result
+                and result.success
+                and result.amountCollected
+                and result.amountCollected > 0
+              then
                 -- Reset client-side accumulated money to the remainder
                 ChickenVisuals.resetAccumulatedMoney(chickenId, result.remainder or 0)
-                
+
                 -- Play collection sound and show visual effect
                 SoundEffects.playMoneyCollect(result.amountCollected)
                 local chickenPos = getChickenPosition(spotIndex)
@@ -923,3 +938,60 @@ local gameLoopConnection = RunService.Heartbeat:Connect(function(deltaTime: numb
 end)
 
 print("[Client] Client game loop started")
+
+--[[
+  Store Interaction Setup
+  Wires the store proximity prompt to open the store UI.
+]]
+
+-- Wire up store prompt triggered event
+local function setupStoreInteraction()
+  local store = SectionVisuals.getStore()
+  if not store then
+    -- Store might not be built yet, wait and retry
+    task.delay(1, setupStoreInteraction)
+    return
+  end
+
+  -- Find the StorePrompt in the store model
+  local prompt = store:FindFirstChild("StorePrompt", true)
+  if prompt and prompt:IsA("ProximityPrompt") then
+    prompt.Triggered:Connect(function(playerWhoTriggered)
+      if playerWhoTriggered == localPlayer then
+        StoreUI.toggle()
+      end
+    end)
+    print("[Client] Store prompt connected")
+  else
+    warn("[Client] StorePrompt not found in store model")
+  end
+end
+
+-- Setup store interaction after a delay to ensure store is built
+task.delay(0.5, setupStoreInteraction)
+
+-- Wire up store purchase callback
+StoreUI.onPurchase(function(eggType: string, quantity: number)
+  local buyEggFunc = getFunction("BuyEgg")
+  if not buyEggFunc then
+    warn("[Client] BuyEgg RemoteFunction not found")
+    return
+  end
+
+  local result = buyEggFunc:InvokeServer(eggType, quantity)
+  if result then
+    if result.success then
+      SoundEffects.play("purchase")
+      print("[Client] Purchased", quantity, "x", eggType, ":", result.message)
+      -- Complete tutorial step if active
+      if Tutorial.isActive() then
+        Tutorial.completeStep("buy_egg")
+      end
+    else
+      SoundEffects.play("uiError")
+      warn("[Client] Purchase failed:", result.message)
+    end
+  end
+end)
+
+print("[Client] Main client script fully initialized")
