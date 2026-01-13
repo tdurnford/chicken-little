@@ -934,3 +934,20 @@
   - Load failures are logged (via warn with descriptive error messages)
 - Format check and build pass
 - Next: High priority client-side items (#23, #25-29, #34-36, #40) or medium priority items (#10-19)
+
+[2026-01-13] Completed Work Item #36: Implement Player Section Spawning
+- Added playerSpawnPoints tracking table to Main.server.lua
+- Created teleportCharacterToSpawnPoint() helper function to teleport character to spawn coordinates
+- Created setupCharacterSpawning() function that:
+  - Stores spawn point for player
+  - Connects to player.CharacterAdded event for handling initial spawn and respawns
+  - Waits for HumanoidRootPart before teleporting (5 second timeout)
+  - Teleports existing character if already loaded
+- Wired setupCharacterSpawning() in PlayerAdded handler after section assignment
+- Added cleanup for playerSpawnPoints in PlayerRemoving handler
+- Acceptance criteria met:
+  - Players spawn in their assigned section (via teleportCharacterToSpawnPoint)
+  - Respawning returns player to their section (via CharacterAdded connection)
+  - Section assignment persists for session (via playerSpawnPoints tracking)
+- Format check and build pass
+- Next: High priority client-side items (#23, #25-29, #34, #35, #40) or medium priority items (#10-19)

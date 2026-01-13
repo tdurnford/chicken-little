@@ -52,6 +52,9 @@ type PlayerGameState = {
 }
 local playerGameStates: { [number]: PlayerGameState } = {}
 
+-- Per-player spawn point tracking for respawning
+local playerSpawnPoints: { [number]: { x: number, y: number, z: number } } = {}
+
 -- Global random chicken spawn state (shared event for all players)
 local randomChickenSpawnState: RandomChickenSpawn.SpawnEventState
 
@@ -362,6 +365,50 @@ local function getPlayerGameState(userId: number): PlayerGameState
   return playerGameStates[userId]
 end
 
+-- Teleport a character to a spawn point position
+local function teleportCharacterToSpawnPoint(
+  character: Model,
+  spawnPoint: { x: number, y: number, z: number }
+)
+  local humanoidRootPart = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+  if humanoidRootPart then
+    humanoidRootPart.CFrame = CFrame.new(spawnPoint.x, spawnPoint.y, spawnPoint.z)
+  end
+end
+
+-- Handle character spawning/respawning to player's section
+local function setupCharacterSpawning(
+  player: Player,
+  spawnPoint: { x: number, y: number, z: number }
+)
+  -- Store spawn point for this player
+  playerSpawnPoints[player.UserId] = spawnPoint
+
+  -- Handle character added (initial spawn and respawns)
+  player.CharacterAdded:Connect(function(character)
+    -- Wait for character to be fully loaded
+    local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5) :: BasePart?
+    if humanoidRootPart and playerSpawnPoints[player.UserId] then
+      local sp = playerSpawnPoints[player.UserId]
+      humanoidRootPart.CFrame = CFrame.new(sp.x, sp.y, sp.z)
+      print(
+        string.format(
+          "[Main.server] Spawned %s at section (%.1f, %.1f, %.1f)",
+          player.Name,
+          sp.x,
+          sp.y,
+          sp.z
+        )
+      )
+    end
+  end)
+
+  -- If character already exists, teleport immediately
+  if player.Character then
+    teleportCharacterToSpawnPoint(player.Character, spawnPoint)
+  end
+end
+
 -- Handle player section assignment on join
 Players.PlayerAdded:Connect(function(player)
   local currentTime = os.time()
@@ -384,6 +431,8 @@ Players.PlayerAdded:Connect(function(player)
           spawnPoint.z
         )
       )
+      -- Setup character spawning for initial spawn and respawns
+      setupCharacterSpawning(player, spawnPoint)
     end
   else
     warn(
@@ -445,6 +494,9 @@ Players.PlayerRemoving:Connect(function(player)
 
   -- Clean up sync tracking for this player
   lastDataSyncTime[player.UserId] = nil
+
+  -- Clean up player spawn point tracking
+  playerSpawnPoints[player.UserId] = nil
 
   -- Clean up player game state
   playerGameStates[player.UserId] = nil
