@@ -999,7 +999,9 @@
       "category": "Tutorial",
       "title": "Create New Player Tutorial",
       "description": "Guide new players through basic mechanics when they first join.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
+      "completedDate": "2026-01-13",
       "steps": [
         "Detect first-time player",
         "Create tutorial UI prompts",

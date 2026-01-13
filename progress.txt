@@ -540,3 +540,20 @@
 - Integrates with PlayerData for inventory operations and validation
 - Format check and build pass
 - Next: Work Items #34-37 (Audio/Visual), #38 (Tutorial), #39 (Balancing), #40 (Testing)
+[2026-01-13] Completed Work Item #38: Create New Player Tutorial
+- Created src/client/Tutorial.lua module
+- Type exports: TutorialStep, TutorialConfig, TutorialState
+- First-time player detection: shouldShowTutorial() checks tutorialComplete field
+- Added tutorialComplete boolean field to PlayerData.PlayerDataSchema
+- Tutorial steps: welcome, inventory_intro, place_egg, hatch_egg, chicken_intro, collect_money, complete
+- Each step has id, title, message, icon, optional action hint, and waitForAction/duration
+- UI: Bottom-positioned frame with icon, title, message, action hint, progress dots
+- Animations: Slide in/out with Back easing, step transitions with fade
+- Skip functionality: Skip button (configurable) calls onSkip callback
+- Step advancement: Auto-advance on timer for non-action steps, manual via completeStep(stepId) for action steps
+- Callbacks: onComplete(), onSkip(), onStepComplete() for external integration
+- Progress indicators: Dot display showing current step vs total
+- Pause/resume support for overlaying other UI
+- Query functions: isActive(), isPaused(), isCreated(), getCurrentStep(), getTotalSteps()
+- Format check and build pass
+- Next: Work Items #34-37 (Audio/Visual), #39 (Balancing), #40 (Testing)

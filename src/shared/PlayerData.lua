@@ -51,6 +51,7 @@ export type PlayerDataSchema = {
   sectionIndex: number?,
   lastLogoutTime: number?,
   totalPlayTime: number,
+  tutorialComplete: boolean?,
 }
 
 -- Rarity tiers for validation
@@ -87,6 +88,7 @@ function PlayerData.createDefault(): PlayerDataSchema
     sectionIndex = nil,
     lastLogoutTime = nil,
     totalPlayTime = 0,
+    tutorialComplete = false,
   }
 end
 
@@ -275,6 +277,10 @@ function PlayerData.validate(data: any): boolean
     return false
   end
   if not validateNumber(data.totalPlayTime, 0) then
+    return false
+  end
+  -- tutorialComplete is optional boolean
+  if data.tutorialComplete ~= nil and type(data.tutorialComplete) ~= "boolean" then
     return false
   end
 
