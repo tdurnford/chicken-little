@@ -93,7 +93,7 @@
       "category": "Map",
       "title": "Implement Map Generation for 12 Players",
       "description": "Create system to duplicate player sections for all 12 players and assign sections on join.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create map generation module",
         "Implement section cloning from template",
@@ -111,7 +111,9 @@
         "Test 12 sections generate correctly",
         "Test player assignment to sections",
         "Test rejoin section assignment"
-      ]
+      ],
+      "status": "completed",
+      "completedDate": "2026-01-13"
     },
     {
       "id": 5,
