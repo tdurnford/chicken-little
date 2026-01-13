@@ -83,3 +83,19 @@
 - Chicken's accumulatedMoney resets to 0 after collection
 - Format check and build pass
 - Next: Work Item #10 (Egg Placement UI), #2 (Data Persistence), or #16 (Main HUD) are good candidates
+[2026-01-13] Completed Work Item #13: Implement Exponential Money Scaling
+- Created src/shared/MoneyScaling.lua module
+- Number formatting: format(), formatCurrency(), formatCompact() with suffixes K, M, B, T, Qa, Qi
+- Supports values from thousands (1e3) up to quintillions (1e18)
+- Upgrade multipliers: 10-tier system (1x -> 35x) based on cage tier
+- Prestige multipliers: 10% compounding bonus per prestige level
+- calculateTotalMultiplier() combines all multiplier sources
+- applyMultipliers() applies multipliers to base amounts
+- getScaledMoneyPerSecond() calculates income with all multipliers
+- estimateTimeToTarget() estimates time to reach a money goal
+- formatTime() formats seconds as human-readable (Xs, Xm Ys, Xh Ym, Xd Yh)
+- getProgressionStage() returns player tier (Beginner -> Quintillionaire)
+- Utility: canAfford(), subtractCost(), getUpgradeTiers(), getMaxUpgradeTier()
+- Type exports: FormattedMoney, MultiplierBreakdown
+- Format check and build pass
+- Next: Work Item #16 (Main HUD) can use this formatting, or #2 (Data Persistence)
