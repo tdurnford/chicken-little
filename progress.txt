@@ -165,3 +165,21 @@
 - Integrates with TrapConfig for pricing, limits, and cooldowns
 - Format check and build pass
 - Next: Work Item #23 (Trap Catching Mechanic) or #19 (Predator Spawning) are good follow-ups
+[2026-01-13] Completed Work Item #23: Implement Trap Catching Mechanic
+- Created src/shared/TrapCatching.lua module
+- Core function: attemptCatch(playerData, trapId, predatorType, currentTime) - rolls against catch probability
+- Bulk function: attemptCatchWithAllTraps() - tries all ready traps in order of effectiveness
+- Uses TrapConfig.calculateCatchProbability() for trap vs predator matchups
+- On successful catch: stores predator in trap via TrapPlacement.setCaughtPredator()
+- On failed catch: starts trap cooldown via TrapPlacement.startCooldown()
+- collectCaughtPredator() - collects reward money and releases predator
+- collectAllCaughtPredators() - bulk collection from all traps
+- Query functions: getCatchInfo(), getAllCatchInfo(), getBestTrapForPredator()
+- getCombinedCatchProbability() - calculates odds of at least one trap catching
+- canCatchPredator() - checks if any trap is ready
+- getCaughtPredatorCount(), getTotalCaughtReward() for status display
+- getSummary() - returns complete trap catching status for UI
+- simulateCatches() - testing utility for probability verification
+- Type exports: CatchResult, CatchAttemptInfo
+- Format check and build pass
+- Next: Work Item #19 (Predator Spawning System) builds on this, or #24 (Baseball Bat Combat)

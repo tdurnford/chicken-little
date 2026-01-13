@@ -588,7 +588,7 @@
       "category": "Traps",
       "title": "Implement Trap Catching Mechanic",
       "description": "Make traps catch predators based on trap level vs predator level.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Detect predator entering trap zone",
         "Calculate catch probability",
@@ -606,7 +606,9 @@
         "Test catch probability",
         "Test caught predator storage",
         "Test trap cooldown"
-      ]
+      ],
+      "status": "completed",
+      "completedDate": "2026-01-13"
     },
     {
       "id": 24,
