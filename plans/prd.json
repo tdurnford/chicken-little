@@ -929,7 +929,7 @@
       "category": "Visual",
       "title": "Create Chicken Models and Animations",
       "description": "Design visual models for all chicken types with idle and laying animations.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create base chicken model",
         "Create variations for each rarity",
@@ -946,7 +946,9 @@
       "tests": [
         "Test all models load",
         "Test animations play"
-      ]
+      ],
+      "status": "completed",
+      "completedDate": "2026-01-13"
     },
     {
       "id": 36,

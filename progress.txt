@@ -615,3 +615,22 @@
 - Tests verify: early/mid/late game achievable, upgrade scaling, progression stages
 - Format check and build pass
 - Next: Work Items #35-37 (Visual models - requires Roblox Studio assets)
+
+[2026-01-13] Completed Work Item #35: Create Chicken Models and Animations
+- Created src/client/ChickenVisuals.lua module
+- Type exports: AnimationState, VisualConfig, ChickenVisualState, MoneyPopConfig
+- Placeholder model creation: createPlaceholderModel() with body, head, beak parts
+- Rarity-based visuals: RARITY_COLORS for 6 tiers, glow intensity, scale multipliers
+- Glow effects: PointLight for Rare+, ParticleEmitter for Legendary/Mythic
+- Money indicator: BillboardGui with formatted money display above chickens
+- Idle animation: Smooth bobbing with configurable speed and amplitude
+- Laying animation: playLayingAnimation() with squash/stretch using TweenService
+- Celebration animation: playCelebrationAnimation() with spin and bounce for rare hatches
+- Money pop effect: createMoneyPopEffect() floating text that rises and fades
+- Lifecycle: create(), destroy(), cleanup() for chicken visual management
+- State tracking: activeChickens dictionary, updateConnection for animation loop
+- Position management: setPosition(), get(), getAll(), getActiveCount()
+- Configuration: configure(), getConfig() for customization
+- Utility: getRarityColor(), getRarityColors(), formatMoney(), getSummary()
+- Format check and build pass
+- Next: Work Items #36-37 (Egg/Predator visuals)
