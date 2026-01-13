@@ -414,3 +414,20 @@
 - Hover effects on confirm/cancel buttons
 - Format check and build pass
 - Next: Work Item #3/#4 (Map), #27 (Chicken Stealing), or #33 (Mobile Touch Controls)
+[2026-01-13] Completed Work Item #27: Implement Chicken Stealing
+- Created src/shared/ChickenStealing.lua module
+- Type exports: StealState, StealResult, StealCheckResult, StealProgressInfo
+- Configuration: 3 second steal duration, 8 stud range
+- State management: createStealState(), reset(), validateState()
+- Lock integration: canStealFromCoop() checks CageLocking.isLocked()
+- Chicken validation: canStealChicken() verifies target exists and coop is unlocked
+- Steal flow: startSteal() begins 3s timer, cancelSteal() interrupts, completeSteal() transfers chicken
+- Progress tracking: getStealProgress() returns 0-1, getRemainingTime(), isStealComplete()
+- Update function: update(stealState, currentTime) returns true when steal completes
+- Chicken transfer: removes from target's placedChickens, adds to thief's inventory.chickens
+- Generates new ID for stolen chicken, resets accumulated money
+- UI helpers: getActionPrompt() returns text and enabled state based on lock status
+- getProgressInfo() for progress bar display, getSummary() for debugging
+- Integrates with ChickenPlacement for chicken lookup and PlayerData for validation
+- Format check and build pass
+- Next: Work Item #28 (Random Chicken Spawn Event), #3/#4 (Map), or #33 (Mobile Touch Controls)

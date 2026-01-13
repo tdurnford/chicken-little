@@ -710,7 +710,7 @@
       "category": "PvP",
       "title": "Implement Chicken Stealing",
       "description": "Allow players to steal chickens from other players' unlocked coops.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Detect player in another's coop",
         "Check if coop is locked",
@@ -728,7 +728,9 @@
         "Test stealing from unlocked coop",
         "Test blocked by locked coop",
         "Test steal interruption"
-      ]
+      ],
+      "status": "completed",
+      "completedDate": "2026-01-13"
     },
     {
       "id": 28,
