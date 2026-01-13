@@ -272,3 +272,22 @@
 - Integrates with PlayerData.upgrades (cageTier, lockDurationMultiplier, predatorResistance)
 - Format check and build pass
 - Next: Work Item #27 (Chicken Stealing) uses cage lock/upgrade system, or #2 (Data Persistence)
+
+[2026-01-13] Completed Work Item #2: Implement Data Persistence with DataStore
+- Created src/server/DataPersistence.lua module
+- Uses Roblox DataStore service with configurable data store name
+- Type exports: SaveResult, LoadResult, OfflineEarningsResult
+- save(userId, data) - saves player data with retry logic (3 attempts with exponential backoff)
+- load(userId) - loads player data, creates default for new players, validates on load
+- calculateOfflineEarnings() - calculates earnings from placed chickens while offline
+- Offline earnings capped at 24 hours, 50% of normal earnings rate
+- Auto-save every 5 minutes via RunService.Heartbeat
+- setupPlayerConnections() hooks into PlayerAdded, PlayerRemoving, BindToClose
+- start() initializes entire persistence system with one call
+- getData(), updateData(), clearCache() for in-memory cache management
+- hasData(), getCachedPlayerCount(), isAutoSaveRunning() for status queries
+- getConfig() exposes configuration values for UI/testing
+- Graceful error handling with warnings, prevents data loss
+- Concurrent save prevention with saveInProgress tracking
+- Format check and build pass
+- Next: Work Item #16 (Main HUD) or #10 (Egg Placement) are good candidates for MVP Core Loop

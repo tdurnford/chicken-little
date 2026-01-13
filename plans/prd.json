@@ -35,7 +35,7 @@
       "category": "Infrastructure",
       "title": "Implement Data Persistence with DataStore",
       "description": "Set up DataStore2 or ProfileService for saving and loading player data with offline earnings calculation.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Choose and integrate data persistence library",
         "Implement save/load functions",
@@ -56,7 +56,9 @@
         "Test offline earnings calculation",
         "Test offline earnings cap",
         "Test error handling scenarios"
-      ]
+      ],
+      "status": "completed",
+      "completedDate": "2026-01-13"
     },
     {
       "id": 3,
