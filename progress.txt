@@ -998,3 +998,23 @@
   - No frame rate issues (throttled update intervals)
 - Format check and build pass
 - Next: Work Items #23, #25, #27, #29 (high priority, now unblocked by #35)
+
+[2026-01-13] Completed Work Item #25: Wire Up Inventory UI
+- Added InventoryUI module require to Main.client.lua
+- Called InventoryUI.create() after MainHUD creation
+- Updated initial player data loading to call InventoryUI.updateFromPlayerData(initialData)
+- Updated PlayerDataChanged event handler to call InventoryUI.updateFromPlayerData(data)
+- Wired InventoryUI.onItemSelected() callback for logging item selection
+- Wired InventoryUI.onAction() callback to handle all inventory actions:
+  - Egg "hatch" action: Invokes HatchEgg RemoteFunction, plays sound, clears selection
+  - Egg "sell" action: Invokes SellEgg RemoteFunction, plays money sound, clears selection
+  - Chicken "place" action: Finds nearby available spot, invokes PlaceChicken RemoteFunction
+  - Chicken "sell" action: Invokes SellChicken RemoteFunction with fromInventory=true flag
+- All actions include error handling with uiError sound and warning logs
+- Acceptance criteria met:
+  - Inventory shows eggs and chickens (via InventoryUI.updateFromPlayerData)
+  - Items can be selected for actions (via onItemSelected callback)
+  - Selecting egg allows hatching (via onAction "hatch" handler)
+  - Selecting chicken allows placing (via onAction "place" handler)
+- Format check and build pass
+- Next: Work Items #23, #26, #27, #29 (high priority, #26 now unblocked by #25)

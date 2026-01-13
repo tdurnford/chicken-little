@@ -18,6 +18,7 @@ local EggVisuals = require(ClientModules:WaitForChild("EggVisuals"))
 local MainHUD = require(ClientModules:WaitForChild("MainHUD"))
 local ChickenPickup = require(ClientModules:WaitForChild("ChickenPickup"))
 local ChickenSelling = require(ClientModules:WaitForChild("ChickenSelling"))
+local InventoryUI = require(ClientModules:WaitForChild("InventoryUI"))
 
 -- Get shared modules for position calculations
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -85,6 +86,10 @@ print("[Client] SoundEffects initialized")
 MainHUD.create()
 print("[Client] MainHUD created")
 
+-- Create Inventory UI
+InventoryUI.create()
+print("[Client] InventoryUI created")
+
 -- Request initial player data from server
 local getPlayerDataFunc = getFunction("GetPlayerData")
 if getPlayerDataFunc then
@@ -92,6 +97,7 @@ if getPlayerDataFunc then
   if initialData then
     playerDataCache = initialData
     MainHUD.updateFromPlayerData(initialData)
+    InventoryUI.updateFromPlayerData(initialData)
 
     -- Create initial chicken visuals for placed chickens
     if initialData.placedChickens then
@@ -112,13 +118,15 @@ end
 
 --[[ RemoteEvent Listeners ]]
 
--- PlayerDataChanged: Update local player data cache, HUD, and chicken money indicators
+-- PlayerDataChanged: Update local player data cache, HUD, inventory, and chicken money indicators
 local playerDataChangedEvent = getEvent("PlayerDataChanged")
 if playerDataChangedEvent then
   playerDataChangedEvent.OnClientEvent:Connect(function(data: { [string]: any })
     playerDataCache = data
     -- Update MainHUD with new money data
     MainHUD.updateFromPlayerData(data)
+    -- Update InventoryUI with new inventory data
+    InventoryUI.updateFromPlayerData(data)
 
     -- Update chicken money indicators from placed chickens
     if data.placedChickens then
@@ -499,6 +507,91 @@ ChickenSelling.setGetPlayerData(function()
   return playerDataCache
 end)
 print("[Client] ChickenSelling system initialized")
+
+-- Wire InventoryUI callbacks for item actions (after helper functions are defined)
+InventoryUI.onItemSelected(function(selectedItem)
+  if selectedItem then
+    print("[Client] Inventory item selected:", selectedItem.itemType, selectedItem.itemId)
+  else
+    print("[Client] Inventory selection cleared")
+  end
+end)
+
+InventoryUI.onAction(function(actionType: string, selectedItem)
+  print("[Client] Inventory action:", actionType, selectedItem.itemType, selectedItem.itemId)
+
+  if selectedItem.itemType == "egg" then
+    if actionType == "hatch" then
+      -- Hatch egg via server
+      local hatchEggFunc = getFunction("HatchEgg")
+      if hatchEggFunc then
+        local result = hatchEggFunc:InvokeServer(selectedItem.itemId)
+        if result and result.success then
+          SoundEffects.playEggHatch(result.rarity or "Common")
+          InventoryUI.clearSelection()
+        else
+          SoundEffects.play("uiError")
+          warn("[Client] Hatch failed:", result and result.error or "Unknown error")
+        end
+      end
+    elseif actionType == "sell" then
+      -- Sell egg via server
+      local sellEggFunc = getFunction("SellEgg")
+      if sellEggFunc then
+        local result = sellEggFunc:InvokeServer(selectedItem.itemId)
+        if result and result.success then
+          SoundEffects.playMoneyCollect(result.sellPrice or 0)
+          InventoryUI.clearSelection()
+        else
+          SoundEffects.play("uiError")
+          warn("[Client] Egg sell failed:", result and result.error or "Unknown error")
+        end
+      end
+    end
+  elseif selectedItem.itemType == "chicken" then
+    if actionType == "place" then
+      -- Place chicken from inventory to coop
+      local placeChickenFunc = getFunction("PlaceChicken")
+      if placeChickenFunc then
+        -- Find available spot near player
+        local character = localPlayer.Character
+        if character then
+          local rootPart = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+          if rootPart then
+            local spotIndex = findNearbyAvailableSpot(rootPart.Position)
+            if spotIndex then
+              local result = placeChickenFunc:InvokeServer(selectedItem.itemId, spotIndex)
+              if result and result.success then
+                SoundEffects.play("chickenPlace")
+                InventoryUI.clearSelection()
+              else
+                SoundEffects.play("uiError")
+                warn("[Client] Place failed:", result and result.error or "Unknown error")
+              end
+            else
+              SoundEffects.play("uiError")
+              warn("[Client] No available spot nearby")
+            end
+          end
+        end
+      end
+    elseif actionType == "sell" then
+      -- Sell chicken from inventory via server
+      local sellChickenFunc = getFunction("SellChicken")
+      if sellChickenFunc then
+        local result = sellChickenFunc:InvokeServer(selectedItem.itemId, true) -- true = from inventory
+        if result and result.success then
+          SoundEffects.playMoneyCollect(result.sellPrice or 0)
+          InventoryUI.clearSelection()
+        else
+          SoundEffects.play("uiError")
+          warn("[Client] Sell failed:", result and result.error or "Unknown error")
+        end
+      end
+    end
+  end
+end)
+print("[Client] InventoryUI callbacks wired")
 
 --[[
 	Updates lock timer display on the HUD if player has an active lock.

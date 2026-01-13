@@ -638,7 +638,7 @@
       "category": "Client-UI",
       "title": "Wire Up Inventory UI",
       "description": "Initialize InventoryUI module and connect to player data.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Require InventoryUI module",
