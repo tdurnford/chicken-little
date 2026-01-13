@@ -203,3 +203,18 @@
 - Integrates with PredatorConfig for type validation and spawn weights
 - Format check and build pass
 - Next: Work Item #20 (Predator Attack Behavior) or #24 (Baseball Bat Combat) are good follow-ups
+[2026-01-13] Completed Work Item #20: Implement Predator Attack Behavior
+- Created src/shared/PredatorAttack.lua module
+- Implemented hasReachedCoop() for coop detection based on approach time (5 seconds)
+- Created executeAttack() - removes chickens from coop, calculates value lost, handles predator escape
+- selectChickensForAttack() randomly selects chickens based on predator's chickensPerAttack config
+- Predator resistance from upgrades can block attacks (random roll against resistance value)
+- updatePredatorStates() transitions spawning -> approaching -> attacking based on time
+- generateAlert() creates AlertInfo for UI notifications (approaching, attacking, escaped, defeated, caught)
+- checkDefenses() evaluates player's trap and bat availability
+- getThreateningPredators() and getThreatSummary() for UI threat display
+- calculatePotentialDamage() estimates total chickens at risk from active threats
+- shouldForceEscape() handles edge cases (no chickens left, no attacks remaining)
+- Type exports: AttackResult, AlertInfo, DefenseCheckResult
+- Format check and build pass
+- Next: Work Item #24 (Baseball Bat Combat) or #25 (Cage Locking System) build on this foundation

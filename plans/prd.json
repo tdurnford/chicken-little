@@ -511,7 +511,7 @@
       "category": "Predators",
       "title": "Implement Predator Attack Behavior",
       "description": "Create predator AI that attacks chickens if not stopped.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Implement predator reach coop detection",
         "Create attack animation",
@@ -529,7 +529,9 @@
         "Test predator attack sequence",
         "Test chicken loss",
         "Test alert system"
-      ]
+      ],
+      "status": "completed",
+      "completedDate": "2026-01-13"
     },
     {
       "id": 21,
