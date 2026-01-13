@@ -464,6 +464,85 @@ if swingBatFunc then
   end
 end
 
+-- Setup ClaimRandomChicken RemoteFunction handler
+local claimRandomChickenFunc = RemoteSetup.getFunction("ClaimRandomChicken")
+if claimRandomChickenFunc then
+  claimRandomChickenFunc.OnServerInvoke = function(player: Player)
+    local userId = player.UserId
+    local playerData = DataPersistence.getData(userId)
+    if not playerData then
+      return { success = false, message = "Player data not found" }
+    end
+
+    -- Get player position
+    local character = player.Character
+    if not character then
+      return { success = false, message = "No character" }
+    end
+    local rootPart = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+    if not rootPart then
+      return { success = false, message = "No HumanoidRootPart" }
+    end
+    local position = rootPart.Position
+    local playerPosition: RandomChickenSpawn.Vector3 = {
+      x = position.X,
+      y = position.Y,
+      z = position.Z,
+    }
+
+    -- Attempt to claim the chicken
+    local currentTime = os.time()
+    local playerId = tostring(userId)
+    local result = RandomChickenSpawn.claimChicken(
+      randomChickenSpawnState,
+      playerId,
+      playerPosition,
+      currentTime
+    )
+
+    if result.success and result.chicken then
+      -- Add chicken to player's inventory
+      local chickenData: PlayerData.ChickenData = {
+        id = PlayerData.generateId(),
+        chickenType = result.chicken.chickenType,
+        rarity = result.chicken.rarity,
+        accumulatedMoney = 0,
+        lastEggTime = currentTime,
+        spotIndex = nil, -- In inventory, not placed
+      }
+      table.insert(playerData.inventory.chickens, chickenData)
+
+      -- Fire RandomChickenClaimed event to all clients
+      local randomChickenClaimedEvent = RemoteSetup.getEvent("RandomChickenClaimed")
+      if randomChickenClaimedEvent then
+        randomChickenClaimedEvent:FireAllClients(result.chicken.id, player)
+      end
+
+      -- Sync player data
+      syncPlayerData(player, playerData, true)
+
+      print(
+        "[Main.server] Player",
+        player.Name,
+        "claimed random chicken:",
+        result.chicken.chickenType,
+        result.chicken.rarity
+      )
+
+      return {
+        success = true,
+        chicken = result.chicken,
+        message = "Chicken claimed!",
+      }
+    else
+      return {
+        success = false,
+        message = result.reason or "Failed to claim chicken",
+      }
+    end
+  end
+end
+
 -- Initialize DataPersistence system (handles player data saving/loading)
 local dataPersistenceStarted = DataPersistence.start()
 if dataPersistenceStarted then

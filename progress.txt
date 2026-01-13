@@ -1083,3 +1083,27 @@
   - Data validation passes for new player data (build succeeds)
 - Format check and build pass
 - Next: Work Items #2, #13, #20 (high priority, #13 now unblocked by #12)
+
+[2026-01-13] Completed Bugfix Work Item #20: Fix Random Chickens Not Collectible
+- Added ClaimRandomChicken RemoteFunction handler to Main.server.lua:
+  - Gets player position from character HumanoidRootPart
+  - Validates proximity using RandomChickenSpawn.claimChicken()
+  - Creates ChickenData and adds to player's inventory.chickens
+  - Fires RandomChickenClaimed event to all clients
+  - Syncs player data after successful claim
+- Added client-side random chicken claiming to Main.client.lua:
+  - Created findNearbyRandomChicken() helper to detect random chickens (spotIndex = nil)
+  - Added RANDOM_CHICKEN_CLAIM_RANGE (8 studs) matching server-side claim range
+  - Created random chicken claim prompt UI (green-styled frame)
+  - Added showRandomChickenPrompt() and hideRandomChickenPrompt() functions
+  - Updated updateProximityPrompts() to detect and show prompt for nearby random chickens
+  - Added E key handler for claiming random chickens via ClaimRandomChicken RemoteFunction
+  - Updated RandomChickenClaimed event handler to destroy chicken visual after claim
+- Acceptance criteria met:
+  - Players see '[E] Claim <type>' prompt near random chickens (via updateProximityPrompts)
+  - Pressing E claims the chicken (via ClaimRandomChicken handler)
+  - Claimed chicken appears in player inventory (added to inventory.chickens)
+  - Chicken despawns from arena after claim (ChickenVisuals.destroy on RandomChickenClaimed)
+  - Only one player can claim each chicken (server-side mutex via claimChicken)
+- Format check and build pass
+- Next: Work Items #2, #13, #21 (high priority items)
