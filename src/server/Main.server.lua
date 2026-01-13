@@ -18,6 +18,7 @@ local PredatorConfig = require(Shared:WaitForChild("PredatorConfig"))
 local CageLocking = require(Shared:WaitForChild("CageLocking"))
 local ChickenStealing = require(Shared:WaitForChild("ChickenStealing"))
 local RandomChickenSpawn = require(Shared:WaitForChild("RandomChickenSpawn"))
+local BaseballBat = require(Shared:WaitForChild("BaseballBat"))
 
 -- Store module for buy/sell operations
 local Store = require(Shared:WaitForChild("Store"))
@@ -49,6 +50,7 @@ type PlayerGameState = {
   spawnState: PredatorSpawning.SpawnState,
   lockState: CageLocking.LockState,
   stealState: ChickenStealing.StealState,
+  batState: BaseballBat.BatState,
 }
 local playerGameStates: { [number]: PlayerGameState } = {}
 
@@ -99,7 +101,7 @@ if getPlayerDataFunc then
     local userId = player.UserId
     local playerId = tostring(userId)
     local data = DataPersistence.getData(userId)
-    
+
     -- Ensure section index is included from mapState
     if data and not data.sectionIndex then
       local sectionIndex = MapGeneration.getPlayerSection(mapState, playerId)
@@ -107,7 +109,7 @@ if getPlayerDataFunc then
         data.sectionIndex = sectionIndex
       end
     end
-    
+
     return data
   end
 end
@@ -288,13 +290,13 @@ if hatchEggFunc then
             break
           end
         end
-        
+
         if chickenIndex then
           -- Remove from inventory and add to placed chickens
           local chicken = table.remove(playerData.inventory.chickens, chickenIndex)
           chicken.spotIndex = spotIndex
           table.insert(playerData.placedChickens, chicken)
-          
+
           -- Fire ChickenPlaced event
           local chickenPlacedEvent = RemoteSetup.getEvent("ChickenPlaced")
           if chickenPlacedEvent then
@@ -305,7 +307,7 @@ if hatchEggFunc then
           end
         end
       end
-      
+
       -- Fire EggHatched event to player with result
       local eggHatchedEvent = RemoteSetup.getEvent("EggHatched")
       if eggHatchedEvent then
@@ -366,6 +368,102 @@ if collectMoneyFunc then
   end
 end
 
+--[[
+  Combat Server Handlers
+  Handles SwingBat RemoteFunction and BatEquipped RemoteEvent.
+  Validates swing conditions and applies damage to predators/knockback to players.
+]]
+
+-- SwingBat RemoteFunction handler
+-- Parameters: targetType ("predator" | "player" | nil), targetId (optional)
+local swingBatFunc = RemoteSetup.getFunction("SwingBat")
+if swingBatFunc then
+  swingBatFunc.OnServerInvoke = function(
+    player: Player,
+    action: string,
+    targetType: string?,
+    targetId: string?
+  )
+    local userId = player.UserId
+    local gameState = getPlayerGameState(userId)
+    local batState = gameState.batState
+    local currentTime = os.clock()
+
+    -- Handle equip/unequip actions
+    if action == "equip" then
+      local equipped = BaseballBat.equip(batState)
+      if equipped then
+        -- Broadcast to all clients that this player equipped bat
+        local batEquippedEvent = RemoteSetup.getEvent("BatEquipped")
+        if batEquippedEvent then
+          batEquippedEvent:FireAllClients(player, true)
+        end
+      end
+      return { success = equipped, isEquipped = batState.isEquipped }
+    elseif action == "unequip" then
+      local unequipped = BaseballBat.unequip(batState)
+      if unequipped then
+        -- Broadcast to all clients that this player unequipped bat
+        local batEquippedEvent = RemoteSetup.getEvent("BatEquipped")
+        if batEquippedEvent then
+          batEquippedEvent:FireAllClients(player, false)
+        end
+      end
+      return { success = unequipped, isEquipped = batState.isEquipped }
+    elseif action == "toggle" then
+      local isNowEquipped = BaseballBat.toggle(batState)
+      -- Broadcast to all clients
+      local batEquippedEvent = RemoteSetup.getEvent("BatEquipped")
+      if batEquippedEvent then
+        batEquippedEvent:FireAllClients(player, isNowEquipped)
+      end
+      return { success = true, isEquipped = isNowEquipped }
+    elseif action == "swing" then
+      -- Check if bat is equipped
+      if not batState.isEquipped then
+        return { success = false, message = "Bat not equipped" }
+      end
+
+      -- Handle predator swing
+      if targetType == "predator" and targetId then
+        local playerData = DataPersistence.getData(userId)
+        if not playerData then
+          return { success = false, message = "Player data not found" }
+        end
+
+        local result =
+          BaseballBat.hitPredator(batState, gameState.spawnState, targetId, currentTime)
+        if result.success and result.defeated then
+          -- Award money for defeating predator
+          playerData.money = (playerData.money or 0) + result.rewardMoney
+
+          -- Fire PredatorDefeated event
+          local predatorDefeatedEvent = RemoteSetup.getEvent("PredatorDefeated")
+          if predatorDefeatedEvent then
+            predatorDefeatedEvent:FireClient(player, targetId, true)
+          end
+
+          syncPlayerData(player, playerData, true)
+        end
+        return result
+
+        -- Handle player swing (knockback)
+      elseif targetType == "player" and targetId then
+        local result = BaseballBat.hitPlayer(batState, targetId, currentTime)
+        -- Note: Actual knockback physics handled on client
+        return result
+
+        -- Handle miss (swing at nothing)
+      else
+        local result = BaseballBat.swingMiss(batState, currentTime)
+        return result
+      end
+    end
+
+    return { success = false, message = "Invalid action" }
+  end
+end
+
 -- Initialize DataPersistence system (handles player data saving/loading)
 local dataPersistenceStarted = DataPersistence.start()
 if dataPersistenceStarted then
@@ -390,6 +488,7 @@ local function createPlayerGameState(): PlayerGameState
     spawnState = PredatorSpawning.createSpawnState(),
     lockState = CageLocking.createLockState(),
     stealState = ChickenStealing.createStealState(),
+    batState = BaseballBat.createBatState(),
   }
 end
 
@@ -680,7 +779,7 @@ local function runGameLoop(deltaTime: number)
           -- Get threat level from config
           local predatorConfig = PredatorConfig.get(predator.predatorType)
           local threatLevel = predatorConfig and predatorConfig.threatLevel or "Minor"
-          
+
           -- Generate spawn position near player's section edge
           local sectionCenter = MapGeneration.getSectionPosition(playerData.sectionIndex or 1)
           local spawnPosition = Vector3.new(
@@ -688,9 +787,10 @@ local function runGameLoop(deltaTime: number)
             sectionCenter.y + 1,
             sectionCenter.z + (math.random() - 0.5) * 20
           )
-          
+
           -- Send predator data in the format the client expects
-          predatorSpawnedEvent:FireClient(player, 
+          predatorSpawnedEvent:FireClient(
+            player,
             predator.id,
             predator.predatorType,
             threatLevel,
@@ -709,7 +809,7 @@ local function runGameLoop(deltaTime: number)
         PredatorAttack.executeAttack(playerData, gameState.spawnState, predatorId)
       if attackResult.success and attackResult.chickensLost > 0 then
         dataChanged = true
-        
+
         -- Notify client to remove chicken visuals for killed chickens
         local chickenPickedUpEvent = RemoteSetup.getEvent("ChickenPickedUp")
         if chickenPickedUpEvent and attackResult.chickenIds then
@@ -721,7 +821,7 @@ local function runGameLoop(deltaTime: number)
             })
           end
         end
-        
+
         -- Notify player of attack
         local alertEvent = RemoteSetup.getEvent("AlertTriggered")
         if alertEvent then

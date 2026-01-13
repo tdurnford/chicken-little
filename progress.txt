@@ -1043,3 +1043,27 @@
   - Store UI can be closed with X button or pressing E again (toggle behavior)
 - Format check and build pass
 - Next: Work Items #2, #8, #12, #20 (other critical priority items)
+
+[2026-01-13] Completed Work Item #8: Fix Baseball Bat Equipping Not Working
+- Added BatEquipped RemoteEvent to RemoteSetup.lua for broadcasting equip state
+- Added BaseballBat module require to Main.server.lua
+- Added batState to PlayerGameState type for per-player bat tracking
+- Implemented SwingBat RemoteFunction handler with actions: equip, unequip, toggle, swing
+- Handler supports predator targeting, player knockback, and miss swings
+- Added BaseballBat module require to Main.client.lua
+- Added localBatState for client-side bat tracking
+- Created createBatVisual() function that creates a procedural bat model
+- Created removeBatVisual() function for cleanup
+- Created playBatSwingAnimation() for swing feedback
+- Created toggleBatEquip() function wired to Q key
+- Created findNearbyPredator() helper to find targets within range
+- Created swingBat() function wired to left mouse click
+- Added BatEquipped event listener for other players' bat state
+- Acceptance criteria met:
+  - Pressing Q key equips/unequips the baseball bat
+  - Bat model appears in player's hands when equipped
+  - Left clicking with bat equipped triggers swing
+  - Predators within range are damaged on swing
+  - Sound effects play on equip, swing, hit, and miss
+- Format check and build pass
+- Next: Work Items #2, #12, #20 (critical priority items)

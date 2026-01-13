@@ -29,12 +29,16 @@ local StoreUI = require(ClientModules:WaitForChild("StoreUI"))
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local MapGeneration = require(Shared:WaitForChild("MapGeneration"))
 local PlayerSection = require(Shared:WaitForChild("PlayerSection"))
+local BaseballBat = require(Shared:WaitForChild("BaseballBat"))
 
 -- Local player reference
 local localPlayer = Players.LocalPlayer
 
 -- Local state cache for player data
 local playerDataCache: { [string]: any } = {}
+
+-- Local bat state for client-side tracking
+local localBatState = BaseballBat.createBatState()
 
 -- Wait for Remotes folder from server
 local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
@@ -790,6 +794,238 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
   end
 end)
 print("[Client] Inventory toggle key binding (I) set up")
+
+--[[
+  Baseball Bat Visual Management
+  Creates and manages the visual bat model on the player's character.
+]]
+
+-- Current bat model reference
+local batModel: Model? = nil
+
+-- Create a simple bat visual attached to the player's right hand
+local function createBatVisual()
+  local character = localPlayer.Character
+  if not character then
+    return
+  end
+
+  local rightHand = character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm")
+  if not rightHand then
+    return
+  end
+
+  -- Remove existing bat if any
+  if batModel then
+    batModel:Destroy()
+    batModel = nil
+  end
+
+  -- Create a simple bat model (cylinder + handle)
+  local bat = Instance.new("Model")
+  bat.Name = "BaseballBat"
+
+  -- Bat barrel (main part)
+  local barrel = Instance.new("Part")
+  barrel.Name = "Barrel"
+  barrel.Size = Vector3.new(0.4, 2.5, 0.4)
+  barrel.BrickColor = BrickColor.new("Brown")
+  barrel.Material = Enum.Material.Wood
+  barrel.CanCollide = false
+  barrel.Anchored = false
+  barrel.Parent = bat
+
+  -- Bat handle
+  local handle = Instance.new("Part")
+  handle.Name = "Handle"
+  handle.Size = Vector3.new(0.25, 1.0, 0.25)
+  handle.BrickColor = BrickColor.new("Dark orange")
+  handle.Material = Enum.Material.Wood
+  handle.CanCollide = false
+  handle.Anchored = false
+  handle.Parent = bat
+
+  -- Weld handle to barrel
+  local handleWeld = Instance.new("Weld")
+  handleWeld.Part0 = barrel
+  handleWeld.Part1 = handle
+  handleWeld.C0 = CFrame.new(0, -1.75, 0)
+  handleWeld.Parent = barrel
+
+  -- Weld bat to right hand
+  local handWeld = Instance.new("Weld")
+  handWeld.Part0 = rightHand
+  handWeld.Part1 = barrel
+  handWeld.C0 = CFrame.new(0, -0.5, 0) * CFrame.Angles(math.rad(90), 0, math.rad(90))
+  handWeld.Parent = rightHand
+
+  bat.PrimaryPart = barrel
+  bat.Parent = character
+
+  batModel = bat
+  print("[Client] Bat visual created")
+end
+
+-- Remove the bat visual from the player
+local function removeBatVisual()
+  if batModel then
+    batModel:Destroy()
+    batModel = nil
+    print("[Client] Bat visual removed")
+  end
+end
+
+-- Play bat swing animation (visual only)
+local function playBatSwingAnimation()
+  -- For now, just play a sound effect
+  -- A full implementation would animate the character's arm
+  SoundEffects.playBatSwing("miss") -- Initial swing sound (before we know if we hit)
+end
+
+--[[
+  Bat Equipment and Swing Handlers
+  Handles Q key for equip toggle and left mouse button for swinging.
+]]
+
+-- Toggle bat equip when Q is pressed
+local function toggleBatEquip()
+  local swingBatFunc = getFunction("SwingBat")
+  if not swingBatFunc then
+    warn("[Client] SwingBat RemoteFunction not found")
+    return
+  end
+
+  local result = swingBatFunc:InvokeServer("toggle")
+  if result and result.success then
+    localBatState.isEquipped = result.isEquipped
+    if result.isEquipped then
+      createBatVisual()
+      SoundEffects.playBatSwing("swing") -- Use bat swing sound for equip
+    else
+      removeBatVisual()
+      SoundEffects.playBatSwing("miss") -- Use miss sound for unequip (softer)
+    end
+    print("[Client] Bat equipped:", result.isEquipped)
+  end
+end
+
+-- Find the nearest predator targeting this player within bat range
+local function findNearbyPredator(): (string?, number?)
+  local character = localPlayer.Character
+  if not character then
+    return nil, nil
+  end
+
+  local rootPart = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+  if not rootPart then
+    return nil, nil
+  end
+
+  local playerPosition = rootPart.Position
+  local batConfig = BaseballBat.getConfig()
+  local bestDistance = batConfig.swingRangeStuds
+  local bestPredatorId: string? = nil
+
+  -- Look for predator models in workspace
+  local predatorsFolder = game.Workspace:FindFirstChild("Predators")
+  if predatorsFolder then
+    for _, predator in ipairs(predatorsFolder:GetChildren()) do
+      if predator:IsA("Model") and predator.PrimaryPart then
+        local distance = (predator.PrimaryPart.Position - playerPosition).Magnitude
+        if distance <= bestDistance then
+          bestDistance = distance
+          bestPredatorId = predator.Name
+        end
+      end
+    end
+  end
+
+  return bestPredatorId, bestDistance
+end
+
+-- Swing the bat when left mouse button is clicked
+local function swingBat()
+  if not localBatState.isEquipped then
+    return
+  end
+
+  local swingBatFunc = getFunction("SwingBat")
+  if not swingBatFunc then
+    warn("[Client] SwingBat RemoteFunction not found")
+    return
+  end
+
+  -- Check if we can swing (client-side cooldown check)
+  local currentTime = os.clock()
+  if not BaseballBat.canSwing(localBatState, currentTime) then
+    return
+  end
+
+  -- Play swing animation immediately for responsiveness
+  playBatSwingAnimation()
+  BaseballBat.performSwing(localBatState, currentTime)
+
+  -- Check for nearby predator targets
+  local predatorId, distance = findNearbyPredator()
+
+  local result
+  if predatorId then
+    result = swingBatFunc:InvokeServer("swing", "predator", predatorId)
+    if result and result.success then
+      if result.defeated then
+        SoundEffects.playBatSwing("predator")
+        print("[Client] Predator defeated! Reward:", result.rewardMoney)
+      else
+        SoundEffects.playBatSwing("hit")
+        print("[Client] Hit predator:", predatorId, "Damage:", result.damage)
+      end
+    end
+  else
+    -- Swing and miss
+    result = swingBatFunc:InvokeServer("swing", nil, nil)
+    if result and result.success then
+      SoundEffects.playBatSwing("miss")
+    end
+  end
+end
+
+-- Setup keyboard input for bat toggle (Q key)
+UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
+  if gameProcessed then
+    return
+  end
+
+  if input.KeyCode == Enum.KeyCode.Q then
+    toggleBatEquip()
+  end
+end)
+print("[Client] Bat toggle key binding (Q) set up")
+
+-- Setup mouse input for bat swing (Left Mouse Button)
+UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
+  if gameProcessed then
+    return
+  end
+
+  if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    swingBat()
+  end
+end)
+print("[Client] Bat swing mouse binding (Left Click) set up")
+
+-- Listen for other players equipping/unequipping bats
+local batEquippedEvent = getEvent("BatEquipped")
+if batEquippedEvent then
+  batEquippedEvent.OnClientEvent:Connect(function(player: Player, isEquipped: boolean)
+    if player == localPlayer then
+      return -- Already handled locally
+    end
+
+    -- For other players, we would create/remove their bat visual here
+    -- This is a simplified version - full implementation would track per-player bat models
+    print("[Client] Player", player.Name, "bat equipped:", isEquipped)
+  end)
+end
 
 --[[
 	Updates lock timer display on the HUD if player has an active lock.
