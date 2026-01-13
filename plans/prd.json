@@ -409,7 +409,7 @@
       "category": "UI",
       "title": "Create Main HUD with Money Display",
       "description": "Design and implement the main UI showing player's current money with proper formatting.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Design HUD layout",
         "Create money display component",

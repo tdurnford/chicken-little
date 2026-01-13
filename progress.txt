@@ -291,3 +291,25 @@
 - Concurrent save prevention with saveInProgress tracking
 - Format check and build pass
 - Next: Work Item #16 (Main HUD) or #10 (Egg Placement) are good candidates for MVP Core Loop
+[2026-01-13] Completed Work Item #16: Create Main HUD with Money Display
+- Created src/client/MainHUD.lua module
+- Type exports: HUDConfig (anchor, position, size, colors, font), HUDState (internal state tracking)
+- create(config?) - Initializes HUD with optional custom configuration
+- destroy() - Cleans up HUD and all connections
+- Money display with coin icon and formatted value using MoneyScaling.formatCurrency()
+- Money per second display showing +$X/s income rate
+- Animation system: flash (green for gains, red for losses), scale bounce on value change
+- Smooth counting animation interpolates between old and new values with ease-out quad
+- setMoney(amount, animate?) - Sets displayed money with optional animation
+- addMoney(amount), subtractMoney(amount) - Convenience functions
+- setMoneyPerSecond(amount) - Updates income rate display
+- getMoney(), getMoneyPerSecond() - Query current values
+- isCreated(), isAnimating() - Status checks
+- setVisible(), isVisible() - Visibility control
+- setPosition(), setSize() - Responsive layout support
+- updateFromPlayerData(playerData, moneyPerSecond?) - Convenience for data sync
+- getScreenGui(), getMainFrame() - Access internal elements for extensions
+- getDefaultConfig() - Returns copy of default configuration
+- HUD positioned center-top with dark semi-transparent background and rounded corners
+- Format check and build pass
+- Next: Work Item #17 (Inventory UI) or #31 (Offline Earnings System) are good candidates
