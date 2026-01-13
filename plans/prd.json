@@ -65,7 +65,7 @@
       "category": "Map",
       "title": "Create Base Player Section Template",
       "description": "Design and build the template for a single player's section of the map including chicken coop area.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Design player section layout in Roblox Studio",
         "Create chicken coop structure with 12 placement spots",
@@ -84,7 +84,9 @@
         "Verify 12 chicken spots exist",
         "Test spot detection for chicken placement",
         "Verify section boundaries work correctly"
-      ]
+      ],
+      "status": "completed",
+      "completedDate": "2026-01-13"
     },
     {
       "id": 4,
