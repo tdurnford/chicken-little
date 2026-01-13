@@ -577,3 +577,24 @@
 - Query functions: getSoundNames(), getSoundsByCategory(), getCategories(), getSummary()
 - Format check and build pass
 - Next: Work Items #35-37 (Visual), #39 (Balancing), #40 (Testing)
+[2026-01-13] Completed Work Item #40: Create Integration Test Suite
+- Created src/shared/IntegrationTests.lua module
+- Type exports: TestResult, TestSuiteResult
+- Test framework: test() function for registering tests, assertion helpers
+- Assertion helpers: assert_eq, assert_true, assert_false, assert_not_nil, assert_nil, assert_gt, assert_gte
+- PlayerData tests: createDefault, starter egg, validation (invalid money, rarity), clone, tutorialComplete
+- ChickenConfig tests: all types valid, money scales exponentially, all rarities have chickens, calculateEarnings
+- EggConfig tests: probabilities sum to 100%, eggs have 3 outcomes, prices scale, selectHatchOutcome returns valid chicken
+- EggHatching tests: hatch consumes egg, hatch fails for missing egg, celebration tiers ordered, probability distribution
+- Store tests: buy egg success/fail, invalid egg type, sell chicken gives money
+- TradeExchange tests: create session, get session by ID, get player session
+- TrapConfig tests: all trap types valid, higher tiers have better effectiveness
+- PredatorConfig tests: all predator types valid with positive damage
+- OfflineEarnings tests: calculates earnings, respects cap
+- CageUpgrades tests: upgrade tiers valid, can afford upgrade
+- RandomChickenSpawn tests: creates valid spawn state, spawn interval reasonable
+- Integration tests: full egg buy/hatch flow, chicken placement/money collection, data remains valid
+- Test runner: runAllTests() returns TestSuiteResult, runAndPrint() for console output
+- Query functions: getTestCount(), getTestNames()
+- Format check and build pass
+- Next: Work Items #35-37 (Visual), #39 (Balancing)
