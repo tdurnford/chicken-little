@@ -76,7 +76,7 @@
       "category": "Server-Gameplay",
       "title": "Wire Up Chicken Placement Server Handlers",
       "description": "Connect RemoteFunctions for chicken placement operations to ChickenPlacement module.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Require ChickenPlacement module",

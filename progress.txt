@@ -811,3 +811,24 @@
   - Player data updates after transactions (via syncPlayerData with forceSync)
 - Format check and build pass
 - Next: Work Items #4-8 (high priority chicken/egg handlers), or #40 (Store UI)
+
+[2026-01-13] Completed Work Item #4: Wire Up Chicken Placement Server Handlers
+- Updated src/server/Main.server.lua to require ChickenPlacement module
+- Wired PlaceChicken RemoteFunction handler:
+  - Validates player data exists
+  - Calls ChickenPlacement.placeChicken() with chickenId and spotIndex
+  - Fires ChickenPlaced event to all clients with playerId, chicken, and spotIndex
+  - Syncs player data on success
+- Wired PickupChicken RemoteFunction handler:
+  - Validates player data exists
+  - Gets spotIndex before pickup for the event
+  - Calls ChickenPlacement.pickupChicken() with chickenId
+  - Fires ChickenPickedUp event to all clients with playerId, chickenId, and spotIndex
+  - Syncs player data on success
+- Acceptance criteria met:
+  - Players can place chickens from inventory via RemoteFunction
+  - Players can pickup their own chickens
+  - Placement validates spot availability (via ChickenPlacement module)
+  - All clients receive placement updates (via FireAllClients)
+- Format check and build pass
+- Next: Work Items #5-8 (egg hatching, money collection, chicken money generation, egg laying) - all high priority

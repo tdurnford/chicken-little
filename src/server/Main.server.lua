@@ -22,6 +22,9 @@ local RandomChickenSpawn = require(Shared:WaitForChild("RandomChickenSpawn"))
 -- Store module for buy/sell operations
 local Store = require(Shared:WaitForChild("Store"))
 
+-- Chicken placement module
+local ChickenPlacement = require(Shared:WaitForChild("ChickenPlacement"))
+
 -- Player Data Sync Configuration
 local DATA_SYNC_THROTTLE_INTERVAL = 0.1 -- Minimum seconds between data updates per player
 local lastDataSyncTime: { [number]: number } = {} -- Tracks last sync time per player
@@ -162,6 +165,70 @@ if sellPredatorFunc then
 
     local result = Store.sellPredator(playerData, trapId)
     if result.success then
+      syncPlayerData(player, playerData, true)
+    end
+    return result
+  end
+end
+
+--[[
+  Chicken Placement Server Handlers
+  Handles PlaceChicken and PickupChicken RemoteFunctions.
+  All operations validate player data and fire events to update clients.
+]]
+
+-- PlaceChicken RemoteFunction handler
+local placeChickenFunc = RemoteSetup.getFunction("PlaceChicken")
+if placeChickenFunc then
+  placeChickenFunc.OnServerInvoke = function(player: Player, chickenId: string, spotIndex: number)
+    local userId = player.UserId
+    local playerData = DataPersistence.getData(userId)
+    if not playerData then
+      return { success = false, message = "Player data not found" }
+    end
+
+    local result = ChickenPlacement.placeChicken(playerData, chickenId, spotIndex)
+    if result.success then
+      -- Fire ChickenPlaced event to all clients so they can update visuals
+      local chickenPlacedEvent = RemoteSetup.getEvent("ChickenPlaced")
+      if chickenPlacedEvent then
+        chickenPlacedEvent:FireAllClients({
+          playerId = userId,
+          chicken = result.chicken,
+          spotIndex = spotIndex,
+        })
+      end
+      syncPlayerData(player, playerData, true)
+    end
+    return result
+  end
+end
+
+-- PickupChicken RemoteFunction handler
+local pickupChickenFunc = RemoteSetup.getFunction("PickupChicken")
+if pickupChickenFunc then
+  pickupChickenFunc.OnServerInvoke = function(player: Player, chickenId: string)
+    local userId = player.UserId
+    local playerData = DataPersistence.getData(userId)
+    if not playerData then
+      return { success = false, message = "Player data not found" }
+    end
+
+    -- Get the spot index before pickup for the event
+    local chicken, _ = ChickenPlacement.findPlacedChicken(playerData, chickenId)
+    local spotIndex = chicken and chicken.spotIndex or nil
+
+    local result = ChickenPlacement.pickupChicken(playerData, chickenId)
+    if result.success then
+      -- Fire ChickenPickedUp event to all clients so they can update visuals
+      local chickenPickedUpEvent = RemoteSetup.getEvent("ChickenPickedUp")
+      if chickenPickedUpEvent then
+        chickenPickedUpEvent:FireAllClients({
+          playerId = userId,
+          chickenId = chickenId,
+          spotIndex = spotIndex,
+        })
+      end
       syncPlayerData(player, playerData, true)
     end
     return result
