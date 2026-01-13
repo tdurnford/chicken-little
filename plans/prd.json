@@ -741,7 +741,9 @@
       "category": "PvP",
       "title": "Implement Random Chicken Spawn Event",
       "description": "Periodically spawn a rare chicken in a neutral area for players to fight over.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
+      "completedDate": "2026-01-13",
       "steps": [
         "Create neutral area on map",
         "Implement spawn timer for events",

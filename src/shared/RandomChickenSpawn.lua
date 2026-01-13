@@ -1,0 +1,505 @@
+--[[
+	RandomChickenSpawn Module
+	Handles periodic spawning of rare chickens in a neutral area
+	for players to compete over. First player to grab the chicken claims it.
+]]
+
+local ChickenConfig = require(script.Parent.ChickenConfig)
+
+local RandomChickenSpawn = {}
+
+-- Constants for spawn events
+local DEFAULT_SPAWN_INTERVAL_MIN = 120 -- 2 minutes minimum between spawns
+local DEFAULT_SPAWN_INTERVAL_MAX = 300 -- 5 minutes maximum between spawns
+local DEFAULT_DESPAWN_TIME = 30 -- seconds before unclaimed chicken despawns
+local NEUTRAL_ZONE_SIZE = 32 -- studs, size of neutral spawn area
+local CLAIM_RANGE = 8 -- studs, how close player must be to claim
+
+-- Rarity weights for spawn selection (higher = more common in events)
+local SPAWN_RARITY_WEIGHTS: { [ChickenConfig.Rarity]: number } = {
+  Common = 0, -- Common chickens don't spawn in events
+  Uncommon = 5,
+  Rare = 30,
+  Epic = 40,
+  Legendary = 20,
+  Mythic = 5,
+}
+
+-- Type definitions
+export type Vector3 = {
+  x: number,
+  y: number,
+  z: number,
+}
+
+export type SpawnConfig = {
+  spawnIntervalMin: number,
+  spawnIntervalMax: number,
+  despawnTime: number,
+  neutralZoneCenter: Vector3,
+  neutralZoneSize: number,
+  claimRange: number,
+}
+
+export type SpawnedChicken = {
+  id: string,
+  chickenType: string,
+  rarity: ChickenConfig.Rarity,
+  position: Vector3,
+  spawnedAt: number,
+  despawnAt: number,
+}
+
+export type SpawnEventState = {
+  config: SpawnConfig,
+  currentChicken: SpawnedChicken?,
+  nextSpawnTime: number,
+  lastSpawnTime: number,
+  totalSpawns: number,
+  totalClaims: number,
+  isActive: boolean,
+}
+
+export type ClaimResult = {
+  success: boolean,
+  chicken: SpawnedChicken?,
+  claimedBy: string?,
+  reason: string?,
+}
+
+export type SpawnResult = {
+  success: boolean,
+  chicken: SpawnedChicken?,
+  reason: string?,
+}
+
+-- Get default spawn configuration
+function RandomChickenSpawn.getDefaultConfig(): SpawnConfig
+  return {
+    spawnIntervalMin = DEFAULT_SPAWN_INTERVAL_MIN,
+    spawnIntervalMax = DEFAULT_SPAWN_INTERVAL_MAX,
+    despawnTime = DEFAULT_DESPAWN_TIME,
+    neutralZoneCenter = { x = 0, y = 0, z = 0 },
+    neutralZoneSize = NEUTRAL_ZONE_SIZE,
+    claimRange = CLAIM_RANGE,
+  }
+end
+
+-- Generate a unique ID for spawned chickens
+local function generateSpawnId(): string
+  return "spawn_" .. tostring(os.time()) .. "_" .. tostring(math.random(1000, 9999))
+end
+
+-- Calculate distance between two positions
+local function getDistance(pos1: Vector3, pos2: Vector3): number
+  local dx = pos2.x - pos1.x
+  local dy = pos2.y - pos1.y
+  local dz = pos2.z - pos1.z
+  return math.sqrt(dx * dx + dy * dy + dz * dz)
+end
+
+-- Calculate next spawn time based on config
+local function calculateNextSpawnTime(config: SpawnConfig, currentTime: number): number
+  local interval = config.spawnIntervalMin
+    + math.random() * (config.spawnIntervalMax - config.spawnIntervalMin)
+  return currentTime + interval
+end
+
+-- Get random position within neutral zone
+function RandomChickenSpawn.getRandomSpawnPosition(config: SpawnConfig): Vector3
+  local halfSize = config.neutralZoneSize / 2
+  return {
+    x = config.neutralZoneCenter.x + (math.random() - 0.5) * halfSize * 2,
+    y = config.neutralZoneCenter.y,
+    z = config.neutralZoneCenter.z + (math.random() - 0.5) * halfSize * 2,
+  }
+end
+
+-- Select a random chicken type based on rarity weights
+function RandomChickenSpawn.selectRandomChickenType(): string?
+  -- Calculate total weight
+  local totalWeight = 0
+  for _, weight in pairs(SPAWN_RARITY_WEIGHTS) do
+    totalWeight = totalWeight + weight
+  end
+
+  if totalWeight == 0 then
+    return nil
+  end
+
+  -- Roll random value
+  local roll = math.random() * totalWeight
+  local currentWeight = 0
+
+  -- Find which rarity was selected
+  local selectedRarity: ChickenConfig.Rarity?
+  for rarity, weight in pairs(SPAWN_RARITY_WEIGHTS) do
+    currentWeight = currentWeight + weight
+    if roll <= currentWeight and weight > 0 then
+      selectedRarity = rarity :: ChickenConfig.Rarity
+      break
+    end
+  end
+
+  if not selectedRarity then
+    return nil
+  end
+
+  -- Get all chicken types of that rarity
+  local chickensOfRarity = ChickenConfig.getByRarity(selectedRarity)
+  if #chickensOfRarity == 0 then
+    return nil
+  end
+
+  -- Select random chicken from that rarity
+  local randomIndex = math.random(1, #chickensOfRarity)
+  return chickensOfRarity[randomIndex].name
+end
+
+-- Create initial spawn event state
+function RandomChickenSpawn.createSpawnState(
+  config: SpawnConfig?,
+  currentTime: number
+): SpawnEventState
+  local cfg = config or RandomChickenSpawn.getDefaultConfig()
+  return {
+    config = cfg,
+    currentChicken = nil,
+    nextSpawnTime = calculateNextSpawnTime(cfg, currentTime),
+    lastSpawnTime = 0,
+    totalSpawns = 0,
+    totalClaims = 0,
+    isActive = true,
+  }
+end
+
+-- Spawn a new chicken in the neutral zone
+function RandomChickenSpawn.spawnChicken(state: SpawnEventState, currentTime: number): SpawnResult
+  -- Check if there's already a chicken
+  if state.currentChicken then
+    return {
+      success = false,
+      chicken = nil,
+      reason = "A chicken is already spawned",
+    }
+  end
+
+  -- Select chicken type
+  local chickenType = RandomChickenSpawn.selectRandomChickenType()
+  if not chickenType then
+    return {
+      success = false,
+      chicken = nil,
+      reason = "Failed to select chicken type",
+    }
+  end
+
+  local chickenConfig = ChickenConfig.get(chickenType)
+  if not chickenConfig then
+    return {
+      success = false,
+      chicken = nil,
+      reason = "Invalid chicken configuration",
+    }
+  end
+
+  -- Create spawned chicken
+  local position = RandomChickenSpawn.getRandomSpawnPosition(state.config)
+  local spawnedChicken: SpawnedChicken = {
+    id = generateSpawnId(),
+    chickenType = chickenType,
+    rarity = chickenConfig.rarity,
+    position = position,
+    spawnedAt = currentTime,
+    despawnAt = currentTime + state.config.despawnTime,
+  }
+
+  -- Update state
+  state.currentChicken = spawnedChicken
+  state.lastSpawnTime = currentTime
+  state.totalSpawns = state.totalSpawns + 1
+  state.nextSpawnTime = calculateNextSpawnTime(state.config, currentTime)
+
+  return {
+    success = true,
+    chicken = spawnedChicken,
+    reason = nil,
+  }
+end
+
+-- Check if it's time to spawn a new chicken
+function RandomChickenSpawn.shouldSpawn(state: SpawnEventState, currentTime: number): boolean
+  if not state.isActive then
+    return false
+  end
+  if state.currentChicken then
+    return false
+  end
+  return currentTime >= state.nextSpawnTime
+end
+
+-- Check if current chicken should despawn
+function RandomChickenSpawn.shouldDespawn(state: SpawnEventState, currentTime: number): boolean
+  if not state.currentChicken then
+    return false
+  end
+  return currentTime >= state.currentChicken.despawnAt
+end
+
+-- Despawn current chicken (timeout)
+function RandomChickenSpawn.despawnChicken(state: SpawnEventState): SpawnedChicken?
+  local chicken = state.currentChicken
+  state.currentChicken = nil
+  return chicken
+end
+
+-- Check if a player can claim the current chicken
+function RandomChickenSpawn.canClaimChicken(
+  state: SpawnEventState,
+  playerPosition: Vector3,
+  currentTime: number
+): boolean
+  if not state.currentChicken then
+    return false
+  end
+
+  -- Check if chicken hasn't despawned
+  if currentTime >= state.currentChicken.despawnAt then
+    return false
+  end
+
+  -- Check distance
+  local distance = getDistance(playerPosition, state.currentChicken.position)
+  return distance <= state.config.claimRange
+end
+
+-- Attempt to claim the current chicken
+function RandomChickenSpawn.claimChicken(
+  state: SpawnEventState,
+  playerId: string,
+  playerPosition: Vector3,
+  currentTime: number
+): ClaimResult
+  -- Validate chicken exists
+  if not state.currentChicken then
+    return {
+      success = false,
+      chicken = nil,
+      claimedBy = nil,
+      reason = "No chicken available to claim",
+    }
+  end
+
+  -- Check if chicken has despawned
+  if currentTime >= state.currentChicken.despawnAt then
+    state.currentChicken = nil
+    return {
+      success = false,
+      chicken = nil,
+      claimedBy = nil,
+      reason = "Chicken has despawned",
+    }
+  end
+
+  -- Check distance
+  local distance = getDistance(playerPosition, state.currentChicken.position)
+  if distance > state.config.claimRange then
+    return {
+      success = false,
+      chicken = nil,
+      claimedBy = nil,
+      reason = string.format(
+        "Too far from chicken (%.1f studs, need %.1f)",
+        distance,
+        state.config.claimRange
+      ),
+    }
+  end
+
+  -- Claim successful
+  local claimedChicken = state.currentChicken
+  state.currentChicken = nil
+  state.totalClaims = state.totalClaims + 1
+
+  return {
+    success = true,
+    chicken = claimedChicken,
+    claimedBy = playerId,
+    reason = nil,
+  }
+end
+
+-- Update spawn state (call each frame/tick)
+function RandomChickenSpawn.update(state: SpawnEventState, currentTime: number): SpawnResult?
+  if not state.isActive then
+    return nil
+  end
+
+  -- Check for despawn
+  if RandomChickenSpawn.shouldDespawn(state, currentTime) then
+    RandomChickenSpawn.despawnChicken(state)
+    -- Schedule next spawn
+    state.nextSpawnTime = calculateNextSpawnTime(state.config, currentTime)
+  end
+
+  -- Check for new spawn
+  if RandomChickenSpawn.shouldSpawn(state, currentTime) then
+    return RandomChickenSpawn.spawnChicken(state, currentTime)
+  end
+
+  return nil
+end
+
+-- Get current chicken if any
+function RandomChickenSpawn.getCurrentChicken(state: SpawnEventState): SpawnedChicken?
+  return state.currentChicken
+end
+
+-- Get time until next spawn
+function RandomChickenSpawn.getTimeUntilNextSpawn(
+  state: SpawnEventState,
+  currentTime: number
+): number
+  if state.currentChicken then
+    -- Include despawn time + next interval
+    return math.max(0, state.currentChicken.despawnAt - currentTime)
+  end
+  return math.max(0, state.nextSpawnTime - currentTime)
+end
+
+-- Get remaining time for current chicken before despawn
+function RandomChickenSpawn.getRemainingClaimTime(
+  state: SpawnEventState,
+  currentTime: number
+): number?
+  if not state.currentChicken then
+    return nil
+  end
+  return math.max(0, state.currentChicken.despawnAt - currentTime)
+end
+
+-- Check if there's an active spawn event
+function RandomChickenSpawn.hasActiveChicken(state: SpawnEventState): boolean
+  return state.currentChicken ~= nil
+end
+
+-- Pause spawn events
+function RandomChickenSpawn.pause(state: SpawnEventState): ()
+  state.isActive = false
+end
+
+-- Resume spawn events
+function RandomChickenSpawn.resume(state: SpawnEventState, currentTime: number): ()
+  state.isActive = true
+  -- Reschedule next spawn if needed
+  if not state.currentChicken and state.nextSpawnTime < currentTime then
+    state.nextSpawnTime = calculateNextSpawnTime(state.config, currentTime)
+  end
+end
+
+-- Reset spawn state
+function RandomChickenSpawn.reset(state: SpawnEventState, currentTime: number): ()
+  state.currentChicken = nil
+  state.nextSpawnTime = calculateNextSpawnTime(state.config, currentTime)
+  state.totalSpawns = 0
+  state.totalClaims = 0
+  state.isActive = true
+end
+
+-- Get spawn statistics
+function RandomChickenSpawn.getStats(
+  state: SpawnEventState
+): { totalSpawns: number, totalClaims: number, claimRate: number }
+  local claimRate = 0
+  if state.totalSpawns > 0 then
+    claimRate = state.totalClaims / state.totalSpawns
+  end
+  return {
+    totalSpawns = state.totalSpawns,
+    totalClaims = state.totalClaims,
+    claimRate = claimRate,
+  }
+end
+
+-- Get announcement text for a spawn event
+function RandomChickenSpawn.getAnnouncementText(chicken: SpawnedChicken): string
+  local config = ChickenConfig.get(chicken.chickenType)
+  local displayName = config and config.displayName or chicken.chickenType
+  return string.format("A %s %s has appeared in the neutral zone!", chicken.rarity, displayName)
+end
+
+-- Get claim prompt text
+function RandomChickenSpawn.getClaimPrompt(state: SpawnEventState, currentTime: number): string?
+  if not state.currentChicken then
+    return nil
+  end
+  local remaining = RandomChickenSpawn.getRemainingClaimTime(state, currentTime) or 0
+  local config = ChickenConfig.get(state.currentChicken.chickenType)
+  local displayName = config and config.displayName or state.currentChicken.chickenType
+  return string.format("[E] Claim %s (%.0fs)", displayName, remaining)
+end
+
+-- Get neutral zone bounds for UI/rendering
+function RandomChickenSpawn.getNeutralZoneBounds(
+  config: SpawnConfig
+): { min: Vector3, max: Vector3 }
+  local halfSize = config.neutralZoneSize / 2
+  return {
+    min = {
+      x = config.neutralZoneCenter.x - halfSize,
+      y = config.neutralZoneCenter.y,
+      z = config.neutralZoneCenter.z - halfSize,
+    },
+    max = {
+      x = config.neutralZoneCenter.x + halfSize,
+      y = config.neutralZoneCenter.y + 10, -- some height for visualization
+      z = config.neutralZoneCenter.z + halfSize,
+    },
+  }
+end
+
+-- Validate spawn state
+function RandomChickenSpawn.validateState(state: SpawnEventState): boolean
+  if type(state) ~= "table" then
+    return false
+  end
+  if type(state.config) ~= "table" then
+    return false
+  end
+  if type(state.nextSpawnTime) ~= "number" then
+    return false
+  end
+  if type(state.lastSpawnTime) ~= "number" then
+    return false
+  end
+  if type(state.totalSpawns) ~= "number" then
+    return false
+  end
+  if type(state.totalClaims) ~= "number" then
+    return false
+  end
+  if type(state.isActive) ~= "boolean" then
+    return false
+  end
+  return true
+end
+
+-- Get summary for debugging
+function RandomChickenSpawn.getSummary(state: SpawnEventState, currentTime: number): string
+  local chickenInfo = "none"
+  if state.currentChicken then
+    local remaining = RandomChickenSpawn.getRemainingClaimTime(state, currentTime) or 0
+    chickenInfo = string.format("%s (%.0fs remaining)", state.currentChicken.chickenType, remaining)
+  end
+  local nextIn = RandomChickenSpawn.getTimeUntilNextSpawn(state, currentTime)
+  return string.format(
+    "RandomChickenSpawn: active=%s, chicken=%s, nextIn=%.0fs, spawns=%d, claims=%d",
+    tostring(state.isActive),
+    chickenInfo,
+    nextIn,
+    state.totalSpawns,
+    state.totalClaims
+  )
+end
+
+return RandomChickenSpawn
