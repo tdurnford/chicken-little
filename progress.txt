@@ -128,3 +128,22 @@
 - Validation: validateAll() checks difficulty range, spawn weight, reward, intervals
 - Format check and build pass
 - Next: Work Item #19 (Predator Spawning) or #21 (Trap Config) build on this foundation
+[2026-01-13] Completed Work Item #21: Create Trap Configuration System
+- Created src/shared/TrapConfig.lua module
+- Defined 12 trap types across 6 tiers (Basic, Improved, Advanced, Expert, Master, Ultimate)
+- Types: WoodenSnare, RopeTrap, MetalCage, SpringTrap, ElectricFence, BearTrap, LaserGrid, SonicEmitter, GravityWell, CryoTrap, QuantumContainment, VoidPrison
+- Prices scale exponentially: 500 -> 2500 -> 12500 -> 62500 -> 312500 -> 1562500
+- Sell price is 40% of purchase price
+- Each tier has: cooldown (120s->30s), durability (5->infinite), effectiveness bonus (0%->75%)
+- Max placement per coop scales inversely with tier (4->4->3->2->2->1)
+- API: get(), getAll(), getByTier(), getTierLevel(), getTierPrice(), isValidType(), getAllTypes(), getTiers()
+- calculateCatchProbability(trapType, predatorType) - core mechanic for trap vs predator matchups
+- getEffectivenessRating() returns 0-5 star rating for trap vs predator
+- canEffectivelyCatch() returns true if catch probability >= 50%
+- getMinimumTierForPredator() finds cheapest tier that can catch a predator
+- getAllSorted(), getAffordableTraps(money), getMaxTotalTraps()
+- validateAll() checks all configurations for errors
+- getStoreInfo() formats trap data for store UI display
+- Integrates with PredatorConfig for catch probability calculations
+- Format check and build pass
+- Next: Work Item #22 (Trap Placement System) or #23 (Trap Catching Mechanic) build on this foundation
