@@ -128,7 +128,7 @@
       "category": "Server-Gameplay",
       "title": "Wire Up Money Collection Server Handlers",
       "description": "Connect money collection system to update player money when collecting from chickens.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Require MoneyCollection module",

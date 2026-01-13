@@ -849,3 +849,18 @@
   - Player receives notification of hatch result (via EggHatched event)
 - Format check and build pass
 - Next: Work Items #6-8 (money collection, chicken money generation, egg laying) - all high priority
+
+[2026-01-13] Completed Work Item #6: Wire Up Money Collection Server Handlers
+- Updated src/server/Main.server.lua to add CollectMoney RemoteFunction handler
+- CollectMoney handler validates player data exists
+- Supports collecting from single chicken (by chickenId) or all chickens (if nil)
+- Uses MoneyCollection.collect() for single chicken, MoneyCollection.collectAll() for all
+- Fires MoneyCollected event to client with amountCollected, newBalance, and message
+- Syncs player data on successful collection with forceSync=true
+- Acceptance criteria met:
+  - Players can collect money from their chickens (single or all)
+  - Money collection applies correct rates (via MoneyCollection module)
+  - Player data money is updated
+  - Client HUD updates with new money amount (via MoneyCollected event)
+- Format check and build pass
+- Next: Work Items #7-8 (chicken money generation loop, egg laying) or other high-priority items

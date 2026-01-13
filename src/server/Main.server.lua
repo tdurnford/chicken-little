@@ -274,6 +274,51 @@ if hatchEggFunc then
   end
 end
 
+--[[
+  Money Collection Server Handlers
+  Handles CollectMoney RemoteFunction.
+  Validates chicken ownership and collects accumulated money.
+]]
+
+-- CollectMoney RemoteFunction handler
+-- Parameters: chickenId (optional) - if nil, collects from all chickens
+local collectMoneyFunc = RemoteSetup.getFunction("CollectMoney")
+if collectMoneyFunc then
+  collectMoneyFunc.OnServerInvoke = function(player: Player, chickenId: string?)
+    local userId = player.UserId
+    local playerData = DataPersistence.getData(userId)
+    if not playerData then
+      return { success = false, message = "Player data not found" }
+    end
+
+    local result
+    if chickenId then
+      -- Collect from a specific chicken
+      result = MoneyCollection.collect(playerData, chickenId)
+    else
+      -- Collect from all chickens
+      result = MoneyCollection.collectAll(playerData)
+    end
+
+    if result.success then
+      local amountCollected = result.amountCollected or result.totalCollected or 0
+      if amountCollected > 0 then
+        -- Fire MoneyCollected event to update client HUD
+        local moneyCollectedEvent = RemoteSetup.getEvent("MoneyCollected")
+        if moneyCollectedEvent then
+          moneyCollectedEvent:FireClient(player, {
+            amountCollected = amountCollected,
+            newBalance = result.newBalance,
+            message = result.message,
+          })
+        end
+        syncPlayerData(player, playerData, true)
+      end
+    end
+    return result
+  end
+end
+
 -- Initialize DataPersistence system (handles player data saving/loading)
 local dataPersistenceStarted = DataPersistence.start()
 if dataPersistenceStarted then
