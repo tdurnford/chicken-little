@@ -771,3 +771,15 @@
   - No memory leaks (cleanup on player leave, predator cleanup)
 - Format check and build pass
 - Next: Work Item #24 (Main HUD) - critical priority, or other high-priority items
+
+[2026-01-13] Completed Work Item #24: Wire Up Main HUD
+- Updated src/client/Main.client.lua to require and wire up MainHUD module
+- MainHUD.create() called on client initialization to display money HUD
+- Initial player data requested from server via GetPlayerData RemoteFunction
+- PlayerDataChanged event listener calls MainHUD.updateFromPlayerData(data)
+- Acceptance criteria met:
+  - Money is always visible on screen (HUD created on client start)
+  - Money updates in real-time (via PlayerDataChanged event)
+  - Large numbers formatted correctly (K, M, B, T via MoneyScaling)
+- Format check and build pass
+- Next: Work Items #4-9 (high priority server gameplay handlers)

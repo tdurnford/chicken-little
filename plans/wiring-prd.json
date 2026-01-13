@@ -614,7 +614,7 @@
       "category": "Client-UI",
       "title": "Wire Up Main HUD",
       "description": "Initialize MainHUD module and connect to player data updates.",
-      "completed": false,
+      "completed": true,
       "priority": "critical",
       "steps": [
         "Require MainHUD module",

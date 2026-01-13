@@ -14,6 +14,7 @@ local SoundEffects = require(ClientModules:WaitForChild("SoundEffects"))
 local ChickenVisuals = require(ClientModules:WaitForChild("ChickenVisuals"))
 local PredatorVisuals = require(ClientModules:WaitForChild("PredatorVisuals"))
 local EggVisuals = require(ClientModules:WaitForChild("EggVisuals"))
+local MainHUD = require(ClientModules:WaitForChild("MainHUD"))
 
 -- Local player reference
 local localPlayer = Players.LocalPlayer
@@ -52,13 +53,30 @@ end
 SoundEffects.initialize()
 print("[Client] SoundEffects initialized")
 
+-- Create Main HUD
+MainHUD.create()
+print("[Client] MainHUD created")
+
+-- Request initial player data from server
+local getPlayerDataFunc = getFunction("GetPlayerData")
+if getPlayerDataFunc then
+  local initialData = getPlayerDataFunc:InvokeServer()
+  if initialData then
+    playerDataCache = initialData
+    MainHUD.updateFromPlayerData(initialData)
+    print("[Client] Initial player data loaded")
+  end
+end
+
 --[[ RemoteEvent Listeners ]]
 
--- PlayerDataChanged: Update local player data cache
+-- PlayerDataChanged: Update local player data cache and HUD
 local playerDataChangedEvent = getEvent("PlayerDataChanged")
 if playerDataChangedEvent then
   playerDataChangedEvent.OnClientEvent:Connect(function(data: { [string]: any })
     playerDataCache = data
+    -- Update MainHUD with new money data
+    MainHUD.updateFromPlayerData(data)
     print("[Client] Player data updated")
   end)
 end
