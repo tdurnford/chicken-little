@@ -557,3 +557,23 @@
 - Query functions: isActive(), isPaused(), isCreated(), getCurrentStep(), getTotalSteps()
 - Format check and build pass
 - Next: Work Items #34-37 (Audio/Visual), #39 (Balancing), #40 (Testing)
+[2026-01-13] Completed Work Item #34: Implement Sound Effects
+- Created src/client/SoundEffects.lua module
+- Type exports: SoundId, SoundCategory, SoundConfig, SoundState
+- Sound categories: money, eggs, chickens, combat, predators, ui, ambient
+- Money sounds: moneyCollect, moneyCollectLarge, moneyCollectJackpot (scales with amount)
+- Egg sounds: eggPlace, eggShake (looped), eggHatchCommon/Rare/Epic/Legendary/Mythic
+- Chicken sounds: chickenPlace, chickenPickup, chickenCluck, chickenSell
+- Combat sounds: batSwing, batHit, batMiss, playerKnockback
+- Predator sounds: predatorSpawn, predatorAlert, predatorApproaching, predatorAttack, predatorDefeated, predatorTrapped
+- UI sounds: buttonClick, menuOpen, menuClose, tradeRequest, tradeComplete, error
+- Volume control: setMasterVolume(), setCategoryVolume(), getMasterVolume(), getCategoryVolume()
+- Mute support: setMuted(), toggleMute(), isMuted()
+- Helper functions: playMoneyCollect(amount), playEggHatch(rarity), playBatSwing(hitType), playPredatorAlert(urgent)
+- Sound caching: loadedSounds cache for performance
+- Pitch variance: configurable random pitch variation per sound
+- SoundGroup: all sounds routed through SoundGroup for global volume control
+- Preloading: preload() for smoother playback, cleanup() for resource management
+- Query functions: getSoundNames(), getSoundsByCategory(), getCategories(), getSummary()
+- Format check and build pass
+- Next: Work Items #35-37 (Visual), #39 (Balancing), #40 (Testing)
