@@ -685,3 +685,11 @@
 - Remotes folder created in ReplicatedStorage for client/server accessibility
 - Format check and build pass
 - Next: Work Items #1 (DataPersistence wiring) or #38 (Module Loading Utility)
+
+[2026-01-13] Completed Work Item #1: Wire Up Data Persistence System
+- Updated src/server/Main.server.lua to require and start DataPersistence
+- DataPersistence.start() called on server initialization
+- Handles: player data loading on join, saving on leave, auto-save loop
+- Logs success/warning based on DataStore initialization status
+- Format check and build pass
+- Next: Work Item #2 (Map Generation) - depends on this item

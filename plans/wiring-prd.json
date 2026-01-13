@@ -10,7 +10,7 @@
       "category": "Server-Core",
       "title": "Wire Up Data Persistence System",
       "description": "Initialize the DataPersistence module in Main.server.lua to handle player data saving/loading on join/leave.",
-      "completed": false,
+      "completed": true,
       "priority": "critical",
       "steps": [
         "Require DataPersistence module",
