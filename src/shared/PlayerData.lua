@@ -64,18 +64,12 @@ local VALID_RARITIES = {
   Mythic = true,
 }
 
--- Creates default player data with a starter egg
+-- Creates default player data with starting money (enough to buy a common egg)
 function PlayerData.createDefault(): PlayerDataSchema
   return {
-    money = 0,
+    money = 100, -- Exactly enough to buy a Common Egg from the store
     inventory = {
-      eggs = {
-        {
-          id = PlayerData.generateId(),
-          eggType = "CommonEgg",
-          rarity = "Common",
-        },
-      },
+      eggs = {},
       chickens = {},
     },
     placedChickens = {},

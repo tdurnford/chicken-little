@@ -1067,3 +1067,19 @@
   - Sound effects play on equip, swing, hit, and miss
 - Format check and build pass
 - Next: Work Items #2, #12, #20 (critical priority items)
+
+[2026-01-13] Completed Bugfix Work Item #12: Simplify Tutorial - Start With Store Money
+- Modified PlayerData.createDefault() to start with money = 100 instead of money = 0
+- Removed starter CommonEgg from default inventory (eggs array now starts empty)
+- Starting money (100) exactly matches Common Egg purchase price (BASE_PURCHASE_PRICE * 1)
+- Updated IntegrationTests.lua:
+  - Renamed test "PlayerData: default has starter egg" to "PlayerData: default has starting money"
+  - Test now verifies empty egg inventory and 100 coins starting balance
+  - Fixed "validate rejects invalid rarity" test to add an egg explicitly before testing
+- Acceptance criteria met:
+  - New players start with money instead of a starter egg (100 coins)
+  - Starting money is exactly enough to buy common egg (100 = Common Egg price)
+  - Inventory starts empty (eggs = {})
+  - Data validation passes for new player data (build succeeds)
+- Format check and build pass
+- Next: Work Items #2, #13, #20 (high priority, #13 now unblocked by #12)

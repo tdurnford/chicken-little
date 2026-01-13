@@ -118,17 +118,13 @@ test("PlayerData: createDefault returns valid structure", function()
   return assert_true(PlayerData.validate(data), "Default data should be valid")
 end)
 
-test("PlayerData: default has starter egg", function()
+test("PlayerData: default has starting money", function()
   local data = PlayerData.createDefault()
-  local pass, msg = assert_eq(#data.inventory.eggs, 1, "Should have 1 starter egg")
+  local pass, msg = assert_eq(#data.inventory.eggs, 0, "Should have empty egg inventory")
   if not pass then
     return pass, msg
   end
-  return assert_eq(
-    data.inventory.eggs[1].eggType,
-    "CommonEgg",
-    "Starter egg should be CommonEgg"
-  )
+  return assert_eq(data.money, 100, "Should start with 100 coins (enough for Common Egg)")
 end)
 
 test("PlayerData: validate rejects invalid money", function()
@@ -139,7 +135,12 @@ end)
 
 test("PlayerData: validate rejects invalid rarity", function()
   local data = PlayerData.createDefault()
-  data.inventory.eggs[1].rarity = "SuperRare"
+  -- Add an egg with invalid rarity to test validation
+  table.insert(data.inventory.eggs, {
+    id = PlayerData.generateId(),
+    eggType = "CommonEgg",
+    rarity = "SuperRare",
+  })
   return assert_false(PlayerData.validate(data), "Invalid rarity should fail validation")
 end)
 
