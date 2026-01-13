@@ -831,7 +831,9 @@
       "category": "Offline",
       "title": "Create Offline Earnings Summary UI",
       "description": "Show players what they earned while offline when they rejoin.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
+      "completedDate": "2026-01-13",
       "steps": [
         "Design welcome back popup",
         "Show money earned offline",

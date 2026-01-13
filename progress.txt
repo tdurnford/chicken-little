@@ -347,3 +347,19 @@
 - LoadResult now includes offlineEggs count for UI display
 - Format check and build pass
 - Next: Work Item #32 (Offline Earnings Summary UI) or #10 (Egg Placement/Hatch Preview)
+[2026-01-13] Completed Work Item #32: Create Offline Earnings Summary UI
+- Created src/client/OfflineEarningsUI.lua module
+- Designed "Welcome Back" popup with dimmed backdrop and centered modal
+- Displays time away using OfflineEarnings.formatDuration()
+- Shows money earned with gold coin icon and MoneyScaling.formatCurrency()
+- Shows eggs collected with egg icon and proper pluralization
+- Claim button with hover animation triggers onClaim callback
+- Animation system: backdrop fades in, popup scales in with Back easing
+- Animation out: scales down before hiding
+- API: create(), destroy(), show(), showFromResult(), showFromPreview()
+- Callbacks: onClaim(), onDismiss() for integration
+- Query functions: isVisible(), isCreated(), getDisplayedEarnings()
+- Integrates with OfflineEarnings module for data formatting
+- Follows existing UI patterns from MainHUD and InventoryUI
+- Format check and build pass
+- Next: Work Item #10 (Egg Placement/Hatch Preview) for MVP Core Loop
