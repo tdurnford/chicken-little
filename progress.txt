@@ -504,3 +504,22 @@
 - getSummary() for debugging
 - Format check and build pass
 - Next: Work Item #29/#30 (Trading), #34-37 (Audio/Visual), #38 (Tutorial), #39 (Balancing), #40 (Integration Tests)
+[2026-01-13] Completed Work Item #29: Implement Trading System UI
+- Created src/client/TradeUI.lua module
+- Type exports: TradeItem, TradeOffer, TradeState, TradeRequest, UIState
+- Trade request system: showTradeRequest(), hideTradeRequest(), getPendingRequests()
+- Trade window UI: dual-panel layout showing both players' offers
+- Local offer panel: displays items with rarity colors, remove buttons
+- Partner offer panel: displays partner's items (read-only)
+- Confirmation flow: confirmOffer(), unconfirmOffer(), areBothConfirmed()
+- Status indicators: green circle when confirmed, gray when pending
+- Action buttons: Confirm (toggles confirmed state), Cancel (ends trade)
+- Trade lifecycle: startTrade(), endTrade(), resetTradeState()
+- Item management: addItemToOffer(), removeItemFromOffer(), updatePartnerOffer()
+- Animation: trade window scales in with Back easing, request fades in
+- Rarity colors match existing UI (Common gray to Mythic pink)
+- Callback system: setOnTradeAccept/Decline/AddItem/RemoveItem/Confirm/Cancel
+- Query functions: isTradeActive(), getTradeState(), getLocalOffer(), getPartnerOffer()
+- Uses EggConfig and ChickenConfig for display names
+- Format check and build pass
+- Next: Work Item #30 (Trade Item Exchange), #34-37 (Audio/Visual), #38 (Tutorial)

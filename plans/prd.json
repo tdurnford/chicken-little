@@ -768,7 +768,9 @@
       "category": "Trading",
       "title": "Implement Trading System UI",
       "description": "Create UI for players to initiate and manage trades with each other.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
+      "completedDate": "2026-01-13",
       "steps": [
         "Create trade request system",
         "Design trade window UI",
