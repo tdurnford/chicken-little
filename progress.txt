@@ -15,3 +15,14 @@
 - API: get(), getAll(), getByRarity(), getRarityMultiplier(), getRarityEggInterval(), isValidType(), getAllTypes(), getRarities(), calculateEarnings()
 - Format check passes
 - Next: Work Item #6 (Egg Configuration) is a natural follow-up, or #2 (Data Persistence)
+[2026-01-13] Completed Work Item #6: Create Egg Configuration System
+- Created src/shared/EggConfig.lua module
+- Defined 6 egg types matching rarity tiers (Common, Uncommon, Rare, Epic, Legendary, Mythic)
+- Each egg has exactly 3 hatch outcomes with weighted probabilities (70%/25%/5%) summing to 100%
+- Prices scale exponentially: 100 -> 1000 -> 10000 -> 100000 -> 1000000 -> 10000000
+- Sell price is 50% of purchase price
+- API: get(), getAll(), getByRarity(), getRarityPriceMultiplier(), isValidType(), getAllTypes(), 
+  validateProbabilities(), validateAll(), selectHatchOutcome(), getRarities(), getStarterEggType()
+- Module validates chicken types against ChickenConfig for data integrity
+- Format check passes, build passes
+- Next: Work Item #7 (Chicken Entity System) or #2 (Data Persistence) are good candidates

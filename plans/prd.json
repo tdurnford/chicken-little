@@ -141,7 +141,9 @@
       "category": "Chickens",
       "title": "Create Egg Configuration System",
       "description": "Define all egg types with their rarity, hatch probabilities for different chickens, and purchase prices.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
+      "completedDate": "2026-01-13",
       "steps": [
         "Create EggConfig module",
         "Define egg tiers matching chicken rarity",
