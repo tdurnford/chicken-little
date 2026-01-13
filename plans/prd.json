@@ -195,7 +195,7 @@
       "category": "Chickens",
       "title": "Implement Chicken Placement System",
       "description": "Allow players to place chickens from inventory into empty coop spots.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Detect available spots in player's coop",
         "Create placement UI/indicator",
@@ -213,7 +213,9 @@
         "Test placement in empty spot",
         "Test placement blocked in occupied spot",
         "Test inventory decrements on placement"
-      ]
+      ],
+      "status": "completed",
+      "completedDate": "2026-01-13"
     },
     {
       "id": 9,
