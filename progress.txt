@@ -951,3 +951,20 @@
   - Section assignment persists for session (via playerSpawnPoints tracking)
 - Format check and build pass
 - Next: High priority client-side items (#23, #25-29, #34, #35, #40) or medium priority items (#10-19)
+
+[2026-01-13] Completed Work Item #28: Wire Up Chicken Visuals System
+- Added MapGeneration and PlayerSection module requires to Main.client.lua
+- Created getChickenPosition() helper function to calculate chicken positions from spotIndex
+- Fixed ChickenPlaced event handler to match server data format (table with chicken and spotIndex)
+- Fixed EggLaid event handler to match server data format and call ChickenVisuals.playLayingAnimation()
+- Fixed RandomChickenSpawned event handler to match server data format
+- Updated PlayerDataChanged handler to call ChickenVisuals.updateMoney() for all placed chickens
+- Added initial chicken visual creation on client startup for existing placed chickens
+- Fixed ChickenVisuals.create() call signature (4 args instead of 5 - rarity is derived internally)
+- Acceptance criteria met:
+  - Chickens appear in coop when placed (via ChickenVisuals.create on ChickenPlaced and initial load)
+  - Chickens show accumulated money (via ChickenVisuals.updateMoney on PlayerDataChanged)
+  - Animations play for laying and collection (playLayingAnimation on EggLaid, createMoneyPopEffect on MoneyCollected)
+  - Rarity affects visual appearance (handled internally by ChickenVisuals module using ChickenConfig)
+- Format check and build pass
+- Next: Work Items #23, #25 (high priority, now unblocked), or #27, #29, #35 (now unblocked by #28)

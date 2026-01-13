@@ -16,6 +16,11 @@ local PredatorVisuals = require(ClientModules:WaitForChild("PredatorVisuals"))
 local EggVisuals = require(ClientModules:WaitForChild("EggVisuals"))
 local MainHUD = require(ClientModules:WaitForChild("MainHUD"))
 
+-- Get shared modules for position calculations
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local MapGeneration = require(Shared:WaitForChild("MapGeneration"))
+local PlayerSection = require(Shared:WaitForChild("PlayerSection"))
+
 -- Local player reference
 local localPlayer = Players.LocalPlayer
 
@@ -49,6 +54,26 @@ local function getFunction(name: string): RemoteFunction?
   return nil
 end
 
+-- Helper to calculate chicken position from spotIndex using player's section
+local function getChickenPosition(spotIndex: number): Vector3?
+  local sectionIndex = playerDataCache.sectionIndex
+  if not sectionIndex then
+    return nil
+  end
+
+  local sectionCenter = MapGeneration.getSectionPosition(sectionIndex)
+  if not sectionCenter then
+    return nil
+  end
+
+  local spotPos = PlayerSection.getSpotPosition(spotIndex, sectionCenter)
+  if not spotPos then
+    return nil
+  end
+
+  return Vector3.new(spotPos.x, spotPos.y, spotPos.z)
+end
+
 -- Initialize client systems
 SoundEffects.initialize()
 print("[Client] SoundEffects initialized")
@@ -64,19 +89,41 @@ if getPlayerDataFunc then
   if initialData then
     playerDataCache = initialData
     MainHUD.updateFromPlayerData(initialData)
+
+    -- Create initial chicken visuals for placed chickens
+    if initialData.placedChickens then
+      for _, chicken in ipairs(initialData.placedChickens) do
+        if chicken.spotIndex then
+          local position = getChickenPosition(chicken.spotIndex)
+          if position then
+            ChickenVisuals.create(chicken.id, chicken.chickenType, position, chicken.spotIndex)
+            ChickenVisuals.updateMoney(chicken.id, chicken.accumulatedMoney or 0)
+          end
+        end
+      end
+    end
+
     print("[Client] Initial player data loaded")
   end
 end
 
 --[[ RemoteEvent Listeners ]]
 
--- PlayerDataChanged: Update local player data cache and HUD
+-- PlayerDataChanged: Update local player data cache, HUD, and chicken money indicators
 local playerDataChangedEvent = getEvent("PlayerDataChanged")
 if playerDataChangedEvent then
   playerDataChangedEvent.OnClientEvent:Connect(function(data: { [string]: any })
     playerDataCache = data
     -- Update MainHUD with new money data
     MainHUD.updateFromPlayerData(data)
+
+    -- Update chicken money indicators from placed chickens
+    if data.placedChickens then
+      for _, chicken in ipairs(data.placedChickens) do
+        ChickenVisuals.updateMoney(chicken.id, chicken.accumulatedMoney or 0)
+      end
+    end
+
     print("[Client] Player data updated")
   end)
 end
@@ -84,19 +131,21 @@ end
 -- ChickenPlaced: Create chicken visual at position
 local chickenPlacedEvent = getEvent("ChickenPlaced")
 if chickenPlacedEvent then
-  chickenPlacedEvent.OnClientEvent:Connect(
-    function(
-      chickenId: string,
-      chickenType: string,
-      rarity: string,
-      position: Vector3,
-      spotIndex: number?
-    )
-      ChickenVisuals.create(chickenId, chickenType, rarity, position, spotIndex)
-      SoundEffects.play("chickenPlace")
-      print("[Client] Chicken placed:", chickenId)
+  chickenPlacedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
+    local chicken = eventData.chicken
+    local spotIndex = eventData.spotIndex
+    if not chicken or not spotIndex then
+      warn("[Client] ChickenPlaced: Invalid event data")
+      return
     end
-  )
+
+    local position = getChickenPosition(spotIndex)
+    if position then
+      ChickenVisuals.create(chicken.id, chicken.chickenType, position, spotIndex)
+      SoundEffects.play("chickenPlace")
+      print("[Client] Chicken placed:", chicken.id)
+    end
+  end)
 end
 
 -- ChickenPickedUp: Remove chicken visual
@@ -129,13 +178,21 @@ if eggHatchedEvent then
   end)
 end
 
--- EggLaid: Create egg visual
+-- EggLaid: Play laying animation and create egg visual
 local eggLaidEvent = getEvent("EggLaid")
 if eggLaidEvent then
-  eggLaidEvent.OnClientEvent:Connect(function(eggId: string, rarity: string, position: Vector3)
-    EggVisuals.create(eggId, rarity, position)
+  eggLaidEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
+    local chickenId = eventData.chickenId
+    local eggId = eventData.eggId
+    local eggRarity = eventData.eggRarity
+
+    -- Play laying animation on the chicken
+    if chickenId then
+      ChickenVisuals.playLayingAnimation(chickenId)
+    end
+
     SoundEffects.play("eggPlace")
-    print("[Client] Egg laid:", eggId)
+    print("[Client] Egg laid:", eggId, "from chicken", chickenId)
   end)
 end
 
@@ -242,13 +299,19 @@ end
 -- RandomChickenSpawned: Show notification for random chicken
 local randomChickenSpawnedEvent = getEvent("RandomChickenSpawned")
 if randomChickenSpawnedEvent then
-  randomChickenSpawnedEvent.OnClientEvent:Connect(
-    function(chickenId: string, chickenType: string, rarity: string, position: Vector3)
-      SoundEffects.play("uiNotification")
-      ChickenVisuals.create(chickenId, chickenType, rarity, position)
-      print("[Client] Random chicken spawned:", chickenId, chickenType, rarity)
+  randomChickenSpawnedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
+    local chicken = eventData.chicken
+    if not chicken then
+      warn("[Client] RandomChickenSpawned: Invalid event data")
+      return
     end
-  )
+
+    SoundEffects.play("uiNotification")
+    local pos = chicken.position
+    local position = Vector3.new(pos.x, pos.y, pos.z)
+    ChickenVisuals.create(chicken.id, chicken.chickenType, position, nil)
+    print("[Client] Random chicken spawned:", chicken.id, chicken.chickenType, chicken.rarity)
+  end)
 end
 
 -- RandomChickenClaimed: Player claimed the random chicken

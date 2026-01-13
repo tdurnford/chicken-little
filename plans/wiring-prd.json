@@ -718,7 +718,7 @@
       "category": "Client-Gameplay",
       "title": "Wire Up Chicken Visuals System",
       "description": "Initialize ChickenVisuals module to display chickens in coops.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Require ChickenVisuals module",
