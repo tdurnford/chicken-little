@@ -180,7 +180,7 @@
       "category": "Server-Gameplay",
       "title": "Wire Up Egg Laying System",
       "description": "Create server-side system for chickens to lay eggs at intervals.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Use Chicken class to track egg laying timers",

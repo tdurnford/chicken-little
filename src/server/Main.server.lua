@@ -28,6 +28,11 @@ local ChickenPlacement = require(Shared:WaitForChild("ChickenPlacement"))
 -- Egg hatching module
 local EggHatching = require(Shared:WaitForChild("EggHatching"))
 
+-- Chicken and Egg modules for egg laying system
+local Chicken = require(Shared:WaitForChild("Chicken"))
+local EggConfig = require(Shared:WaitForChild("EggConfig"))
+local PlayerData = require(Shared:WaitForChild("PlayerData"))
+
 -- Player Data Sync Configuration
 local DATA_SYNC_THROTTLE_INTERVAL = 0.1 -- Minimum seconds between data updates per player
 local lastDataSyncTime: { [number]: number } = {} -- Tracks last sync time per player
@@ -463,6 +468,45 @@ local function runGameLoop(deltaTime: number)
     local moneyGenerated = MoneyCollection.updateAllChickenMoney(playerData, deltaTime)
     if moneyGenerated > 0 then
       dataChanged = true
+    end
+
+    -- 1.5. Update egg laying for all placed chickens
+    local currentTimeSeconds = os.time()
+    local eggLaidEvent = RemoteSetup.getEvent("EggLaid")
+    for _, chickenData in ipairs(playerData.placedChickens) do
+      local chickenInstance = Chicken.new(chickenData)
+      if chickenInstance and chickenInstance:canLayEgg(currentTimeSeconds) then
+        local eggType = chickenInstance:layEgg(currentTimeSeconds)
+        if eggType then
+          -- Get egg config to get rarity
+          local eggConfigData = EggConfig.get(eggType)
+          local eggRarity = if eggConfigData then eggConfigData.rarity else "Common"
+
+          -- Create new egg and add to inventory
+          local newEgg: PlayerData.EggData = {
+            id = PlayerData.generateId(),
+            eggType = eggType,
+            rarity = eggRarity,
+          }
+          table.insert(playerData.inventory.eggs, newEgg)
+
+          -- Update chicken's lastEggTime in player data
+          chickenData.lastEggTime = chickenInstance.lastEggTime
+
+          dataChanged = true
+
+          -- Notify player of egg laid
+          if eggLaidEvent then
+            eggLaidEvent:FireClient(player, {
+              chickenId = chickenData.id,
+              chickenType = chickenData.chickenType,
+              eggId = newEgg.id,
+              eggType = eggType,
+              eggRarity = eggRarity,
+            })
+          end
+        end
+      end
     end
 
     -- 2. Update cage lock states (check for expiration)

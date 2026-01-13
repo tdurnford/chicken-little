@@ -878,3 +878,20 @@
   - Clients can see accumulated money on chickens (via PlayerDataChanged event sync)
 - Format check and build pass
 - Next: Work Item #8 (Egg Laying System) - high priority, depends on #7
+
+[2026-01-13] Completed Work Item #8: Wire Up Egg Laying System
+- Updated src/server/Main.server.lua to require Chicken, EggConfig, and PlayerData modules
+- Added egg laying logic in the game loop (step 1.5 after money generation)
+- Egg laying system checks each placed chicken using Chicken:canLayEgg(currentTime)
+- When a chicken can lay, calls Chicken:layEgg() to get egg type
+- Creates new egg with PlayerData.generateId(), egg type, and rarity from EggConfig
+- Adds egg to player's inventory.eggs array
+- Updates chicken's lastEggTime in player data to sync the timer
+- Fires EggLaid event to client with chickenId, chickenType, eggId, eggType, eggRarity
+- Acceptance criteria met:
+  - Chickens lay eggs at intervals defined in config (eggLayIntervalSeconds)
+  - Eggs are added to player inventory
+  - Egg type matches chicken's possible egg types (via Chicken:layEgg())
+  - Players are notified when eggs are laid (via EggLaid event)
+- Format check and build pass
+- Next: Work Item #20 (Offline Earnings on Join - high priority) or #10-19 (medium priority)
