@@ -183,3 +183,23 @@
 - Type exports: CatchResult, CatchAttemptInfo
 - Format check and build pass
 - Next: Work Item #19 (Predator Spawning System) builds on this, or #24 (Baseball Bat Combat)
+[2026-01-13] Completed Work Item #19: Implement Predator Spawning System
+- Created src/shared/PredatorSpawning.lua module
+- Type exports: PredatorInstance, SpawnState, SpawnResult, WaveInfo
+- Core function: spawn(spawnState, currentTime, targetPlayerId) - spawns predator based on wave difficulty
+- Alternative: forceSpawn(spawnState, predatorType, currentTime, targetPlayerId) - force spawn specific type
+- State management: createSpawnState(), reset(), cleanup() for predator lifecycle
+- Wave system: getWaveInfo() returns current wave number, predator count, threat level, spawn interval
+- Difficulty scales: 5% per wave, spawn intervals decrease from 60s to min 15s
+- Predator selection: selectPredatorForWave() uses weighted random based on threat level and wave number
+- Higher waves unlock higher threat predators (wave/3 determines max threat tier)
+- Tracking: findPredator(), getActivePredators(), getActivePredatorCount()
+- State updates: updatePredatorState(), markCaught(), markEscaped()
+- Combat: applyBatHit() decreases health, returns defeated status when health reaches 0
+- Attack tracking: decreaseAttacks() for predator attack counts, triggers escape when exhausted
+- Status: getPredatorInfo() for UI display, getSummary() for overall status
+- Validation: validateState() checks spawn state integrity
+- Constants: BASE_SPAWN_INTERVAL=60, MIN_SPAWN_INTERVAL=15, MAX_ACTIVE_PREDATORS=5
+- Integrates with PredatorConfig for type validation and spawn weights
+- Format check and build pass
+- Next: Work Item #20 (Predator Attack Behavior) or #24 (Baseball Bat Combat) are good follow-ups

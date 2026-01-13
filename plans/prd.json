@@ -484,7 +484,9 @@
       "category": "Predators",
       "title": "Implement Predator Spawning System",
       "description": "Create system to periodically spawn predators that target player coops.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
+      "completedDate": "2026-01-13",
       "steps": [
         "Create spawn timer system",
         "Select random predator type based on weights",
