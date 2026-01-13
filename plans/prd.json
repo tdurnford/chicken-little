@@ -249,7 +249,9 @@
       "category": "Eggs",
       "title": "Implement Egg Placement and Hatch Preview",
       "description": "When player places an egg, show the 3 possible chickens with probabilities before hatching.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
+      "completedDate": "2026-01-13",
       "steps": [
         "Create egg placement detection",
         "Design hatch preview UI showing 3 chickens",

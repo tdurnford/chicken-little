@@ -363,3 +363,20 @@
 - Follows existing UI patterns from MainHUD and InventoryUI
 - Format check and build pass
 - Next: Work Item #10 (Egg Placement/Hatch Preview) for MVP Core Loop
+[2026-01-13] Completed Work Item #10: Implement Egg Placement and Hatch Preview
+- Created src/client/HatchPreviewUI.lua module
+- Designed modal popup showing 3 possible chicken outcomes with probabilities
+- Each outcome card displays: chicken icon, display name, rarity (color-coded), probability percentage
+- Rarity colors match existing UI pattern: Common (gray), Uncommon (green), Rare (blue), Epic (purple), Legendary (orange), Mythic (pink)
+- Cards arranged horizontally with rarity-colored borders
+- Hatch button with hover animation triggers onHatch callback
+- Cancel button and backdrop click to dismiss
+- E key binding to confirm hatch, Escape to cancel
+- Animation system: backdrop fades in, popup scales in with Back easing
+- API: create(), destroy(), show(eggId, eggType), hide(), confirmHatch(), cancel()
+- Callbacks: onHatch(), onCancel() for integration with game logic
+- Query functions: isVisible(), isCreated(), getCurrentEgg(), getPreviewData()
+- Utility: getRarityColors(), getDefaultConfig(), getScreenGui(), getMainFrame()
+- Follows established UI patterns from InventoryUI and OfflineEarningsUI
+- Format check and build pass
+- Next: Work Item #9 (Chicken Pickup System), #15 (Chicken Selling with F Key), or #27 (Chicken Stealing)
