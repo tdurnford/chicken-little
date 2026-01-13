@@ -224,7 +224,9 @@
       "category": "Chickens",
       "title": "Implement Chicken Pickup System",
       "description": "Allow players to pick up chickens by pressing E and move them to different spots.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
+      "completedDate": "2026-01-13",
       "steps": [
         "Detect E key press near chicken",
         "Pick up chicken into held state",

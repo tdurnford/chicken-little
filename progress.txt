@@ -380,3 +380,19 @@
 - Follows established UI patterns from InventoryUI and OfflineEarningsUI
 - Format check and build pass
 - Next: Work Item #9 (Chicken Pickup System), #15 (Chicken Selling with F Key), or #27 (Chicken Stealing)
+[2026-01-13] Completed Work Item #9: Implement Chicken Pickup System
+- Created src/client/ChickenPickup.lua module
+- Type exports: PickupConfig, PickupState, PickupResult, PlaceResult
+- E key binding: press E near chicken to pick up, press E near empty spot to place
+- Escape key binding: cancel pickup and return chicken to original spot
+- Visual indicator: floating panel follows mouse with chicken icon, name, and rarity-colored border
+- Action prompts: "[E] Pick Up" near chickens, "[E] Place | [Esc] Cancel" while holding
+- Animation: indicator scales in/out with Back easing for polish
+- State management: tracks heldChickenId, heldChickenType, heldChickenRarity, previousSpotIndex
+- Callback system: setOnPickup(), setOnPlace(), setOnCancel() for game integration
+- Detection callbacks: setGetNearbyChicken(), setGetAvailableSpot(), setGetPlayerData() for 3D world integration
+- Mobile support: touchPickup(), touchCancel() for mobile touch controls
+- Utility: isHolding(), getHeldChicken(), getPreviousSpot(), getPickupRange()
+- Integrates with ChickenPlacement and ChickenConfig modules
+- Format check and build pass
+- Next: Work Item #15 (Chicken Selling with F Key) or #3/#4 (Map) are good candidates
