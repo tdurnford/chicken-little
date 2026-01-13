@@ -1028,7 +1028,7 @@
       "category": "Balancing",
       "title": "Balance Economy Values",
       "description": "Fine-tune all economic values for good game progression.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Playtest early game progression",
         "Adjust money generation rates",
@@ -1045,7 +1045,9 @@
       "tests": [
         "Test full progression playthrough",
         "Test edge cases"
-      ]
+      ],
+      "status": "completed",
+      "completedDate": "2026-01-13"
     },
     {
       "id": 40,

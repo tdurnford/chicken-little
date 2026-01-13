@@ -20,6 +20,7 @@ local PredatorConfig = require(script.Parent.PredatorConfig)
 local OfflineEarnings = require(script.Parent.OfflineEarnings)
 local CageUpgrades = require(script.Parent.CageUpgrades)
 local RandomChickenSpawn = require(script.Parent.RandomChickenSpawn)
+local BalanceConfig = require(script.Parent.BalanceConfig)
 
 -- Type definitions
 export type TestResult = {
@@ -525,6 +526,91 @@ test("RandomChickenSpawn: spawn interval is reasonable", function()
     return pass, msg
   end
   return assert_gte(config.spawnIntervalMax, config.spawnIntervalMin, "Max should be >= min")
+end)
+
+-- ============================================================================
+-- BalanceConfig Tests
+-- ============================================================================
+
+test("BalanceConfig: early game progression is achievable", function()
+  local economy = BalanceConfig.getEconomy()
+  local pass, msg = assert_gt(economy.BASE_MONEY_PER_SECOND, 0, "Base MPS should be positive")
+  if not pass then
+    return pass, msg
+  end
+  local report = BalanceConfig.validateBalance()
+  return assert_true(report.earlyGameValid, "Early game should be achievable in reasonable time")
+end)
+
+test("BalanceConfig: mid game progression is achievable", function()
+  local report = BalanceConfig.validateBalance()
+  return assert_true(report.midGameValid, "Mid game should be achievable in reasonable time")
+end)
+
+test("BalanceConfig: late game reaches trillions", function()
+  local targets = BalanceConfig.getProgressionTargets()
+  local pass, msg = assert_gte(targets.LATE_END, 1e12, "Late game target should reach trillions")
+  if not pass then
+    return pass, msg
+  end
+  local report = BalanceConfig.validateBalance()
+  return assert_true(report.lateGameValid, "Late game should be achievable")
+end)
+
+test("BalanceConfig: upgrade multipliers scale correctly", function()
+  local prev = 0
+  for tier = 1, 10 do
+    local mult = BalanceConfig.getUpgradeMultiplier(tier)
+    if mult <= prev then
+      return false, "Tier " .. tier .. " multiplier should be > " .. tostring(prev)
+    end
+    prev = mult
+  end
+  return true, "OK"
+end)
+
+test("BalanceConfig: progression stages are ordered", function()
+  local targets = BalanceConfig.getProgressionTargets()
+  if targets.EARLY_END > targets.MID_START then
+    return false, "Early end should be <= mid start"
+  end
+  if targets.MID_END > targets.LATE_START then
+    return false, "Mid end should be <= late start"
+  end
+  return true, "OK"
+end)
+
+test("BalanceConfig: calculateMoneyPerSecond works correctly", function()
+  local chickens = { "BasicChick", "BasicChick" }
+  local mps = BalanceConfig.calculateMoneyPerSecond(chickens, 1)
+  local pass, msg = assert_gt(mps, 0, "MPS should be positive with chickens")
+  if not pass then
+    return pass, msg
+  end
+  local mpsWithUpgrade = BalanceConfig.calculateMoneyPerSecond(chickens, 2)
+  return assert_gt(mpsWithUpgrade, mps, "Upgraded MPS should be higher")
+end)
+
+test("BalanceConfig: analyzeProgression returns valid analysis", function()
+  local analysis = BalanceConfig.analyzeProgression(5000, { "BasicChick" }, 1)
+  local pass, msg = assert_not_nil(analysis.stage, "Should have stage")
+  if not pass then
+    return pass, msg
+  end
+  pass, msg = assert_gte(analysis.percentComplete, 0, "Percent should be >= 0")
+  if not pass then
+    return pass, msg
+  end
+  return assert_gte(analysis.moneyPerSecond, 0, "MPS should be >= 0")
+end)
+
+test("BalanceConfig: simulateProgression calculates correctly", function()
+  local result = BalanceConfig.simulateProgression(0, { "BasicChick" }, 1, 100)
+  local pass, msg = assert_gt(result.money, 0, "Should earn money over time")
+  if not pass then
+    return pass, msg
+  end
+  return assert_not_nil(result.stage, "Should have stage")
 end)
 
 -- ============================================================================
