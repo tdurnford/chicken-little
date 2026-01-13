@@ -313,3 +313,20 @@
 - HUD positioned center-top with dark semi-transparent background and rounded corners
 - Format check and build pass
 - Next: Work Item #17 (Inventory UI) or #31 (Offline Earnings System) are good candidates
+[2026-01-13] Completed Work Item #17: Create Inventory UI
+- Created src/client/InventoryUI.lua module
+- Designed inventory panel layout with title bar, close button, and content container
+- Implemented tabs for eggs and chickens with visual toggle state
+- Created scrolling content frame with UIGridLayout for item slots
+- Item slots display icon (emoji), item name, and rarity-colored border
+- Rarity colors match game tiers: Common (gray), Uncommon (green), Rare (blue), Epic (purple), Legendary (orange), Mythic (pink)
+- Selection system with visual highlight (thicker border) on selected item
+- Action buttons appear based on selection: Hatch/Sell for eggs, Place/Sell for chickens
+- Callback system: onItemSelected(), onAction() for external integration
+- updateFromPlayerData() syncs UI with player inventory
+- Empty state messages when no items in tab
+- Visibility controls: setVisible(), toggle(), isVisible()
+- Responsive layout support: setPosition(), setSize()
+- Utility: getItemCounts(), getRarityColors(), getCurrentTab()
+- Format check and build pass
+- Next: Work Item #31 (Offline Earnings System) or #10 (Egg Placement/Hatch Preview) are good candidates
