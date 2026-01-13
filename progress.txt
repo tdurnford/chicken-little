@@ -864,3 +864,17 @@
   - Client HUD updates with new money amount (via MoneyCollected event)
 - Format check and build pass
 - Next: Work Items #7-8 (chicken money generation loop, egg laying) or other high-priority items
+
+[2026-01-13] Completed Work Item #7: Wire Up Chicken Money Generation Loop
+- Verified implementation already exists in Main.server.lua (lines 462-466)
+- Game loop calls MoneyCollection.updateAllChickenMoney(playerData, deltaTime) on each Heartbeat
+- MoneyCollection.updateAllChickenMoney iterates all placed chickens and updates accumulatedMoney
+- Uses ChickenConfig.get(chickenType).moneyPerSecond for correct rates per type
+- Data synced to clients via syncPlayerData when dataChanged
+- Acceptance criteria met:
+  - Chickens accumulate money over time based on config (moneyPerSecond * deltaTime)
+  - Money generation uses correct rates per chicken type (via ChickenConfig)
+  - Accumulated money persists until collected (stored in chicken.accumulatedMoney)
+  - Clients can see accumulated money on chickens (via PlayerDataChanged event sync)
+- Format check and build pass
+- Next: Work Item #8 (Egg Laying System) - high priority, depends on #7

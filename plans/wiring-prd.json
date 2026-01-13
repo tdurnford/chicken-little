@@ -154,7 +154,7 @@
       "category": "Server-Gameplay",
       "title": "Wire Up Chicken Money Generation Loop",
       "description": "Create server-side loop to update chicken accumulated money over time.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Require Chicken module",
