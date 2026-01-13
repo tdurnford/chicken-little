@@ -912,3 +912,25 @@
   - Client receives earnings summary for UI (via OfflineEarningsAwarded event)
 - Format check and build pass
 - Next: Medium priority items (#10-19) or remaining high priority client-side items (#23, #25-29, #34-36, #38, #40)
+
+[2026-01-13] Completed Work Item #38: Create Module Loading Utility
+- Created src/shared/ModuleLoader.lua utility module
+- ModuleLoader provides:
+  - require(): Safely requires a single module with pcall error handling and caching
+  - requireAll(): Loads multiple named modules from a parent folder
+  - requireFolder(): Auto-discovers and loads all ModuleScripts in a folder
+  - getErrors(): Returns table of any load errors that occurred
+  - isLoaded(): Checks if a module was successfully loaded
+  - get(): Retrieves a previously loaded module from cache
+  - clearCache(): Clears module cache for hot-reloading in development
+- Features:
+  - Caches loaded modules to avoid duplicate require calls
+  - Uses pcall for graceful error handling
+  - Logs successful loads and failures for debugging
+  - Configurable timeout for WaitForChild operations
+- Acceptance criteria met:
+  - All shared modules can load without errors (via pcall protection)
+  - Modules are easily accessible (via caching and get/requireAll)
+  - Load failures are logged (via warn with descriptive error messages)
+- Format check and build pass
+- Next: High priority client-side items (#23, #25-29, #34-36, #40) or medium priority items (#10-19)
