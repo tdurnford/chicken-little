@@ -653,3 +653,25 @@
 - Utility: getRarityColor(), getRarityColors(), getSummary()
 - Format check and build pass
 - Next: Work Item #37 (Predator Visuals) - only remaining incomplete item
+[2026-01-13] Completed Work Item #37: Create Predator Models and Animations
+- Created src/client/PredatorVisuals.lua module
+- Type exports: AnimationState, VisualConfig, PredatorVisualState, AttackEffectConfig
+- Threat level colors: Minor, Moderate, Dangerous, Severe, Deadly, Catastrophic
+- Eye colors: increasingly menacing red glow by threat level
+- Scale multipliers: 0.8x (Minor) to 2.2x (Catastrophic)
+- Placeholder model: quadruped with body, head, eyes, 4 legs, and tail
+- Glow effects: PointLight on eyes for Dangerous+, ParticleEmitter for Deadly+
+- Idle animation: subtle breathing with sine wave
+- Walk animation: bobbing motion with alternating leg movement
+- Attack animation: playAttackAnimation() with lunge forward and return
+- Defeated animation: playDefeatedAnimation() with spin, shrink, and fade
+- Trapped animation: playTrappedAnimation() with cage overlay and struggling shake
+- Trap cage visual: semi-transparent wood overlay on trapped predators
+- Lifecycle: create(), destroy(), cleanup() for predator visual management
+- State tracking: activePredators dictionary, updateConnection for animation loop
+- Position management: setPosition(), updatePosition(), walkTo(), get(), getAll()
+- Animation control: setAnimation(), releaseFromTrap()
+- Configuration: configure(), getConfig() for customization
+- Utility: getThreatColor(), getThreatColors(), getEyeColor(), getSummary()
+- Format check and build pass
+- PRD COMPLETE: All 40 work items now marked as completed

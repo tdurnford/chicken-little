@@ -981,7 +981,9 @@
       "category": "Visual",
       "title": "Create Predator Models and Animations",
       "description": "Design visual models for all predator types with walk and attack animations.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
+      "completedDate": "2026-01-13",
       "steps": [
         "Create predator models for each type",
         "Add walk/run animation",
