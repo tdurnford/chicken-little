@@ -674,4 +674,14 @@
 - Configuration: configure(), getConfig() for customization
 - Utility: getThreatColor(), getThreatColors(), getEyeColor(), getSummary()
 - Format check and build pass
-- PRD COMPLETE: All 40 work items now marked as completed
+
+[2026-01-13] Completed Work Item #3: Create RemoteEvents and RemoteFunctions
+- Created src/server/RemoteSetup.lua module
+- Type exports: RemotesContainer
+- 18 RemoteEvents: PlayerDataChanged, ChickenPlaced, ChickenPickedUp, ChickenSold, EggHatched, MoneyCollected, TrapPlaced, TrapCaught, PredatorSpawned, PredatorDefeated, LockActivated, TradeRequested, TradeUpdated, TradeCompleted, RandomChickenSpawned, RandomChickenClaimed, AlertTriggered, EggLaid
+- 19 RemoteFunctions: GetPlayerData, PlaceChicken, PickupChicken, SellChicken, HatchEgg, CollectMoney, BuyEgg, BuyTrap, PlaceTrap, ActivateLock, UpgradeCage, RequestTrade, AcceptTrade, AddToTrade, ConfirmTrade, CancelTrade, ClaimRandomChicken, SwingBat, StealChicken
+- Helper functions: initialize(), getRemotes(), getEvent(), getFunction(), getEventNames(), getFunctionNames(), getSummary()
+- Updated Main.server.lua to initialize remotes on server start
+- Remotes folder created in ReplicatedStorage for client/server accessibility
+- Format check and build pass
+- Next: Work Items #1 (DataPersistence wiring) or #38 (Module Loading Utility)
