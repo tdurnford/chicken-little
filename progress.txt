@@ -218,3 +218,19 @@
 - Type exports: AttackResult, AlertInfo, DefenseCheckResult
 - Format check and build pass
 - Next: Work Item #24 (Baseball Bat Combat) or #25 (Cage Locking System) build on this foundation
+[2026-01-13] Completed Work Item #24: Implement Baseball Bat Combat
+- Created src/shared/BaseballBat.lua module
+- Type definitions: BatState, SwingResult, BatConfig for type safety
+- Configuration: 0.5s swing cooldown, 8 stud range, 1 damage per hit, knockback force 50
+- State management: createBatState(), equip(), unequip(), toggle()
+- Swing mechanics: canSwing(), performSwing(), getSwingCooldownRemaining()
+- Predator combat: hitPredator() applies damage via PredatorSpawning.applyBatHit()
+- Predator targeting: findBestTarget(), getHittablePredators(), getHitsToDefeat()
+- Player combat: hitPlayer() returns knockback info for client-side physics
+- Knockback: getKnockbackParams() provides force (50) and duration (0.5s)
+- Utility: swingMiss(), isInRange(), getConfig(), getStats(), reset()
+- UI support: getDisplayInfo() for cooldown bar display
+- Testing: simulateSwings() for combat verification
+- Rewards player with predator.rewardMoney when defeating predator
+- Format check and build pass
+- Next: Work Item #25 (Cage Locking) or #26 (Cage Upgrade) build on defense system

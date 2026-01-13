@@ -637,7 +637,8 @@
         "Test bat swing detection",
         "Test predator damage",
         "Test player knockback"
-      ]
+      ],
+      "status": "completed"
     },
     {
       "id": 25,
