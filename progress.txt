@@ -234,3 +234,22 @@
 - Rewards player with predator.rewardMoney when defeating predator
 - Format check and build pass
 - Next: Work Item #25 (Cage Locking) or #26 (Cage Upgrade) build on defense system
+[2026-01-13] Completed Work Item #25: Implement Cage Locking System
+- Created src/shared/CageLocking.lua module
+- Type exports: LockState, LockResult, LockStatus for type safety
+- Configuration: 60s base lock duration, 120s cooldown between locks
+- State management: createLockState(), reset(), serialize(), deserialize()
+- Core locking: activateLock(lockState, multiplier, time) - activates lock with duration
+- deactivateLock() for early unlock (admin/special cases)
+- Lock queries: isLocked(), canLock(), getRemainingDuration(), getCooldownRemaining()
+- Entry control: canEnterCage(lockState, isOwner, time) - owner always enters, others blocked when locked
+- tryEnterCage() returns {allowed, message} for UI feedback
+- getStatus() returns full LockStatus for UI display
+- getDisplayInfo() returns formatted button text, enabled state, status text
+- getLockDuration() and getLockDurationForTier() for upgrade integration
+- update() auto-expires locks when time passes lockEndTime
+- validateState() checks lock state integrity
+- Cooldown starts after lock expires (prevents lock/unlock abuse)
+- Integrates with PlayerData.upgrades.lockDurationMultiplier for cage upgrades
+- Format check and build pass
+- Next: Work Item #26 (Cage Upgrade System) builds on this, or #27 (Chicken Stealing) uses it

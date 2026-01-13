@@ -619,7 +619,7 @@
       "category": "Defense",
       "title": "Implement Baseball Bat Combat",
       "description": "Give players a baseball bat to defend against predators and other players.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create bat tool/weapon",
         "Implement swing animation",
@@ -638,14 +638,15 @@
         "Test predator damage",
         "Test player knockback"
       ],
-      "status": "completed"
+      "status": "completed",
+      "completedDate": "2026-01-13"
     },
     {
       "id": 25,
       "category": "Defense",
       "title": "Implement Cage Locking System",
       "description": "Allow players to lock their cage for 1 minute to prevent theft.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create lock button in UI",
         "Implement 1 minute lock timer",
@@ -663,7 +664,9 @@
         "Test lock activation",
         "Test lock duration",
         "Test entry blocking"
-      ]
+      ],
+      "status": "completed",
+      "completedDate": "2026-01-13"
     },
     {
       "id": 26,
