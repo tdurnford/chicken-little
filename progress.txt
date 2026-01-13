@@ -113,3 +113,18 @@
 - All transactions return {success, message, newBalance, itemId}
 - Format check and build pass
 - Next: Work Item #16 (Main HUD) or #2 (Data Persistence) are good candidates
+[2026-01-13] Completed Work Item #18: Create Predator Configuration System
+- Created src/shared/PredatorConfig.lua module
+- Defined 12 predator types across 6 threat tiers (Minor, Moderate, Dangerous, Severe, Deadly, Catastrophic)
+- Types: Rat, Crow, Weasel, Raccoon, Fox, Snake, Coyote, Hawk, Wolf, Bobcat, Bear, Eagle
+- Spawn weights decrease with threat level (100 for Minor down to 1 for Catastrophic)
+- Rewards scale exponentially: 50 -> 250 -> 1250 -> 5000 -> 25000 -> 125000
+- Attack intervals increase with threat (30s -> 180s)
+- Chickens per attack scale 1 -> 4 by threat level
+- Catch difficulty 1-10 scale affects trap success and bat hits needed
+- API: get(), getAll(), getByThreatLevel(), isValidType(), getAllTypes(), getThreatLevels()
+- Utility: selectRandomPredator() weighted random, getSpawnProbability()
+- Combat: getBatHitsRequired(), getTrapEffectiveness(predatorType, trapTier)
+- Validation: validateAll() checks difficulty range, spawn weight, reward, intervals
+- Format check and build pass
+- Next: Work Item #19 (Predator Spawning) or #21 (Trap Config) build on this foundation

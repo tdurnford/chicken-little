@@ -457,7 +457,7 @@
       "category": "Predators",
       "title": "Create Predator Configuration System",
       "description": "Define predator types with their strength levels, spawn rates, and rewards when caught.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create PredatorConfig module",
         "Define predator types and tiers",
@@ -475,7 +475,9 @@
         "Test all predator configs are valid",
         "Test reward scaling",
         "Test spawn rate calculations"
-      ]
+      ],
+      "status": "completed",
+      "completedDate": "2026-01-13"
     },
     {
       "id": 19,
