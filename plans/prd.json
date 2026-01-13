@@ -561,7 +561,9 @@
       "category": "Traps",
       "title": "Implement Trap Placement System",
       "description": "Allow players to purchase and place traps around their coop.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
+      "completedDate": "2026-01-13",
       "steps": [
         "Create trap placement spots",
         "Implement trap purchase from store",
