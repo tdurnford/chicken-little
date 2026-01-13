@@ -31,7 +31,7 @@
       "category": "Server-Core",
       "title": "Wire Up Map Generation System",
       "description": "Initialize the MapGeneration module to create 12 player sections and assign sections to players on join.",
-      "completed": false,
+      "completed": true,
       "priority": "critical",
       "steps": [
         "Require MapGeneration module",
