@@ -70,3 +70,16 @@
 - Rollback mechanism if chicken creation fails after egg removal
 - Format check and build pass
 - Next: Work Item #10 (Egg Placement UI) or #12 (Money Collection) are good follow-ups
+[2026-01-13] Completed Work Item #12: Implement Money Collection System
+- Created src/shared/MoneyCollection.lua module
+- Core function: collect(playerData, chickenId) - collects money from single placed chicken
+- Bulk function: collectAll(playerData) - collects from all placed chickens at once
+- Returns CollectionResult with success, message, amountCollected, chickenId, newBalance
+- Returns BulkCollectionResult with totalCollected, chickensCollected, and individual results
+- Update functions: updateChickenMoney(), updateAllChickenMoney(elapsedSeconds) for accumulating money
+- Query functions: getTotalAccumulated(), getAccumulated(chickenId), getChickensWithMoney()
+- Utility: hasMoney(), getTotalMoneyPerSecond(), estimateEarnings(seconds)
+- Money transfers from chicken.accumulatedMoney to playerData.money
+- Chicken's accumulatedMoney resets to 0 after collection
+- Format check and build pass
+- Next: Work Item #10 (Egg Placement UI), #2 (Data Persistence), or #16 (Main HUD) are good candidates

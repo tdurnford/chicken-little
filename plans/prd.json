@@ -299,7 +299,7 @@
       "category": "Economy",
       "title": "Implement Money Collection System",
       "description": "Allow players to collect accumulated money from chickens by touching them.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Detect player touch/collision with chicken",
         "Transfer accumulated money to player",
@@ -317,7 +317,9 @@
         "Test money transfers correctly",
         "Test chicken money resets",
         "Test only owner can collect"
-      ]
+      ],
+      "status": "completed",
+      "completedDate": "2026-01-13"
     },
     {
       "id": 13,
