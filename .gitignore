@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+
+# Roblox place files (treat filesystem as source of truth)
+*.rbxl
+*.rbxlx
+
+# Rojo build output
+build/
+dist/
+
+# Tooling caches
+.aftman/
+.vscode/*.log
