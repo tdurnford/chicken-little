@@ -870,7 +870,9 @@
       "category": "Mobile",
       "title": "Implement Mobile Touch Controls",
       "description": "Create touch equivalents for all keyboard controls (E, F, etc.).",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
+      "completedDate": "2026-01-13",
       "steps": [
         "Detect mobile device",
         "Create contextual touch buttons",

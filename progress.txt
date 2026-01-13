@@ -465,3 +465,23 @@
 - Type exports: SectionAssignment, MapState, MapConfig
 - Format check and build pass
 - Next: Work Item #28 (Random Chicken Spawn Event), #29/#30 (Trading), #33 (Mobile), or visual/audio work items
+[2026-01-13] Completed Work Item #33: Implement Mobile Touch Controls
+- Created src/client/MobileTouchControls.lua module
+- Type exports: TouchConfig, ButtonType, ButtonConfig, TouchState
+- Mobile detection: checks TouchEnabled, KeyboardEnabled, MouseEnabled, and GuiService inset
+- Handles phones, tablets, and excludes touch-screen laptops with keyboards
+- Button types: pickup, place, cancel, sell, hatch, confirm
+- Each button has configurable icon, text, and color
+- Button container: right-aligned, vertically stacked, positioned above mobile controls
+- Animation: buttons fade in/out with configurable duration
+- Context functions: showPickupContext(), showPlaceContext(), showSellContext(), showHatchContext()
+- showChickenContext() combines pickup and sell for near-owned-chicken context
+- showSellConfirmContext() for confirmation dialogs
+- Dynamic updates: updateButtonText(), updateButtonColor() for runtime changes
+- Action callbacks: setAction(), clearAction() for external module integration
+- Integrates with ChickenPickup.touchPickup(), ChickenSelling.touchSell(), etc.
+- Query functions: isMobile(), isCreated(), isButtonActive(), getActiveButtons()
+- Testing support: forceMobileMode() for desktop testing
+- refreshMobileDetection() for handling device changes
+- Format check and build pass
+- Next: Work Item #28 (Random Chicken Spawn Event), #29/#30 (Trading), #34-37 (Audio/Visual), #38 (Tutorial)
