@@ -634,3 +634,22 @@
 - Utility: getRarityColor(), getRarityColors(), formatMoney(), getSummary()
 - Format check and build pass
 - Next: Work Items #36-37 (Egg/Predator visuals)
+[2026-01-13] Completed Work Item #36: Create Egg Models and Hatch Animation
+- Created src/client/EggVisuals.lua module
+- Type exports: AnimationState, VisualConfig, EggVisualState, HatchEffectConfig
+- Base egg model: createPlaceholderModel() with ellipsoid body and speckles
+- Rarity-based visuals: RARITY_COLORS for 6 tiers, glow intensity, scale multipliers
+- Glow effects: PointLight for Rare+, ParticleEmitter for Legendary/Mythic eggs
+- Particle counts: scaled by rarity (5 for Common up to 75 for Mythic)
+- Idle animation: Subtle floating with sine wave
+- Shake animation: playShakeAnimation() with 3 phases of increasing intensity
+- Hatch animation: playHatchAnimation() with intense shake, expand, explode phases
+- Shell fragments: createShellFragment() with physics (BodyVelocity, BodyAngularVelocity)
+- Particle burst: createHatchParticles() with color by rarity, sparkles for rare+
+- Lifecycle: create(), destroy(), cleanup() for egg visual management
+- State tracking: activeEggs dictionary, updateConnection for animation loop
+- Position management: setPosition(), get(), getAll(), getActiveCount()
+- Configuration: configure(), getConfig() for customization
+- Utility: getRarityColor(), getRarityColors(), getSummary()
+- Format check and build pass
+- Next: Work Item #37 (Predator Visuals) - only remaining incomplete item
