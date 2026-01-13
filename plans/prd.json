@@ -1,0 +1,1038 @@
+{
+  "project": {
+    "name": "Chicken Coop Tycoon",
+    "description": "A multiplayer Roblox game where players raise chickens, collect eggs, earn money, and defend their coops from predators and other players.",
+    "maxPlayersPerServer": 12
+  },
+  "workItems": [
+    {
+      "id": 1,
+      "category": "Infrastructure",
+      "title": "Create Player Data Structure",
+      "description": "Define and implement the data structure for storing player information including inventory, money, chickens, eggs, traps, and upgrades.",
+      "completed": false,
+      "steps": [
+        "Create PlayerData module in shared folder",
+        "Define data schema with money, inventory, chickens, eggs, traps, upgrades",
+        "Implement data validation functions",
+        "Create default player data template with starter egg"
+      ],
+      "acceptanceCriteria": [
+        "PlayerData module exports data schema",
+        "New players receive default data with basic chick egg",
+        "Data validation prevents invalid states",
+        "All fields are properly typed"
+      ],
+      "tests": [
+        "Test default data creation",
+        "Test data validation with valid data",
+        "Test data validation rejects invalid data",
+        "Test starter egg is included for new players"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Infrastructure",
+      "title": "Implement Data Persistence with DataStore",
+      "description": "Set up DataStore2 or ProfileService for saving and loading player data with offline earnings calculation.",
+      "completed": false,
+      "steps": [
+        "Choose and integrate data persistence library",
+        "Implement save/load functions",
+        "Add auto-save on interval and player leave",
+        "Implement offline earnings calculation with cap",
+        "Handle DataStore errors gracefully"
+      ],
+      "acceptanceCriteria": [
+        "Player data persists between sessions",
+        "Offline earnings are calculated on rejoin",
+        "Offline earnings are capped appropriately",
+        "Data saves on player leave and periodically",
+        "Errors are handled without data loss"
+      ],
+      "tests": [
+        "Test data saves correctly",
+        "Test data loads correctly",
+        "Test offline earnings calculation",
+        "Test offline earnings cap",
+        "Test error handling scenarios"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Map",
+      "title": "Create Base Player Section Template",
+      "description": "Design and build the template for a single player's section of the map including chicken coop area.",
+      "completed": false,
+      "steps": [
+        "Design player section layout in Roblox Studio",
+        "Create chicken coop structure with 12 placement spots",
+        "Add visual boundaries between sections",
+        "Create spawn point for player within their section",
+        "Add store location placeholder"
+      ],
+      "acceptanceCriteria": [
+        "Section has clear boundaries",
+        "Coop has exactly 12 chicken spots",
+        "Spots are clearly marked for placement",
+        "Section is visually appealing",
+        "Store location is accessible"
+      ],
+      "tests": [
+        "Verify 12 chicken spots exist",
+        "Test spot detection for chicken placement",
+        "Verify section boundaries work correctly"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Map",
+      "title": "Implement Map Generation for 12 Players",
+      "description": "Create system to duplicate player sections for all 12 players and assign sections on join.",
+      "completed": false,
+      "steps": [
+        "Create map generation module",
+        "Implement section cloning from template",
+        "Position 12 sections appropriately",
+        "Assign sections to players on join",
+        "Handle player leaving and rejoining same section"
+      ],
+      "acceptanceCriteria": [
+        "12 identical sections are generated",
+        "Each player is assigned a unique section",
+        "Sections are properly positioned",
+        "Rejoining players get their original section"
+      ],
+      "tests": [
+        "Test 12 sections generate correctly",
+        "Test player assignment to sections",
+        "Test rejoin section assignment"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Chickens",
+      "title": "Create Chicken Configuration System",
+      "description": "Define all chicken types with their rarity, egg laying intervals, money generation rates, and egg types they produce.",
+      "completed": false,
+      "steps": [
+        "Create ChickenConfig module",
+        "Define rarity tiers (Common, Uncommon, Rare, Epic, Legendary, Mythic)",
+        "Set money generation rates per tier (exponential scaling)",
+        "Set egg laying intervals per tier",
+        "Define which eggs each chicken type lays"
+      ],
+      "acceptanceCriteria": [
+        "All chicken types are defined",
+        "Rarity affects money generation exponentially",
+        "Rarer chickens lay rarer eggs",
+        "Intervals are balanced for gameplay"
+      ],
+      "tests": [
+        "Test all chicken types have valid config",
+        "Test money rates scale exponentially",
+        "Test egg type mappings are valid"
+      ]
+    },
+    {
+      "id": 6,
+      "category": "Chickens",
+      "title": "Create Egg Configuration System",
+      "description": "Define all egg types with their rarity, hatch probabilities for different chickens, and purchase prices.",
+      "completed": false,
+      "steps": [
+        "Create EggConfig module",
+        "Define egg tiers matching chicken rarity",
+        "Set hatch probability tables for each egg",
+        "Define purchase prices for eggs",
+        "Ensure probabilities sum to 100%"
+      ],
+      "acceptanceCriteria": [
+        "All egg types are defined",
+        "Each egg has 3 possible chicken outcomes",
+        "Probabilities are valid (sum to 100%)",
+        "Prices scale with rarity"
+      ],
+      "tests": [
+        "Test all egg types have valid config",
+        "Test probability sums equal 100%",
+        "Test price scaling is correct"
+      ]
+    },
+    {
+      "id": 7,
+      "category": "Chickens",
+      "title": "Implement Chicken Entity System",
+      "description": "Create chicken objects that can be placed, generate money over time, and lay eggs at intervals.",
+      "completed": false,
+      "steps": [
+        "Create Chicken class/module",
+        "Implement money generation loop",
+        "Implement egg laying timer",
+        "Create visual money indicator above chicken",
+        "Store accumulated money on chicken"
+      ],
+      "acceptanceCriteria": [
+        "Chickens generate money over time",
+        "Money accumulates and is visible",
+        "Chickens lay eggs at correct intervals",
+        "Money generation matches config rates"
+      ],
+      "tests": [
+        "Test money generation rate",
+        "Test egg laying interval",
+        "Test money accumulation display"
+      ]
+    },
+    {
+      "id": 8,
+      "category": "Chickens",
+      "title": "Implement Chicken Placement System",
+      "description": "Allow players to place chickens from inventory into empty coop spots.",
+      "completed": false,
+      "steps": [
+        "Detect available spots in player's coop",
+        "Create placement UI/indicator",
+        "Handle chicken placement from inventory",
+        "Spawn chicken model at spot",
+        "Update player data"
+      ],
+      "acceptanceCriteria": [
+        "Players can place chickens in empty spots",
+        "Placed chickens appear visually",
+        "Inventory updates correctly",
+        "Cannot place in occupied spots"
+      ],
+      "tests": [
+        "Test placement in empty spot",
+        "Test placement blocked in occupied spot",
+        "Test inventory decrements on placement"
+      ]
+    },
+    {
+      "id": 9,
+      "category": "Chickens",
+      "title": "Implement Chicken Pickup System",
+      "description": "Allow players to pick up chickens by pressing E and move them to different spots.",
+      "completed": false,
+      "steps": [
+        "Detect E key press near chicken",
+        "Pick up chicken into held state",
+        "Show visual indicator of held chicken",
+        "Allow placement in new empty spot",
+        "Handle mobile touch equivalent"
+      ],
+      "acceptanceCriteria": [
+        "E key picks up nearby chicken",
+        "Held chicken is visually indicated",
+        "Can place in different empty spot",
+        "Works on mobile devices"
+      ],
+      "tests": [
+        "Test pickup with E key",
+        "Test placement after pickup",
+        "Test cannot pick up other player's chicken (unless stealing)"
+      ]
+    },
+    {
+      "id": 10,
+      "category": "Eggs",
+      "title": "Implement Egg Placement and Hatch Preview",
+      "description": "When player places an egg, show the 3 possible chickens with probabilities before hatching.",
+      "completed": false,
+      "steps": [
+        "Create egg placement detection",
+        "Design hatch preview UI showing 3 chickens",
+        "Display probability percentages",
+        "Add hatch button and E key binding",
+        "Create anticipation animation"
+      ],
+      "acceptanceCriteria": [
+        "Placing egg shows preview UI",
+        "3 possible chickens displayed with probabilities",
+        "Click or E key triggers hatch",
+        "UI is clear and exciting"
+      ],
+      "tests": [
+        "Test preview shows correct chickens",
+        "Test probabilities match config",
+        "Test hatch trigger works"
+      ]
+    },
+    {
+      "id": 11,
+      "category": "Eggs",
+      "title": "Implement Egg Hatching Logic",
+      "description": "Create the hatching system that randomly selects a chicken based on probabilities and spawns it.",
+      "completed": false,
+      "steps": [
+        "Implement weighted random selection",
+        "Create hatch animation sequence",
+        "Spawn selected chicken at location",
+        "Remove egg from inventory",
+        "Play celebration effects for rare hatches"
+      ],
+      "acceptanceCriteria": [
+        "Random selection follows probability weights",
+        "Correct chicken type spawns",
+        "Egg is consumed from inventory",
+        "Rare hatches have special effects"
+      ],
+      "tests": [
+        "Test probability distribution over many hatches",
+        "Test egg consumption",
+        "Test correct chicken spawns"
+      ]
+    },
+    {
+      "id": 12,
+      "category": "Economy",
+      "title": "Implement Money Collection System",
+      "description": "Allow players to collect accumulated money from chickens by touching them.",
+      "completed": false,
+      "steps": [
+        "Detect player touch/collision with chicken",
+        "Transfer accumulated money to player",
+        "Reset chicken's accumulated money",
+        "Show collection visual feedback",
+        "Play collection sound"
+      ],
+      "acceptanceCriteria": [
+        "Touching chicken collects money",
+        "Player money increases correctly",
+        "Chicken money resets to zero",
+        "Visual and audio feedback plays"
+      ],
+      "tests": [
+        "Test money transfers correctly",
+        "Test chicken money resets",
+        "Test only owner can collect"
+      ]
+    },
+    {
+      "id": 13,
+      "category": "Economy",
+      "title": "Implement Exponential Money Scaling",
+      "description": "Configure money generation to scale exponentially so players progress from thousands to millions to trillions.",
+      "completed": false,
+      "steps": [
+        "Define money generation tiers",
+        "Implement multipliers based on chicken rarity",
+        "Add prestige or upgrade multipliers",
+        "Format large numbers (K, M, B, T)",
+        "Balance early and late game rates"
+      ],
+      "acceptanceCriteria": [
+        "Early game earns thousands",
+        "Mid game earns millions",
+        "Late game earns billions/trillions",
+        "Progression feels rewarding"
+      ],
+      "tests": [
+        "Test early game money rates",
+        "Test late game money rates",
+        "Test number formatting"
+      ]
+    },
+    {
+      "id": 14,
+      "category": "Economy",
+      "title": "Create Store System",
+      "description": "Implement the store where players can buy eggs and sell eggs, chickens, and trapped predators.",
+      "completed": false,
+      "steps": [
+        "Create store UI",
+        "Implement buy eggs functionality",
+        "Implement sell eggs functionality",
+        "Implement sell chickens functionality",
+        "Implement sell trapped predators"
+      ],
+      "acceptanceCriteria": [
+        "Players can buy eggs with money",
+        "Players can sell eggs for money",
+        "Players can sell chickens for money",
+        "Players can sell trapped predators",
+        "Prices reflect rarity"
+      ],
+      "tests": [
+        "Test buying eggs",
+        "Test selling eggs",
+        "Test selling chickens",
+        "Test insufficient funds handling"
+      ]
+    },
+    {
+      "id": 15,
+      "category": "Economy",
+      "title": "Implement Chicken Selling with F Key",
+      "description": "Allow players to sell chickens by walking up to them and pressing F.",
+      "completed": false,
+      "steps": [
+        "Detect F key press near owned chicken",
+        "Show sell confirmation with price",
+        "Process sale and add money",
+        "Remove chicken from coop",
+        "Handle mobile equivalent gesture"
+      ],
+      "acceptanceCriteria": [
+        "F key near chicken shows sell option",
+        "Confirmation prevents accidents",
+        "Money is added correctly",
+        "Chicken is removed from coop"
+      ],
+      "tests": [
+        "Test sell with F key",
+        "Test money received matches chicken value",
+        "Test chicken removal"
+      ]
+    },
+    {
+      "id": 16,
+      "category": "UI",
+      "title": "Create Main HUD with Money Display",
+      "description": "Design and implement the main UI showing player's current money with proper formatting.",
+      "completed": false,
+      "steps": [
+        "Design HUD layout",
+        "Create money display component",
+        "Implement number formatting (K, M, B, T, Qa, Qi)",
+        "Add money change animations",
+        "Position appropriately for all devices"
+      ],
+      "acceptanceCriteria": [
+        "Money is always visible",
+        "Large numbers formatted correctly",
+        "Updates in real-time",
+        "Works on all screen sizes"
+      ],
+      "tests": [
+        "Test number formatting at all scales",
+        "Test real-time updates",
+        "Test responsive layout"
+      ]
+    },
+    {
+      "id": 17,
+      "category": "UI",
+      "title": "Create Inventory UI",
+      "description": "Design and implement inventory UI showing eggs and chickens the player owns.",
+      "completed": false,
+      "steps": [
+        "Design inventory panel layout",
+        "Create egg display slots",
+        "Create chicken display for unplaced chickens",
+        "Add selection and action buttons",
+        "Implement scrolling for large inventories"
+      ],
+      "acceptanceCriteria": [
+        "Inventory shows all owned items",
+        "Items can be selected",
+        "Actions available for selected items",
+        "Scrolls when inventory is large"
+      ],
+      "tests": [
+        "Test inventory displays correctly",
+        "Test item selection",
+        "Test scrolling functionality"
+      ]
+    },
+    {
+      "id": 18,
+      "category": "Predators",
+      "title": "Create Predator Configuration System",
+      "description": "Define predator types with their strength levels, spawn rates, and rewards when caught.",
+      "completed": false,
+      "steps": [
+        "Create PredatorConfig module",
+        "Define predator types and tiers",
+        "Set spawn probabilities and intervals",
+        "Define rewards for catching each type",
+        "Set damage/threat levels"
+      ],
+      "acceptanceCriteria": [
+        "Multiple predator types defined",
+        "Predators have varying difficulties",
+        "Rewards scale with difficulty",
+        "Spawn rates are balanced"
+      ],
+      "tests": [
+        "Test all predator configs are valid",
+        "Test reward scaling",
+        "Test spawn rate calculations"
+      ]
+    },
+    {
+      "id": 19,
+      "category": "Predators",
+      "title": "Implement Predator Spawning System",
+      "description": "Create system to periodically spawn predators that target player coops.",
+      "completed": false,
+      "steps": [
+        "Create spawn timer system",
+        "Select random predator type based on weights",
+        "Spawn predator near player's coop",
+        "Create predator AI pathfinding to coop",
+        "Handle multiple predator types"
+      ],
+      "acceptanceCriteria": [
+        "Predators spawn periodically",
+        "Predators move toward coops",
+        "Different types spawn based on probability",
+        "Spawning scales with game progression"
+      ],
+      "tests": [
+        "Test predator spawning",
+        "Test AI pathfinding",
+        "Test spawn rate timing"
+      ]
+    },
+    {
+      "id": 20,
+      "category": "Predators",
+      "title": "Implement Predator Attack Behavior",
+      "description": "Create predator AI that attacks chickens if not stopped.",
+      "completed": false,
+      "steps": [
+        "Implement predator reach coop detection",
+        "Create attack animation",
+        "Implement chicken stealing/killing logic",
+        "Handle predator escape with chicken",
+        "Trigger alerts for player"
+      ],
+      "acceptanceCriteria": [
+        "Predators attack chickens in coop",
+        "Chickens can be stolen/killed",
+        "Player is alerted to attacks",
+        "Predators can escape with loot"
+      ],
+      "tests": [
+        "Test predator attack sequence",
+        "Test chicken loss",
+        "Test alert system"
+      ]
+    },
+    {
+      "id": 21,
+      "category": "Traps",
+      "title": "Create Trap Configuration System",
+      "description": "Define trap types with their effectiveness against different predator levels.",
+      "completed": false,
+      "steps": [
+        "Create TrapConfig module",
+        "Define trap tiers and types",
+        "Set effectiveness against each predator type",
+        "Define purchase prices",
+        "Set placement limits"
+      ],
+      "acceptanceCriteria": [
+        "Multiple trap types defined",
+        "Traps have varying effectiveness",
+        "Higher traps catch stronger predators",
+        "Prices scale appropriately"
+      ],
+      "tests": [
+        "Test trap config validity",
+        "Test effectiveness calculations",
+        "Test price scaling"
+      ]
+    },
+    {
+      "id": 22,
+      "category": "Traps",
+      "title": "Implement Trap Placement System",
+      "description": "Allow players to purchase and place traps around their coop.",
+      "completed": false,
+      "steps": [
+        "Create trap placement spots",
+        "Implement trap purchase from store",
+        "Create placement UI",
+        "Spawn trap model at location",
+        "Limit traps per coop"
+      ],
+      "acceptanceCriteria": [
+        "Players can buy traps",
+        "Traps can be placed in designated spots",
+        "Placement limit is enforced",
+        "Traps are visible in coop"
+      ],
+      "tests": [
+        "Test trap purchase",
+        "Test trap placement",
+        "Test placement limits"
+      ]
+    },
+    {
+      "id": 23,
+      "category": "Traps",
+      "title": "Implement Trap Catching Mechanic",
+      "description": "Make traps catch predators based on trap level vs predator level.",
+      "completed": false,
+      "steps": [
+        "Detect predator entering trap zone",
+        "Calculate catch probability",
+        "Trigger catch animation if successful",
+        "Store caught predator for selling",
+        "Handle trap cooldown or single-use"
+      ],
+      "acceptanceCriteria": [
+        "Traps catch predators",
+        "Catch rate depends on trap vs predator level",
+        "Caught predators can be sold",
+        "Traps have appropriate cooldown"
+      ],
+      "tests": [
+        "Test catch probability",
+        "Test caught predator storage",
+        "Test trap cooldown"
+      ]
+    },
+    {
+      "id": 24,
+      "category": "Defense",
+      "title": "Implement Baseball Bat Combat",
+      "description": "Give players a baseball bat to defend against predators and other players.",
+      "completed": false,
+      "steps": [
+        "Create bat tool/weapon",
+        "Implement swing animation",
+        "Detect hit on predators",
+        "Detect hit on players",
+        "Apply damage/knockback"
+      ],
+      "acceptanceCriteria": [
+        "Players can equip bat",
+        "Swinging hits nearby targets",
+        "Predators can be defeated",
+        "Players can be knocked back"
+      ],
+      "tests": [
+        "Test bat swing detection",
+        "Test predator damage",
+        "Test player knockback"
+      ]
+    },
+    {
+      "id": 25,
+      "category": "Defense",
+      "title": "Implement Cage Locking System",
+      "description": "Allow players to lock their cage for 1 minute to prevent theft.",
+      "completed": false,
+      "steps": [
+        "Create lock button in UI",
+        "Implement 1 minute lock timer",
+        "Block entry to cage while locked",
+        "Show lock visual indicator",
+        "Add cooldown between locks"
+      ],
+      "acceptanceCriteria": [
+        "Players can activate lock",
+        "Lock lasts 1 minute",
+        "Other players cannot enter",
+        "Visual shows lock status"
+      ],
+      "tests": [
+        "Test lock activation",
+        "Test lock duration",
+        "Test entry blocking"
+      ]
+    },
+    {
+      "id": 26,
+      "category": "Defense",
+      "title": "Implement Cage Upgrade System",
+      "description": "Allow players to upgrade their cage to extend lock duration and improve predator resistance.",
+      "completed": false,
+      "steps": [
+        "Define cage upgrade tiers",
+        "Create upgrade purchase UI",
+        "Implement extended lock durations per tier",
+        "Add predator resistance bonuses",
+        "Visual changes for upgraded cages"
+      ],
+      "acceptanceCriteria": [
+        "Players can purchase upgrades",
+        "Lock duration increases with tier",
+        "Predator resistance improves",
+        "Cage visually changes"
+      ],
+      "tests": [
+        "Test upgrade purchase",
+        "Test lock duration per tier",
+        "Test predator resistance"
+      ]
+    },
+    {
+      "id": 27,
+      "category": "PvP",
+      "title": "Implement Chicken Stealing",
+      "description": "Allow players to steal chickens from other players' unlocked coops.",
+      "completed": false,
+      "steps": [
+        "Detect player in another's coop",
+        "Check if coop is locked",
+        "Allow E key to steal chicken",
+        "Add steal animation/delay",
+        "Transfer chicken to thief's inventory"
+      ],
+      "acceptanceCriteria": [
+        "Can steal from unlocked coops",
+        "Cannot steal from locked coops",
+        "Stealing takes time (can be interrupted)",
+        "Chicken transfers to thief"
+      ],
+      "tests": [
+        "Test stealing from unlocked coop",
+        "Test blocked by locked coop",
+        "Test steal interruption"
+      ]
+    },
+    {
+      "id": 28,
+      "category": "PvP",
+      "title": "Implement Random Chicken Spawn Event",
+      "description": "Periodically spawn a rare chicken in a neutral area for players to fight over.",
+      "completed": false,
+      "steps": [
+        "Create neutral area on map",
+        "Implement spawn timer for events",
+        "Spawn random rare chicken",
+        "Announce event to all players",
+        "First to grab chicken gets it"
+      ],
+      "acceptanceCriteria": [
+        "Events occur periodically",
+        "Rare chickens spawn in neutral zone",
+        "All players are notified",
+        "One player claims the chicken"
+      ],
+      "tests": [
+        "Test event timing",
+        "Test chicken claiming",
+        "Test notification system"
+      ]
+    },
+    {
+      "id": 29,
+      "category": "Trading",
+      "title": "Implement Trading System UI",
+      "description": "Create UI for players to initiate and manage trades with each other.",
+      "completed": false,
+      "steps": [
+        "Create trade request system",
+        "Design trade window UI",
+        "Show both players' offers",
+        "Add confirm/cancel buttons",
+        "Handle trade completion"
+      ],
+      "acceptanceCriteria": [
+        "Players can request trades",
+        "Trade UI shows both offers",
+        "Both must confirm to complete",
+        "Items transfer correctly"
+      ],
+      "tests": [
+        "Test trade request",
+        "Test trade UI display",
+        "Test trade completion"
+      ]
+    },
+    {
+      "id": 30,
+      "category": "Trading",
+      "title": "Implement Trade Item Exchange",
+      "description": "Handle the actual exchange of eggs and chickens between players.",
+      "completed": false,
+      "steps": [
+        "Validate both players have offered items",
+        "Lock items during trade",
+        "Transfer items on confirmation",
+        "Update both player inventories",
+        "Handle edge cases (disconnect, etc.)"
+      ],
+      "acceptanceCriteria": [
+        "Items transfer correctly",
+        "Inventories update for both players",
+        "Items locked during pending trade",
+        "Disconnects cancel trade safely"
+      ],
+      "tests": [
+        "Test item transfer",
+        "Test inventory updates",
+        "Test disconnect handling"
+      ]
+    },
+    {
+      "id": 31,
+      "category": "Offline",
+      "title": "Implement Offline Earnings System",
+      "description": "Calculate and award money and eggs earned while player was offline, with caps.",
+      "completed": false,
+      "steps": [
+        "Store last logout timestamp",
+        "Calculate offline duration on login",
+        "Compute money earned from chickens",
+        "Compute eggs laid while offline",
+        "Apply caps to prevent abuse"
+      ],
+      "acceptanceCriteria": [
+        "Offline money is calculated correctly",
+        "Offline eggs are added to inventory",
+        "Caps prevent excessive offline gains",
+        "Player sees offline earnings summary"
+      ],
+      "tests": [
+        "Test offline money calculation",
+        "Test offline egg calculation",
+        "Test cap enforcement"
+      ]
+    },
+    {
+      "id": 32,
+      "category": "Offline",
+      "title": "Create Offline Earnings Summary UI",
+      "description": "Show players what they earned while offline when they rejoin.",
+      "completed": false,
+      "steps": [
+        "Design welcome back popup",
+        "Show money earned offline",
+        "Show eggs collected offline",
+        "Show time away",
+        "Add claim button"
+      ],
+      "acceptanceCriteria": [
+        "Popup appears on rejoin",
+        "Shows accurate offline earnings",
+        "Player must claim to receive",
+        "Can be dismissed"
+      ],
+      "tests": [
+        "Test popup displays",
+        "Test earnings accuracy",
+        "Test claim functionality"
+      ]
+    },
+    {
+      "id": 33,
+      "category": "Mobile",
+      "title": "Implement Mobile Touch Controls",
+      "description": "Create touch equivalents for all keyboard controls (E, F, etc.).",
+      "completed": false,
+      "steps": [
+        "Detect mobile device",
+        "Create contextual touch buttons",
+        "Show pickup button near chickens",
+        "Show sell button when appropriate",
+        "Show hatch button for eggs"
+      ],
+      "acceptanceCriteria": [
+        "Mobile players can perform all actions",
+        "Buttons appear contextually",
+        "Touch controls are intuitive",
+        "UI doesn't obstruct gameplay"
+      ],
+      "tests": [
+        "Test mobile device detection",
+        "Test contextual button appearance",
+        "Test all actions on mobile"
+      ]
+    },
+    {
+      "id": 34,
+      "category": "Audio",
+      "title": "Implement Sound Effects",
+      "description": "Add sound effects for all major actions in the game.",
+      "completed": false,
+      "steps": [
+        "Add money collection sound",
+        "Add egg hatch sounds",
+        "Add chicken placement sounds",
+        "Add combat/bat sounds",
+        "Add predator alert sounds"
+      ],
+      "acceptanceCriteria": [
+        "All major actions have sounds",
+        "Sounds are appropriate and not annoying",
+        "Volume levels are balanced",
+        "Sounds can be muted"
+      ],
+      "tests": ["Test all sound triggers", "Test mute functionality"]
+    },
+    {
+      "id": 35,
+      "category": "Visual",
+      "title": "Create Chicken Models and Animations",
+      "description": "Design visual models for all chicken types with idle and laying animations.",
+      "completed": false,
+      "steps": [
+        "Create base chicken model",
+        "Create variations for each rarity",
+        "Add idle animation",
+        "Add egg laying animation",
+        "Add money generation visual effect"
+      ],
+      "acceptanceCriteria": [
+        "Each chicken type is visually distinct",
+        "Rarer chickens look more impressive",
+        "Animations play correctly",
+        "Money visual is clear"
+      ],
+      "tests": ["Test all models load", "Test animations play"]
+    },
+    {
+      "id": 36,
+      "category": "Visual",
+      "title": "Create Egg Models and Hatch Animation",
+      "description": "Design egg models for each type and create exciting hatch animation.",
+      "completed": false,
+      "steps": [
+        "Create base egg model",
+        "Create variations for each rarity",
+        "Design hatch animation sequence",
+        "Add particle effects for rare hatches",
+        "Create anticipation shake animation"
+      ],
+      "acceptanceCriteria": [
+        "Each egg type is visually distinct",
+        "Hatch animation is exciting",
+        "Rare hatches have special effects",
+        "Animations are smooth"
+      ],
+      "tests": ["Test all egg models", "Test hatch animation"]
+    },
+    {
+      "id": 37,
+      "category": "Visual",
+      "title": "Create Predator Models and Animations",
+      "description": "Design visual models for all predator types with walk and attack animations.",
+      "completed": false,
+      "steps": [
+        "Create predator models for each type",
+        "Add walk/run animation",
+        "Add attack animation",
+        "Add defeated animation",
+        "Add trapped animation"
+      ],
+      "acceptanceCriteria": [
+        "Each predator type has unique model",
+        "Animations play correctly",
+        "Predators are visually threatening",
+        "Trapped state is clear"
+      ],
+      "tests": ["Test all predator models", "Test animations"]
+    },
+    {
+      "id": 38,
+      "category": "Tutorial",
+      "title": "Create New Player Tutorial",
+      "description": "Guide new players through basic mechanics when they first join.",
+      "completed": false,
+      "steps": [
+        "Detect first-time player",
+        "Create tutorial UI prompts",
+        "Guide placing first egg",
+        "Guide hatching process",
+        "Explain money collection"
+      ],
+      "acceptanceCriteria": [
+        "Tutorial triggers for new players",
+        "All core mechanics explained",
+        "Can be skipped",
+        "Doesn't repeat for returning players"
+      ],
+      "tests": [
+        "Test tutorial triggers",
+        "Test skip functionality",
+        "Test completion tracking"
+      ]
+    },
+    {
+      "id": 39,
+      "category": "Balancing",
+      "title": "Balance Economy Values",
+      "description": "Fine-tune all economic values for good game progression.",
+      "completed": false,
+      "steps": [
+        "Playtest early game progression",
+        "Adjust money generation rates",
+        "Balance egg prices",
+        "Balance chicken values",
+        "Ensure exponential progression feels good"
+      ],
+      "acceptanceCriteria": [
+        "Early game is engaging",
+        "Mid game has good progression",
+        "Late game reaches trillions",
+        "No exploits or dead ends"
+      ],
+      "tests": ["Test full progression playthrough", "Test edge cases"]
+    },
+    {
+      "id": 40,
+      "category": "Testing",
+      "title": "Create Integration Test Suite",
+      "description": "Build comprehensive tests for all game systems.",
+      "completed": false,
+      "steps": [
+        "Set up testing framework",
+        "Create tests for each system",
+        "Create multiplayer scenario tests",
+        "Test edge cases",
+        "Automate test running"
+      ],
+      "acceptanceCriteria": [
+        "All systems have tests",
+        "Tests run automatically",
+        "Edge cases covered",
+        "Tests pass consistently"
+      ],
+      "tests": ["Meta: verify test coverage"]
+    }
+  ],
+  "categories": [
+    "Infrastructure",
+    "Map",
+    "Chickens",
+    "Eggs",
+    "Economy",
+    "UI",
+    "Predators",
+    "Traps",
+    "Defense",
+    "PvP",
+    "Trading",
+    "Offline",
+    "Mobile",
+    "Audio",
+    "Visual",
+    "Tutorial",
+    "Balancing",
+    "Testing"
+  ],
+  "milestones": [
+    {
+      "name": "MVP Core Loop",
+      "description": "Basic playable game with chickens, eggs, and money",
+      "workItemIds": [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 16]
+    },
+    {
+      "name": "Economy & Store",
+      "description": "Full economy with store and selling",
+      "workItemIds": [13, 14, 15, 17]
+    },
+    {
+      "name": "Predators & Defense",
+      "description": "PvE content with predators and traps",
+      "workItemIds": [18, 19, 20, 21, 22, 23, 24]
+    },
+    {
+      "name": "PvP & Social",
+      "description": "Player interaction features",
+      "workItemIds": [9, 25, 26, 27, 28, 29, 30]
+    },
+    {
+      "name": "Polish & Launch",
+      "description": "Final polish, mobile support, and balancing",
+      "workItemIds": [31, 32, 33, 34, 35, 36, 37, 38, 39, 40]
+    }
+  ]
+}

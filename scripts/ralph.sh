@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -e
+
+if [ -z "$1" ]; then
+  echo "Usage: $0 <command>"
+  exit 1
+fi
+
+for ((i = 0; i < $1; i++)); do
+  echo "Iteration $i: Executing command..."
+  echo "----------------------------"
+  result=$(copilot --allow-all-tools --model claude-opus-4.5 -p "@plans/prd.json @progress.txt \
+1. Find the highest-priority feature to work on and work only on that feature.
+This should be the one YOU decide has the highest priority - not necessarily the first in the list. \
+2. Check that the types check via and that the tests pass.
+3. Update the PRD with the work that was done. \
+4. Append your progress to the progress.txt file. \
+Use this to leave a note for the next person working in the codebase. \
+5. Make a git commit of that feature. \
+ONLY WORK ON A SINGLE FEATURE.
+If, while implementing the feature, you notice the PRD is complete, output <promise>COMPLETE</promise>.
+")
+
+  echo "$result"
+  echo "----------------------------"
+
+  if [[ "$result" == *"<promise>COMPLETE</promise>"* ]]; then
+    echo "PRD complete, exiting."
+    # tt notify "VM PRD complete after $i iterations" exit g
+    exit 0
+  fi
+done
+
+
