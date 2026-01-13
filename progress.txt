@@ -704,3 +704,28 @@
 - Map summary printed on startup
 - Format check and build pass
 - Next: Work Items #4-9 (Gameplay handlers) - all have high priority
+
+[2026-01-13] Completed Work Item #22: Wire Up Client RemoteEvent Listeners
+- Completely rewrote src/client/Main.client.lua with full remote event wiring
+- Requires and initializes: SoundEffects, ChickenVisuals, PredatorVisuals, EggVisuals
+- Gets Remotes folder from ReplicatedStorage with 10s timeout
+- Helper functions: getEvent(), getFunction() for safe remote access
+- 18 RemoteEvent listeners connected:
+  - PlayerDataChanged: Updates local playerDataCache
+  - ChickenPlaced: Creates chicken visual, plays sound
+  - ChickenPickedUp: Destroys chicken visual, plays sound
+  - ChickenSold: Destroys chicken, plays money collect sound
+  - EggHatched: Plays hatch animation and sound by rarity
+  - EggLaid: Creates egg visual at position
+  - MoneyCollected: Plays sound and money pop effect
+  - TrapPlaced/TrapCaught: Sound effects and predator trapped animation
+  - PredatorSpawned: Creates predator visual, plays alert for high threat
+  - PredatorDefeated: Plays defeated animation, bat swing sound if by player
+  - LockActivated: Lock sound effect
+  - Trade events (Requested/Updated/Completed): Notifications and sounds
+  - RandomChickenSpawned/Claimed: Notifications and celebration animation
+  - AlertTriggered: Predator alert sound
+- Utility exports: getPlayerData(), invokeServer(), getEvent(), getFunction()
+- ClientMain object created for other client module access
+- Format check and build pass
+- Next: Work Items #23 (Sound Effects), #24 (Main HUD), #37 (Data Sync) - all unblocked by this item

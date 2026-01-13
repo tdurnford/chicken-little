@@ -557,7 +557,7 @@
       "category": "Client-Core",
       "title": "Wire Up Client RemoteEvent Listeners",
       "description": "Set up listeners for all RemoteEvents from server in Main.client.lua.",
-      "completed": false,
+      "completed": true,
       "priority": "critical",
       "steps": [
         "Get Remotes folder from ReplicatedStorage",
