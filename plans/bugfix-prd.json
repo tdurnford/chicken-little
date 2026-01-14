@@ -85,9 +85,7 @@
         "UI updates when purchase is made",
         "Sold out items are greyed out"
       ],
-      "dependencies": [
-        1
-      ],
+      "dependencies": [1],
       "codeLocation": "src/client/StoreUI.lua"
     },
     {
@@ -138,9 +136,7 @@
         "Stock quantities vary by rarity",
         "All connected clients see updated inventory"
       ],
-      "dependencies": [
-        3
-      ],
+      "dependencies": [3],
       "codeLocation": "src/shared/Store.lua"
     },
     {
@@ -164,9 +160,7 @@
         "All players see the refreshed inventory",
         "Receipt is properly recorded"
       ],
-      "dependencies": [
-        4
-      ],
+      "dependencies": [4],
       "codeLocation": "src/server/Main.server.lua",
       "status": "completed"
     },
@@ -191,10 +185,7 @@
         "Items are delivered to player inventory after purchase",
         "Transaction is recorded properly"
       ],
-      "dependencies": [
-        2,
-        3
-      ],
+      "dependencies": [2, 3],
       "codeLocation": "src/server/Main.server.lua",
       "status": "completed"
     },
@@ -223,9 +214,7 @@
         "Power-ups have time duration and expire",
         "Active power-ups are shown in UI"
       ],
-      "dependencies": [
-        2
-      ],
+      "dependencies": [2],
       "codeLocation": "src/shared/PowerUpConfig.lua"
     },
     {
@@ -301,9 +290,7 @@
         "Player is knocked back if health depletes",
         "Health regenerates after combat ends"
       ],
-      "dependencies": [
-        8
-      ],
+      "dependencies": [8],
       "codeLocation": "src/shared/PredatorConfig.lua",
       "status": "completed"
     },
@@ -332,9 +319,7 @@
         "Player regains control after timer expires",
         "Visual feedback shows incapacitation state"
       ],
-      "dependencies": [
-        8
-      ],
+      "dependencies": [8],
       "codeLocation": "src/shared/BaseballBat.lua"
     },
     {
@@ -383,9 +368,7 @@
         "Tutorial completes after egg is placed",
         "Tutorial is much shorter than before"
       ],
-      "dependencies": [
-        12
-      ],
+      "dependencies": [12],
       "codeLocation": "src/client/Tutorial.lua"
     },
     {
@@ -436,9 +419,7 @@
         "Full health chickens produce normal income",
         "Visual indicator shows reduced income state"
       ],
-      "dependencies": [
-        14
-      ],
+      "dependencies": [14],
       "codeLocation": "src/shared/MoneyCollection.lua"
     },
     {
@@ -490,9 +471,7 @@
         "Robux option available for all items",
         "Items are added to player inventory"
       ],
-      "dependencies": [
-        2
-      ],
+      "dependencies": [2],
       "codeLocation": "src/shared/SuppliesStore.lua"
     },
     {
@@ -521,9 +500,7 @@
         "Weapon visuals change based on equipped weapon",
         "Robux option available"
       ],
-      "dependencies": [
-        8
-      ],
+      "dependencies": [8],
       "codeLocation": "src/shared/WeaponConfig.lua"
     },
     {
@@ -557,9 +534,9 @@
     {
       "id": 20,
       "category": "RandomChicken-BugFix",
-      "title": "Fix Random Chickens Not Collectible",
-      "description": "Players cannot collect chickens that are dropped in the arena. Fix the claim interaction.",
-      "completed": true,
+      "title": "Fix Arena Chicken Pickup",
+      "description": "Players cannot collect chickens that are dropped in the arena. The entire flow is broken - from interaction prompt to inventory sync.",
+      "completed": false,
       "priority": "critical",
       "steps": [
         "Verify ClaimRandomChicken RemoteFunction exists and is connected",
@@ -567,13 +544,15 @@
         "Add E key interaction prompt for random chickens",
         "Wire claim interaction to RandomChickenSpawn.claimChicken()",
         "Transfer claimed chicken to player inventory",
+        "Ensure syncPlayerData is called immediately after claim",
+        "Verify client-side inventory state updates on event receipt",
         "Remove chicken from arena after claim",
         "Fire RandomChickenClaimed event to all clients"
       ],
       "acceptanceCriteria": [
         "Players see 'Press E to claim' near random chickens",
         "Pressing E claims the chicken",
-        "Claimed chicken appears in player inventory",
+        "Claimed chicken appears in player inventory immediately",
         "Chicken despawns from arena after claim",
         "Only one player can claim each chicken"
       ],
@@ -599,9 +578,7 @@
         "Money only starts accumulating after placement",
         "Placed chickens accumulate normally"
       ],
-      "dependencies": [
-        20
-      ],
+      "dependencies": [20],
       "codeLocation": "src/client/ChickenVisuals.lua"
     },
     {
@@ -628,9 +605,7 @@
         "Movement looks natural with animations",
         "All clients see same chicken positions"
       ],
-      "dependencies": [
-        20
-      ],
+      "dependencies": [20],
       "codeLocation": "src/shared/ChickenAI.lua"
     },
     {
@@ -682,9 +657,7 @@
         "Players can see predators roaming",
         "Predators can be intercepted during roam"
       ],
-      "dependencies": [
-        23
-      ],
+      "dependencies": [23],
       "codeLocation": "src/shared/PredatorAI.lua"
     },
     {
@@ -708,11 +681,7 @@
         "Purchases work and update inventory",
         "Money balance updates correctly"
       ],
-      "dependencies": [
-        1,
-        2,
-        3
-      ],
+      "dependencies": [1, 2, 3],
       "codeLocation": "src/client/Main.client.lua",
       "status": "completed"
     },
@@ -738,11 +707,7 @@
         "Hits register on predators and players",
         "Damage feedback is shown"
       ],
-      "dependencies": [
-        8,
-        10,
-        11
-      ],
+      "dependencies": [8, 10, 11],
       "codeLocation": "src/client/Main.client.lua"
     },
     {
@@ -766,10 +731,7 @@
         "All clients see predator movement",
         "Attacks start when predator reaches coop"
       ],
-      "dependencies": [
-        23,
-        24
-      ],
+      "dependencies": [23, 24],
       "codeLocation": "src/server/Main.server.lua"
     },
     {
@@ -791,9 +753,7 @@
         "Movement synced to all clients",
         "Chickens can still be claimed while moving"
       ],
-      "dependencies": [
-        22
-      ],
+      "dependencies": [22],
       "codeLocation": "src/server/Main.server.lua"
     },
     {
@@ -844,10 +804,7 @@
         "Edge cases are covered",
         "Tests are added to IntegrationTests.lua"
       ],
-      "dependencies": [
-        3,
-        4
-      ],
+      "dependencies": [3, 4],
       "codeLocation": "src/shared/IntegrationTests.lua"
     },
     {
@@ -869,11 +826,7 @@
         "Damage values are correct",
         "Tests are added to IntegrationTests.lua"
       ],
-      "dependencies": [
-        8,
-        10,
-        11
-      ],
+      "dependencies": [8, 10, 11],
       "codeLocation": "src/shared/IntegrationTests.lua"
     },
     {
@@ -895,10 +848,7 @@
         "Movement stays in bounds",
         "Tests are added to IntegrationTests.lua"
       ],
-      "dependencies": [
-        22,
-        23
-      ],
+      "dependencies": [22, 23],
       "codeLocation": "src/shared/IntegrationTests.lua"
     },
     {
@@ -920,9 +870,7 @@
         "Timer updates in real-time",
         "Timer resets after replenishment occurs"
       ],
-      "dependencies": [
-        4
-      ],
+      "dependencies": [4],
       "codeLocation": "src/client/StoreUI.lua"
     },
     {
@@ -930,7 +878,8 @@
       "category": "Inventory-BugFix",
       "title": "Fix Inventory Keybind Not Working",
       "description": "The inventory keybind doesn't work at all. Need to wire the keybind handler to actually open/close the inventory UI.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
       "priority": "critical",
       "steps": [
         "Find the inventory keybind in Main.client.lua or InventoryUI.lua",
@@ -966,9 +915,7 @@
         "Money display only appears for placed chickens",
         "No visual clutter on arena chickens"
       ],
-      "dependencies": [
-        21
-      ],
+      "dependencies": [21],
       "codeLocation": "src/client/ChickenVisuals.lua"
     },
     {
@@ -1033,9 +980,7 @@
         "No damage dealt from distant predators",
         "Predators visibly approach before attacking"
       ],
-      "dependencies": [
-        23
-      ],
+      "dependencies": [23],
       "codeLocation": "src/shared/PredatorAttack.lua",
       "status": "completed"
     },
@@ -1062,30 +1007,6 @@
       ],
       "dependencies": [],
       "codeLocation": "src/shared/BalanceConfig.lua"
-    },
-    {
-      "id": 40,
-      "category": "RandomChicken-BugFix",
-      "title": "Fix Arena Chicken Pickup Not Adding to Inventory Immediately",
-      "description": "Picking up arena chickens doesn't add them to inventory until a second chicken is picked up. Fix the inventory sync.",
-      "completed": true,
-      "priority": "critical",
-      "steps": [
-        "Review ClaimRandomChicken handler inventory update logic",
-        "Ensure syncPlayerData is called immediately after claim",
-        "Check if inventory update event is firing to client",
-        "Verify client-side inventory state updates on event receipt"
-      ],
-      "acceptanceCriteria": [
-        "Claimed chicken appears in inventory immediately",
-        "No need to claim a second chicken",
-        "Inventory count updates correctly on first claim"
-      ],
-      "dependencies": [
-        20
-      ],
-      "codeLocation": "src/server/Main.server.lua",
-      "status": "completed"
     },
     {
       "id": 41,
@@ -1152,9 +1073,7 @@
         "Rate reflects actual generation including damage penalties",
         "Label is readable and well-positioned"
       ],
-      "dependencies": [
-        14
-      ],
+      "dependencies": [14],
       "codeLocation": "src/client/ChickenVisuals.lua"
     },
     {
@@ -1337,9 +1256,7 @@
         "Movement looks more natural and threatening",
         "Predators target specific chickens visually"
       ],
-      "dependencies": [
-        23
-      ],
+      "dependencies": [23],
       "codeLocation": "src/shared/PredatorAI.lua"
     },
     {
@@ -1362,9 +1279,7 @@
         "Robux button has Robux icon",
         "Clean, uncluttered store item layout"
       ],
-      "dependencies": [
-        2
-      ],
+      "dependencies": [2],
       "codeLocation": "src/client/StoreUI.lua"
     },
     {
@@ -1387,10 +1302,7 @@
         "Other eggs can still sell out normally",
         "Works correctly with store replenishment system"
       ],
-      "dependencies": [
-        3,
-        4
-      ],
+      "dependencies": [3, 4],
       "codeLocation": "src/shared/Store.lua"
     },
     {
@@ -1442,9 +1354,7 @@
         "Button shows item count badge",
         "Works on both desktop and mobile"
       ],
-      "dependencies": [
-        34
-      ],
+      "dependencies": [34],
       "codeLocation": "src/client/MainHUD.lua"
     }
   ],

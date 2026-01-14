@@ -100,7 +100,10 @@ MainHUD.create()
 print("[Client] MainHUD created")
 
 -- Create Inventory UI
-InventoryUI.create()
+local inventoryCreated = InventoryUI.create()
+if not inventoryCreated then
+  warn("[Client] InventoryUI creation FAILED")
+end
 print("[Client] InventoryUI created")
 
 -- Create Hatch Preview UI

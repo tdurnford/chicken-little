@@ -659,6 +659,8 @@ function InventoryUI.setVisible(visible: boolean)
   state.isVisible = visible
   if state.mainFrame then
     state.mainFrame.Visible = visible
+  else
+    warn("[InventoryUI] Cannot set visibility - mainFrame is nil. Was create() called?")
   end
   -- Refresh inventory with cached data when becoming visible
   if visible and cachedPlayerData then
