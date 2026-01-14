@@ -1,7 +1,7 @@
 --[[
 	Tutorial Module
-	Guides new players through basic mechanics when they first join.
-	Covers egg placement, hatching, and money collection.
+	Guides new players through basic mechanics using visual arrows.
+	Simplified to: Go to store -> Buy egg -> Place/hatch chicken -> Done
 ]]
 
 local Tutorial = {}
@@ -9,12 +9,14 @@ local Tutorial = {}
 -- Services
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 -- Get shared modules path
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local PlayerData = require(Shared:WaitForChild("PlayerData"))
+local MapGeneration = require(Shared:WaitForChild("MapGeneration"))
 
 -- Type definitions
 export type TutorialStep = {
@@ -25,6 +27,7 @@ export type TutorialStep = {
   action: string?, -- Optional action description (e.g., "Press E")
   waitForAction: boolean?, -- Wait for player to complete action
   duration: number?, -- Auto-advance duration if no action required
+  targetPosition: Vector3?, -- Position for arrow to point to
 }
 
 export type TutorialConfig = {
@@ -36,6 +39,9 @@ export type TutorialConfig = {
 export type TutorialState = {
   screenGui: ScreenGui?,
   mainFrame: Frame?,
+  arrowPart: Part?,
+  arrowBillboard: BillboardGui?,
+  arrowUpdateConnection: RBXScriptConnection?,
   currentStepIndex: number,
   isActive: boolean,
   isPaused: boolean,
@@ -46,59 +52,38 @@ export type TutorialState = {
   advanceConnection: RBXScriptConnection?,
 }
 
--- Tutorial steps for new players
+-- Get store position from map config
+local function getStorePosition(): Vector3
+  local config = MapGeneration.getConfig()
+  return Vector3.new(config.originPosition.x, config.originPosition.y + 3, config.originPosition.z)
+end
+
+-- Simplified tutorial steps: buy egg, place it, done
 local TUTORIAL_STEPS: { TutorialStep } = {
   {
-    id = "welcome",
-    title = "Welcome to Chicken Coop Tycoon!",
-    message = "Raise chickens, collect eggs, and build your fortune!",
-    icon = "🐔",
-    duration = 4,
-  },
-  {
-    id = "inventory_intro",
-    title = "Your Inventory",
-    message = "You start with a Basic Chick Egg in your inventory. Open your inventory to see it!",
-    icon = "🎒",
-    action = "Press I or click the inventory button",
+    id = "buy_egg",
+    title = "Buy an Egg!",
+    message = "Go to the store and buy your first egg.",
+    icon = "🏪",
+    action = "Press E at the store",
     waitForAction = true,
+    targetPosition = getStorePosition(),
   },
   {
     id = "place_egg",
-    title = "Place Your Egg",
-    message = "Click on your egg in the inventory, then click the Place button to put it in your coop!",
+    title = "Place Your Egg!",
+    message = "Walk to your coop and place the egg.",
     icon = "🥚",
-    action = "Select egg and click Place",
+    action = "Walk near a coop spot",
     waitForAction = true,
-  },
-  {
-    id = "hatch_egg",
-    title = "Hatch Your Egg",
-    message = "See the possible chickens you could get? Press E or click Hatch to hatch your egg!",
-    icon = "🐣",
-    action = "Press E to hatch",
-    waitForAction = true,
-  },
-  {
-    id = "chicken_intro",
-    title = "Your First Chicken!",
-    message = "Congratulations! Your chicken will now generate money over time.",
-    icon = "🐔",
-    duration = 4,
-  },
-  {
-    id = "collect_money",
-    title = "Collect Money",
-    message = "Walk into your chicken to collect the money it has generated!",
-    icon = "💰",
-    waitForAction = true,
+    -- targetPosition set dynamically based on player section
   },
   {
     id = "complete",
-    title = "You're Ready!",
-    message = "Buy more eggs, hatch rarer chickens, and watch out for predators. Good luck!",
+    title = "Great Job!",
+    message = "Your chicken is hatching! Keep buying eggs and growing your farm.",
     icon = "🎉",
-    duration = 5,
+    duration = 4,
   },
 }
 
@@ -118,6 +103,9 @@ local STEP_TRANSITION_DURATION = 0.25
 local state: TutorialState = {
   screenGui = nil,
   mainFrame = nil,
+  arrowPart = nil,
+  arrowBillboard = nil,
+  arrowUpdateConnection = nil,
   currentStepIndex = 0,
   isActive = false,
   isPaused = false,
@@ -320,6 +308,132 @@ local function createProgressDots(parent: Frame, totalSteps: number): Frame
   return container
 end
 
+-- Create 3D arrow that points to objectives
+local function createArrowIndicator(): Part
+  local player = Players.LocalPlayer
+  local arrow = Instance.new("Part")
+  arrow.Name = "TutorialArrow"
+  arrow.Size = Vector3.new(2, 0.5, 3)
+  arrow.Color = Color3.fromRGB(100, 180, 255)
+  arrow.Material = Enum.Material.Neon
+  arrow.Transparency = 0.3
+  arrow.Anchored = true
+  arrow.CanCollide = false
+  arrow.CastShadow = false
+  arrow.Parent = workspace
+
+  -- Create a special mesh to make it look like an arrow
+  local mesh = Instance.new("SpecialMesh")
+  mesh.MeshType = Enum.MeshType.Wedge
+  mesh.Scale = Vector3.new(1, 1, 1)
+  mesh.Parent = arrow
+
+  -- Add billboard with text above the arrow
+  local billboard = Instance.new("BillboardGui")
+  billboard.Name = "ArrowLabel"
+  billboard.Size = UDim2.new(0, 200, 0, 50)
+  billboard.StudsOffset = Vector3.new(0, 3, 0)
+  billboard.AlwaysOnTop = true
+  billboard.Parent = arrow
+
+  local label = Instance.new("TextLabel")
+  label.Name = "Text"
+  label.Size = UDim2.new(1, 0, 1, 0)
+  label.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+  label.BackgroundTransparency = 0.2
+  label.TextColor3 = Color3.fromRGB(255, 255, 255)
+  label.TextScaled = true
+  label.Font = Enum.Font.GothamBold
+  label.Text = "Go here!"
+  label.Parent = billboard
+
+  local labelCorner = Instance.new("UICorner")
+  labelCorner.CornerRadius = UDim.new(0, 8)
+  labelCorner.Parent = label
+
+  state.arrowPart = arrow
+  state.arrowBillboard = billboard
+  return arrow
+end
+
+-- Update arrow position and rotation to point toward target
+local function updateArrowPosition(targetPos: Vector3?)
+  if not state.arrowPart then
+    return
+  end
+  if not targetPos then
+    state.arrowPart.Transparency = 1
+    return
+  end
+
+  local player = Players.LocalPlayer
+  local character = player and player.Character
+  local rootPart = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+
+  if not rootPart then
+    state.arrowPart.Transparency = 1
+    return
+  end
+
+  -- Position arrow above and in front of player
+  local playerPos = rootPart.Position
+  local direction = (targetPos - playerPos).Unit
+  local arrowPos = playerPos + Vector3.new(0, 5, 0) + direction * 3
+
+  -- Point arrow toward target (rotate around Y axis)
+  local lookAt = CFrame.lookAt(arrowPos, targetPos)
+  -- Rotate 90 degrees on X axis since wedge points "up" by default
+  state.arrowPart.CFrame = lookAt * CFrame.Angles(math.rad(90), 0, 0)
+  state.arrowPart.Transparency = 0.3
+end
+
+-- Start arrow update loop
+local function startArrowUpdates()
+  if state.arrowUpdateConnection then
+    state.arrowUpdateConnection:Disconnect()
+  end
+
+  state.arrowUpdateConnection = RunService.Heartbeat:Connect(function()
+    if not state.isActive or state.isPaused then
+      return
+    end
+
+    local currentStep = currentConfig.steps[state.currentStepIndex]
+    if currentStep and currentStep.targetPosition then
+      updateArrowPosition(currentStep.targetPosition)
+    else
+      updateArrowPosition(nil)
+    end
+  end)
+end
+
+-- Stop arrow updates and hide arrow
+local function stopArrowUpdates()
+  if state.arrowUpdateConnection then
+    state.arrowUpdateConnection:Disconnect()
+    state.arrowUpdateConnection = nil
+  end
+
+  if state.arrowPart then
+    state.arrowPart:Destroy()
+    state.arrowPart = nil
+  end
+end
+
+-- Set arrow label text
+local function setArrowLabel(text: string)
+  if not state.arrowPart then
+    return
+  end
+  local billboard = state.arrowPart:FindFirstChild("ArrowLabel") :: BillboardGui?
+  if billboard then
+    local label = billboard:FindFirstChild("Text") :: TextLabel?
+    if label then
+      label.Text = text
+    end
+  end
+end
+
 -- Update progress dots
 local function updateProgressDots(stepIndex: number)
   if not state.mainFrame then
@@ -378,6 +492,11 @@ local function updateStepUI(step: TutorialStep)
   if continueButton then
     -- Show continue button only for non-action steps
     continueButton.Visible = not step.waitForAction
+  end
+
+  -- Update arrow label based on step
+  if step.targetPosition then
+    setArrowLabel(step.title)
   end
 
   updateProgressDots(state.currentStepIndex)
@@ -506,6 +625,9 @@ function Tutorial.create(config: TutorialConfig?): boolean
   createContinueButton(state.mainFrame)
   createProgressDots(state.mainFrame, #currentConfig.steps)
 
+  -- Create 3D arrow indicator
+  createArrowIndicator()
+
   state.isActive = false
   state.currentStepIndex = 0
 
@@ -524,12 +646,17 @@ function Tutorial.destroy()
     state.advanceConnection = nil
   end
 
+  -- Clean up arrow
+  stopArrowUpdates()
+
   if state.screenGui then
     state.screenGui:Destroy()
   end
 
   state.screenGui = nil
   state.mainFrame = nil
+  state.arrowPart = nil
+  state.arrowBillboard = nil
   state.currentStepIndex = 0
   state.isActive = false
   state.isPaused = false
@@ -552,6 +679,9 @@ function Tutorial.start()
   state.isActive = true
   state.isPaused = false
   state.currentStepIndex = 1
+
+  -- Start arrow updates
+  startArrowUpdates()
 
   local firstStep = currentConfig.steps[1]
   if firstStep then
@@ -620,6 +750,9 @@ function Tutorial.skip()
     state.advanceConnection = nil
   end
 
+  -- Stop arrow updates
+  stopArrowUpdates()
+
   hideFrame(function()
     if state.onSkip then
       state.onSkip()
@@ -639,6 +772,9 @@ function Tutorial.complete()
     state.advanceConnection:Disconnect()
     state.advanceConnection = nil
   end
+
+  -- Stop arrow updates
+  stopArrowUpdates()
 
   hideFrame(function()
     if state.onComplete then

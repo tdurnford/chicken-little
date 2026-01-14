@@ -379,10 +379,6 @@ if moneyCollectedEvent then
         isLarge = amount >= 1000,
       })
     end
-    -- Complete tutorial step if active
-    if Tutorial.isActive() then
-      Tutorial.completeStep("collect_money")
-    end
     print("[Client] Money collected:", amount)
   end)
 end
@@ -836,9 +832,9 @@ HatchPreviewUI.onHatch(function(eggId: string, eggType: string)
     local result = hatchEggFunc:InvokeServer(eggId, placedEggData.spotIndex)
     if result and result.success then
       SoundEffects.playEggHatch(result.rarity or "Common")
-      -- Complete tutorial step if active
+      -- Complete tutorial step if active (place_egg completes tutorial)
       if Tutorial.isActive() then
-        Tutorial.completeStep("hatch_egg")
+        Tutorial.completeStep("place_egg")
       end
       print("[Client] Egg hatched successfully:", result.chickenType, result.rarity)
 
@@ -885,11 +881,9 @@ Tutorial.onStepComplete(function(stepId: string)
 end)
 print("[Client] Tutorial callbacks wired")
 
--- Wire up InventoryUI visibility callback for tutorial
+-- Wire up InventoryUI visibility callback
 InventoryUI.onVisibilityChanged(function(visible: boolean)
-  if visible and Tutorial.isActive() then
-    Tutorial.completeStep("inventory_intro")
-  end
+  -- Reserved for future tutorial steps if needed
 end)
 
 -- Setup keyboard input for inventory toggle (I key)
@@ -1235,10 +1229,6 @@ local function updateProximityPrompts()
                     position = chickenPos + Vector3.new(0, 2, 0),
                     isLarge = result.amountCollected >= 1000,
                   })
-                end
-                -- Complete tutorial step if active
-                if Tutorial.isActive() then
-                  Tutorial.completeStep("collect_money")
                 end
               end
             end)

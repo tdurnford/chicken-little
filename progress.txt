@@ -1107,3 +1107,31 @@
   - Only one player can claim each chicken (server-side mutex via claimChicken)
 - Format check and build pass
 - Next: Work Items #2, #13, #21 (high priority items)
+
+[2026-01-13] Completed Bugfix Work Item #13: Create Arrow-Based Tutorial System
+- Simplified TUTORIAL_STEPS from 7 steps to just 3 steps:
+  - Step 1 "buy_egg": Arrow points to store with "Buy an Egg!" label
+  - Step 2 "place_egg": Arrow points toward coop (dynamically positioned)
+  - Step 3 "complete": Brief congratulations message (auto-advances)
+- Added 3D arrow indicator system to Tutorial.lua:
+  - createArrowIndicator(): Creates wedge-shaped neon arrow with billboard text
+  - updateArrowPosition(): Positions arrow above player pointing toward target
+  - startArrowUpdates(): RunService Heartbeat loop to follow player
+  - stopArrowUpdates(): Cleanup when tutorial ends
+  - setArrowLabel(): Updates billboard text based on current step
+- Added new type field targetPosition to TutorialStep for arrow targeting
+- Added new state fields: arrowPart, arrowBillboard, arrowUpdateConnection
+- Updated Tutorial.start() to call startArrowUpdates()
+- Updated Tutorial.skip() and Tutorial.complete() to call stopArrowUpdates()
+- Updated Tutorial.destroy() to clean up arrow resources
+- Updated Main.client.lua:
+  - Removed obsolete completeStep calls for "inventory_intro" and "collect_money"
+  - Changed hatch_egg completeStep to complete "place_egg" step instead
+- Acceptance criteria met:
+  - Tutorial uses visual arrows instead of text popups (3D arrow with billboard)
+  - Arrow points to store initially (getStorePosition() from MapGeneration)
+  - After buying egg, arrow guides to placement (place_egg step)
+  - Tutorial completes after egg is placed (place_egg → complete)
+  - Tutorial is much shorter than before (7 steps → 3 steps)
+- Format check and build pass
+- Next: Work Items #2, #3, #9, #10, #14 (high priority items)
