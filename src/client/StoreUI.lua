@@ -574,9 +574,9 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   buyButtonCorner.CornerRadius = UDim.new(0, 6)
   buyButtonCorner.Parent = buyButton
 
-  -- Connect cash buy button
+  -- Connect cash buy button (server validates affordability)
   buyButton.MouseButton1Click:Connect(function()
-    if canAfford and onTrapPurchaseCallback then
+    if onTrapPurchaseCallback then
       onTrapPurchaseCallback(supplyItem.id)
     end
   end)
@@ -620,6 +620,28 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   robuxButton.MouseButton1Click:Connect(function()
     if onRobuxPurchaseCallback then
       onRobuxPurchaseCallback("trap", supplyItem.id)
+    end
+  end)
+
+  -- Store price on card for affordability updates
+  card:SetAttribute("Price", supplyItem.price)
+
+  -- Update affordability - updates button appearance when money changes
+  local function updateAffordability()
+    local currentCanAfford = cachedPlayerMoney >= supplyItem.price
+    if currentCanAfford then
+      buyButton.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
+      buyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    else
+      buyButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+      buyButton.TextColor3 = Color3.fromRGB(150, 150, 150)
+    end
+  end
+
+  -- Listen for money updates
+  card.AttributeChanged:Connect(function(attributeName)
+    if attributeName == "PlayerMoney" then
+      updateAffordability()
     end
   end)
 

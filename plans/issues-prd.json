@@ -235,7 +235,7 @@
       "category": "Store-BugFix",
       "title": "Fix Trap Purchasing in Store",
       "description": "Players are unable to buy traps from the store. Need to investigate and fix the trap purchasing functionality.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Review Store.lua for trap item configuration",

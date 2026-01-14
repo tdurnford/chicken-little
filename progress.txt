@@ -2905,3 +2905,30 @@
 - Eggs auto-despawn after 5 minutes if not collected
 - Format check and build pass
 - Next: Work on remaining items (#7 Trap Purchasing, #4 Baseball Bat, #6 Pickup Inconsistency, #2 Inventory Stacking)
+
+[2026-01-14] Completed Bugfix Work Item #7: Fix Trap Purchasing in Store
+- Root cause: The trap purchase button in StoreUI.lua had a stale closure bug.
+  The `canAfford` variable was captured at card creation time and used in the
+  click handler. If player earned money after the card was created, the click
+  handler would still use the old `canAfford` value and not fire the purchase
+  callback. Unlike egg/chicken cards which don't check affordability client-side
+  (letting the server validate), the trap card was incorrectly blocking clicks.
+- Implementation approach:
+  1. Removed stale `canAfford` check from click handler in createSupplyCard()
+     - Changed from: `if canAfford and onTrapPurchaseCallback then`
+     - Changed to: `if onTrapPurchaseCallback then`
+     - Server-side in Store.buyTrap() properly validates affordability
+  2. Added dynamic affordability UI updates:
+     - Added card:SetAttribute("Price", supplyItem.price) for tracking
+     - Added updateAffordability() function that reads cachedPlayerMoney
+     - Added AttributeChanged listener for "PlayerMoney" attribute
+     - Button color now updates dynamically when player's money changes
+- Acceptance criteria met:
+  - Traps appear in the store with correct pricing ✓
+  - Players can purchase traps with in-game money ✓
+  - Purchased traps are added to player inventory ✓
+  - Store stock decrements after trap purchase (traps don't have stock) ✓
+  - UI updates to reflect purchase ✓
+  - All trap types can be purchased ✓
+- Format check passes
+- Next: Work on remaining items (#4 Baseball Bat, #6 Pickup Inconsistency, #2 Inventory Stacking)
