@@ -1138,6 +1138,82 @@ test("Integration: data remains valid after operations", function()
 end)
 
 -- ============================================================================
+-- ChickenPlacement MoveChicken Tests
+-- ============================================================================
+
+test("ChickenPlacement: moveChicken relocates chicken to new spot", function()
+  local data = PlayerData.createDefault()
+  local chickenId = "test-move-" .. tostring(os.clock())
+
+  -- Add chicken to inventory
+  table.insert(data.inventory.chickens, {
+    id = chickenId,
+    chickenType = "BasicChick",
+    rarity = "Common",
+    accumulatedMoney = 0,
+    lastEggTime = os.time(),
+    spotIndex = nil,
+  })
+
+  -- Place chicken at spot 1
+  local placeResult = ChickenPlacement.placeChicken(data, chickenId, 1)
+  if not placeResult.success then
+    return false, "Place failed: " .. placeResult.message
+  end
+
+  -- Verify chicken is at spot 1
+  local chicken, _ = ChickenPlacement.findPlacedChicken(data, chickenId)
+  local pass, msg = assert_eq(chicken.spotIndex, 1, "Chicken should be at spot 1")
+  if not pass then
+    return pass, msg
+  end
+
+  -- Move chicken to spot 5
+  local moveResult = ChickenPlacement.moveChicken(data, chickenId, 5)
+  if not moveResult.success then
+    return false, "Move failed: " .. moveResult.message
+  end
+
+  -- Verify chicken is now at spot 5
+  chicken, _ = ChickenPlacement.findPlacedChicken(data, chickenId)
+  return assert_eq(chicken.spotIndex, 5, "Chicken should be at spot 5 after move")
+end)
+
+test("ChickenPlacement: moveChicken fails for occupied spot", function()
+  local data = PlayerData.createDefault()
+  local chickenId1 = "test-move-1-" .. tostring(os.clock())
+  local chickenId2 = "test-move-2-" .. tostring(os.clock())
+
+  -- Add two chickens to inventory
+  table.insert(data.inventory.chickens, {
+    id = chickenId1,
+    chickenType = "BasicChick",
+    rarity = "Common",
+    accumulatedMoney = 0,
+    lastEggTime = os.time(),
+    spotIndex = nil,
+  })
+  table.insert(data.inventory.chickens, {
+    id = chickenId2,
+    chickenType = "BasicChick",
+    rarity = "Common",
+    accumulatedMoney = 0,
+    lastEggTime = os.time(),
+    spotIndex = nil,
+  })
+
+  -- Place first chicken at spot 1
+  ChickenPlacement.placeChicken(data, chickenId1, 1)
+  -- Place second chicken at spot 2
+  ChickenPlacement.placeChicken(data, chickenId2, 2)
+
+  -- Try to move first chicken to spot 2 (occupied)
+  local moveResult = ChickenPlacement.moveChicken(data, chickenId1, 2)
+
+  return assert_false(moveResult.success, "Should not be able to move to occupied spot")
+end)
+
+-- ============================================================================
 -- CombatHealth Tests
 -- ============================================================================
 

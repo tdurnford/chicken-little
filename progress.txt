@@ -2329,3 +2329,37 @@
   - Economy feels balanced for new players ✓
 - Format check and build pass
 - Next: Other high priority items (#55 - Add Inventory Toggle Button to HUD)
+
+[2026-01-14] Completed Wiring Work Item #27: Wire Up Chicken Pickup System
+- Root cause: ChickenPickup module was initialized but only partially wired.
+  The setOnPlace callback was not connected, so chickens would immediately
+  return to inventory on pickup instead of allowing relocation.
+- Implementation approach:
+  1. Added MoveChicken remote function to RemoteSetup.lua
+  2. Added ChickenMoved event to RemoteSetup.lua
+  3. Added MoveChicken handler in Main.server.lua:
+     - Uses ChickenPlacement.moveChicken() to relocate chicken
+     - Fires ChickenMoved event to update all clients
+  4. Rewired ChickenPickup callbacks in Main.client.lua:
+     - setOnPickup: Just plays sound, no server call (visual hold state)
+     - setOnPlace: Calls MoveChicken server function
+     - setOnCancel: Plays cancel sound (chicken stays in original spot)
+  5. Added ChickenMoved event handler in Main.client.lua:
+     - Calls ChickenVisuals.moveToSpot() to update visual position
+     - Updates SectionVisuals spot occupancy for old and new spots
+  6. Added ChickenVisuals.moveToSpot() function to update position and spotIndex
+  7. Added integration tests:
+     - "ChickenPlacement: moveChicken relocates chicken to new spot"
+     - "ChickenPlacement: moveChicken fails for occupied spot"
+- User flow now:
+  1. Press E near chicken -> pickup sound, visual indicator shows "Holding"
+  2. Walk to new empty spot -> "[E] Place | [Esc] Cancel" prompt
+  3. Press E to place -> server moves chicken, visual updates
+  4. Press Esc to cancel -> cancel sound, chicken stays in original spot
+- Acceptance criteria met:
+  - E key picks up nearby owned chicken ✓
+  - Held chicken shows visual indicator ✓
+  - Can place chicken in available spot ✓
+  - Server validates and processes actions ✓
+- Format check and build pass
+- Next: Other high priority wiring items (#23, #26, #29, #34, #40)

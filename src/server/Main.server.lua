@@ -364,6 +364,40 @@ if pickupChickenFunc then
   end
 end
 
+-- MoveChicken RemoteFunction handler
+-- Moves a chicken from one coop spot to another without going through inventory
+local moveChickenFunc = RemoteSetup.getFunction("MoveChicken")
+if moveChickenFunc then
+  moveChickenFunc.OnServerInvoke = function(player: Player, chickenId: string, newSpotIndex: number)
+    local userId = player.UserId
+    local playerData = DataPersistence.getData(userId)
+    if not playerData then
+      return { success = false, message = "Player data not found" }
+    end
+
+    -- Get the old spot index before the move for the event
+    local chicken, _ = ChickenPlacement.findPlacedChicken(playerData, chickenId)
+    local oldSpotIndex = chicken and chicken.spotIndex or nil
+
+    local result = ChickenPlacement.moveChicken(playerData, chickenId, newSpotIndex)
+    if result.success then
+      -- Fire ChickenMoved event to all clients so they can update visuals
+      local chickenMovedEvent = RemoteSetup.getEvent("ChickenMoved")
+      if chickenMovedEvent then
+        chickenMovedEvent:FireAllClients({
+          playerId = userId,
+          chickenId = chickenId,
+          oldSpotIndex = oldSpotIndex,
+          newSpotIndex = newSpotIndex,
+          chicken = result.chicken,
+        })
+      end
+      syncPlayerData(player, playerData, true)
+    end
+    return result
+  end
+end
+
 --[[
   Egg Hatching Server Handlers
   Handles HatchEgg RemoteFunction.

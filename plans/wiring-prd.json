@@ -690,7 +690,7 @@
       "category": "Client-Gameplay",
       "title": "Wire Up Chicken Pickup System",
       "description": "Initialize ChickenPickup module and connect to input and server.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Require ChickenPickup module",
@@ -711,7 +711,9 @@
         22,
         28
       ],
-      "codeLocation": "src/client/Main.client.lua"
+      "codeLocation": "src/client/Main.client.lua",
+      "completedDate": "2026-01-14",
+      "completionNotes": "Wired ChickenPickup with MoveChicken remote function. Pickup shows visual indicator, place calls server to relocate chicken. Added ChickenMoved event and handler. Added ChickenVisuals.moveToSpot function. Added integration tests for moveChicken."
     },
     {
       "id": 28,

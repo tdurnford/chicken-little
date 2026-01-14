@@ -652,6 +652,23 @@ function ChickenVisuals.setPosition(chickenId: string, position: Vector3): boole
   return true
 end
 
+-- Move chicken to a new spot (updates position and spotIndex)
+function ChickenVisuals.moveToSpot(
+  chickenId: string,
+  position: Vector3,
+  newSpotIndex: number
+): boolean
+  local state = activeChickens[chickenId]
+  if not state or not state.model then
+    return false
+  end
+
+  state.position = position
+  state.spotIndex = newSpotIndex
+  state.model:SetPrimaryPartCFrame(CFrame.new(position))
+  return true
+end
+
 -- Update position with facing direction and animation state (for wandering chickens)
 function ChickenVisuals.updatePosition(
   chickenId: string,

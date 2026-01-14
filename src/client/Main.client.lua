@@ -358,6 +358,36 @@ if chickenPickedUpEvent then
   end)
 end
 
+-- ChickenMoved: Update chicken visual position when moved to a new spot
+local chickenMovedEvent = getEvent("ChickenMoved")
+if chickenMovedEvent then
+  chickenMovedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
+    local chickenId = eventData.chickenId
+    local oldSpotIndex = eventData.oldSpotIndex
+    local newSpotIndex = eventData.newSpotIndex
+
+    if not chickenId or not newSpotIndex then
+      warn("[Client] ChickenMoved: Invalid event data")
+      return
+    end
+
+    -- Get new position for the chicken
+    local newPosition = getChickenPosition(newSpotIndex)
+    if newPosition then
+      -- Update the chicken visual position and spotIndex
+      ChickenVisuals.moveToSpot(chickenId, newPosition, newSpotIndex)
+
+      -- Update spot occupancy visuals
+      if oldSpotIndex then
+        SectionVisuals.updateSpotOccupancy(oldSpotIndex, false)
+      end
+      SectionVisuals.updateSpotOccupancy(newSpotIndex, true)
+
+      print("[Client] Chicken moved:", chickenId, "from", oldSpotIndex, "to", newSpotIndex)
+    end
+  end)
+end
+
 -- ChickenSold: Remove chicken visual and play sell sound
 local chickenSoldEvent = getEvent("ChickenSold")
 if chickenSoldEvent then
@@ -1001,30 +1031,39 @@ ChickenPickup.setGetPlayerData(function()
   return playerDataCache
 end)
 
--- Wire up pickup callback to call server and return chicken to inventory
+-- Wire up pickup callback - just visual feedback, chicken stays in coop until placed
+-- Server call happens when player places the chicken at a new location
 ChickenPickup.setOnPickup(function(chickenId: string, spotIndex: number)
-  local pickupChickenFunc = getFunction("PickupChicken")
-  if pickupChickenFunc then
-    task.spawn(function()
-      local result = pickupChickenFunc:InvokeServer(chickenId)
-      if result and result.success then
-        -- Chicken returned to inventory - clear the holding state
-        -- The server will sync player data which updates the UI
-        SoundEffects.play("chickenPickup")
-        print("[Client] Chicken picked up and returned to inventory:", chickenId)
+  -- Play pickup sound for visual feedback
+  SoundEffects.play("chickenPickup")
+  print("[Client] Holding chicken:", chickenId, "from spot:", spotIndex)
+  -- Don't call server yet - chicken stays in original spot until placed elsewhere
+end)
 
-        -- Clear the holding state since chicken is now in inventory
-        ChickenPickup.clearHoldingState()
+-- Wire up place callback - call server to move chicken to new spot
+ChickenPickup.setOnPlace(function(chickenId: string, newSpotIndex: number)
+  local moveChickenFunc = getFunction("MoveChicken")
+  if moveChickenFunc then
+    task.spawn(function()
+      local result = moveChickenFunc:InvokeServer(chickenId, newSpotIndex)
+      if result and result.success then
+        SoundEffects.play("chickenPlace")
+        print("[Client] Chicken moved to spot:", newSpotIndex)
       else
-        -- Failed to pickup - clear the holding state
-        ChickenPickup.clearHoldingState()
-        warn("[Client] Failed to pickup chicken:", result and result.message or "Unknown error")
+        -- Failed to move - server rejected the operation
+        SoundEffects.play("uiError")
+        warn("[Client] Failed to move chicken:", result and result.message or "Unknown error")
       end
     end)
   else
-    ChickenPickup.clearHoldingState()
-    warn("[Client] PickupChicken function not found")
+    warn("[Client] MoveChicken function not found")
   end
+end)
+
+-- Wire up cancel callback - chicken stays where it was, no server call needed
+ChickenPickup.setOnCancel(function()
+  SoundEffects.play("uiCancel")
+  print("[Client] Pickup cancelled, chicken returned to original spot")
 end)
 print("[Client] ChickenPickup system initialized")
 
