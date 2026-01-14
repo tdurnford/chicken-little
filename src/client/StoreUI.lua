@@ -986,37 +986,43 @@ function StoreUI.create()
   screenGui.Enabled = false
   screenGui.Parent = localPlayer:WaitForChild("PlayerGui")
 
-  -- Main frame (centered panel)
+  -- Main frame (centered panel) - "The Supply Shack" wooden theme
   mainFrame = Instance.new("Frame")
   mainFrame.Name = "MainFrame"
   mainFrame.Size = UDim2.new(0, 420, 0, 550)
   mainFrame.Position = UDim2.new(0.5, -210, 0.5, -275)
-  mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+  mainFrame.BackgroundColor3 = Color3.fromRGB(255, 248, 220) -- Warm off-white/cream
   mainFrame.BorderSizePixel = 0
   mainFrame.Parent = screenGui
 
   local mainCorner = Instance.new("UICorner")
-  mainCorner.CornerRadius = UDim.new(0, 12)
+  mainCorner.CornerRadius = UDim.new(0, 20) -- Bubbly rounded corners
   mainCorner.Parent = mainFrame
 
-  -- Title bar
+  -- Wood border effect
+  local mainStroke = Instance.new("UIStroke")
+  mainStroke.Color = Color3.fromRGB(101, 67, 33) -- Dark brown wood
+  mainStroke.Thickness = 4
+  mainStroke.Parent = mainFrame
+
+  -- Title bar - wooden header
   local titleBar = Instance.new("Frame")
   titleBar.Name = "TitleBar"
   titleBar.Size = UDim2.new(1, 0, 0, 45)
-  titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+  titleBar.BackgroundColor3 = Color3.fromRGB(139, 90, 43) -- Medium brown wood
   titleBar.BorderSizePixel = 0
   titleBar.Parent = mainFrame
 
   local titleCorner = Instance.new("UICorner")
-  titleCorner.CornerRadius = UDim.new(0, 12)
+  titleCorner.CornerRadius = UDim.new(0, 20) -- Match main frame corners
   titleCorner.Parent = titleBar
 
   -- Fix bottom corners of title bar
   local titleCornerFix = Instance.new("Frame")
   titleCornerFix.Name = "CornerFix"
-  titleCornerFix.Size = UDim2.new(1, 0, 0, 12)
-  titleCornerFix.Position = UDim2.new(0, 0, 1, -12)
-  titleCornerFix.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+  titleCornerFix.Size = UDim2.new(1, 0, 0, 20)
+  titleCornerFix.Position = UDim2.new(0, 0, 1, -20)
+  titleCornerFix.BackgroundColor3 = Color3.fromRGB(139, 90, 43) -- Match header
   titleCornerFix.BorderSizePixel = 0
   titleCornerFix.Parent = titleBar
 
@@ -1058,12 +1064,12 @@ function StoreUI.create()
   restockFrame.Name = "RestockFrame"
   restockFrame.Size = UDim2.new(1, -20, 0, 35)
   restockFrame.Position = UDim2.new(0, 10, 0, 50)
-  restockFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+  restockFrame.BackgroundColor3 = Color3.fromRGB(180, 140, 90) -- Muted brown to match theme
   restockFrame.BorderSizePixel = 0
   restockFrame.Parent = mainFrame
 
   local restockCorner = Instance.new("UICorner")
-  restockCorner.CornerRadius = UDim.new(0, 6)
+  restockCorner.CornerRadius = UDim.new(0, 8)
   restockCorner.Parent = restockFrame
 
   -- Restock timer display
@@ -1073,9 +1079,9 @@ function StoreUI.create()
   restockTimerLabel.Position = UDim2.new(0, 5, 0, 0)
   restockTimerLabel.BackgroundTransparency = 1
   restockTimerLabel.Text = "Restocks in 0:00"
-  restockTimerLabel.TextColor3 = Color3.fromRGB(150, 200, 255)
+  restockTimerLabel.TextColor3 = Color3.fromRGB(50, 30, 10) -- Dark brown text
   restockTimerLabel.TextScaled = true
-  restockTimerLabel.Font = Enum.Font.Gotham
+  restockTimerLabel.Font = Enum.Font.GothamBold
   restockTimerLabel.TextXAlignment = Enum.TextXAlignment.Center
   restockTimerLabel.Parent = restockFrame
 
@@ -1197,7 +1203,7 @@ function StoreUI.create()
   scrollFrame.Position = UDim2.new(0, 10, 0, 130)
   scrollFrame.BackgroundTransparency = 1
   scrollFrame.ScrollBarThickness = 6
-  scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+  scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(139, 90, 43) -- Brown to match theme
   scrollFrame.Parent = mainFrame
 
   -- Replenish Now button (Robux purchase)

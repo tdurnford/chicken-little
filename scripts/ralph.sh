@@ -9,7 +9,7 @@ fi
 for ((i = 0; i < $1; i++)); do
   echo "Iteration $i: Executing command..."
   echo "----------------------------"
-  result=$(copilot --allow-all-tools --model claude-opus-4.5 -p "@plans/issues-prd.json @progress.txt \
+  result=$(copilot --allow-all-tools --model claude-opus-4.5 -p "@plans/store-redesign-prd.json @progress.txt \
 1. Find the highest-priority feature to work on and work only on that feature.
 This should be the one YOU decide has the highest priority - not necessarily the first in the list. \
 2. Use the Roblox Studio MCP server to test your changes in-game:

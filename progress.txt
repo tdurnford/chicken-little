@@ -3341,3 +3341,22 @@
   - Store purchasing still works (validates against cachedPlayerMoney) ✓
 - Format check passes, build passes
 - PRD is now COMPLETE - all 3 work items have been implemented
+
+[2026-01-14] Completed Store Redesign Work Item #1: Redesign Main Frame as 'The Supply Shack'
+- Transformed dark grey store UI into warm wooden shack-themed container
+- Changes applied in src/client/StoreUI.lua:
+  1. Main frame BackgroundColor3 changed from RGB(25, 25, 25) to RGB(255, 248, 220) (warm cream)
+  2. UICorner radius increased from 12px to 20px for bubbly rounded corners
+  3. Added UIStroke with RGB(101, 67, 33) color, thickness 4 for wood border effect
+  4. Title bar BackgroundColor3 changed from RGB(35, 35, 35) to RGB(139, 90, 43) (medium brown wood)
+  5. Title bar corner radius updated to 20px to match main frame
+  6. Restock frame BackgroundColor3 changed from RGB(30, 30, 30) to RGB(180, 140, 90) (muted brown)
+  7. Restock timer text color changed from blue to dark brown RGB(50, 30, 10)
+  8. Scroll bar color changed from grey to brown RGB(139, 90, 43) to match theme
+- Acceptance criteria met:
+  - Main frame has warm cream/off-white background ✓
+  - Corners are rounded (20px radius) ✓
+  - Thick dark brown border creates wooden frame appearance ✓
+  - Overall appearance matches 'wooden shack' theme ✓
+- Format check passes
+- Next: Work on remaining items (Phase 1 Foundation: Items 5, 12)
