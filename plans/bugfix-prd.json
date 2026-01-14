@@ -663,7 +663,8 @@
       "category": "Predator-AI",
       "title": "Add Predator Roaming Behavior",
       "description": "Predators should roam the map looking for targets rather than spawning with a fixed target.",
-      "completed": false,
+      "completed": true,
+      "status": "complete",
       "priority": "medium",
       "steps": [
         "Add roaming state to predator state machine",
@@ -774,7 +775,8 @@
       "category": "Integration",
       "title": "Wire Random Chicken AI to Server Main",
       "description": "Connect random chicken movement to Main.server.lua.",
-      "completed": false,
+      "completed": true,
+      "status": "complete",
       "priority": "medium",
       "steps": [
         "Require ChickenAI module in Main.server.lua",
@@ -825,7 +827,8 @@
       "category": "Testing",
       "title": "Add Integration Tests for Store Features",
       "description": "Create tests for store inventory, replenishment, and purchase flows.",
-      "completed": false,
+      "completed": true,
+      "status": "complete",
       "priority": "medium",
       "steps": [
         "Test store inventory initialization",

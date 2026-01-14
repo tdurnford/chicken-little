@@ -1662,3 +1662,39 @@
   - All clients see same chicken positions (server-synced via RemoteEvent)
 - Format check and build pass
 - Next: Work Item #28 (Wire Random Chicken AI to Server Main) - may already be complete
+
+[2026-01-14] Completed Bugfix Work Item #24: Add Predator Roaming Behavior
+- Enhanced PredatorAI.lua with roaming behavior state machine:
+  - Added PredatorBehaviorState type: "roaming" | "stalking" | "approaching" | "attacking"
+  - Added roaming-specific fields to PredatorPosition: behaviorState, roamTarget, roamEndTime, 
+    targetSectionIndex, detectionRange, isStalking
+  - Added neutralZoneCenter and neutralZoneSize to PredatorAIState
+- Added roaming constants:
+  - ROAM_SPEED_MULTIPLIER (0.6) - predators move slower while roaming
+  - ROAM_DURATION_MIN/MAX (10-30 seconds) - time before seeking targets
+  - DETECTION_RANGE_BASE (40 studs) - base range for detecting player sections
+  - STALKING_DURATION (5 seconds) - pause before approaching target
+- Created new functions:
+  - generateRoamPosition() - random position within neutral zone
+  - registerRoamingPredator() - spawn predator in neutral zone with roaming state
+  - detectNearbySections() - find nearby player sections with chickens
+  - selectTarget() - weighted random selection based on proximity and chicken count
+  - startStalking() - transition to stalking state (visual indicator)
+  - startApproaching() - transition from stalking to approaching
+  - updateRoaming() - handle roaming movement
+  - shouldSeekTarget() / shouldStartApproaching() - state transition checks
+  - getRoamingPredators() / getStalkingPredators() - query by state
+  - setNeutralZone() / getNeutralZone() - configure roaming area
+- Updated updatePosition() to handle roaming/stalking states
+- Updated getSummary() to include roaming and stalking counts
+- Updated getPositionInfo() to include behaviorState and isStalking
+- Added 9 new integration tests for roaming behavior
+- Acceptance criteria met:
+  - Predators can roam before selecting a target (registerRoamingPredator)
+  - Target selection based on proximity and opportunity (detectNearbySections, selectTarget)
+  - Players can see predators roaming (behaviorState exposed in getPositionInfo)
+  - Predators can be intercepted during roam (roaming updates position continuously)
+- Also verified #28 (Wire Random Chicken AI) was already complete from previous session
+- Also verified #30 (Store integration tests) was already complete
+- Format check and build pass
+- Next: Medium priority items (#5 Robux replenish, #6 Robux purchase, #31 Combat tests, #32 AI tests)

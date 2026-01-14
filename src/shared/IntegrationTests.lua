@@ -1262,6 +1262,145 @@ test("PredatorAI: getApproachingPredators returns correct list", function()
   return assert_eq(#approaching, 2, "Should have 2 approaching predators")
 end)
 
+test("PredatorAI: registerRoamingPredator creates roaming predator", function()
+  local state = PredatorAI.createState(Vector3.new(0, 0, 0), 80)
+  local currentTime = os.time()
+  local position = PredatorAI.registerRoamingPredator(state, "roamer1", "Rat", currentTime)
+  local pass, msg = assert_not_nil(position, "Position should be created")
+  if not pass then
+    return pass, msg
+  end
+  pass, msg = assert_eq(position.behaviorState, "roaming", "Should be in roaming state")
+  if not pass then
+    return pass, msg
+  end
+  return assert_not_nil(position.roamTarget, "Should have roam target")
+end)
+
+test("PredatorAI: roaming predator stays in neutral zone", function()
+  local center = Vector3.new(50, 0, 50)
+  local size = 40
+  local state = PredatorAI.createState(center, size)
+  local currentTime = os.time()
+  local position = PredatorAI.registerRoamingPredator(state, "roamer1", "Rat", currentTime)
+  -- Check spawn position is within bounds
+  local halfSize = size / 2
+  local inBounds = position.currentPosition.X >= center.X - halfSize
+    and position.currentPosition.X <= center.X + halfSize
+    and position.currentPosition.Z >= center.Z - halfSize
+    and position.currentPosition.Z <= center.Z + halfSize
+  return assert_true(inBounds, "Roaming predator should spawn within neutral zone")
+end)
+
+test("PredatorAI: updateRoaming moves roaming predator", function()
+  local state = PredatorAI.createState(Vector3.new(0, 0, 0), 80)
+  local currentTime = os.time()
+  PredatorAI.registerRoamingPredator(state, "roamer1", "Rat", currentTime)
+  local initialPos = PredatorAI.getPosition(state, "roamer1")
+  local initialX = initialPos.currentPosition.X
+  local initialZ = initialPos.currentPosition.Z
+  -- Update with enough time to move
+  PredatorAI.updateRoaming(state, "roamer1", 2, currentTime + 2)
+  local newPos = PredatorAI.getPosition(state, "roamer1")
+  -- Position should have changed (unless already at roam target)
+  local moved = newPos.currentPosition.X ~= initialX or newPos.currentPosition.Z ~= initialZ
+  return assert_true(moved, "Roaming predator should move when updated")
+end)
+
+test("PredatorAI: shouldSeekTarget returns true after roam time expires", function()
+  local state = PredatorAI.createState(Vector3.new(0, 0, 0), 80)
+  local startTime = os.time()
+  local position = PredatorAI.registerRoamingPredator(state, "roamer1", "Rat", startTime)
+  -- Immediately after spawn, should not seek (roam time not expired)
+  local pass, msg = assert_false(
+    PredatorAI.shouldSeekTarget(state, "roamer1", startTime + 1),
+    "Should not seek target immediately"
+  )
+  if not pass then
+    return pass, msg
+  end
+  -- After roam time expires (use roamEndTime + 1)
+  local afterRoamTime = (position.roamEndTime or startTime) + 1
+  return assert_true(
+    PredatorAI.shouldSeekTarget(state, "roamer1", afterRoamTime),
+    "Should seek target after roam time expires"
+  )
+end)
+
+test("PredatorAI: startStalking transitions to stalking state", function()
+  local state = PredatorAI.createState(Vector3.new(0, 0, 0), 80)
+  local currentTime = os.time()
+  PredatorAI.registerRoamingPredator(state, "roamer1", "Rat", currentTime)
+  local targetSection = {
+    sectionIndex = 1,
+    center = Vector3.new(100, 0, 0),
+    chickenCount = 5,
+    distance = 30,
+  }
+  PredatorAI.startStalking(state, "roamer1", targetSection, currentTime)
+  local position = PredatorAI.getPosition(state, "roamer1")
+  local pass, msg = assert_eq(position.behaviorState, "stalking", "Should be in stalking state")
+  if not pass then
+    return pass, msg
+  end
+  return assert_true(position.isStalking, "isStalking flag should be true")
+end)
+
+test("PredatorAI: startApproaching transitions from stalking to approaching", function()
+  local state = PredatorAI.createState(Vector3.new(0, 0, 0), 80)
+  local currentTime = os.time()
+  PredatorAI.registerRoamingPredator(state, "roamer1", "Rat", currentTime)
+  local targetSection = {
+    sectionIndex = 1,
+    center = Vector3.new(100, 0, 0),
+    chickenCount = 5,
+    distance = 30,
+  }
+  PredatorAI.startStalking(state, "roamer1", targetSection, currentTime)
+  PredatorAI.startApproaching(state, "roamer1", Vector3.new(100, 0, 0))
+  local position = PredatorAI.getPosition(state, "roamer1")
+  local pass, msg =
+    assert_eq(position.behaviorState, "approaching", "Should be in approaching state")
+  if not pass then
+    return pass, msg
+  end
+  return assert_false(position.isStalking, "isStalking flag should be false")
+end)
+
+test("PredatorAI: getRoamingPredators returns only roaming predators", function()
+  local state = PredatorAI.createState(Vector3.new(0, 0, 0), 80)
+  local currentTime = os.time()
+  -- Add a roaming predator
+  PredatorAI.registerRoamingPredator(state, "roamer1", "Rat", currentTime)
+  -- Add a direct approaching predator
+  PredatorAI.registerPredator(state, "direct1", "Crow", Vector3.new(50, 0, 50))
+  local roaming = PredatorAI.getRoamingPredators(state)
+  local pass, msg = assert_eq(#roaming, 1, "Should have 1 roaming predator")
+  if not pass then
+    return pass, msg
+  end
+  return assert_eq(roaming[1], "roamer1", "Should be roamer1")
+end)
+
+test("PredatorAI: getSummary includes roaming and stalking counts", function()
+  local state = PredatorAI.createState(Vector3.new(0, 0, 0), 80)
+  local currentTime = os.time()
+  -- Add roaming predator
+  PredatorAI.registerRoamingPredator(state, "roamer1", "Rat", currentTime)
+  -- Add direct predator
+  PredatorAI.registerPredator(state, "direct1", "Crow", Vector3.new(50, 0, 50))
+  local summary = PredatorAI.getSummary(state)
+  local pass, msg = assert_eq(summary.roaming, 1, "Should have 1 roaming")
+  if not pass then
+    return pass, msg
+  end
+  pass, msg = assert_eq(summary.approaching, 1, "Should have 1 approaching")
+  if not pass then
+    return pass, msg
+  end
+  return assert_eq(summary.totalActive, 2, "Should have 2 total active")
+end)
+
 -- ============================================================================
 -- Test Runner
 -- ============================================================================
