@@ -1885,3 +1885,21 @@
   - No stuck states preventing reopening
 - Format check and build pass
 - Next: Critical items (#38, #40, #45, #46, #47, #54)
+
+[2026-01-14] Completed Bugfix Work Item #46: Fix Chickens Not Laying Eggs
+- Root cause: Chicken.new() in src/shared/Chicken.lua (line 39) had defensive fallback:
+  `lastEggTime = chickenData.lastEggTime or os.time()`
+- When a chicken's lastEggTime was nil/missing (old data, corruption), this defaulted to os.time()
+- Problem: Game loop creates new Chicken instance every frame (line 1231 in Main.server.lua)
+- Each frame, if lastEggTime was nil, it would reset to "now", so canLayEgg() always returned false
+- canLayEgg() checks if (now - lastEggTime) >= eggLayInterval, but lastEggTime kept resetting
+- Fix: Changed default from os.time() to 0 (Unix epoch):
+  `lastEggTime = chickenData.lastEggTime or 0, -- Default to 0 so chicken can lay immediately`
+- This means chickens with missing lastEggTime can immediately lay eggs (since 0 is far in past)
+- Once an egg is laid, lastEggTime is properly synced back to chickenData (line 1248)
+- Acceptance criteria met:
+  - Placed chickens lay eggs at configured intervals (60-300 seconds by rarity)
+  - Eggs appear in player inventory via table.insert on line 1245
+  - EggLaid event notifies player client (line 1254)
+- Format check and build pass
+- Next: Other critical items (#38, #40, #45, #47, #54)

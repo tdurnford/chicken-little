@@ -36,7 +36,7 @@ function Chicken.new(chickenData: PlayerData.ChickenData): ChickenInstance?
     chickenType = chickenData.chickenType,
     rarity = chickenData.rarity,
     accumulatedMoney = chickenData.accumulatedMoney or 0,
-    lastEggTime = chickenData.lastEggTime or os.time(),
+    lastEggTime = chickenData.lastEggTime or 0, -- Default to 0 so chicken can lay immediately if no lastEggTime
     lastUpdateTime = os.time(),
     spotIndex = chickenData.spotIndex,
   }

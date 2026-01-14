@@ -1199,7 +1199,7 @@
       "category": "Chicken-BugFix",
       "title": "Fix Chickens Not Laying Eggs",
       "description": "Placed chickens don't seem to be laying eggs. Review and fix the egg laying system.",
-      "completed": false,
+      "completed": true,
       "priority": "critical",
       "steps": [
         "Review egg laying logic in game loop",
@@ -1214,7 +1214,8 @@
         "EggLaid event notifies player"
       ],
       "dependencies": [],
-      "codeLocation": "src/server/Main.server.lua"
+      "codeLocation": "src/server/Main.server.lua",
+      "status": "completed"
     },
     {
       "id": 47,
