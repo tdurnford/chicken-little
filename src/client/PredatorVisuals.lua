@@ -479,8 +479,17 @@ function PredatorVisuals.create(
 
   -- Create model
   local model = createPlaceholderModel(predatorType, actualThreatLevel)
+  model.Name = predatorId -- Use predatorId as model name for client-server lookup
   model:SetPrimaryPartCFrame(CFrame.new(position))
-  model.Parent = workspace
+
+  -- Parent to Predators folder (create if needed)
+  local predatorsFolder = workspace:FindFirstChild("Predators")
+  if not predatorsFolder then
+    predatorsFolder = Instance.new("Folder")
+    predatorsFolder.Name = "Predators"
+    predatorsFolder.Parent = workspace
+  end
+  model.Parent = predatorsFolder
 
   -- Create state
   local state: PredatorVisualState = {

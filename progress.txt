@@ -3273,3 +3273,31 @@
   - Target prioritization for isolated chickens (server integration needed)
 - Format check passes, build passes
 - PRD is now COMPLETE - all 6 work items have been implemented
+
+[2026-01-14] Completed Combat Work Item #3: Fix Weapon Damage Not Being Applied to Predators
+- Root cause: The predator model's Name was set to predatorType (e.g., "fox", "hawk")
+  instead of the unique predatorId (e.g., "pred_1705123456_123456").
+  - Client (Main.client.lua:1625) finds predator models in workspace.Predators by Name
+  - Client sends model.Name to server as predatorId in SwingBat call
+  - Server (Main.server.lua:788-795) looks up predator in spawnState.activePredators by id
+  - Server couldn't find predator because "fox" != "pred_1705123456_123456"
+- Fix applied in PredatorVisuals.lua:
+  1. After createPlaceholderModel(), set model.Name = predatorId (not predatorType)
+  2. Parent model to workspace.Predators folder (create if doesn't exist)
+- Files changed:
+  * src/client/PredatorVisuals.lua (lines 480-492)
+- Damage flow now works:
+  - Client finds predator model by Name (predatorId) ✓
+  - Client sends correct predatorId to server ✓
+  - Server finds predator in spawnState.activePredators ✓
+  - PredatorSpawning.applyBatHit() applies damage ✓
+- Acceptance criteria met:
+  - Swinging weapon near predator deals damage ✓
+  - Predator health decreases with hits ✓
+  - Floating damage numbers appear (via PredatorHealthBar.showDamageNumber) ✓
+  - Health bar updates (via PredatorHealthBar.updateHealth) ✓
+  - Predators defeated when health reaches 0 ✓
+  - Reward money granted on defeat ✓
+  - All weapon types work (same SwingBat handler) ✓
+- Format check passes, build passes
+- Next: Work on remaining items (Item #1 Trap Icon, Item #2 Remove Balance)
