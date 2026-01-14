@@ -1524,3 +1524,22 @@
   - Attack only begins when predator reaches coop (AI-based not time-based)
 - Format check and build pass
 - Next: Work Items #24 (Predator Roaming), #25-29 (wiring tasks), medium priority items
+
+[2026-01-14] Completed Bugfix Work Item #29: Add Missing RemoteEvents for New Features
+- Added missing RemoteEvents to RemoteSetup.lua:
+  - StoreOpened: Fires when store UI is opened
+  - StoreInventoryUpdated: Fires when store inventory changes (purchase or replenish)
+  - WeaponEquipped: Generic weapon equip event (extends BatEquipped for future weapons)
+  - ShieldActivated: Fires when player activates area shield
+  - ShieldDeactivated: Fires when shield expires or is turned off
+- Added missing RemoteFunctions to RemoteSetup.lua:
+  - GetStoreInventory: Client can request current store inventory state
+  - EquipWeapon: Client requests to equip a weapon by type
+  - ActivateShield: Client requests to activate area shield
+- Acceptance criteria met:
+  - All new RemoteEvents are created (5 new events added)
+  - Events are properly organized in REMOTE_EVENTS array
+  - RemoteFunctions added for store and shield operations (3 new functions)
+  - Format check passes
+  - Build passes
+- Next: Work Items #25 (Wire Store UI), #26 (Wire Combat System), high priority wiring tasks

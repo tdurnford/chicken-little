@@ -792,7 +792,7 @@
       "category": "RemoteEvents",
       "title": "Add Missing RemoteEvents for New Features",
       "description": "Create RemoteEvents needed for new store, combat, and shield features.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Add StoreOpened RemoteEvent",
@@ -812,7 +812,8 @@
         "Events fire and receive correctly"
       ],
       "dependencies": [],
-      "codeLocation": "src/server/RemoteSetup.lua"
+      "codeLocation": "src/server/RemoteSetup.lua",
+      "status": "completed"
     },
     {
       "id": 30,

@@ -32,6 +32,11 @@ local REMOTE_EVENTS = {
   "CompleteTutorial",
   "BatEquipped",
   "StoreReplenished",
+  "StoreOpened",
+  "StoreInventoryUpdated",
+  "WeaponEquipped",
+  "ShieldActivated",
+  "ShieldDeactivated",
   "PlayerDamaged",
   "PlayerKnockback",
   "PlayerHealthChanged",
@@ -66,6 +71,9 @@ local REMOTE_FUNCTIONS = {
   "ClaimRandomChicken",
   "SwingBat",
   "StealChicken",
+  "GetStoreInventory",
+  "EquipWeapon",
+  "ActivateShield",
 }
 
 -- Type for the created remotes container
