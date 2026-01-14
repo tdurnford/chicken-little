@@ -1573,3 +1573,31 @@
   - Stock updates in real-time for all players (via StoreInventoryUpdated)
 - Format check and build pass
 - Next: Work Items #26 (Wire Combat System), #27 (Wire Predator AI)
+
+[2026-01-14] Completed Bugfix Work Item #26: Wire Combat System to Client Main
+- Added weapon equip keybinds in Main.client.lua:
+  - Key 1: Equips baseball bat
+  - Key 2: Reserved for sword (not yet implemented)
+  - Key 3: Reserved for axe (not yet implemented)
+  - Key Q: Toggles bat equip (existing functionality)
+- Added floating damage numbers when hitting predators:
+  - Created PredatorHealthBar.showDamageNumber() function
+  - Shows red floating "-X" text above predator when hit
+  - Damage numbers animate upward and fade out over 1 second
+  - Uses TweenService for smooth animation
+- Updated swingBat() function in Main.client.lua:
+  - Calls PredatorHealthBar.showDamageNumber() after successful hit
+  - Displays damage dealt to predator in addition to updating health bar
+- Existing combat features verified working:
+  - Q key toggles bat equip with visual feedback
+  - Left click swings equipped bat
+  - Hit detection for predators and players
+  - Swing cooldown system
+  - Health bar updates on predator damage
+- Acceptance criteria met:
+  - Number keys equip different weapons (1 for bat, 2/3 reserved)
+  - Left click swings equipped weapon
+  - Hits register on predators and players
+  - Damage feedback is shown (floating damage numbers)
+- Format check and build pass
+- Next: Work Items #27 (Wire Predator AI to Server), #28 (Wire Random Chicken AI)

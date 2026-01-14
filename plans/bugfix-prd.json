@@ -716,7 +716,8 @@
       "category": "Integration",
       "title": "Wire Combat System to Client Main",
       "description": "Connect weapon equipping and combat to Main.client.lua.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
       "priority": "high",
       "steps": [
         "Add weapon equip keybind (1 for bat, 2 for sword, 3 for axe)",

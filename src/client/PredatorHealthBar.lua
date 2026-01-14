@@ -8,6 +8,7 @@ local PredatorHealthBar = {}
 
 -- Services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 -- Get shared modules
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -290,6 +291,71 @@ function PredatorHealthBar.getSummary(): {
     activeCount = PredatorHealthBar.getActiveCount(),
     healthBars = healthBars,
   }
+end
+
+-- Constants for damage number animation
+local DAMAGE_NUMBER_LIFETIME = 1.0 -- Seconds for damage number to float and fade
+local DAMAGE_NUMBER_RISE_STUDS = 3 -- How high the damage number floats
+
+-- Show a floating damage number above a predator
+function PredatorHealthBar.showDamageNumber(predatorId: string, damage: number): boolean
+  local state = activeHealthBars[predatorId]
+  if not state or not state.billboard then
+    return false
+  end
+
+  local adornee = state.billboard.Adornee :: BasePart?
+  if not adornee then
+    return false
+  end
+
+  -- Create a BillboardGui for the damage number
+  local damageBillboard = Instance.new("BillboardGui")
+  damageBillboard.Name = "DamageNumber"
+  damageBillboard.Size = UDim2.new(0, 60, 0, 30)
+  damageBillboard.StudsOffset = Vector3.new(math.random(-1, 1), 4, 0) -- Slight horizontal randomness
+  damageBillboard.AlwaysOnTop = true
+  damageBillboard.Adornee = adornee
+  damageBillboard.Parent = adornee
+
+  -- Create damage text label
+  local damageLabel = Instance.new("TextLabel")
+  damageLabel.Name = "DamageText"
+  damageLabel.Size = UDim2.new(1, 0, 1, 0)
+  damageLabel.BackgroundTransparency = 1
+  damageLabel.Text = string.format("-%.0f", damage)
+  damageLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+  damageLabel.TextStrokeTransparency = 0.3
+  damageLabel.TextStrokeColor3 = Color3.fromRGB(50, 0, 0)
+  damageLabel.Font = Enum.Font.GothamBold
+  damageLabel.TextSize = 20
+  damageLabel.TextScaled = false
+  damageLabel.Parent = damageBillboard
+
+  -- Animate floating up and fading out
+  local startOffset = damageBillboard.StudsOffset
+  local endOffset = startOffset + Vector3.new(0, DAMAGE_NUMBER_RISE_STUDS, 0)
+
+  local tweenInfo =
+    TweenInfo.new(DAMAGE_NUMBER_LIFETIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+  local moveTween = TweenService:Create(damageBillboard, tweenInfo, {
+    StudsOffset = endOffset,
+  })
+
+  local fadeTween = TweenService:Create(damageLabel, tweenInfo, {
+    TextTransparency = 1,
+    TextStrokeTransparency = 1,
+  })
+
+  moveTween:Play()
+  fadeTween:Play()
+
+  moveTween.Completed:Connect(function()
+    damageBillboard:Destroy()
+  end)
+
+  return true
 end
 
 return PredatorHealthBar

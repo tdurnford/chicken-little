@@ -1306,6 +1306,10 @@ local function swingBat()
       if result.remainingHealth ~= nil then
         PredatorHealthBar.updateHealth(predatorId, result.remainingHealth)
       end
+      -- Show floating damage number above predator
+      if result.damage and result.damage > 0 then
+        PredatorHealthBar.showDamageNumber(predatorId, result.damage)
+      end
       if result.defeated then
         SoundEffects.playBatSwing("predator")
         print("[Client] Predator defeated! Reward:", result.rewardMoney)
@@ -1334,6 +1338,29 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
   end
 end)
 print("[Client] Bat toggle key binding (Q) set up")
+
+-- Setup keyboard input for weapon equip (1 key for bat, 2/3 reserved for future weapons)
+UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
+  if gameProcessed then
+    return
+  end
+
+  if input.KeyCode == Enum.KeyCode.One then
+    -- Key 1: Equip bat (or toggle if already equipped)
+    if not localBatState.isEquipped then
+      toggleBatEquip()
+    end
+  elseif input.KeyCode == Enum.KeyCode.Two then
+    -- Key 2: Reserved for sword (future weapon)
+    -- When sword is implemented, this will equip it
+    print("[Client] Key 2 reserved for sword (not yet implemented)")
+  elseif input.KeyCode == Enum.KeyCode.Three then
+    -- Key 3: Reserved for axe (future weapon)
+    -- When axe is implemented, this will equip it
+    print("[Client] Key 3 reserved for axe (not yet implemented)")
+  end
+end)
+print("[Client] Weapon equip key bindings (1, 2, 3) set up")
 
 -- Setup mouse input for bat swing (Left Mouse Button)
 UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
