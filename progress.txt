@@ -2363,3 +2363,36 @@
   - Server validates and processes actions ✓
 - Format check and build pass
 - Next: Other high priority wiring items (#23, #26, #29, #34, #40)
+
+[2026-01-14] Completed Bugfix Work Item #55: Add Inventory Toggle Button to HUD
+- Root cause: Players only had a keybind (I key) to access inventory, with no visible
+  on-screen button. This was problematic for new players and mobile users.
+- Implementation approach:
+  1. Added createInventoryButton() function to MainHUD.lua
+  2. Created ImageButton with backpack icon (rbxassetid://6034684949)
+  3. Positioned button in top-right corner (UDim2.new(1, -70, 0, 10))
+  4. Added item count badge (red circle with number) that shows total items
+  5. Badge hidden when count is 0, shows "99+" for large inventories
+  6. Added tooltip on hover showing "Inventory (I)" keybind
+  7. Styled consistently with existing HUD (rounded corners, dark theme)
+- MainHUD changes (src/client/MainHUD.lua):
+  - Extended HUDState type with inventoryButton, inventoryBadge, inventoryItemCount, onInventoryClick
+  - Added createInventoryButton() helper function
+  - Updated create() to instantiate inventory button
+  - Updated destroy() to clean up inventory button state
+  - Added MainHUD.onInventoryClick() callback setter
+  - Added MainHUD.setInventoryItemCount() to update badge
+  - Added MainHUD.getInventoryItemCount() getter
+- Client wiring (src/client/Main.client.lua):
+  - Wired MainHUD.onInventoryClick to InventoryUI.toggle()
+  - Added inventory badge update in initial data load
+  - Added inventory badge update in PlayerDataChanged event handler
+- Mobile-friendly: 50x50 button size provides good touch target
+- Acceptance criteria met:
+  - Visible inventory button appears on screen at all times ✓
+  - Clicking button opens inventory UI ✓
+  - Clicking again or X closes inventory ✓
+  - Button shows item count badge ✓
+  - Works on both desktop and mobile (proper touch sizing) ✓
+- Format check and build pass
+- Next: Other medium priority items (#7, #17, #18, #33, #43, #44, #48, #49, #52)

@@ -202,6 +202,12 @@ if getPlayerDataFunc then
     playerDataCache = initialData
     MainHUD.updateFromPlayerData(initialData)
     InventoryUI.updateFromPlayerData(initialData)
+    -- Update inventory item count badge on MainHUD
+    if initialData.inventory then
+      local eggCount = initialData.inventory.eggs and #initialData.inventory.eggs or 0
+      local chickenCount = initialData.inventory.chickens and #initialData.inventory.chickens or 0
+      MainHUD.setInventoryItemCount(eggCount + chickenCount)
+    end
 
     print("[Client] Got initial data, sectionIndex =", initialData.sectionIndex)
 
@@ -270,6 +276,12 @@ if playerDataChangedEvent then
     InventoryUI.updateFromPlayerData(data)
     -- Update StoreUI with money balance
     StoreUI.updateMoney(data.money or 0)
+    -- Update inventory item count badge on MainHUD
+    if data.inventory then
+      local eggCount = data.inventory.eggs and #data.inventory.eggs or 0
+      local chickenCount = data.inventory.chickens and #data.inventory.chickens or 0
+      MainHUD.setInventoryItemCount(eggCount + chickenCount)
+    end
 
     -- Build section visuals if we have a section index but haven't built yet
     if data.sectionIndex and not SectionVisuals.getCurrentSection() then
@@ -1258,6 +1270,12 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
   end
 end)
 print("[Client] Inventory toggle key binding (I) set up")
+
+-- Wire up MainHUD inventory button to toggle InventoryUI
+MainHUD.onInventoryClick(function()
+  InventoryUI.toggle()
+end)
+print("[Client] MainHUD inventory button wired")
 
 --[[
   Baseball Bat Visual Management

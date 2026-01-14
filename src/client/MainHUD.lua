@@ -40,6 +40,11 @@ export type HUDState = {
   protectionLabel: TextLabel?,
   protectionEndTime: number?,
   protectionUpdateConnection: RBXScriptConnection?,
+  -- Inventory button state
+  inventoryButton: ImageButton?,
+  inventoryBadge: TextLabel?,
+  inventoryItemCount: number,
+  onInventoryClick: (() -> ())?,
 }
 
 -- Default configuration
@@ -74,6 +79,11 @@ local state: HUDState = {
   protectionLabel = nil,
   protectionEndTime = nil,
   protectionUpdateConnection = nil,
+  -- Inventory button state
+  inventoryButton = nil,
+  inventoryBadge = nil,
+  inventoryItemCount = 0,
+  onInventoryClick = nil,
 }
 
 -- Create the money icon
@@ -122,6 +132,100 @@ local function createMoneyPerSecLabel(parent: Frame, config: HUDConfig): TextLab
   label.TextTransparency = 0.2
   label.Parent = parent
   return label
+end
+
+-- Create inventory button with item count badge
+local function createInventoryButton(screenGui: ScreenGui): (ImageButton, TextLabel)
+  local button = Instance.new("ImageButton")
+  button.Name = "InventoryButton"
+  button.Size = UDim2.new(0, 50, 0, 50)
+  button.Position = UDim2.new(1, -70, 0, 10) -- Top right corner
+  button.AnchorPoint = Vector2.new(0, 0)
+  button.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+  button.BackgroundTransparency = 0.2
+  button.BorderSizePixel = 0
+  button.Image = "rbxassetid://6034684949" -- Backpack icon
+  button.ImageColor3 = Color3.fromRGB(220, 200, 160)
+  button.ScaleType = Enum.ScaleType.Fit
+  button.AutoButtonColor = true
+  button.Parent = screenGui
+
+  -- Rounded corners
+  local corner = Instance.new("UICorner")
+  corner.CornerRadius = UDim.new(0, 10)
+  corner.Parent = button
+
+  -- Border stroke
+  local stroke = Instance.new("UIStroke")
+  stroke.Color = Color3.fromRGB(80, 80, 100)
+  stroke.Thickness = 2
+  stroke.Transparency = 0.3
+  stroke.Parent = button
+
+  -- Padding for the image
+  local padding = Instance.new("UIPadding")
+  padding.PaddingTop = UDim.new(0, 8)
+  padding.PaddingBottom = UDim.new(0, 8)
+  padding.PaddingLeft = UDim.new(0, 8)
+  padding.PaddingRight = UDim.new(0, 8)
+  padding.Parent = button
+
+  -- Item count badge (shows number of items in inventory)
+  local badge = Instance.new("TextLabel")
+  badge.Name = "ItemBadge"
+  badge.Size = UDim2.new(0, 22, 0, 22)
+  badge.Position = UDim2.new(1, -6, 0, -6)
+  badge.AnchorPoint = Vector2.new(0.5, 0.5)
+  badge.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
+  badge.Text = "0"
+  badge.TextColor3 = Color3.fromRGB(255, 255, 255)
+  badge.TextSize = 12
+  badge.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
+  badge.BorderSizePixel = 0
+  badge.Visible = false -- Hidden when count is 0
+  badge.Parent = button
+
+  local badgeCorner = Instance.new("UICorner")
+  badgeCorner.CornerRadius = UDim.new(1, 0) -- Fully round
+  badgeCorner.Parent = badge
+
+  -- Tooltip showing keybind
+  local tooltip = Instance.new("TextLabel")
+  tooltip.Name = "Tooltip"
+  tooltip.Size = UDim2.new(0, 80, 0, 20)
+  tooltip.Position = UDim2.new(0.5, 0, 1, 4)
+  tooltip.AnchorPoint = Vector2.new(0.5, 0)
+  tooltip.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+  tooltip.BackgroundTransparency = 0.2
+  tooltip.Text = "Inventory (I)"
+  tooltip.TextColor3 = Color3.fromRGB(180, 180, 180)
+  tooltip.TextSize = 10
+  tooltip.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular)
+  tooltip.BorderSizePixel = 0
+  tooltip.Visible = false
+  tooltip.Parent = button
+
+  local tooltipCorner = Instance.new("UICorner")
+  tooltipCorner.CornerRadius = UDim.new(0, 4)
+  tooltipCorner.Parent = tooltip
+
+  -- Show/hide tooltip on hover
+  button.MouseEnter:Connect(function()
+    tooltip.Visible = true
+  end)
+
+  button.MouseLeave:Connect(function()
+    tooltip.Visible = false
+  end)
+
+  -- Wire click to callback
+  button.MouseButton1Click:Connect(function()
+    if state.onInventoryClick then
+      state.onInventoryClick()
+    end
+  end)
+
+  return button, badge
 end
 
 -- Create the main HUD frame
@@ -295,6 +399,9 @@ function MainHUD.create(config: HUDConfig?): boolean
   state.moneyLabel = createMoneyLabel(state.mainFrame, hudConfig)
   state.moneyPerSecLabel = createMoneyPerSecLabel(state.mainFrame, hudConfig)
 
+  -- Create inventory button
+  state.inventoryButton, state.inventoryBadge = createInventoryButton(state.screenGui)
+
   -- Initialize display
   updateMoneyDisplay(false)
   updateMoneyPerSecDisplay()
@@ -329,6 +436,9 @@ function MainHUD.destroy()
   state.protectionFrame = nil
   state.protectionLabel = nil
   state.protectionEndTime = nil
+  state.inventoryButton = nil
+  state.inventoryBadge = nil
+  state.inventoryItemCount = 0
 end
 
 -- Set current money (with optional animation)
@@ -418,6 +528,37 @@ function MainHUD.updateFromPlayerData(playerData: any, moneyPerSecond: number?)
   if moneyPerSecond then
     MainHUD.setMoneyPerSecond(moneyPerSecond)
   end
+end
+
+-- Set callback for inventory button click
+function MainHUD.onInventoryClick(callback: () -> ())
+  state.onInventoryClick = callback
+end
+
+-- Update inventory item count badge
+function MainHUD.setInventoryItemCount(count: number)
+  state.inventoryItemCount = count
+
+  if state.inventoryBadge then
+    if count <= 0 then
+      state.inventoryBadge.Visible = false
+    else
+      state.inventoryBadge.Visible = true
+      -- Format count (show 99+ for large numbers)
+      if count > 99 then
+        state.inventoryBadge.Text = "99+"
+        state.inventoryBadge.Size = UDim2.new(0, 28, 0, 22)
+      else
+        state.inventoryBadge.Text = tostring(count)
+        state.inventoryBadge.Size = UDim2.new(0, 22, 0, 22)
+      end
+    end
+  end
+end
+
+-- Get inventory item count
+function MainHUD.getInventoryItemCount(): number
+  return state.inventoryItemCount
 end
 
 -- Get configuration defaults

@@ -1409,7 +1409,8 @@
       "category": "Inventory-UI",
       "title": "Add Inventory Toggle Button to HUD",
       "description": "Add a visible button on the main HUD that players can click to open/close the inventory. Currently there's no on-screen button - only a keybind exists.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
       "priority": "high",
       "steps": [
         "Add inventory icon button to MainHUD.lua",
