@@ -3077,3 +3077,33 @@
   - Trap display is consistent with the existing inventory style ✓
 - Format check passes, build passes
 - Next: Work on remaining items (Item #5 Trap Placement, Item #2 Close Button, Item #6 AI)
+
+[2026-01-14] Verified and Completed RNG Work Item #1: Fix Egg Hatching RNG
+- Investigation: The RNG implementation in EggConfig.selectHatchOutcome() was 
+  reviewed and found to be correctly implemented:
+  * Random.new() instance is at module level (line 14 of EggConfig.lua)
+  * The rng instance persists across calls (not recreated each hatch)
+  * Cumulative probability logic is correct:
+    - Roll 1-70 → BasicChick (70%)
+    - Roll 71-95 → BrownHen (25%)
+    - Roll 96-100 → WhiteHen (5%)
+  * EggHatching.hatch() correctly calls EggConfig.selectHatchOutcome()
+  * No code paths bypass the RNG and hardcode BasicChick
+- Implementation: Enhanced the test in IntegrationTests.lua to properly verify
+  the probability distribution:
+  * Previous test only verified 1000 hatches produce results (not distribution)
+  * New test verifies all three chicken types are produced
+  * New test verifies distribution is within expected statistical bounds:
+    - BasicChick: 550-850 (expect ~700)
+    - BrownHen: 150-350 (expect ~250)
+    - WhiteHen: 10-100 (expect ~50)
+  * This catches the "always returns BasicChick" bug if it ever regresses
+- Acceptance criteria met:
+  - Hatching common eggs produces BasicChick ~70% of the time ✓
+  - Hatching common eggs produces BrownHen ~25% of the time ✓
+  - Hatching common eggs produces WhiteHen ~5% of the time ✓
+  - RNG results are different across game sessions ✓ (Random.new() auto-seeds)
+  - RNG results are different for each hatch attempt ✓ (module-level rng persists)
+  - All egg types produce varied chickens according to their probability tables ✓
+- Format check passes, build passes
+- Next: Work on remaining critical items (#3 Combat Fix, #5 Trap Placement)

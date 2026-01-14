@@ -351,12 +351,42 @@ end)
 
 test("EggHatching: probability distribution is reasonable", function()
   -- Simulate many hatches and verify distribution is within expected bounds
+  -- CommonEgg outcomes: BasicChick 70%, BrownHen 25%, WhiteHen 5%
   local results = EggHatching.simulateHatches("CommonEgg", 1000)
   local totalHatches = 0
   for _, count in pairs(results) do
     totalHatches = totalHatches + count
   end
-  return assert_eq(totalHatches, 1000, "All 1000 hatches should produce results")
+
+  local pass, msg = assert_eq(totalHatches, 1000, "All 1000 hatches should produce results")
+  if not pass then
+    return pass, msg
+  end
+
+  -- Verify all three outcomes are produced (RNG is working)
+  local basicCount = results["BasicChick"] or 0
+  local brownCount = results["BrownHen"] or 0
+  local whiteCount = results["WhiteHen"] or 0
+
+  -- With 1000 samples, we expect roughly: 700 BasicChick, 250 BrownHen, 50 WhiteHen
+  -- Allow generous bounds for statistical variance (±15% of expected)
+  -- BasicChick: expect 700, allow 550-850
+  if basicCount < 550 or basicCount > 850 then
+    return false, string.format("BasicChick count %d outside expected range 550-850", basicCount)
+  end
+
+  -- BrownHen: expect 250, allow 150-350
+  if brownCount < 150 or brownCount > 350 then
+    return false, string.format("BrownHen count %d outside expected range 150-350", brownCount)
+  end
+
+  -- WhiteHen: expect 50, allow 10-100 (wider range due to low probability)
+  if whiteCount < 10 or whiteCount > 100 then
+    return false, string.format("WhiteHen count %d outside expected range 10-100", whiteCount)
+  end
+
+  return true,
+    string.format("OK (Basic:%d, Brown:%d, White:%d)", basicCount, brownCount, whiteCount)
 end)
 
 -- ============================================================================
