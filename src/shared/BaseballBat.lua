@@ -26,6 +26,7 @@ export type SwingResult = {
   defeated: boolean,
   knockback: boolean,
   rewardMoney: number,
+  remainingHealth: number?,
 }
 
 export type BatConfig = {
@@ -202,6 +203,7 @@ function BaseballBat.hitPredator(
     defeated = hitResult.defeated,
     knockback = false,
     rewardMoney = rewardMoney,
+    remainingHealth = hitResult.remainingHealth,
   }
 end
 

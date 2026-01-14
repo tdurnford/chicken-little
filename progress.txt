@@ -1185,3 +1185,27 @@
   - Note: Stock/sold-out feature deferred to Work Item #3 (Store Inventory System)
 - Format check and build pass
 - Next: Work Items #3, #9 (high priority items)
+
+[2026-01-14] Completed Bugfix Work Item #9: Implement Predator Health Bar UI
+- Created PredatorHealthBar.lua client module with health bar visualization
+- Key features implemented:
+  - BillboardGui-based health bar appears above predator models
+  - Shows predator name with threat level color coding
+  - Health bar with current/max health text display
+  - Color coded: green (>60%), yellow (30-60%), red (<30%)
+  - Updates in real-time when predator takes damage
+  - Automatically destroyed when predator is defeated
+- Updated BaseballBat.lua SwingResult type to include remainingHealth field
+- Updated Main.client.lua:
+  - Added PredatorHealthBar module require
+  - PredatorSpawned event now creates health bar alongside visual
+  - PredatorDefeated event destroys health bar before playing defeat animation
+  - Bat swing handler updates health bar with remaining health from server response
+- Acceptance criteria met:
+  - Health bar appears above active predators (via PredatorSpawned event)
+  - Health bar updates in real-time as predator takes damage (via SwingBat result)
+  - Health bar shows predator name and type (displayName with threat color)
+  - Health bar disappears when predator defeated (destroyed in PredatorDefeated handler)
+- Format check and build pass
+- Next: Work Items #3, #10, #11, #14, #16, #23 (high priority items)
+

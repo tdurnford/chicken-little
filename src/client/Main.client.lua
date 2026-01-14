@@ -15,6 +15,7 @@ local ClientModules = script.Parent
 local SoundEffects = require(ClientModules:WaitForChild("SoundEffects"))
 local ChickenVisuals = require(ClientModules:WaitForChild("ChickenVisuals"))
 local PredatorVisuals = require(ClientModules:WaitForChild("PredatorVisuals"))
+local PredatorHealthBar = require(ClientModules:WaitForChild("PredatorHealthBar"))
 local EggVisuals = require(ClientModules:WaitForChild("EggVisuals"))
 local MainHUD = require(ClientModules:WaitForChild("MainHUD"))
 local ChickenPickup = require(ClientModules:WaitForChild("ChickenPickup"))
@@ -404,22 +405,27 @@ if trapCaughtEvent then
   end)
 end
 
--- PredatorSpawned: Create predator visual
+-- PredatorSpawned: Create predator visual and health bar
 local predatorSpawnedEvent = getEvent("PredatorSpawned")
 if predatorSpawnedEvent then
   predatorSpawnedEvent.OnClientEvent:Connect(
     function(predatorId: string, predatorType: string, threatLevel: string, position: Vector3)
-      PredatorVisuals.create(predatorId, predatorType, threatLevel, position)
+      local visualState = PredatorVisuals.create(predatorId, predatorType, threatLevel, position)
+      -- Create health bar if visual was created successfully
+      if visualState and visualState.model then
+        PredatorHealthBar.create(predatorId, predatorType, threatLevel, visualState.model)
+      end
       SoundEffects.playPredatorAlert(threatLevel == "Deadly" or threatLevel == "Catastrophic")
       print("[Client] Predator spawned:", predatorId, predatorType, threatLevel)
     end
   )
 end
 
--- PredatorDefeated: Play defeated animation and remove
+-- PredatorDefeated: Play defeated animation, remove visual and health bar
 local predatorDefeatedEvent = getEvent("PredatorDefeated")
 if predatorDefeatedEvent then
   predatorDefeatedEvent.OnClientEvent:Connect(function(predatorId: string, byPlayer: boolean)
+    PredatorHealthBar.destroy(predatorId)
     PredatorVisuals.playDefeatedAnimation(predatorId)
     if byPlayer then
       SoundEffects.playBatSwing("predator")
@@ -1075,6 +1081,10 @@ local function swingBat()
   if predatorId then
     result = swingBatFunc:InvokeServer("swing", "predator", predatorId)
     if result and result.success then
+      -- Update health bar with remaining health
+      if result.remainingHealth ~= nil then
+        PredatorHealthBar.updateHealth(predatorId, result.remainingHealth)
+      end
       if result.defeated then
         SoundEffects.playBatSwing("predator")
         print("[Client] Predator defeated! Reward:", result.rewardMoney)
