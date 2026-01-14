@@ -981,7 +981,7 @@
       "category": "RandomChicken-BugFix",
       "title": "Fix Arena Chickens Spawning in Same Location",
       "description": "Random arena chickens all spawn in the same place. Need to randomize spawn positions within neutral zone.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Review RandomChickenSpawn spawn position generation",
@@ -995,7 +995,8 @@
         "No overlapping spawn positions"
       ],
       "dependencies": [],
-      "codeLocation": "src/shared/RandomChickenSpawn.lua"
+      "codeLocation": "src/shared/RandomChickenSpawn.lua",
+      "status": "completed"
     },
     {
       "id": 37,

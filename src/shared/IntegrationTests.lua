@@ -874,6 +874,49 @@ test("RandomChickenSpawn: claim chicken fails when out of range", function()
   return assert_not_nil(state.currentChicken, "Chicken should still exist after failed claim")
 end)
 
+test("RandomChickenSpawn: consecutive spawns have different positions", function()
+  local currentTime = os.time()
+  local state = RandomChickenSpawn.createSpawnState(nil, currentTime)
+
+  -- Spawn multiple chickens and track positions
+  local positions: { { x: number, z: number } } = {}
+  local MIN_DISTANCE = 8 -- Minimum distance we expect between spawns
+
+  for i = 1, 5 do
+    -- Clear current chicken to allow next spawn
+    state.currentChicken = nil
+    state.nextSpawnTime = currentTime - 1
+
+    local spawnResult = RandomChickenSpawn.spawnChicken(state, currentTime + i)
+    local pass, msg = assert_true(spawnResult.success, "Spawn " .. i .. " should succeed")
+    if not pass then
+      return pass, msg
+    end
+
+    local pos = spawnResult.chicken.position
+    table.insert(positions, { x = pos.x, z = pos.z })
+  end
+
+  -- Verify at least some positions are different (not all in same spot)
+  local allSamePosition = true
+  local firstPos = positions[1]
+  for i = 2, #positions do
+    local pos = positions[i]
+    local dx = pos.x - firstPos.x
+    local dz = pos.z - firstPos.z
+    local distance = math.sqrt(dx * dx + dz * dz)
+    if distance >= MIN_DISTANCE then
+      allSamePosition = false
+      break
+    end
+  end
+
+  return assert_false(
+    allSamePosition,
+    "Spawn positions should vary - not all chickens should spawn in the same location"
+  )
+end)
+
 -- ============================================================================
 -- BalanceConfig Tests
 -- ============================================================================

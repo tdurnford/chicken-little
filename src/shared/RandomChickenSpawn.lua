@@ -8,6 +8,14 @@ local ChickenConfig = require(script.Parent.ChickenConfig)
 
 local RandomChickenSpawn = {}
 
+-- Initialize random seed with high-precision time components to ensure
+-- unique random sequences across server restarts
+math.randomseed(os.time() + math.floor((os.clock() * 1000000) % 1000000))
+-- Warm up the RNG by discarding first few values (improves randomness)
+for _ = 1, 3 do
+  math.random()
+end
+
 -- Constants for spawn events
 local DEFAULT_SPAWN_INTERVAL_MIN = 120 -- 2 minutes minimum between spawns
 local DEFAULT_SPAWN_INTERVAL_MAX = 300 -- 5 minutes maximum between spawns
@@ -55,6 +63,7 @@ export type SpawnEventState = {
   currentChicken: SpawnedChicken?,
   nextSpawnTime: number,
   lastSpawnTime: number,
+  lastSpawnPosition: Vector3?, -- Track last spawn position to ensure variety
   totalSpawns: number,
   totalClaims: number,
   isActive: boolean,
@@ -105,9 +114,41 @@ local function calculateNextSpawnTime(config: SpawnConfig, currentTime: number):
   return currentTime + interval
 end
 
--- Get random position within neutral zone
-function RandomChickenSpawn.getRandomSpawnPosition(config: SpawnConfig): Vector3
+-- Minimum distance between consecutive spawn positions to ensure visible variety
+local MIN_SPAWN_DISTANCE = 8 -- studs
+
+-- Get random position within neutral zone, ensuring minimum distance from last spawn
+function RandomChickenSpawn.getRandomSpawnPosition(
+  config: SpawnConfig,
+  lastPosition: Vector3?
+): Vector3
   local halfSize = config.neutralZoneSize / 2
+  local maxAttempts = 10 -- Prevent infinite loops
+
+  for _ = 1, maxAttempts do
+    local newPosition = {
+      x = config.neutralZoneCenter.x + (math.random() - 0.5) * halfSize * 2,
+      y = config.neutralZoneCenter.y,
+      z = config.neutralZoneCenter.z + (math.random() - 0.5) * halfSize * 2,
+    }
+
+    -- If no last position, or if new position is far enough away, use it
+    if not lastPosition then
+      return newPosition
+    end
+
+    -- Calculate distance from last position
+    local dx = newPosition.x - lastPosition.x
+    local dz = newPosition.z - lastPosition.z
+    local distance = math.sqrt(dx * dx + dz * dz)
+
+    if distance >= MIN_SPAWN_DISTANCE then
+      return newPosition
+    end
+  end
+
+  -- Fallback: return a position anyway after max attempts
+  -- (ensures we don't get stuck, even if slightly close to last position)
   return {
     x = config.neutralZoneCenter.x + (math.random() - 0.5) * halfSize * 2,
     y = config.neutralZoneCenter.y,
@@ -167,6 +208,7 @@ function RandomChickenSpawn.createSpawnState(
     currentChicken = nil,
     nextSpawnTime = calculateNextSpawnTime(cfg, currentTime),
     lastSpawnTime = 0,
+    lastSpawnPosition = nil,
     totalSpawns = 0,
     totalClaims = 0,
     isActive = true,
@@ -204,7 +246,7 @@ function RandomChickenSpawn.spawnChicken(state: SpawnEventState, currentTime: nu
   end
 
   -- Create spawned chicken
-  local position = RandomChickenSpawn.getRandomSpawnPosition(state.config)
+  local position = RandomChickenSpawn.getRandomSpawnPosition(state.config, state.lastSpawnPosition)
   local spawnedChicken: SpawnedChicken = {
     id = generateSpawnId(),
     chickenType = chickenType,
@@ -217,6 +259,7 @@ function RandomChickenSpawn.spawnChicken(state: SpawnEventState, currentTime: nu
   -- Update state
   state.currentChicken = spawnedChicken
   state.lastSpawnTime = currentTime
+  state.lastSpawnPosition = position
   state.totalSpawns = state.totalSpawns + 1
   state.nextSpawnTime = calculateNextSpawnTime(state.config, currentTime)
 
@@ -401,6 +444,7 @@ end
 function RandomChickenSpawn.reset(state: SpawnEventState, currentTime: number): ()
   state.currentChicken = nil
   state.nextSpawnTime = calculateNextSpawnTime(state.config, currentTime)
+  state.lastSpawnPosition = nil
   state.totalSpawns = 0
   state.totalClaims = 0
   state.isActive = true

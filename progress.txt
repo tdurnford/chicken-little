@@ -2219,3 +2219,31 @@
   - No visual clutter on arena chickens
 - Format check and build pass
 - Next: Other high priority items (#36, #39, #51, #55)
+
+[2026-01-14] Completed Bugfix Work Item #36: Fix Arena Chickens Spawning in Same Location
+- Root cause: math.random() was not seeded, causing deterministic sequences on server restart.
+  Additionally, no tracking of previous spawn positions meant chickens could spawn at 
+  very similar locations consecutively.
+- Implementation approach:
+  1. Added math.randomseed() initialization using os.time() + os.clock() for unique seeds
+  2. Added RNG warmup by discarding first 3 random values
+  3. Added lastSpawnPosition tracking to SpawnEventState type
+  4. Modified getRandomSpawnPosition() to accept lastPosition parameter
+  5. Added MIN_SPAWN_DISTANCE = 8 studs minimum between consecutive spawns
+  6. New position generation tries up to 10 times to find a position at least 8 studs
+     away from the previous spawn location
+  7. Fallback generates new random position if max attempts reached
+- Code changes in src/shared/RandomChickenSpawn.lua:
+  - Added random seed initialization at module load
+  - Added lastSpawnPosition field to SpawnEventState type
+  - Enhanced getRandomSpawnPosition() with distance checking
+  - Updated spawnChicken() to pass and track lastSpawnPosition
+  - Updated createSpawnState() and reset() to initialize lastSpawnPosition
+- Added integration test "RandomChickenSpawn: consecutive spawns have different positions"
+  - Spawns 5 chickens consecutively and verifies they don't all spawn at the same spot
+- Acceptance criteria met:
+  - Each arena chicken spawns in a different random location (RNG seeded properly)
+  - Spawn positions are within neutral zone boundaries (existing logic preserved)
+  - No overlapping spawn positions (8 stud minimum distance enforced)
+- Format check and build pass
+- Next: Other high priority items (#39, #51, #55)
