@@ -1947,3 +1947,35 @@
   - Chicken visuals persist until protection expires and chicken takes lethal damage
 - Format check and build pass
 - Next: Other critical items (#1, #8, #12, #20, #38, #40, #47)
+
+[2026-01-14] Completed Bugfix Work Item #47: Fix Cannot Pickup Placed Chickens to Inventory
+- Root cause: ChickenPickup module never wired its setOnPickup callback to call server
+- The pickup/place system was designed for moving chickens between spots, but:
+  - onPickup callback was never set
+  - onPlace callback was never set
+  - Server's PickupChicken RemoteFunction was never called from client
+- Fixes applied:
+  1. Added clearHoldingState() function to ChickenPickup.lua (line 710-718)
+     - Clears holding state without triggering onPlace/onCancel callbacks
+     - Used when chicken is returned to inventory via server call
+  2. Added setOnPickup callback wiring in Main.client.lua (lines 963-988)
+     - When E is pressed near placed chicken, calls server's PickupChicken
+     - Server moves chicken from placedChickens to inventory.chickens
+     - Clears client holding state after server confirms
+     - Plays chickenPickup sound effect
+- Flow now works correctly:
+  - Player walks near placed chicken in coop spot
+  - Player presses E, tryPickup() fires onPickup callback
+  - Callback calls PickupChicken:InvokeServer(chickenId)
+  - Server removes chicken from placedChickens, adds to inventory.chickens
+  - Server syncs player data to client
+  - Client receives PlayerDataChanged event with updated inventory
+  - Client clears holding state via clearHoldingState()
+  - Chicken appears in inventory UI, coop spot becomes empty
+- Acceptance criteria met:
+  - Pressing E on placed chicken returns it to inventory
+  - Chicken appears in inventory list (via PlayerDataChanged sync)
+  - Coop spot becomes empty (ChickenPickedUp event updates visuals)
+  - Can place the same chicken again (it's now in inventory)
+- Format check and build pass
+- Next: Other critical items (#38, #40)

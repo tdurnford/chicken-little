@@ -959,6 +959,32 @@ end)
 ChickenPickup.setGetPlayerData(function()
   return playerDataCache
 end)
+
+-- Wire up pickup callback to call server and return chicken to inventory
+ChickenPickup.setOnPickup(function(chickenId: string, spotIndex: number)
+  local pickupChickenFunc = getFunction("PickupChicken")
+  if pickupChickenFunc then
+    task.spawn(function()
+      local result = pickupChickenFunc:InvokeServer(chickenId)
+      if result and result.success then
+        -- Chicken returned to inventory - clear the holding state
+        -- The server will sync player data which updates the UI
+        SoundEffects.play("chickenPickup")
+        print("[Client] Chicken picked up and returned to inventory:", chickenId)
+
+        -- Clear the holding state since chicken is now in inventory
+        ChickenPickup.clearHoldingState()
+      else
+        -- Failed to pickup - clear the holding state
+        ChickenPickup.clearHoldingState()
+        warn("[Client] Failed to pickup chicken:", result and result.message or "Unknown error")
+      end
+    end)
+  else
+    ChickenPickup.clearHoldingState()
+    warn("[Client] PickupChicken function not found")
+  end
+end)
 print("[Client] ChickenPickup system initialized")
 
 -- Wire up ChickenSelling callbacks for proximity checking

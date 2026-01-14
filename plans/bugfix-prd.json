@@ -1223,7 +1223,8 @@
       "category": "Chicken-BugFix",
       "title": "Fix Cannot Pickup Placed Chickens to Inventory",
       "description": "Players cannot pick up chickens from coop spots and return them to inventory.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
       "priority": "critical",
       "steps": [
         "Review PickupChicken RemoteFunction handler",

@@ -707,4 +707,16 @@ function ChickenPickup.touchCancel()
   end
 end
 
+-- Clear holding state without triggering callbacks
+-- Used when chicken was returned to inventory via server call
+function ChickenPickup.clearHoldingState()
+  state.heldChickenId = nil
+  state.heldChickenType = nil
+  state.heldChickenRarity = nil
+  state.previousSpotIndex = nil
+  state.isHolding = false
+  hideIndicator()
+  updatePrompt(nil, false)
+end
+
 return ChickenPickup
