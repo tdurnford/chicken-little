@@ -723,6 +723,19 @@ if playerHealthChangedEvent then
   end)
 end
 
+-- ProtectionStatusChanged: Update protection timer display
+local protectionStatusChangedEvent = getEvent("ProtectionStatusChanged")
+if protectionStatusChangedEvent then
+  protectionStatusChangedEvent.OnClientEvent:Connect(function(data: any)
+    MainHUD.setProtectionStatus(data)
+    if data.isProtected then
+      print("[Client] Protection status: Protected for", data.remainingSeconds, "seconds")
+    else
+      print("[Client] Protection status: Protection expired")
+    end
+  end)
+end
+
 -- Track incapacitation state for movement control
 local isIncapacitated = false
 local incapacitatedEndTime = 0

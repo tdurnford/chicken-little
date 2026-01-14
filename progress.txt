@@ -2074,3 +2074,35 @@
   - Works correctly with store replenishment system
 - Format check and build pass
 - Next: Other high priority items (#35, #36, #39, #41, #50, #51)
+
+[2026-01-14] Completed Bugfix Work Item #50: Add New Player Predator Protection Cooldown
+- Root cause: New players had no grace period to learn the game before predators attacked
+- Without protection, players could lose their first chicken before understanding mechanics
+- Implementation approach:
+  1. Added NEW_PLAYER_PROTECTION_DURATION = 180 (3 minutes) constant in Main.server.lua
+  2. Added playerJoinTimes dictionary to track when each player joined
+  3. Modified predator spawn logic to skip spawning for protected players
+  4. Added ProtectionStatusChanged RemoteEvent for client notification
+  5. Created protection timer UI in MainHUD with countdown display
+- Server changes (src/server/Main.server.lua):
+  - Track player join time in playerJoinTimes on PlayerAdded
+  - Clean up tracking on PlayerRemoving
+  - Send initial protection status to client on join
+  - Skip predator spawning if player is still protected
+  - Send protection expired notification when time runs out
+- Client changes (src/client/MainHUD.lua):
+  - Added protection frame with shield icon and countdown timer
+  - Timer updates in real-time using RunService.Heartbeat
+  - Auto-hides when protection expires
+- Client changes (src/client/Main.client.lua):
+  - Added ProtectionStatusChanged event listener
+  - Routes protection updates to MainHUD.setProtectionStatus()
+- RemoteSetup changes:
+  - Added "ProtectionStatusChanged" to REMOTE_EVENTS list
+- Acceptance criteria met:
+  - New players have 3-minute predator immunity
+  - Protection timer displayed on screen (shows "🛡️ Protected: M:SS")
+  - Predators don't spawn in protected player's section
+  - Protection ends after timer expires
+- Format check and build pass
+- Next: Other high priority items (#35, #36, #39, #41, #51)

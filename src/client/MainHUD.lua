@@ -35,6 +35,11 @@ export type HUDState = {
   moneyPerSecond: number,
   isAnimating: boolean,
   animationConnection: RBXScriptConnection?,
+  -- Protection timer state
+  protectionFrame: Frame?,
+  protectionLabel: TextLabel?,
+  protectionEndTime: number?,
+  protectionUpdateConnection: RBXScriptConnection?,
 }
 
 -- Default configuration
@@ -64,6 +69,11 @@ local state: HUDState = {
   moneyPerSecond = 0,
   isAnimating = false,
   animationConnection = nil,
+  -- Protection timer state
+  protectionFrame = nil,
+  protectionLabel = nil,
+  protectionEndTime = nil,
+  protectionUpdateConnection = nil,
 }
 
 -- Create the money icon
@@ -299,6 +309,11 @@ function MainHUD.destroy()
     state.animationConnection = nil
   end
 
+  if state.protectionUpdateConnection then
+    state.protectionUpdateConnection:Disconnect()
+    state.protectionUpdateConnection = nil
+  end
+
   if state.screenGui then
     state.screenGui:Destroy()
   end
@@ -311,6 +326,9 @@ function MainHUD.destroy()
   state.displayedMoney = 0
   state.moneyPerSecond = 0
   state.isAnimating = false
+  state.protectionFrame = nil
+  state.protectionLabel = nil
+  state.protectionEndTime = nil
 end
 
 -- Set current money (with optional animation)
@@ -409,6 +427,123 @@ function MainHUD.getDefaultConfig(): HUDConfig
     copy[key] = value
   end
   return copy
+end
+
+-- Create protection timer UI frame
+local function createProtectionFrame(screenGui: ScreenGui): Frame
+  local frame = Instance.new("Frame")
+  frame.Name = "ProtectionFrame"
+  frame.Size = UDim2.new(0, 220, 0, 40)
+  frame.Position = UDim2.new(0.5, 0, 0, 90) -- Below the main HUD
+  frame.AnchorPoint = Vector2.new(0.5, 0)
+  frame.BackgroundColor3 = Color3.fromRGB(20, 60, 20) -- Dark green
+  frame.BackgroundTransparency = 0.3
+  frame.BorderSizePixel = 0
+  frame.Visible = false
+  frame.Parent = screenGui
+
+  -- Corner rounding
+  local corner = Instance.new("UICorner")
+  corner.CornerRadius = UDim.new(0, 8)
+  corner.Parent = frame
+
+  -- Border stroke
+  local stroke = Instance.new("UIStroke")
+  stroke.Color = Color3.fromRGB(100, 200, 100) -- Light green border
+  stroke.Thickness = 2
+  stroke.Parent = frame
+
+  -- Shield icon
+  local icon = Instance.new("TextLabel")
+  icon.Name = "ShieldIcon"
+  icon.Size = UDim2.new(0, 30, 1, 0)
+  icon.Position = UDim2.new(0, 5, 0, 0)
+  icon.BackgroundTransparency = 1
+  icon.Text = "🛡️"
+  icon.TextSize = 20
+  icon.Parent = frame
+
+  -- Protection label
+  local label = Instance.new("TextLabel")
+  label.Name = "ProtectionLabel"
+  label.Size = UDim2.new(1, -45, 1, 0)
+  label.Position = UDim2.new(0, 40, 0, 0)
+  label.BackgroundTransparency = 1
+  label.TextColor3 = Color3.fromRGB(150, 255, 150) -- Light green text
+  label.TextSize = 16
+  label.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
+  label.TextXAlignment = Enum.TextXAlignment.Left
+  label.Text = "Protected: 3:00"
+  label.Parent = frame
+
+  return frame
+end
+
+-- Format seconds as M:SS
+local function formatTime(seconds: number): string
+  local mins = math.floor(seconds / 60)
+  local secs = math.floor(seconds % 60)
+  return string.format("%d:%02d", mins, secs)
+end
+
+-- Update protection timer display
+local function updateProtectionDisplay()
+  if not state.protectionFrame or not state.protectionLabel or not state.protectionEndTime then
+    return
+  end
+
+  local remaining = state.protectionEndTime - os.time()
+  if remaining <= 0 then
+    -- Protection has expired
+    state.protectionFrame.Visible = false
+    if state.protectionUpdateConnection then
+      state.protectionUpdateConnection:Disconnect()
+      state.protectionUpdateConnection = nil
+    end
+    state.protectionEndTime = nil
+  else
+    state.protectionLabel.Text = "Protected: " .. formatTime(remaining)
+  end
+end
+
+-- Set protection status from server
+function MainHUD.setProtectionStatus(data: {
+  isProtected: boolean,
+  remainingSeconds: number,
+  totalDuration: number,
+})
+  if not state.screenGui then
+    return
+  end
+
+  -- Create protection frame if needed
+  if not state.protectionFrame then
+    state.protectionFrame = createProtectionFrame(state.screenGui)
+    state.protectionLabel = state.protectionFrame:FindFirstChild("ProtectionLabel") :: TextLabel
+  end
+
+  if data.isProtected and data.remainingSeconds > 0 then
+    -- Show protection timer
+    state.protectionEndTime = os.time() + data.remainingSeconds
+    state.protectionFrame.Visible = true
+    updateProtectionDisplay()
+
+    -- Start update loop if not already running
+    if not state.protectionUpdateConnection then
+      local RunService = game:GetService("RunService")
+      state.protectionUpdateConnection = RunService.Heartbeat:Connect(function()
+        updateProtectionDisplay()
+      end)
+    end
+  else
+    -- Hide protection timer
+    state.protectionFrame.Visible = false
+    if state.protectionUpdateConnection then
+      state.protectionUpdateConnection:Disconnect()
+      state.protectionUpdateConnection = nil
+    end
+    state.protectionEndTime = nil
+  end
 end
 
 return MainHUD

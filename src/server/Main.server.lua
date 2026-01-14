@@ -54,6 +54,10 @@ local lastCleanupTime = 0
 local CHICKEN_PLACEMENT_PROTECTION_SECONDS = 5 -- Protection period for newly placed chickens
 local PREDATOR_ATTACK_RANGE_STUDS = 15 -- Predators must be within this range of coop to damage chickens
 
+-- New Player Protection Configuration
+local NEW_PLAYER_PROTECTION_DURATION = 180 -- 3 minutes of predator immunity for new players
+local playerJoinTimes: { [number]: number } = {} -- Tracks when each player joined (userId -> os.time())
+
 -- Store Replenishment Configuration
 local lastStoreReplenishCheck = 0
 local STORE_REPLENISH_CHECK_INTERVAL = 10 -- Check every 10 seconds if replenish needed
@@ -1013,8 +1017,23 @@ Players.PlayerAdded:Connect(function(player)
   local playerId = tostring(player.UserId)
   local sectionIndex = MapGeneration.handlePlayerJoin(mapState, playerId, currentTime)
 
+  -- Track join time for new player protection
+  playerJoinTimes[player.UserId] = currentTime
+
   -- Initialize player game state
   playerGameStates[player.UserId] = createPlayerGameState()
+
+  -- Send initial protection status to client
+  task.defer(function()
+    local protectionEvent = RemoteSetup.getEvent("ProtectionStatusChanged")
+    if protectionEvent then
+      protectionEvent:FireClient(player, {
+        isProtected = true,
+        remainingSeconds = NEW_PLAYER_PROTECTION_DURATION,
+        totalDuration = NEW_PLAYER_PROTECTION_DURATION,
+      })
+    end
+  end)
 
   if sectionIndex then
     print(string.format("[Main.server] Assigned section %d to %s", sectionIndex, player.Name))
@@ -1111,6 +1130,9 @@ Players.PlayerRemoving:Connect(function(player)
 
   -- Clean up player game state
   playerGameStates[player.UserId] = nil
+
+  -- Clean up player join time tracking
+  playerJoinTimes[player.UserId] = nil
 end)
 
 print("[Main.server] " .. RemoteSetup.getSummary())
@@ -1287,7 +1309,10 @@ local function runGameLoop(deltaTime: number)
     end
 
     -- 4. Update predator spawning (check if should spawn new predator)
-    if PredatorSpawning.shouldSpawn(gameState.spawnState, currentTime) then
+    -- Skip predator spawning for new players who still have protection
+    local joinTime = playerJoinTimes[player.UserId]
+    local isProtected = joinTime and (currentTime - joinTime) < NEW_PLAYER_PROTECTION_DURATION
+    if not isProtected and PredatorSpawning.shouldSpawn(gameState.spawnState, currentTime) then
       local result = PredatorSpawning.spawn(gameState.spawnState, currentTime, playerId)
       if result.success and result.predator then
         -- Notify player of predator spawn
@@ -1623,6 +1648,29 @@ local function runGameLoop(deltaTime: number)
         for _, player in ipairs(Players:GetPlayers()) do
           storeReplenishedEvent:FireClient(player, newInventory)
         end
+      end
+    end
+  end
+
+  -- 9. Update protection status for players approaching/exceeding protection duration
+  local protectionEvent = RemoteSetup.getEvent("ProtectionStatusChanged")
+  if protectionEvent then
+    for userId, joinTime in pairs(playerJoinTimes) do
+      local timeSinceJoin = currentTime - joinTime
+      local remainingSeconds = NEW_PLAYER_PROTECTION_DURATION - timeSinceJoin
+
+      -- Send update when protection is about to expire or has expired
+      if remainingSeconds <= 0 then
+        -- Protection has expired - notify once and remove tracking
+        local player = Players:GetPlayerByUserId(userId)
+        if player then
+          protectionEvent:FireClient(player, {
+            isProtected = false,
+            remainingSeconds = 0,
+            totalDuration = NEW_PLAYER_PROTECTION_DURATION,
+          })
+        end
+        playerJoinTimes[userId] = nil
       end
     end
   end

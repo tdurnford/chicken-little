@@ -928,24 +928,26 @@
     {
       "id": 34,
       "category": "Inventory-BugFix",
-      "title": "Fix Inventory Not Reopening After Close",
-      "description": "Player cannot open inventory after closing it. The inventory UI needs proper toggle/reopen logic.",
-      "completed": true,
+      "title": "Fix Inventory Keybind Not Working",
+      "description": "The inventory keybind doesn't work at all. Need to wire the keybind handler to actually open/close the inventory UI.",
+      "completed": false,
       "priority": "critical",
       "steps": [
-        "Check InventoryUI toggle logic for state tracking issues",
-        "Ensure inventory visibility flag is properly reset on close",
-        "Verify keybind handler fires on subsequent presses",
-        "Test open/close/reopen cycle"
+        "Find the inventory keybind in Main.client.lua or InventoryUI.lua",
+        "Verify UserInputService is listening for the keybind (likely 'I' or 'B')",
+        "Wire keybind handler to call InventoryUI.toggle() or open()/close()",
+        "Ensure InventoryUI module is properly required",
+        "Test keybind opens and closes inventory correctly",
+        "Test open/close/reopen cycle works"
       ],
       "acceptanceCriteria": [
-        "Inventory can be opened after being closed",
-        "Toggle keybind works correctly every time",
+        "Pressing inventory keybind opens the inventory UI",
+        "Pressing keybind again closes the inventory",
+        "Toggle works correctly every time",
         "No stuck states preventing reopening"
       ],
       "dependencies": [],
-      "codeLocation": "src/client/InventoryUI.lua",
-      "status": "completed"
+      "codeLocation": "src/client/Main.client.lua"
     },
     {
       "id": 35,
@@ -1296,7 +1298,7 @@
       "category": "NewPlayer-Protection",
       "title": "Add New Player Predator Protection Cooldown",
       "description": "New players should have 3-minute immunity from predator attacks to learn the game without stress.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Track joinTime in player data or session state",
@@ -1312,7 +1314,8 @@
         "Protection ends after timer expires"
       ],
       "dependencies": [],
-      "codeLocation": "src/server/Main.server.lua"
+      "codeLocation": "src/server/Main.server.lua",
+      "status": "completed"
     },
     {
       "id": 51,
@@ -1415,6 +1418,34 @@
       "dependencies": [],
       "codeLocation": "src/shared/ChickenPlacement.lua",
       "status": "completed"
+    },
+    {
+      "id": 55,
+      "category": "Inventory-UI",
+      "title": "Add Inventory Toggle Button to HUD",
+      "description": "Add a visible button on the main HUD that players can click to open/close the inventory. Currently there's no on-screen button - only a keybind exists.",
+      "completed": false,
+      "priority": "high",
+      "steps": [
+        "Add inventory icon button to MainHUD.lua",
+        "Position button in accessible location (e.g., bottom right or top right)",
+        "Use backpack/bag icon for the button",
+        "Wire button click to toggle InventoryUI.open()/close()",
+        "Show inventory item count badge on button (e.g., '5' for 5 items)",
+        "Ensure button works on mobile with proper touch sizing",
+        "Add tooltip showing keybind (e.g., 'Inventory (I)')"
+      ],
+      "acceptanceCriteria": [
+        "Visible inventory button appears on screen at all times",
+        "Clicking button opens inventory UI",
+        "Clicking again or X closes inventory",
+        "Button shows item count badge",
+        "Works on both desktop and mobile"
+      ],
+      "dependencies": [
+        34
+      ],
+      "codeLocation": "src/client/MainHUD.lua"
     }
   ],
   "priorityOrder": [
