@@ -1858,3 +1858,30 @@
   - RNG produces statistically expected distribution over many hatches
 - Format check and build pass
 - Next: Other critical items (#34, #38, #40, #45, #46, #47, #54)
+
+[2026-01-14] Completed Bugfix Work Item #34: Fix Inventory Not Reopening After Close
+- Root cause: Two bugs in InventoryUI.lua state management
+  1. destroy() was setting state.isVisible = true instead of false
+  2. create() wasn't explicitly setting mainFrame.Visible to match state.isVisible
+- The flow was:
+  - create() calls destroy() which set isVisible = true
+  - New mainFrame created with Roblox default Visible = true
+  - First I press: toggle() -> setVisible(false) hides it
+  - Second I press: toggle() -> setVisible(true) should show it
+  - But the state was inverted from intended behavior (start hidden)
+- Fixes applied:
+  1. Changed destroy() to set state.isVisible = false (line 546)
+  2. Added explicit initialization in create() after UI creation (lines 527-528):
+     - state.isVisible = false
+     - state.mainFrame.Visible = false
+- Now the inventory:
+  - Starts hidden as intended (comment on line 80)
+  - First I press opens it (toggle from false to true)
+  - X button or I press closes it (setVisible false)
+  - I press reopens it (toggle from false to true)
+- Acceptance criteria met:
+  - Inventory can be opened after being closed
+  - Toggle keybind works correctly every time
+  - No stuck states preventing reopening
+- Format check and build pass
+- Next: Critical items (#38, #40, #45, #46, #47, #54)

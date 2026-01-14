@@ -930,7 +930,7 @@
       "category": "Inventory-BugFix",
       "title": "Fix Inventory Not Reopening After Close",
       "description": "Player cannot open inventory after closing it. The inventory UI needs proper toggle/reopen logic.",
-      "completed": false,
+      "completed": true,
       "priority": "critical",
       "steps": [
         "Check InventoryUI toggle logic for state tracking issues",
@@ -944,7 +944,8 @@
         "No stuck states preventing reopening"
       ],
       "dependencies": [],
-      "codeLocation": "src/client/InventoryUI.lua"
+      "codeLocation": "src/client/InventoryUI.lua",
+      "status": "completed"
     },
     {
       "id": 35,

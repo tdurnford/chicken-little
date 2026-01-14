@@ -523,6 +523,10 @@ function InventoryUI.create(config: InventoryConfig?): boolean
   -- Set initial tab appearance
   updateTabAppearance()
 
+  -- Set initial visibility (start hidden, player opens with I key)
+  state.isVisible = false
+  state.mainFrame.Visible = false
+
   return true
 end
 
@@ -539,7 +543,7 @@ function InventoryUI.destroy()
   state.actionFrame = nil
   state.selectedItem = nil
   state.currentTab = "eggs"
-  state.isVisible = true
+  state.isVisible = false
   state.slots = {}
 end
 
