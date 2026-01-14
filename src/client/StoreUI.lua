@@ -116,8 +116,8 @@ local function createItemCard(
 ): Frame
   local card = Instance.new("Frame")
   card.Name = itemId
-  card.Size = UDim2.new(1, -10, 0, 80)
-  card.Position = UDim2.new(0, 5, 0, (index - 1) * 85 + 5)
+  card.Size = UDim2.new(1, -20, 0, 104)
+  card.Position = UDim2.new(0, 10, 0, (index - 1) * 112 + 10)
   card.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
   card.BorderSizePixel = 0
   card.Parent = parent
@@ -152,8 +152,8 @@ local function createItemCard(
   -- Item name
   local nameLabel = Instance.new("TextLabel")
   nameLabel.Name = "Name"
-  nameLabel.Size = UDim2.new(0.35, -20, 0, 25)
-  nameLabel.Position = UDim2.new(0, 45, 0, 8)
+  nameLabel.Size = UDim2.new(0.35, -20, 0, 28)
+  nameLabel.Position = UDim2.new(0, 45, 0, 12)
   nameLabel.BackgroundTransparency = 1
   nameLabel.Text = displayName
   nameLabel.TextColor3 = RARITY_COLORS[rarity] or Color3.fromRGB(255, 255, 255)
@@ -165,8 +165,8 @@ local function createItemCard(
   -- Rarity label
   local rarityLabel = Instance.new("TextLabel")
   rarityLabel.Name = "Rarity"
-  rarityLabel.Size = UDim2.new(0.35, -20, 0, 18)
-  rarityLabel.Position = UDim2.new(0, 45, 0, 33)
+  rarityLabel.Size = UDim2.new(0.35, -20, 0, 20)
+  rarityLabel.Position = UDim2.new(0, 45, 0, 42)
   rarityLabel.BackgroundTransparency = 1
   rarityLabel.Text = rarity
   rarityLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
@@ -178,8 +178,8 @@ local function createItemCard(
   -- Stock label
   local stockLabel = Instance.new("TextLabel")
   stockLabel.Name = "StockLabel"
-  stockLabel.Size = UDim2.new(0, 50, 0, 18)
-  stockLabel.Position = UDim2.new(0, 45, 0, 53)
+  stockLabel.Size = UDim2.new(0, 60, 0, 20)
+  stockLabel.Position = UDim2.new(0, 45, 0, 70)
   stockLabel.BackgroundTransparency = 1
   stockLabel.Text = stock > 0 and ("x" .. tostring(stock)) or "SOLD OUT"
   stockLabel.TextColor3 = stock > 0 and Color3.fromRGB(150, 150, 150) or Color3.fromRGB(255, 80, 80)
@@ -858,7 +858,7 @@ local function populateItems()
         index
       )
     end
-    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableEggs * 85 + 10)
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableEggs * 112 + 20)
   elseif currentTab == "chickens" then
     local availableChickens = Store.getAvailableChickensWithStock()
     for index, item in ipairs(availableChickens) do
@@ -874,7 +874,7 @@ local function populateItems()
         index
       )
     end
-    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableChickens * 85 + 10)
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableChickens * 112 + 20)
   elseif currentTab == "supplies" then
     local availableTraps = Store.getAvailableTraps()
     for index, item in ipairs(availableTraps) do

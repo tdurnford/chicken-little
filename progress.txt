@@ -3360,3 +3360,23 @@
   - Overall appearance matches 'wooden shack' theme ✓
 - Format check passes
 - Next: Work on remaining items (Phase 1 Foundation: Items 5, 12)
+
+[2026-01-14] Completed Store Redesign Work Item #5: Increase Item Card Height and Add Padding
+- Increased item card height from 80px to 104px (30% increase as specified)
+- Updated card spacing from 85px to 112px total (104px card + 8px spacing)
+- Added 10px horizontal margins to cards (Size changed from 1, -10 to 1, -20)
+- Added 10px padding at top of scroll content (Position offset changed to +10)
+- Updated internal element positions to utilize new card height:
+  - Name label: moved to y=12, increased height to 28px
+  - Rarity label: moved to y=42, increased height to 20px
+  - Stock label: moved to y=70, increased width to 60px
+- Updated CanvasSize calculations for eggs and chickens tabs to use 112px per item
+- Files changed:
+  * src/client/StoreUI.lua (createItemCard function, populateItems function)
+- Acceptance criteria met:
+  - Item cards are 30% taller than before (104px vs 80px) ✓
+  - Cards have breathing room and don't touch frame edges (10px margins) ✓
+  - Scrolling works correctly with new sizes ✓
+  - All items remain accessible via scrolling ✓
+- Format check passes, build passes
+- Next: Work on Phase 1 Foundation Item #12 (Scroll Frame Padding) or Phase 2 Items
