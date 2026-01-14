@@ -3043,3 +3043,37 @@
 - Note: Data layer unchanged - each item still has unique ID for server-side
   operations (place/sell). The UI groups them visually but actions still
   operate on individual items via selectedItem.itemId.
+
+[2026-01-14] Completed Bugfix Work Item #4: Add Traps Tab to Inventory UI
+- Root cause: The InventoryUI only supported "eggs" and "chickens" tabs with no way
+  to view or manage traps that players purchased from the store. The traps data was
+  stored in playerData.traps but never displayed in the inventory.
+- Implementation approach:
+  1. Modified InventoryUI.lua to add full trap support:
+     - Added TrapConfig import for trap type/tier information
+     - Updated SelectedItem type to include "trap" option
+     - Updated InventoryState.currentTab type to "eggs" | "chickens" | "traps"
+     - Added TRAP_TIER_COLORS table matching rarity color pattern (Basic=gray, etc.)
+     - Changed tab button sizing from 50% width to 33% for three tabs
+     - Added third "Traps" tab button with 🪤 emoji in createTabFrame()
+     - Updated getStackKey() to stack traps by trapType
+     - Updated groupItemsIntoStacks() type signature for trap support
+     - Updated createItemSlot() with trap-specific display:
+       * Uses tier colors instead of rarity colors
+       * Shows trap tier label (Basic, Improved, etc.)
+       * Shows durability (e.g., "5 uses" or "∞ uses" for Ultimate traps)
+       * Shows placement status ("Placed" or "In Inventory")
+     - Updated updateTabAppearance() to handle traps tab styling
+     - Updated updateActionButtons() to show Place/Sell for traps
+     - Updated updateFromPlayerData() to pull from playerData.traps
+     - Updated setTab(), selectItem(), getCurrentTab() type signatures
+     - Updated getItemCounts() to include traps count
+- Acceptance criteria met:
+  - Inventory UI shows three tabs: Eggs, Chickens, Traps ✓
+  - Traps tab displays all owned traps with correct details ✓
+  - Trap cards show trap type, tier, and count (if stacked) ✓
+  - Placed traps show their current status (active, in inventory) ✓
+  - Unplaced traps can be selected for placement from inventory ✓
+  - Trap display is consistent with the existing inventory style ✓
+- Format check passes, build passes
+- Next: Work on remaining items (Item #5 Trap Placement, Item #2 Close Button, Item #6 AI)

@@ -16,6 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local EggConfig = require(Shared:WaitForChild("EggConfig"))
 local ChickenConfig = require(Shared:WaitForChild("ChickenConfig"))
+local TrapConfig = require(Shared:WaitForChild("TrapConfig"))
 local MoneyScaling = require(Shared:WaitForChild("MoneyScaling"))
 
 -- Type definitions
@@ -29,7 +30,7 @@ export type InventoryConfig = {
 }
 
 export type SelectedItem = {
-  itemType: "egg" | "chicken",
+  itemType: "egg" | "chicken" | "trap",
   itemId: string,
   itemData: any,
   stackCount: number?, -- Number of stacked items (nil = 1)
@@ -44,7 +45,7 @@ export type InventoryState = {
   actionFrame: Frame?,
   selectedItem: SelectedItem?,
   selectedStackKey: string?, -- Stack key for the currently selected item
-  currentTab: "eggs" | "chickens",
+  currentTab: "eggs" | "chickens" | "traps",
   isVisible: boolean,
   slots: { [string]: Frame },
   onItemSelected: ((SelectedItem?) -> ())?,
@@ -59,6 +60,16 @@ local RARITY_COLORS: { [string]: Color3 } = {
   Epic = Color3.fromRGB(180, 100, 255),
   Legendary = Color3.fromRGB(255, 180, 50),
   Mythic = Color3.fromRGB(255, 100, 150),
+}
+
+-- Trap tier colors for visual distinction
+local TRAP_TIER_COLORS: { [string]: Color3 } = {
+  Basic = Color3.fromRGB(180, 180, 180),
+  Improved = Color3.fromRGB(100, 200, 100),
+  Advanced = Color3.fromRGB(100, 150, 255),
+  Expert = Color3.fromRGB(180, 100, 255),
+  Master = Color3.fromRGB(255, 180, 50),
+  Ultimate = Color3.fromRGB(255, 100, 150),
 }
 
 -- Default configuration
@@ -136,12 +147,12 @@ end
 local function createTabButton(
   parent: Frame,
   text: string,
-  tabType: "eggs" | "chickens",
+  tabType: "eggs" | "chickens" | "traps",
   position: UDim2
 ): TextButton
   local button = Instance.new("TextButton")
   button.Name = tabType .. "Tab"
-  button.Size = UDim2.new(0.5, -4, 1, 0)
+  button.Size = UDim2.new(0.333, -4, 1, 0)
   button.Position = position
   button.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
   button.Text = text
@@ -163,7 +174,7 @@ local function createTabButton(
   return button
 end
 
--- Create the tab frame with eggs/chickens tabs
+-- Create the tab frame with eggs/chickens/traps tabs
 local function createTabFrame(parent: Frame): Frame
   local tabFrame = Instance.new("Frame")
   tabFrame.Name = "TabFrame"
@@ -173,7 +184,8 @@ local function createTabFrame(parent: Frame): Frame
   tabFrame.Parent = parent
 
   createTabButton(tabFrame, "🥚 Eggs", "eggs", UDim2.new(0, 0, 0, 0))
-  createTabButton(tabFrame, "🐔 Chickens", "chickens", UDim2.new(0.5, 4, 0, 0))
+  createTabButton(tabFrame, "🐔 Chickens", "chickens", UDim2.new(0.333, 2, 0, 0))
+  createTabButton(tabFrame, "🪤 Traps", "traps", UDim2.new(0.666, 4, 0, 0))
 
   return tabFrame
 end
@@ -273,16 +285,22 @@ type StackedItem = {
 }
 
 -- Generate a stack key for grouping identical items
-local function getStackKey(itemType: "egg" | "chicken", itemData: any): string
+local function getStackKey(itemType: "egg" | "chicken" | "trap", itemData: any): string
   if itemType == "egg" then
     return itemData.eggType .. "_" .. itemData.rarity
-  else
+  elseif itemType == "chicken" then
     return itemData.chickenType .. "_" .. itemData.rarity
+  else
+    -- Traps stack by type
+    return itemData.trapType
   end
 end
 
 -- Group items by type+rarity into stacks
-local function groupItemsIntoStacks(itemType: "egg" | "chicken", items: { any }): { StackedItem }
+local function groupItemsIntoStacks(
+  itemType: "egg" | "chicken" | "trap",
+  items: { any }
+): { StackedItem }
   local stackMap: { [string]: StackedItem } = {}
   local orderedKeys: { string } = {}
 
@@ -311,7 +329,7 @@ end
 
 -- Create an item slot (now supports stacking)
 local function createItemSlot(
-  itemType: "egg" | "chicken",
+  itemType: "egg" | "chicken" | "trap",
   stackedItem: StackedItem,
   layoutOrder: number
 ): Frame
@@ -328,26 +346,39 @@ local function createItemSlot(
   corner.CornerRadius = UDim.new(0, 8)
   corner.Parent = slotFrame
 
-  -- Rarity border
-  local rarity = itemData.rarity
-  local rarityColor = RARITY_COLORS[rarity] or RARITY_COLORS.Common
+  -- Get color based on item type (rarity for eggs/chickens, tier for traps)
+  local borderColor: Color3
+  local tierOrRarity: string = ""
+  if itemType == "trap" then
+    local config = TrapConfig.get(itemData.trapType)
+    tierOrRarity = config and config.tier or "Basic"
+    borderColor = TRAP_TIER_COLORS[tierOrRarity] or TRAP_TIER_COLORS.Basic
+  else
+    tierOrRarity = itemData.rarity
+    borderColor = RARITY_COLORS[tierOrRarity] or RARITY_COLORS.Common
+  end
 
   local stroke = Instance.new("UIStroke")
-  stroke.Color = rarityColor
+  stroke.Color = borderColor
   stroke.Thickness = 2
   stroke.Transparency = 0.3
   stroke.Parent = slotFrame
 
   -- Icon/Image placeholder (centered emoji for now)
-  -- Adjust layout: chickens need more vertical space for additional labels
   local icon = Instance.new("TextLabel")
   icon.Name = "Icon"
   icon.Size = UDim2.new(1, 0, 0.32, 0)
   icon.Position = UDim2.new(0, 0, 0, 0)
   icon.BackgroundTransparency = 1
-  icon.Text = itemType == "egg" and "🥚" or "🐔"
+  if itemType == "egg" then
+    icon.Text = "🥚"
+  elseif itemType == "chicken" then
+    icon.Text = "🐔"
+  else
+    icon.Text = "🪤"
+  end
   icon.TextSize = 20
-  icon.TextColor3 = rarityColor
+  icon.TextColor3 = borderColor
   icon.Parent = slotFrame
 
   -- Stack count badge (only show if more than 1)
@@ -375,18 +406,26 @@ local function createItemSlot(
     countLabel.Parent = countBadge
   end
 
-  -- Get display name and config from config
+  -- Get display name and config based on item type
   local displayName = ""
   local moneyPerSecond: number? = nil
   local chickenType: string? = nil
+  local trapTier: string? = nil
+  local trapDurability: number? = nil
+
   if itemType == "egg" then
     local config = EggConfig.get(itemData.eggType)
     displayName = config and config.displayName or itemData.eggType
-  else
+  elseif itemType == "chicken" then
     chickenType = itemData.chickenType
     local config = ChickenConfig.get(chickenType)
     displayName = config and config.displayName or chickenType
     moneyPerSecond = config and config.moneyPerSecond or nil
+  else
+    local config = TrapConfig.get(itemData.trapType)
+    displayName = config and config.displayName or itemData.trapType
+    trapTier = config and config.tier or "Basic"
+    trapDurability = config and config.durability or nil
   end
 
   -- Item name label
@@ -402,19 +441,30 @@ local function createItemSlot(
   nameLabel.Text = displayName
   nameLabel.Parent = slotFrame
 
-  -- Rarity label for chickens (color-coded)
+  -- Rarity/Tier label (for chickens and traps)
   if itemType == "chicken" then
     local rarityLabel = Instance.new("TextLabel")
     rarityLabel.Name = "RarityLabel"
     rarityLabel.Size = UDim2.new(1, -4, 0.14, 0)
     rarityLabel.Position = UDim2.new(0, 2, 0.52, 0)
     rarityLabel.BackgroundTransparency = 1
-    rarityLabel.Text = rarity
-    rarityLabel.TextColor3 = rarityColor
+    rarityLabel.Text = tierOrRarity
+    rarityLabel.TextColor3 = borderColor
     rarityLabel.TextSize = 9
     rarityLabel.FontFace =
       Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
     rarityLabel.Parent = slotFrame
+  elseif itemType == "trap" then
+    local tierLabel = Instance.new("TextLabel")
+    tierLabel.Name = "TierLabel"
+    tierLabel.Size = UDim2.new(1, -4, 0.14, 0)
+    tierLabel.Position = UDim2.new(0, 2, 0.52, 0)
+    tierLabel.BackgroundTransparency = 1
+    tierLabel.Text = trapTier or "Basic"
+    tierLabel.TextColor3 = borderColor
+    tierLabel.TextSize = 9
+    tierLabel.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
+    tierLabel.Parent = slotFrame
   end
 
   -- Money rate label for chickens ($/s)
@@ -431,6 +481,25 @@ local function createItemSlot(
     rateLabel.Parent = slotFrame
   end
 
+  -- Durability label for traps
+  if itemType == "trap" then
+    local durabilityLabel = Instance.new("TextLabel")
+    durabilityLabel.Name = "DurabilityLabel"
+    durabilityLabel.Size = UDim2.new(1, -4, 0.16, 0)
+    durabilityLabel.Position = UDim2.new(0, 2, 0.66, 0)
+    durabilityLabel.BackgroundTransparency = 1
+    if trapDurability and trapDurability > 0 then
+      durabilityLabel.Text = trapDurability .. " uses"
+    else
+      durabilityLabel.Text = "∞ uses"
+    end
+    durabilityLabel.TextColor3 = Color3.fromRGB(150, 200, 150)
+    durabilityLabel.TextSize = 9
+    durabilityLabel.FontFace =
+      Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
+    durabilityLabel.Parent = slotFrame
+  end
+
   -- Global count label for chickens
   if itemType == "chicken" and chickenType then
     local globalCount = cachedGlobalChickenCounts[chickenType] or 0
@@ -445,6 +514,26 @@ local function createItemSlot(
     globalLabel.FontFace =
       Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular)
     globalLabel.Parent = slotFrame
+  end
+
+  -- Status label for traps (placed status)
+  if itemType == "trap" then
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Name = "StatusLabel"
+    statusLabel.Size = UDim2.new(1, -4, 0.16, 0)
+    statusLabel.Position = UDim2.new(0, 2, 0.82, 0)
+    statusLabel.BackgroundTransparency = 1
+    if itemData.spotIndex and itemData.spotIndex > 0 then
+      statusLabel.Text = "Placed"
+      statusLabel.TextColor3 = Color3.fromRGB(100, 200, 100)
+    else
+      statusLabel.Text = "In Inventory"
+      statusLabel.TextColor3 = Color3.fromRGB(150, 150, 180)
+    end
+    statusLabel.TextSize = 8
+    statusLabel.FontFace =
+      Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular)
+    statusLabel.Parent = slotFrame
   end
 
   -- Click detection
@@ -470,6 +559,7 @@ local function updateTabAppearance()
 
   local eggsTab = state.tabFrame:FindFirstChild("eggsTab")
   local chickensTab = state.tabFrame:FindFirstChild("chickensTab")
+  local trapsTab = state.tabFrame:FindFirstChild("trapsTab")
 
   if eggsTab then
     eggsTab.BackgroundColor3 = state.currentTab == "eggs" and Color3.fromRGB(80, 80, 100)
@@ -482,6 +572,13 @@ local function updateTabAppearance()
     chickensTab.BackgroundColor3 = state.currentTab == "chickens" and Color3.fromRGB(80, 80, 100)
       or Color3.fromRGB(50, 50, 60)
     chickensTab.TextColor3 = state.currentTab == "chickens" and Color3.fromRGB(255, 255, 255)
+      or Color3.fromRGB(180, 180, 180)
+  end
+
+  if trapsTab then
+    trapsTab.BackgroundColor3 = state.currentTab == "traps" and Color3.fromRGB(80, 80, 100)
+      or Color3.fromRGB(50, 50, 60)
+    trapsTab.TextColor3 = state.currentTab == "traps" and Color3.fromRGB(255, 255, 255)
       or Color3.fromRGB(180, 180, 180)
   end
 end
@@ -521,7 +618,7 @@ local function updateActionButtons()
       Color3.fromRGB(200, 80, 80)
     ).Visible =
       true
-  else
+  elseif state.selectedItem.itemType == "chicken" then
     -- Chicken actions: Place, Sell
     createActionButton(
       state.actionFrame,
@@ -529,6 +626,24 @@ local function updateActionButtons()
       "place",
       UDim2.new(0, 0, 0, 0),
       Color3.fromRGB(80, 120, 200)
+    ).Visible =
+      true
+    createActionButton(
+      state.actionFrame,
+      "💰 Sell",
+      "sell",
+      UDim2.new(0.5, 4, 0, 0),
+      Color3.fromRGB(200, 80, 80)
+    ).Visible =
+      true
+  else
+    -- Trap actions: Place, Sell
+    createActionButton(
+      state.actionFrame,
+      "📍 Place",
+      "place",
+      UDim2.new(0, 0, 0, 0),
+      Color3.fromRGB(80, 160, 120)
     ).Visible =
       true
     createActionButton(
@@ -716,7 +831,7 @@ function InventoryUI.destroy()
 end
 
 -- Set the current tab
-function InventoryUI.setTab(tab: "eggs" | "chickens")
+function InventoryUI.setTab(tab: "eggs" | "chickens" | "traps")
   state.currentTab = tab
   state.selectedItem = nil
   state.selectedStackKey = nil
@@ -752,18 +867,27 @@ function InventoryUI.updateFromPlayerData(playerData: any)
 
   -- Get items based on current tab
   local items: { any } = {}
+  local itemType: "egg" | "chicken" | "trap"
+
   if state.currentTab == "eggs" then
     if playerData.inventory and playerData.inventory.eggs then
       items = playerData.inventory.eggs
     end
-  else
+    itemType = "egg"
+  elseif state.currentTab == "chickens" then
     if playerData.inventory and playerData.inventory.chickens then
       items = playerData.inventory.chickens
     end
+    itemType = "chicken"
+  else
+    -- Traps tab
+    if playerData.traps then
+      items = playerData.traps
+    end
+    itemType = "trap"
   end
 
-  -- Group items into stacks by type+rarity
-  local itemType = state.currentTab == "eggs" and "egg" or "chicken"
+  -- Group items into stacks by type+rarity (or just type for traps)
   local stacks = groupItemsIntoStacks(itemType, items)
 
   -- Create slots for each stack
@@ -780,9 +904,13 @@ function InventoryUI.updateFromPlayerData(playerData: any)
     emptyLabel.Size = UDim2.new(1, -20, 0, 60)
     emptyLabel.Position = UDim2.new(0, 10, 0, 10)
     emptyLabel.BackgroundTransparency = 1
-    emptyLabel.Text = state.currentTab == "eggs"
-        and "No eggs in inventory\nBuy some from the store!"
-      or "No chickens in inventory\nHatch some eggs!"
+    if state.currentTab == "eggs" then
+      emptyLabel.Text = "No eggs in inventory\nBuy some from the store!"
+    elseif state.currentTab == "chickens" then
+      emptyLabel.Text = "No chickens in inventory\nHatch some eggs!"
+    else
+      emptyLabel.Text = "No traps in inventory\nBuy some from the store!"
+    end
     emptyLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
     emptyLabel.TextSize = 14
     emptyLabel.TextWrapped = true
@@ -798,7 +926,7 @@ end
 
 -- Select an item (with stack support)
 function InventoryUI.selectItem(
-  itemType: "egg" | "chicken",
+  itemType: "egg" | "chicken" | "trap",
   itemId: string,
   itemData: any,
   stackCount: number?,
@@ -890,7 +1018,7 @@ function InventoryUI.onAction(callback: (string, SelectedItem) -> ())
 end
 
 -- Get current tab
-function InventoryUI.getCurrentTab(): "eggs" | "chickens"
+function InventoryUI.getCurrentTab(): "eggs" | "chickens" | "traps"
   return state.currentTab
 end
 
@@ -919,9 +1047,12 @@ function InventoryUI.setSize(size: UDim2)
 end
 
 -- Get item counts
-function InventoryUI.getItemCounts(playerData: any): { eggs: number, chickens: number }
+function InventoryUI.getItemCounts(
+  playerData: any
+): { eggs: number, chickens: number, traps: number }
   local eggCount = 0
   local chickenCount = 0
+  local trapCount = 0
 
   if playerData.inventory then
     if playerData.inventory.eggs then
@@ -932,9 +1063,14 @@ function InventoryUI.getItemCounts(playerData: any): { eggs: number, chickens: n
     end
   end
 
+  if playerData.traps then
+    trapCount = #playerData.traps
+  end
+
   return {
     eggs = eggCount,
     chickens = chickenCount,
+    traps = trapCount,
   }
 end
 
