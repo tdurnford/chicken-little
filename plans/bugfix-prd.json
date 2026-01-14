@@ -1267,7 +1267,7 @@
       "category": "Admin",
       "title": "Add Admin Abuse Controls",
       "description": "Add admin commands and controls to manage potential abuse, kick players, reset data, etc.",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Create AdminConfig.lua with list of admin UserIds",
@@ -1284,7 +1284,8 @@
         "Actions are logged for accountability"
       ],
       "dependencies": [],
-      "codeLocation": "src/server/AdminCommands.lua"
+      "codeLocation": "src/server/AdminCommands.lua",
+      "status": "completed"
     },
     {
       "id": 50,

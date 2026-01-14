@@ -2748,3 +2748,55 @@
   - Other players protection implemented in canPredatorSpawn logic ✓
 - Format check and build pass
 - Next: Only one work item remaining (#49: Add Admin Abuse Controls)
+
+[2026-01-14] Completed Bugfix Work Item #49: Add Admin Abuse Controls
+- Root cause: Game lacked admin tools to manage problematic players, making it 
+  difficult to address abuse, cheating, or disruptive behavior.
+- Implementation approach:
+  1. Created AdminConfig.lua shared module:
+     - AdminPermission type (kick, ban, resetdata, giveitem, all)
+     - AdminEntry type with userId, name, and permissions list
+     - ADMIN_ENTRIES table for configuring admin users
+     - isAdmin() to check if user is an admin
+     - hasPermission() to check specific permission
+     - getPermissions() to get all admin permissions
+     - getAdminName() and getAdminEntries() helpers
+  2. Created AdminCommands.lua server module:
+     - AdminAction and AdminLogEntry types
+     - CommandResult type for consistent responses
+     - In-memory action log with MAX_LOG_ENTRIES limit (1000)
+     - Session-based banned players tracking
+     - logAction() for accountability logging (prints to console)
+     - validateAdmin() helper for permission checking
+     - findPlayer() for name/partial name lookup
+     - init() to receive DataPersistence reference
+     - kick() - kicks player with reason (logs action)
+     - ban() - session-only ban with kick (logs action)
+     - resetData() - resets player to default state (logs action)
+     - giveMoney() - gives money to player (1-1000000 limit)
+     - warn() - logs warning for player
+     - unban() - removes session ban
+     - isBanned() - checks if user is banned
+     - getLog() - returns recent log entries
+     - getLogByAdmin() - returns logs for specific admin
+     - getBannedUsers() - returns list of banned userIds
+     - getOnlinePlayers() - returns player list for admin UI
+     - getAdminStatus() - returns isAdmin and permissions
+  3. Extended RemoteSetup.lua:
+     - Added AdminWarning RemoteEvent
+     - Added AdminCommand, GetAdminStatus, GetAdminLog, GetOnlinePlayers RemoteFunctions
+  4. Extended Main.server.lua:
+     - Added AdminCommands import
+     - Initialized AdminCommands with DataPersistence reference
+     - Added AdminCommand RemoteFunction handler (kick, ban, resetdata, givemoney, warn, unban)
+     - Added GetAdminStatus RemoteFunction handler
+     - Added GetAdminLog RemoteFunction handler (admin-only)
+     - Added GetOnlinePlayers RemoteFunction handler (admin-only)
+     - Added banned player check in PlayerAdded handler
+- Acceptance criteria met:
+  - Admins can kick problematic players ✓
+  - Admins can reset player data if needed ✓
+  - Admin commands are secure (server-validated with permission checks) ✓
+  - Actions are logged for accountability ✓
+- Format check and build pass
+- Next: All bugfix work items completed!

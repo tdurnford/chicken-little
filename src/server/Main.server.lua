@@ -56,6 +56,9 @@ local OfflineEarnings = require(Shared:WaitForChild("OfflineEarnings"))
 -- Player section module for coop positioning
 local PlayerSection = require(Shared:WaitForChild("PlayerSection"))
 
+-- Admin commands module
+local AdminCommands = require(ServerScriptService:WaitForChild("AdminCommands"))
+
 -- Player Data Sync Configuration
 local DATA_SYNC_THROTTLE_INTERVAL = 0.1 -- Minimum seconds between data updates per player
 local lastDataSyncTime: { [number]: number } = {} -- Tracks last sync time per player
@@ -1146,7 +1149,75 @@ if buyPowerUpFunc then
   end
 end
 
--- ProcessReceipt callback for handling Robux purchases
+--[[
+  Admin Command Handlers
+  Handles admin-only operations like kick, ban, and data reset.
+  All actions are logged for accountability.
+]]
+
+-- AdminCommand RemoteFunction handler
+local adminCommandFunc = RemoteSetup.getFunction("AdminCommand")
+if adminCommandFunc then
+  adminCommandFunc.OnServerInvoke = function(
+    player: Player,
+    command: string,
+    targetName: string?,
+    arg1: any?
+  )
+    -- Dispatch to appropriate admin command
+    if command == "kick" then
+      return AdminCommands.kick(player, targetName or "", arg1)
+    elseif command == "ban" then
+      return AdminCommands.ban(player, targetName or "", arg1)
+    elseif command == "resetdata" then
+      return AdminCommands.resetData(player, targetName or "")
+    elseif command == "givemoney" then
+      local amount = tonumber(arg1) or 0
+      return AdminCommands.giveMoney(player, targetName or "", amount)
+    elseif command == "warn" then
+      return AdminCommands.warn(player, targetName or "", tostring(arg1 or "Warning"))
+    elseif command == "unban" then
+      local userId = tonumber(targetName) or 0
+      return AdminCommands.unban(player, userId)
+    else
+      return { success = false, message = "Unknown command: " .. tostring(command) }
+    end
+  end
+end
+
+-- GetAdminStatus RemoteFunction handler
+local getAdminStatusFunc = RemoteSetup.getFunction("GetAdminStatus")
+if getAdminStatusFunc then
+  getAdminStatusFunc.OnServerInvoke = function(player: Player)
+    return AdminCommands.getAdminStatus(player)
+  end
+end
+
+-- GetAdminLog RemoteFunction handler
+local getAdminLogFunc = RemoteSetup.getFunction("GetAdminLog")
+if getAdminLogFunc then
+  getAdminLogFunc.OnServerInvoke = function(player: Player, count: number?)
+    -- Only admins can view the log
+    local status = AdminCommands.getAdminStatus(player)
+    if not status.isAdmin then
+      return { success = false, message = "Not authorized", entries = {} }
+    end
+    return { success = true, entries = AdminCommands.getLog(count) }
+  end
+end
+
+-- GetOnlinePlayers RemoteFunction handler
+local getOnlinePlayersFunc = RemoteSetup.getFunction("GetOnlinePlayers")
+if getOnlinePlayersFunc then
+  getOnlinePlayersFunc.OnServerInvoke = function(player: Player)
+    -- Only admins can view online players list
+    local status = AdminCommands.getAdminStatus(player)
+    if not status.isAdmin then
+      return { success = false, message = "Not authorized", players = {} }
+    end
+    return { success = true, players = AdminCommands.getOnlinePlayers() }
+  end
+end
 MarketplaceService.ProcessReceipt = function(receiptInfo: { [string]: any })
   local userId = receiptInfo.PlayerId
   local productId = receiptInfo.ProductId
@@ -1273,6 +1344,10 @@ if dataPersistenceStarted then
 else
   warn("[Main.server] DataPersistence failed to initialize DataStore - running in offline mode")
 end
+
+-- Initialize Admin Commands with DataPersistence reference
+AdminCommands.init(DataPersistence)
+print("[Main.server] AdminCommands initialized")
 
 -- Initialize Map Generation system
 local mapState = MapGeneration.createMapState()
@@ -1432,6 +1507,12 @@ end
 
 -- Handle player section assignment on join
 Players.PlayerAdded:Connect(function(player)
+  -- Check if player is banned (session-only bans)
+  if AdminCommands.isBanned(player.UserId) then
+    player:Kick("You are banned from this server")
+    return
+  end
+
   local currentTime = os.time()
   local playerId = tostring(player.UserId)
   local sectionIndex = MapGeneration.handlePlayerJoin(mapState, playerId, currentTime)
