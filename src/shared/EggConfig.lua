@@ -9,6 +9,10 @@ local EggConfig = {}
 -- Import ChickenConfig types for validation
 local ChickenConfig = require(script.Parent.ChickenConfig)
 
+-- Create a properly seeded random generator using Roblox's Random class
+-- This ensures different results each game session
+local rng = Random.new()
+
 -- Rarity tiers (same as ChickenConfig)
 export type Rarity = "Common" | "Uncommon" | "Rare" | "Epic" | "Legendary" | "Mythic"
 
@@ -247,7 +251,8 @@ function EggConfig.selectHatchOutcome(eggType: string): string?
     return nil
   end
 
-  local roll = math.random(1, 100)
+  -- Use properly seeded Random instance for varied results
+  local roll = rng:NextInteger(1, 100)
   local cumulativeProbability = 0
 
   for _, outcome in ipairs(config.hatchOutcomes) do

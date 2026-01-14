@@ -900,22 +900,544 @@
         23
       ],
       "codeLocation": "src/shared/IntegrationTests.lua"
+    },
+    {
+      "id": 33,
+      "category": "Store-UI",
+      "title": "Add Store Restock Timer Display",
+      "description": "Store UI should display a countdown timer showing when the store will be restocked.",
+      "completed": false,
+      "priority": "medium",
+      "steps": [
+        "Track lastReplenishTime and send to clients with store data",
+        "Calculate time remaining until next replenish (5 minute interval)",
+        "Display countdown timer in Store UI header",
+        "Update timer every second",
+        "Show 'Restocking...' message when timer reaches zero"
+      ],
+      "acceptanceCriteria": [
+        "Store UI displays 'Restocks in X:XX' countdown",
+        "Timer updates in real-time",
+        "Timer resets after replenishment occurs"
+      ],
+      "dependencies": [
+        4
+      ],
+      "codeLocation": "src/client/StoreUI.lua"
+    },
+    {
+      "id": 34,
+      "category": "Inventory-BugFix",
+      "title": "Fix Inventory Not Reopening After Close",
+      "description": "Player cannot open inventory after closing it. The inventory UI needs proper toggle/reopen logic.",
+      "completed": false,
+      "priority": "critical",
+      "steps": [
+        "Check InventoryUI toggle logic for state tracking issues",
+        "Ensure inventory visibility flag is properly reset on close",
+        "Verify keybind handler fires on subsequent presses",
+        "Test open/close/reopen cycle"
+      ],
+      "acceptanceCriteria": [
+        "Inventory can be opened after being closed",
+        "Toggle keybind works correctly every time",
+        "No stuck states preventing reopening"
+      ],
+      "dependencies": [],
+      "codeLocation": "src/client/InventoryUI.lua"
+    },
+    {
+      "id": 35,
+      "category": "RandomChicken-BugFix",
+      "title": "Fix Arena Chickens Showing Accumulated Money",
+      "description": "Arena chickens should not display any accumulated money - they only earn money once placed in coop.",
+      "completed": false,
+      "priority": "high",
+      "steps": [
+        "Update ChickenVisuals to hide money display for arena chickens",
+        "Check if chicken has isPlaced flag or spotIndex before showing money",
+        "Arena chickens should show no money indicator at all"
+      ],
+      "acceptanceCriteria": [
+        "Arena chickens display no money value",
+        "Money display only appears for placed chickens",
+        "No visual clutter on arena chickens"
+      ],
+      "dependencies": [
+        21
+      ],
+      "codeLocation": "src/client/ChickenVisuals.lua"
+    },
+    {
+      "id": 36,
+      "category": "RandomChicken-BugFix",
+      "title": "Fix Arena Chickens Spawning in Same Location",
+      "description": "Random arena chickens all spawn in the same place. Need to randomize spawn positions within neutral zone.",
+      "completed": false,
+      "priority": "high",
+      "steps": [
+        "Review RandomChickenSpawn spawn position generation",
+        "Add randomization within neutral zone bounds",
+        "Ensure chickens don't spawn on top of each other",
+        "Test multiple spawn events for position variety"
+      ],
+      "acceptanceCriteria": [
+        "Each arena chicken spawns in a different random location",
+        "Spawn positions are within neutral zone boundaries",
+        "No overlapping spawn positions"
+      ],
+      "dependencies": [],
+      "codeLocation": "src/shared/RandomChickenSpawn.lua"
+    },
+    {
+      "id": 37,
+      "category": "EggHatching-BugFix",
+      "title": "Fix Egg Hatching Always Producing Basic Chicken",
+      "description": "Egg hatching randomness is broken - always produces basic chicken. Review and fix the RNG implementation.",
+      "completed": true,
+      "priority": "critical",
+      "steps": [
+        "Review EggHatching.hatch() RNG logic",
+        "Check if Random.new() is being used correctly",
+        "Verify rarity weights are being applied properly",
+        "Test that different egg types produce appropriate chicken distributions",
+        "Add logging to debug random selection"
+      ],
+      "acceptanceCriteria": [
+        "Hatching produces varied chicken types based on egg rarity",
+        "Rare eggs have higher chance of rare chickens",
+        "RNG produces statistically expected distribution over many hatches"
+      ],
+      "dependencies": [],
+      "codeLocation": "src/shared/EggHatching.lua",
+      "status": "completed"
+    },
+    {
+      "id": 38,
+      "category": "Predator-BugFix",
+      "title": "Fix Predators Attacking Without Being Near Chickens",
+      "description": "Predators should only attack chickens when they are physically close to them. Currently attacking from anywhere.",
+      "completed": false,
+      "priority": "critical",
+      "steps": [
+        "Add proximity check before predator can deal damage to chickens",
+        "Define attack range constant (e.g., 10 studs)",
+        "Only apply damage when predator position is within range of coop",
+        "Predators should path to chickens before attacking"
+      ],
+      "acceptanceCriteria": [
+        "Predators must be within attack range to damage chickens",
+        "No damage dealt from distant predators",
+        "Predators visibly approach before attacking"
+      ],
+      "dependencies": [
+        23
+      ],
+      "codeLocation": "src/shared/PredatorAttack.lua"
+    },
+    {
+      "id": 39,
+      "category": "Balance-BugFix",
+      "title": "Rebalance Egg and Chicken Pricing",
+      "description": "Basic chicken costs more than common egg which makes no sense. Rebalance all prices so eggs are appropriately cheaper than their potential chicken output.",
+      "completed": false,
+      "priority": "high",
+      "steps": [
+        "Review EggConfig and ChickenConfig pricing",
+        "Eggs should cost less than their expected chicken value",
+        "Common egg should be cheapest, basic chicken should be affordable",
+        "Create pricing formula: egg_price < average_chicken_value_from_egg",
+        "Update BalanceConfig with new price tiers",
+        "Test purchasing flow with new prices"
+      ],
+      "acceptanceCriteria": [
+        "Basic chicken is cheaper than or equal to common egg",
+        "All egg prices are less than their expected chicken output value",
+        "Pricing progression makes logical sense",
+        "Economy feels balanced for new players"
+      ],
+      "dependencies": [],
+      "codeLocation": "src/shared/BalanceConfig.lua"
+    },
+    {
+      "id": 40,
+      "category": "RandomChicken-BugFix",
+      "title": "Fix Arena Chicken Pickup Not Adding to Inventory Immediately",
+      "description": "Picking up arena chickens doesn't add them to inventory until a second chicken is picked up. Fix the inventory sync.",
+      "completed": false,
+      "priority": "critical",
+      "steps": [
+        "Review ClaimRandomChicken handler inventory update logic",
+        "Ensure syncPlayerData is called immediately after claim",
+        "Check if inventory update event is firing to client",
+        "Verify client-side inventory state updates on event receipt"
+      ],
+      "acceptanceCriteria": [
+        "Claimed chicken appears in inventory immediately",
+        "No need to claim a second chicken",
+        "Inventory count updates correctly on first claim"
+      ],
+      "dependencies": [
+        20
+      ],
+      "codeLocation": "src/server/Main.server.lua"
+    },
+    {
+      "id": 41,
+      "category": "Economy-Safety",
+      "title": "Add Bankruptcy Protection for Players",
+      "description": "If player has no eggs, no chickens, no money to buy anything, and respawns, give them starter money to continue playing.",
+      "completed": false,
+      "priority": "high",
+      "steps": [
+        "Create isBankrupt() check function in PlayerData",
+        "Check: no chickens in inventory, no placed chickens, no eggs, money < cheapest item price",
+        "On player respawn or join, check bankruptcy condition",
+        "If bankrupt, award starter money (e.g., $100)",
+        "Show 'You've been given $100 to start over!' message",
+        "Add cooldown to prevent exploitation"
+      ],
+      "acceptanceCriteria": [
+        "Bankrupt players receive starter money on respawn",
+        "Players can always afford at least one egg",
+        "Cannot be exploited by intentionally going bankrupt",
+        "Clear message explains the assistance"
+      ],
+      "dependencies": [],
+      "codeLocation": "src/shared/PlayerData.lua"
+    },
+    {
+      "id": 42,
+      "category": "Multiplayer-BugFix",
+      "title": "Fix Predator NPCs Not Visible to All Players",
+      "description": "Predator NPCs should be visible to all players on the server, not just the owner of the section.",
+      "completed": false,
+      "priority": "high",
+      "steps": [
+        "Review PredatorSpawned event - ensure FireAllClients is used",
+        "Review PredatorPositionUpdated event - ensure all clients receive updates",
+        "Update PredatorVisuals to render predators from any player's section",
+        "Test with multiple players that all see each other's predators"
+      ],
+      "acceptanceCriteria": [
+        "All players see predators in all sections",
+        "Predator positions sync correctly for all clients",
+        "Predator defeat is visible to all players"
+      ],
+      "dependencies": [],
+      "codeLocation": "src/client/PredatorVisuals.lua"
+    },
+    {
+      "id": 43,
+      "category": "Chicken-UI",
+      "title": "Show $/s Generation Rate on Placed Chickens",
+      "description": "Chickens placed in coop spots should display their money generation rate ($/s) for player visibility.",
+      "completed": false,
+      "priority": "medium",
+      "steps": [
+        "Get money generation rate from ChickenConfig",
+        "Create BillboardGui label showing $/s on placed chickens",
+        "Position label above chicken model",
+        "Update if chicken is damaged (reduced rate)",
+        "Format as '$X.XX/s'"
+      ],
+      "acceptanceCriteria": [
+        "Placed chickens show $/s label above them",
+        "Rate reflects actual generation including damage penalties",
+        "Label is readable and well-positioned"
+      ],
+      "dependencies": [
+        14
+      ],
+      "codeLocation": "src/client/ChickenVisuals.lua"
+    },
+    {
+      "id": 44,
+      "category": "Inventory-UI",
+      "title": "Show $/s Generation Rate in Inventory",
+      "description": "Inventory should display the money generation rate ($/s) for each chicken so players can compare.",
+      "completed": false,
+      "priority": "medium",
+      "steps": [
+        "Add $/s column to inventory chicken list",
+        "Get rate from ChickenConfig based on chickenType",
+        "Format as '$X/s'",
+        "Consider sorting inventory by generation rate"
+      ],
+      "acceptanceCriteria": [
+        "Each chicken in inventory shows its $/s rate",
+        "Players can easily compare chicken values",
+        "Rate is accurate per ChickenConfig"
+      ],
+      "dependencies": [],
+      "codeLocation": "src/client/InventoryUI.lua"
+    },
+    {
+      "id": 45,
+      "category": "Store-BugFix",
+      "title": "Fix Purchasing Not Updating Inventory Properly",
+      "description": "Purchasing eggs or chickens from store doesn't update the player's inventory display correctly.",
+      "completed": false,
+      "priority": "critical",
+      "steps": [
+        "Review syncPlayerData calls after purchase",
+        "Ensure PlayerDataChanged event fires with complete inventory",
+        "Check client-side inventory refresh on data change event",
+        "Verify purchase adds item to correct inventory array"
+      ],
+      "acceptanceCriteria": [
+        "Purchased items appear in inventory immediately",
+        "Inventory count updates correctly",
+        "No need to close/reopen inventory to see purchases"
+      ],
+      "dependencies": [],
+      "codeLocation": "src/server/Main.server.lua"
+    },
+    {
+      "id": 46,
+      "category": "Chicken-BugFix",
+      "title": "Fix Chickens Not Laying Eggs",
+      "description": "Placed chickens don't seem to be laying eggs. Review and fix the egg laying system.",
+      "completed": false,
+      "priority": "critical",
+      "steps": [
+        "Review egg laying logic in game loop",
+        "Check canLayEgg() condition in Chicken module",
+        "Verify lastEggTime is being tracked correctly",
+        "Ensure EggLaid event fires to client",
+        "Add debug logging to trace egg laying"
+      ],
+      "acceptanceCriteria": [
+        "Placed chickens lay eggs at configured intervals",
+        "Eggs appear in player inventory",
+        "EggLaid event notifies player"
+      ],
+      "dependencies": [],
+      "codeLocation": "src/server/Main.server.lua"
+    },
+    {
+      "id": 47,
+      "category": "Chicken-BugFix",
+      "title": "Fix Cannot Pickup Placed Chickens to Inventory",
+      "description": "Players cannot pick up chickens from coop spots and return them to inventory.",
+      "completed": false,
+      "priority": "critical",
+      "steps": [
+        "Review PickupChicken RemoteFunction handler",
+        "Ensure chicken is moved from placedChickens to inventory.chickens",
+        "Clear spotIndex when returning to inventory",
+        "Fire ChickenPickedUp event correctly",
+        "Test pickup/place cycle"
+      ],
+      "acceptanceCriteria": [
+        "Clicking placed chicken returns it to inventory",
+        "Chicken appears in inventory list",
+        "Coop spot becomes empty",
+        "Can place the same chicken again"
+      ],
+      "dependencies": [],
+      "codeLocation": "src/server/Main.server.lua"
+    },
+    {
+      "id": 48,
+      "category": "Inventory-UI",
+      "title": "Show Chicken Rarity and Global Count in Inventory",
+      "description": "Inventory should show chicken rarity and how many of that chicken type exist globally in the game.",
+      "completed": false,
+      "priority": "medium",
+      "steps": [
+        "Add rarity display with color coding to inventory items",
+        "Create server-side tracking of global chicken counts by type",
+        "Create RemoteFunction to query global counts",
+        "Display 'X exist globally' for each chicken type",
+        "Update counts periodically or on change"
+      ],
+      "acceptanceCriteria": [
+        "Inventory shows rarity with color (Common=white, Rare=blue, etc.)",
+        "Shows global count of that chicken type across all players",
+        "Counts are reasonably accurate"
+      ],
+      "dependencies": [],
+      "codeLocation": "src/client/InventoryUI.lua"
+    },
+    {
+      "id": 49,
+      "category": "Admin",
+      "title": "Add Admin Abuse Controls",
+      "description": "Add admin commands and controls to manage potential abuse, kick players, reset data, etc.",
+      "completed": false,
+      "priority": "medium",
+      "steps": [
+        "Create AdminConfig.lua with list of admin UserIds",
+        "Create AdminCommands.lua module",
+        "Implement /kick, /ban, /resetdata commands",
+        "Add server-side validation of admin status",
+        "Create admin UI panel for in-game management",
+        "Log all admin actions"
+      ],
+      "acceptanceCriteria": [
+        "Admins can kick problematic players",
+        "Admins can reset player data if needed",
+        "Admin commands are secure (server-validated)",
+        "Actions are logged for accountability"
+      ],
+      "dependencies": [],
+      "codeLocation": "src/server/AdminCommands.lua"
+    },
+    {
+      "id": 50,
+      "category": "NewPlayer-Protection",
+      "title": "Add New Player Predator Protection Cooldown",
+      "description": "New players should have 3-minute immunity from predator attacks to learn the game without stress.",
+      "completed": false,
+      "priority": "high",
+      "steps": [
+        "Track joinTime in player data or session state",
+        "Add NEW_PLAYER_PROTECTION_DURATION constant (180 seconds)",
+        "Skip predator spawning for protected players",
+        "Show 'Protected for X:XX' indicator on screen",
+        "Remove protection after timer expires"
+      ],
+      "acceptanceCriteria": [
+        "New players have 3-minute predator immunity",
+        "Protection timer displayed on screen",
+        "Predators don't spawn in protected player's section",
+        "Protection ends after timer expires"
+      ],
+      "dependencies": [],
+      "codeLocation": "src/server/Main.server.lua"
+    },
+    {
+      "id": 51,
+      "category": "Predator-AI",
+      "title": "Improve Predator Movement and Chicken Detection",
+      "description": "Predators go to center and stay there. They should move around more and leave if there are no chickens.",
+      "completed": false,
+      "priority": "high",
+      "steps": [
+        "Add patrol behavior when predator reaches coop area",
+        "Predator should check if chickens exist in section",
+        "If no chickens, predator should leave/despawn after short time",
+        "Add wandering movement while in attack mode",
+        "Predator should visually approach individual chickens"
+      ],
+      "acceptanceCriteria": [
+        "Predators patrol around coop area instead of standing still",
+        "Predators leave if no chickens are present",
+        "Movement looks more natural and threatening",
+        "Predators target specific chickens visually"
+      ],
+      "dependencies": [
+        23
+      ],
+      "codeLocation": "src/shared/PredatorAI.lua"
+    },
+    {
+      "id": 52,
+      "category": "Store-UI",
+      "title": "Improve Store Buy Button Layout",
+      "description": "Remove redundant 'Buy' text button and replace with price button. Add Robux icon to Robux price button.",
+      "completed": false,
+      "priority": "medium",
+      "steps": [
+        "Remove separate 'Buy' text button from store items",
+        "Replace with single button showing '$X' price",
+        "Keep Robux button next to it with Robux icon (\u211d or image)",
+        "Ensure button layout is clean and intuitive",
+        "Test mobile and desktop layouts"
+      ],
+      "acceptanceCriteria": [
+        "Single price button replaces 'Buy' text button",
+        "Price is clearly displayed on the button",
+        "Robux button has Robux icon",
+        "Clean, uncluttered store item layout"
+      ],
+      "dependencies": [
+        2
+      ],
+      "codeLocation": "src/client/StoreUI.lua"
+    },
+    {
+      "id": 53,
+      "category": "Store-BugFix",
+      "title": "Prevent Basic Egg from Selling Out",
+      "description": "The most basic/common egg should never sell out to ensure new players always have something affordable to buy.",
+      "completed": false,
+      "priority": "high",
+      "steps": [
+        "Identify the most basic egg type in EggConfig (Common egg)",
+        "Modify Store inventory logic to always maintain minimum stock of 1 for basic egg",
+        "When basic egg is purchased and stock reaches 0, immediately replenish to 1",
+        "Update store UI to not show 'Sold Out' for basic egg",
+        "Test that basic egg is always purchasable"
+      ],
+      "acceptanceCriteria": [
+        "Basic/Common egg never shows as sold out",
+        "Players can always buy at least one basic egg",
+        "Other eggs can still sell out normally",
+        "Works correctly with store replenishment system"
+      ],
+      "dependencies": [
+        3,
+        4
+      ],
+      "codeLocation": "src/shared/Store.lua"
+    },
+    {
+      "id": 54,
+      "category": "Chicken-BugFix",
+      "title": "Fix Placed Chickens Disappearing Immediately",
+      "description": "When placing chickens on coop spots, they disappear immediately. May be related to predator presence in the player's section causing instant kills.",
+      "completed": false,
+      "priority": "critical",
+      "steps": [
+        "Review ChickenPlacement logic to ensure chickens persist after placement",
+        "Check if predators are instantly killing chickens on placement",
+        "Add delay or protection period for newly placed chickens",
+        "Verify placedChickens array is being updated correctly on server",
+        "Check ChickenPlaced event is firing with correct data",
+        "Review client-side ChickenVisuals to ensure it's not removing chickens incorrectly",
+        "Test placement with and without active predators in section"
+      ],
+      "acceptanceCriteria": [
+        "Placed chickens remain visible in their spots",
+        "Chickens are not instantly killed by predators on placement",
+        "Placement works correctly regardless of predator presence",
+        "Chicken visuals persist until explicitly removed"
+      ],
+      "dependencies": [],
+      "codeLocation": "src/shared/ChickenPlacement.lua"
     }
   ],
   "priorityOrder": [
     "Fix critical bugs first (Store E key, Bat equipping, Random chicken collection)",
-    "Implement core store functionality (inventory, UI, replenishment)",
+    "Fix critical new bugs (Inventory not reopening, Egg hatching RNG, Chickens not laying eggs, Chicken pickup, Purchase inventory sync)",
+    "Implement core store functionality (inventory, UI, replenishment, restock timer)",
     "Fix tutorial to new flow",
     "Implement combat improvements (health bars, damage)",
+    "Fix predator proximity attack requirement",
     "Add AI for predators and chickens",
+    "Fix arena chicken spawn positions and money display",
+    "Add new player predator protection",
+    "Fix multiplayer predator visibility",
+    "Improve predator AI movement and chicken detection",
+    "Add bankruptcy protection for stuck players",
+    "Rebalance egg and chicken pricing",
+    "Add $/s display for chickens in coop and inventory",
+    "Add chicken rarity and global counts to inventory",
+    "Improve store buy button layout",
     "Add new stores (supplies, weapons)",
     "Add power-ups and shield",
+    "Add admin abuse controls",
     "Wire all integrations",
     "Add tests"
   ],
   "notes": [
     "All Robux features require Developer Products to be created in Roblox Studio",
     "Test thoroughly in Studio before publishing",
-    "Consider mobile controls for all new interactions"
+    "Consider mobile controls for all new interactions",
+    "New player protection should help with onboarding experience",
+    "Bankruptcy protection prevents players from getting permanently stuck",
+    "Global chicken counts require server-side aggregation across all players"
   ]
 }

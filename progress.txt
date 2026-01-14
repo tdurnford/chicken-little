@@ -1841,3 +1841,20 @@
   - Transaction is recorded via ProcessReceipt
 - Build and format check pass
 - Next: #7 Power-ups Store, #17-19 New Stores, #19 Area Shield
+
+[2026-01-14] Completed Bugfix Work Item #37: Fix Egg Hatching Always Producing Basic Chicken
+- Root cause: EggConfig.selectHatchOutcome() was using math.random(1, 100) without seeding
+- In Luau, math.random() without math.randomseed() produces the same sequence each session
+- This caused the same roll value every time, resulting in the first outcome (basic chicken)
+- Fix: Added Random.new() instance at module level (line 14) which auto-seeds properly
+- Changed selectHatchOutcome() to use rng:NextInteger(1, 100) instead of math.random(1, 100)
+- Now hatching produces varied chicken types based on weighted probabilities:
+  - 70% chance for tier 1 chicken (e.g., BasicChick for CommonEgg)
+  - 25% chance for tier 2 chicken (e.g., BrownHen for CommonEgg)
+  - 5% chance for tier 3 chicken (e.g., WhiteHen for CommonEgg)
+- Acceptance criteria met:
+  - Hatching produces varied chicken types based on egg rarity
+  - Rare eggs have higher chance of rare chickens (probabilities configured per egg type)
+  - RNG produces statistically expected distribution over many hatches
+- Format check and build pass
+- Next: Other critical items (#34, #38, #40, #45, #46, #47, #54)
