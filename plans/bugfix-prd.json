@@ -1124,7 +1124,7 @@
       "category": "Chicken-UI",
       "title": "Show $/s Generation Rate on Placed Chickens",
       "description": "Chickens placed in coop spots should display their money generation rate ($/s) for player visibility.",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Get money generation rate from ChickenConfig",
@@ -1141,7 +1141,8 @@
       "dependencies": [
         14
       ],
-      "codeLocation": "src/client/ChickenVisuals.lua"
+      "codeLocation": "src/client/ChickenVisuals.lua",
+      "status": "done"
     },
     {
       "id": 44,

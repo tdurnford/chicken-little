@@ -209,11 +209,24 @@ local function createPlaceholderModel(chickenType: string, rarity: string): Mode
   return model
 end
 
+-- Helper: Format money rate for display ($/s)
+local function formatMoneyRate(rate: number): string
+  if rate >= 1000 then
+    return string.format("$%.1fK/s", rate / 1000)
+  elseif rate >= 100 then
+    return string.format("$%.0f/s", rate)
+  elseif rate >= 10 then
+    return string.format("$%.1f/s", rate)
+  else
+    return string.format("$%.2f/s", rate)
+  end
+end
+
 -- Create money indicator billboard GUI
-local function createMoneyIndicator(parent: BasePart): BillboardGui
+local function createMoneyIndicator(parent: BasePart, moneyPerSecond: number): BillboardGui
   local billboard = Instance.new("BillboardGui")
   billboard.Name = "MoneyIndicator"
-  billboard.Size = UDim2.new(0, 80, 0, 30)
+  billboard.Size = UDim2.new(0, 80, 0, 50)
   billboard.StudsOffset = Vector3.new(0, 2.5, 0)
   billboard.AlwaysOnTop = true
   billboard.Adornee = parent
@@ -232,10 +245,23 @@ local function createMoneyIndicator(parent: BasePart): BillboardGui
   corner.CornerRadius = UDim.new(0, 8)
   corner.Parent = bg
 
-  -- Money text
+  -- Rate text ($/s) - top portion
+  local rateText = Instance.new("TextLabel")
+  rateText.Name = "RateText"
+  rateText.Size = UDim2.new(1, 0, 0.5, 0)
+  rateText.Position = UDim2.new(0, 0, 0, 0)
+  rateText.BackgroundTransparency = 1
+  rateText.Font = Enum.Font.GothamBold
+  rateText.TextSize = 12
+  rateText.TextColor3 = Color3.fromRGB(255, 220, 100)
+  rateText.Text = formatMoneyRate(moneyPerSecond)
+  rateText.Parent = bg
+
+  -- Money text (accumulated) - bottom portion
   local moneyText = Instance.new("TextLabel")
   moneyText.Name = "MoneyText"
-  moneyText.Size = UDim2.new(1, 0, 1, 0)
+  moneyText.Size = UDim2.new(1, 0, 0.5, 0)
+  moneyText.Position = UDim2.new(0, 0, 0.5, 0)
   moneyText.BackgroundTransparency = 1
   moneyText.Font = Enum.Font.GothamBold
   moneyText.TextSize = 14
@@ -443,8 +469,9 @@ function ChickenVisuals.create(
 
   -- Create money indicator only for placed chickens (arena chickens have no spotIndex)
   local moneyIndicator: BillboardGui? = nil
+  local chickenMoneyPerSecond = config.moneyPerSecond or 1
   if spotIndex ~= nil then
-    moneyIndicator = createMoneyIndicator(model.PrimaryPart)
+    moneyIndicator = createMoneyIndicator(model.PrimaryPart, chickenMoneyPerSecond)
   end
 
   -- Create state
@@ -547,10 +574,28 @@ function ChickenVisuals.updateHealthState(chickenId: string, healthPercent: numb
     local bg = state.moneyIndicator:FindFirstChild("Background")
     if bg then
       local moneyText = bg:FindFirstChild("MoneyText") :: TextLabel?
-      if moneyText and state.isDamaged then
+      local rateText = bg:FindFirstChild("RateText") :: TextLabel?
+      if state.isDamaged then
         -- Show reduced income with orange/red tint
         local intensity = healthPercent
-        moneyText.TextColor3 = Color3.fromRGB(255, math.floor(100 + intensity * 155), 50)
+        if moneyText then
+          moneyText.TextColor3 = Color3.fromRGB(255, math.floor(100 + intensity * 155), 50)
+        end
+        -- Update rate text to show effective rate
+        if rateText then
+          local effectiveRate = state.moneyPerSecond * healthPercent
+          rateText.Text = formatMoneyRate(effectiveRate)
+          rateText.TextColor3 = Color3.fromRGB(255, math.floor(150 + intensity * 70), 50)
+        end
+      else
+        -- Restore normal colors at full health
+        if moneyText then
+          moneyText.TextColor3 = Color3.fromRGB(100, 255, 100)
+        end
+        if rateText then
+          rateText.Text = formatMoneyRate(state.moneyPerSecond)
+          rateText.TextColor3 = Color3.fromRGB(255, 220, 100)
+        end
       end
     end
   end

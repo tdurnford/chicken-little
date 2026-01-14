@@ -2444,3 +2444,27 @@
   - Timer resets after replenishment occurs (via Store module) ✓
 - Format check and build pass
 - Next: Other medium priority items (#7, #17, #18, #19, #43, #44, #48, #49, #52)
+
+[2026-01-14] Completed Bugfix Work Item #43: Show $/s Generation Rate on Placed Chickens
+- Root cause: Players had no visibility into how much money each chicken generates,
+  making it hard to compare chicken values and understand income sources.
+- Implementation approach:
+  1. Added formatMoneyRate() helper function to format $/s values cleanly
+     - Handles K suffix for rates >= 1000
+     - Shows 2 decimal places for small rates, 1 decimal for medium, 0 for large
+  2. Extended createMoneyIndicator() to accept moneyPerSecond parameter
+  3. Increased BillboardGui height from 30 to 50 to fit both labels
+  4. Added RateText label (top half) showing $/s in gold color (255, 220, 100)
+  5. Existing MoneyText label (bottom half) continues showing accumulated money
+  6. Updated ChickenVisuals.create() to pass chickenMoneyPerSecond to indicator
+  7. Extended updateHealthState() to update rate display when damaged:
+     - Damaged chickens show effective rate (base rate * health %)
+     - Rate text color changes to orange when damaged
+     - Rate text restores to gold when healed to full
+- Display format examples: "$0.50/s", "$1.25/s", "$15.0/s", "$1.5K/s"
+- Acceptance criteria met:
+  - Placed chickens show $/s label above them ✓
+  - Rate reflects actual generation including damage penalties ✓
+  - Label is readable and well-positioned ✓
+- Format check and build pass
+- Next: Other medium priority items (#7, #17, #18, #19, #44, #48, #49, #52)
