@@ -675,6 +675,7 @@ if claimRandomChickenFunc then
         success = true,
         chicken = result.chicken,
         message = "Chicken claimed!",
+        playerData = playerData, -- Include updated player data for immediate client sync
       }
     else
       return {

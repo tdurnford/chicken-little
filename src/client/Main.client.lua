@@ -1759,6 +1759,13 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
             nearestRandomChickenId = nil
             nearestRandomChickenType = nil
 
+            -- Update local cache and UI with returned player data (immediate sync)
+            if result.playerData then
+              playerDataCache = result.playerData
+              MainHUD.updateFromPlayerData(result.playerData)
+              InventoryUI.updateFromPlayerData(result.playerData)
+            end
+
             print("[Client] Claimed random chicken:", result.chicken and result.chicken.chickenType)
           else
             SoundEffects.play("uiError")

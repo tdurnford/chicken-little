@@ -1066,7 +1066,7 @@
       "category": "RandomChicken-BugFix",
       "title": "Fix Arena Chicken Pickup Not Adding to Inventory Immediately",
       "description": "Picking up arena chickens doesn't add them to inventory until a second chicken is picked up. Fix the inventory sync.",
-      "completed": false,
+      "completed": true,
       "priority": "critical",
       "steps": [
         "Review ClaimRandomChicken handler inventory update logic",
@@ -1082,7 +1082,8 @@
       "dependencies": [
         20
       ],
-      "codeLocation": "src/server/Main.server.lua"
+      "codeLocation": "src/server/Main.server.lua",
+      "status": "completed"
     },
     {
       "id": 41,

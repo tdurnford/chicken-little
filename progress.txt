@@ -2002,3 +2002,27 @@
   - Predators visibly approach before attacking (existing behavior preserved)
 - Format check and build pass
 - Next: Other critical items (#40)
+
+[2026-01-14] Completed Bugfix Work Item #40: Fix Arena Chicken Pickup Not Adding to Inventory Immediately
+- Root cause: Race condition between PlayerDataChanged event and InvokeServer() return timing
+- When claiming arena chicken, server fired PlayerDataChanged event before returning from InvokeServer()
+- Due to Roblox event queue timing, the event could be processed after client code expected
+- This caused inventory to appear stale until another action triggered a refresh
+- Fix applied to both server and client:
+  1. Server (Main.server.lua line 678): Return playerData in ClaimRandomChicken result
+     - Added playerData field to success response so client gets updated data immediately
+  2. Client (Main.client.lua lines 1762-1767): Explicitly update cache and UI on claim success
+     - Update playerDataCache with returned playerData
+     - Call MainHUD.updateFromPlayerData() for immediate money display update
+     - Call InventoryUI.updateFromPlayerData() for immediate inventory refresh
+- Now when player claims an arena chicken:
+  - Server adds chicken to inventory, syncs data (event), and returns with playerData
+  - Client receives the returned playerData synchronously after InvokeServer() completes
+  - Client immediately updates its local cache and UI elements
+  - No dependency on event timing - data update is guaranteed before claim flow completes
+- Acceptance criteria met:
+  - Claimed chicken appears in inventory immediately
+  - No need to claim a second chicken to see first one
+  - Inventory count updates correctly on first claim
+- Format check passes
+- Next: Other high priority items (#35, #36, #39, #41, #42, #50, #51, #53)
