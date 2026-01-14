@@ -24,6 +24,8 @@ local BalanceConfig = require(script.Parent.BalanceConfig)
 local CombatHealth = require(script.Parent.CombatHealth)
 local ChickenHealth = require(script.Parent.ChickenHealth)
 local PredatorAI = require(script.Parent.PredatorAI)
+local BaseballBat = require(script.Parent.BaseballBat)
+local PredatorSpawning = require(script.Parent.PredatorSpawning)
 
 -- Type definitions
 export type TestResult = {
@@ -1060,6 +1062,282 @@ test("CombatHealth: getIncapacitateConstants returns valid values", function()
   local constants = CombatHealth.getIncapacitateConstants()
   return assert_gt(constants.duration, 0, "Duration should be positive")
     and assert_gt(constants.knockbackForce, 0, "Knockback force should be positive")
+end)
+
+-- ============================================================================
+-- BaseballBat Tests
+-- ============================================================================
+
+test("BaseballBat: createBatState returns unequipped bat", function()
+  local batState = BaseballBat.createBatState()
+  local pass, msg = assert_not_nil(batState, "Bat state should be created")
+  if not pass then
+    return pass, msg
+  end
+  return assert_false(batState.isEquipped, "Bat should start unequipped")
+end)
+
+test("BaseballBat: equip sets isEquipped to true", function()
+  local batState = BaseballBat.createBatState()
+  local result = BaseballBat.equip(batState)
+  local pass, msg = assert_true(result, "Equip should succeed")
+  if not pass then
+    return pass, msg
+  end
+  return assert_true(batState.isEquipped, "Bat should be equipped after equip()")
+end)
+
+test("BaseballBat: equip fails when already equipped", function()
+  local batState = BaseballBat.createBatState()
+  BaseballBat.equip(batState)
+  local result = BaseballBat.equip(batState)
+  return assert_false(result, "Equip should fail when already equipped")
+end)
+
+test("BaseballBat: unequip sets isEquipped to false", function()
+  local batState = BaseballBat.createBatState()
+  BaseballBat.equip(batState)
+  local result = BaseballBat.unequip(batState)
+  local pass, msg = assert_true(result, "Unequip should succeed")
+  if not pass then
+    return pass, msg
+  end
+  return assert_false(batState.isEquipped, "Bat should be unequipped after unequip()")
+end)
+
+test("BaseballBat: unequip fails when already unequipped", function()
+  local batState = BaseballBat.createBatState()
+  local result = BaseballBat.unequip(batState)
+  return assert_false(result, "Unequip should fail when already unequipped")
+end)
+
+test("BaseballBat: toggle switches equip state", function()
+  local batState = BaseballBat.createBatState()
+  local result1 = BaseballBat.toggle(batState)
+  local pass, msg = assert_true(result1, "First toggle should equip")
+  if not pass then
+    return pass, msg
+  end
+  local result2 = BaseballBat.toggle(batState)
+  return assert_false(result2, "Second toggle should unequip")
+end)
+
+test("BaseballBat: canSwing returns false when not equipped", function()
+  local batState = BaseballBat.createBatState()
+  local canSwing = BaseballBat.canSwing(batState, 0)
+  return assert_false(canSwing, "Should not be able to swing when not equipped")
+end)
+
+test("BaseballBat: canSwing returns true when equipped and off cooldown", function()
+  local batState = BaseballBat.createBatState()
+  BaseballBat.equip(batState)
+  local canSwing = BaseballBat.canSwing(batState, 0)
+  return assert_true(canSwing, "Should be able to swing when equipped")
+end)
+
+test("BaseballBat: swing cooldown prevents immediate second swing", function()
+  local batState = BaseballBat.createBatState()
+  BaseballBat.equip(batState)
+  BaseballBat.performSwing(batState, 0)
+  local canSwing = BaseballBat.canSwing(batState, 0.1)
+  return assert_false(canSwing, "Should not be able to swing during cooldown")
+end)
+
+test("BaseballBat: swing cooldown expires after configured time", function()
+  local batState = BaseballBat.createBatState()
+  BaseballBat.equip(batState)
+  BaseballBat.performSwing(batState, 0)
+  local config = BaseballBat.getConfig()
+  local canSwing = BaseballBat.canSwing(batState, config.swingCooldownSeconds + 0.1)
+  return assert_true(canSwing, "Should be able to swing after cooldown expires")
+end)
+
+test("BaseballBat: getSwingCooldownRemaining returns correct value", function()
+  local batState = BaseballBat.createBatState()
+  BaseballBat.equip(batState)
+  BaseballBat.performSwing(batState, 0)
+  local config = BaseballBat.getConfig()
+  local remaining = BaseballBat.getSwingCooldownRemaining(batState, 0.2)
+  local expected = config.swingCooldownSeconds - 0.2
+  return assert_true(
+    math.abs(remaining - expected) < 0.01,
+    "Cooldown remaining should match expected"
+  )
+end)
+
+test("BaseballBat: performSwing increments swing count", function()
+  local batState = BaseballBat.createBatState()
+  BaseballBat.equip(batState)
+  BaseballBat.performSwing(batState, 0)
+  local config = BaseballBat.getConfig()
+  BaseballBat.performSwing(batState, config.swingCooldownSeconds + 0.1)
+  return assert_eq(batState.swingsCount, 2, "Swing count should be 2 after two swings")
+end)
+
+test("BaseballBat: hitPlayer returns knockback result", function()
+  local batState = BaseballBat.createBatState()
+  BaseballBat.equip(batState)
+  local result = BaseballBat.hitPlayer(batState, "player123", 0)
+  local pass, msg = assert_true(result.success, "Hit should succeed")
+  if not pass then
+    return pass, msg
+  end
+  pass, msg = assert_eq(result.hitType, "player", "Hit type should be player")
+  if not pass then
+    return pass, msg
+  end
+  return assert_true(result.knockback, "Should have knockback")
+end)
+
+test("BaseballBat: swingMiss returns miss result", function()
+  local batState = BaseballBat.createBatState()
+  BaseballBat.equip(batState)
+  local result = BaseballBat.swingMiss(batState, 0)
+  local pass, msg = assert_true(result.success, "Miss swing should succeed")
+  if not pass then
+    return pass, msg
+  end
+  return assert_eq(result.hitType, "miss", "Hit type should be miss")
+end)
+
+test("BaseballBat: isInRange returns true for close distances", function()
+  local config = BaseballBat.getConfig()
+  local inRange = BaseballBat.isInRange(config.swingRangeStuds - 1)
+  return assert_true(inRange, "Should be in range at close distance")
+end)
+
+test("BaseballBat: isInRange returns false for far distances", function()
+  local config = BaseballBat.getConfig()
+  local inRange = BaseballBat.isInRange(config.swingRangeStuds + 1)
+  return assert_false(inRange, "Should be out of range at far distance")
+end)
+
+test("BaseballBat: getKnockbackParams returns valid values", function()
+  local params = BaseballBat.getKnockbackParams()
+  local pass, msg = assert_gt(params.force, 0, "Knockback force should be positive")
+  if not pass then
+    return pass, msg
+  end
+  return assert_gt(params.duration, 0, "Knockback duration should be positive")
+end)
+
+test("BaseballBat: getConfig returns valid configuration", function()
+  local config = BaseballBat.getConfig()
+  local pass, msg = assert_gt(config.swingCooldownSeconds, 0, "Cooldown should be positive")
+  if not pass then
+    return pass, msg
+  end
+  pass, msg = assert_gt(config.swingRangeStuds, 0, "Range should be positive")
+  if not pass then
+    return pass, msg
+  end
+  pass, msg = assert_gt(config.predatorDamage, 0, "Predator damage should be positive")
+  if not pass then
+    return pass, msg
+  end
+  return assert_gt(config.playerKnockbackForce, 0, "Player knockback force should be positive")
+end)
+
+test("BaseballBat: reset clears bat state", function()
+  local batState = BaseballBat.createBatState()
+  BaseballBat.equip(batState)
+  BaseballBat.performSwing(batState, 0)
+  BaseballBat.reset(batState)
+  local pass, msg = assert_false(batState.isEquipped, "Bat should be unequipped after reset")
+  if not pass then
+    return pass, msg
+  end
+  pass, msg = assert_eq(batState.swingsCount, 0, "Swing count should be 0 after reset")
+  if not pass then
+    return pass, msg
+  end
+  return assert_eq(batState.lastSwingTime, 0, "Last swing time should be 0 after reset")
+end)
+
+test("BaseballBat: getStats returns correct statistics", function()
+  local batState = BaseballBat.createBatState()
+  BaseballBat.equip(batState)
+  BaseballBat.performSwing(batState, 5)
+  local stats = BaseballBat.getStats(batState)
+  local pass, msg = assert_true(stats.isEquipped, "Stats should show equipped")
+  if not pass then
+    return pass, msg
+  end
+  pass, msg = assert_eq(stats.totalSwings, 1, "Stats should show 1 swing")
+  if not pass then
+    return pass, msg
+  end
+  return assert_eq(stats.lastSwingTime, 5, "Stats should show correct last swing time")
+end)
+
+test("BaseballBat: getDisplayInfo shows cooldown correctly", function()
+  local batState = BaseballBat.createBatState()
+  BaseballBat.equip(batState)
+  BaseballBat.performSwing(batState, 0)
+  local displayInfo = BaseballBat.getDisplayInfo(batState, 0.2)
+  local pass, msg = assert_true(displayInfo.isEquipped, "Should show equipped")
+  if not pass then
+    return pass, msg
+  end
+  pass, msg = assert_false(displayInfo.canSwing, "Should not be able to swing during cooldown")
+  if not pass then
+    return pass, msg
+  end
+  return assert_gt(displayInfo.cooldownRemaining, 0, "Should have cooldown remaining")
+end)
+
+test("BaseballBat: getHitsToDefeat returns bat hits from PredatorConfig", function()
+  local hits = BaseballBat.getHitsToDefeat("Rat")
+  return assert_gt(hits, 0, "Rat should require positive bat hits")
+end)
+
+test("BaseballBat: hitPredator damages predator on hit", function()
+  local batState = BaseballBat.createBatState()
+  BaseballBat.equip(batState)
+  local spawnState = PredatorSpawning.createSpawnState()
+  -- Spawn a predator
+  local spawnResult = PredatorSpawning.spawnPredator(spawnState, "Rat", "player1", 0)
+  if not spawnResult.success or not spawnResult.predator then
+    return false, "Failed to spawn predator for test"
+  end
+  local predatorId = spawnResult.predator.id
+  local initialHealth = spawnResult.predator.health
+  -- Hit the predator
+  local result = BaseballBat.hitPredator(batState, spawnState, predatorId, 0)
+  local pass, msg = assert_true(result.success, "Hit should succeed")
+  if not pass then
+    return pass, msg
+  end
+  pass, msg = assert_eq(result.hitType, "predator", "Hit type should be predator")
+  if not pass then
+    return pass, msg
+  end
+  return assert_gt(result.damage, 0, "Should deal positive damage")
+end)
+
+test("BaseballBat: hitPredator fails on inactive predator", function()
+  local batState = BaseballBat.createBatState()
+  BaseballBat.equip(batState)
+  local spawnState = PredatorSpawning.createSpawnState()
+  -- Try to hit non-existent predator
+  local result = BaseballBat.hitPredator(batState, spawnState, "fake_id", 0)
+  return assert_false(result.success, "Should fail to hit non-existent predator")
+end)
+
+test("BaseballBat: hitPredator respects swing cooldown", function()
+  local batState = BaseballBat.createBatState()
+  BaseballBat.equip(batState)
+  local spawnState = PredatorSpawning.createSpawnState()
+  local spawnResult = PredatorSpawning.spawnPredator(spawnState, "Rat", "player1", 0)
+  if not spawnResult.success or not spawnResult.predator then
+    return false, "Failed to spawn predator for test"
+  end
+  local predatorId = spawnResult.predator.id
+  -- First hit
+  BaseballBat.hitPredator(batState, spawnState, predatorId, 0)
+  -- Try immediate second hit
+  local result = BaseballBat.hitPredator(batState, spawnState, predatorId, 0.1)
+  return assert_false(result.success, "Second hit should fail due to cooldown")
 end)
 
 -- ============================================================================

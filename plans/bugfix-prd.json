@@ -853,7 +853,7 @@
       "category": "Testing",
       "title": "Add Integration Tests for Combat System",
       "description": "Create tests for weapon damage, knockback, and incapacitation.",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Test weapon equip/unequip",
