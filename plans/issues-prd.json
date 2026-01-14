@@ -73,7 +73,7 @@
       "category": "Inventory-UI",
       "title": "Implement Inventory Item Stacking",
       "description": "Inventory items of the same type should stack together with a count indicator instead of showing as individual items. For example, 3 basic chickens should show as one item with 'x3' or a count badge.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Review current inventory data structure in PlayerData.lua",

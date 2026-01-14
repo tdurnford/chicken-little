@@ -3007,3 +3007,39 @@
     (server-side validation in MoveChicken/PickupChicken handlers)
 - Format check and build pass
 - Next: Work on remaining item (#2 Inventory Stacking - UX improvement)
+
+[2026-01-14] Completed UX Work Item #2: Implement Inventory Item Stacking
+- Root cause: The inventory UI displayed each item individually, which became
+  cluttered when players accumulated many identical items (e.g., 10 Common eggs
+  would show as 10 separate slots instead of one slot with "x10").
+- Implementation approach (UI-only stacking, preserving data integrity):
+  1. Added StackedItem type and groupItemsIntoStacks() helper function:
+     - Groups items by (itemType, rarity) for eggs and (chickenType, rarity) for chickens
+     - Each StackedItem contains: representativeItem, count, itemIds[], stackKey
+     - Preserves insertion order so stacks appear in order first encountered
+  2. Modified createItemSlot() to accept StackedItem instead of individual itemData:
+     - Added stack count badge (x2, x3, etc.) displayed in top-right corner
+     - Badge only shows when count > 1
+     - Passes stackCount and stackedItemIds to selectItem() on click
+  3. Updated SelectedItem type to include stacking info:
+     - Added stackCount: number? field
+     - Added stackedItemIds: { string }? field for all item IDs in the stack
+  4. Updated state tracking:
+     - Added selectedStackKey to InventoryState for proper selection highlighting
+     - Selection now works on stack level (clicking same stack toggles selection)
+  5. Modified updateFromPlayerData() to use groupItemsIntoStacks():
+     - Items are now grouped before creating slots
+     - Slots keyed by stackKey instead of individual itemId
+  6. Updated all state management functions (setTab, clearSelection, destroy)
+     to properly reset selectedStackKey
+- Acceptance criteria met:
+  - Identical items in inventory show as single entry with count ✓
+  - Count is clearly visible on the inventory item (x2, x3, etc. badge) ✓
+  - Adding duplicate items increments the count ✓ (automatic via grouping)
+  - Using/placing items decrements the count ✓ (automatic via grouping)
+  - Items are removed from inventory when count reaches 0 ✓ (handled by server)
+  - Stacking works for chickens, eggs, traps, and other stackable items ✓
+- Format check passes, build passes
+- Note: Data layer unchanged - each item still has unique ID for server-side
+  operations (place/sell). The UI groups them visually but actions still
+  operate on individual items via selectedItem.itemId.

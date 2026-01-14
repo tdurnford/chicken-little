@@ -32,6 +32,8 @@ export type SelectedItem = {
   itemType: "egg" | "chicken",
   itemId: string,
   itemData: any,
+  stackCount: number?, -- Number of stacked items (nil = 1)
+  stackedItemIds: { string }?, -- All item IDs in this stack
 }
 
 export type InventoryState = {
@@ -41,6 +43,7 @@ export type InventoryState = {
   contentFrame: ScrollingFrame?,
   actionFrame: Frame?,
   selectedItem: SelectedItem?,
+  selectedStackKey: string?, -- Stack key for the currently selected item
   currentTab: "eggs" | "chickens",
   isVisible: boolean,
   slots: { [string]: Frame },
@@ -89,6 +92,7 @@ local state: InventoryState = {
   contentFrame = nil,
   actionFrame = nil,
   selectedItem = nil,
+  selectedStackKey = nil,
   currentTab = "eggs",
   isVisible = false, -- Start hidden, player opens with I key
   slots = {},
@@ -260,14 +264,62 @@ local function createActionButton(
   return button
 end
 
--- Create an item slot
+-- Type for a stacked group of items
+type StackedItem = {
+  representativeItem: any, -- First item in the stack (used for display)
+  count: number, -- Number of items in the stack
+  itemIds: { string }, -- All item IDs in this stack
+  stackKey: string, -- Key used for grouping (e.g., "BasicEgg_Common")
+}
+
+-- Generate a stack key for grouping identical items
+local function getStackKey(itemType: "egg" | "chicken", itemData: any): string
+  if itemType == "egg" then
+    return itemData.eggType .. "_" .. itemData.rarity
+  else
+    return itemData.chickenType .. "_" .. itemData.rarity
+  end
+end
+
+-- Group items by type+rarity into stacks
+local function groupItemsIntoStacks(itemType: "egg" | "chicken", items: { any }): { StackedItem }
+  local stackMap: { [string]: StackedItem } = {}
+  local orderedKeys: { string } = {}
+
+  for _, itemData in ipairs(items) do
+    local key = getStackKey(itemType, itemData)
+    if not stackMap[key] then
+      stackMap[key] = {
+        representativeItem = itemData,
+        count = 0,
+        itemIds = {},
+        stackKey = key,
+      }
+      table.insert(orderedKeys, key)
+    end
+    stackMap[key].count = stackMap[key].count + 1
+    table.insert(stackMap[key].itemIds, itemData.id)
+  end
+
+  -- Return stacks in order they were first encountered
+  local stacks: { StackedItem } = {}
+  for _, key in ipairs(orderedKeys) do
+    table.insert(stacks, stackMap[key])
+  end
+  return stacks
+end
+
+-- Create an item slot (now supports stacking)
 local function createItemSlot(
   itemType: "egg" | "chicken",
-  itemData: any,
+  stackedItem: StackedItem,
   layoutOrder: number
 ): Frame
+  local itemData = stackedItem.representativeItem
+  local stackCount = stackedItem.count
+
   local slotFrame = Instance.new("Frame")
-  slotFrame.Name = "Slot_" .. itemData.id
+  slotFrame.Name = "Slot_" .. stackedItem.stackKey
   slotFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
   slotFrame.BorderSizePixel = 0
   slotFrame.LayoutOrder = layoutOrder
@@ -297,6 +349,31 @@ local function createItemSlot(
   icon.TextSize = 20
   icon.TextColor3 = rarityColor
   icon.Parent = slotFrame
+
+  -- Stack count badge (only show if more than 1)
+  if stackCount > 1 then
+    local countBadge = Instance.new("Frame")
+    countBadge.Name = "CountBadge"
+    countBadge.Size = UDim2.new(0, 24, 0, 16)
+    countBadge.Position = UDim2.new(1, -26, 0, 2)
+    countBadge.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+    countBadge.BorderSizePixel = 0
+    countBadge.Parent = slotFrame
+
+    local badgeCorner = Instance.new("UICorner")
+    badgeCorner.CornerRadius = UDim.new(0, 4)
+    badgeCorner.Parent = countBadge
+
+    local countLabel = Instance.new("TextLabel")
+    countLabel.Name = "CountLabel"
+    countLabel.Size = UDim2.new(1, 0, 1, 0)
+    countLabel.BackgroundTransparency = 1
+    countLabel.Text = "x" .. tostring(stackCount)
+    countLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    countLabel.TextSize = 11
+    countLabel.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
+    countLabel.Parent = countBadge
+  end
 
   -- Get display name and config from config
   local displayName = ""
@@ -379,7 +456,7 @@ local function createItemSlot(
   clickButton.Parent = slotFrame
 
   clickButton.MouseButton1Click:Connect(function()
-    InventoryUI.selectItem(itemType, itemData.id, itemData)
+    InventoryUI.selectItem(itemType, itemData.id, itemData, stackCount, stackedItem.itemIds)
   end)
 
   return slotFrame
@@ -476,9 +553,9 @@ local function updateSelectionVisual()
     end
   end
 
-  -- Highlight selected slot
-  if state.selectedItem then
-    local selectedSlot = state.slots[state.selectedItem.itemId]
+  -- Highlight selected slot (use stack key instead of item ID)
+  if state.selectedItem and state.selectedStackKey then
+    local selectedSlot = state.slots[state.selectedStackKey]
     if selectedSlot then
       local stroke = selectedSlot:FindFirstChildOfClass("UIStroke")
       if stroke then
@@ -632,6 +709,7 @@ function InventoryUI.destroy()
   state.contentFrame = nil
   state.actionFrame = nil
   state.selectedItem = nil
+  state.selectedStackKey = nil
   state.currentTab = "eggs"
   state.isVisible = false
   state.slots = {}
@@ -641,6 +719,7 @@ end
 function InventoryUI.setTab(tab: "eggs" | "chickens")
   state.currentTab = tab
   state.selectedItem = nil
+  state.selectedStackKey = nil
   updateTabAppearance()
   updateActionButtons()
   -- Refresh inventory display to update global counts when switching to chickens tab
@@ -683,11 +762,15 @@ function InventoryUI.updateFromPlayerData(playerData: any)
     end
   end
 
-  -- Create slots for each item
-  for i, itemData in ipairs(items) do
-    local slot = createItemSlot(state.currentTab == "eggs" and "egg" or "chicken", itemData, i)
+  -- Group items into stacks by type+rarity
+  local itemType = state.currentTab == "eggs" and "egg" or "chicken"
+  local stacks = groupItemsIntoStacks(itemType, items)
+
+  -- Create slots for each stack
+  for i, stackedItem in ipairs(stacks) do
+    local slot = createItemSlot(itemType, stackedItem, i)
     slot.Parent = state.contentFrame
-    state.slots[itemData.id] = slot
+    state.slots[stackedItem.stackKey] = slot
   end
 
   -- Show empty message if no items
@@ -713,17 +796,30 @@ function InventoryUI.updateFromPlayerData(playerData: any)
   updateActionButtons()
 end
 
--- Select an item
-function InventoryUI.selectItem(itemType: "egg" | "chicken", itemId: string, itemData: any)
-  -- Deselect if same item clicked
-  if state.selectedItem and state.selectedItem.itemId == itemId then
+-- Select an item (with stack support)
+function InventoryUI.selectItem(
+  itemType: "egg" | "chicken",
+  itemId: string,
+  itemData: any,
+  stackCount: number?,
+  stackedItemIds: { string }?
+)
+  -- Generate stack key for this item
+  local stackKey = getStackKey(itemType, itemData)
+
+  -- Deselect if same stack clicked
+  if state.selectedStackKey and state.selectedStackKey == stackKey then
     state.selectedItem = nil
+    state.selectedStackKey = nil
   else
     state.selectedItem = {
       itemType = itemType,
       itemId = itemId,
       itemData = itemData,
+      stackCount = stackCount or 1,
+      stackedItemIds = stackedItemIds or { itemId },
     }
+    state.selectedStackKey = stackKey
   end
 
   updateSelectionVisual()
@@ -742,6 +838,7 @@ end
 -- Clear selection
 function InventoryUI.clearSelection()
   state.selectedItem = nil
+  state.selectedStackKey = nil
   updateSelectionVisual()
   updateActionButtons()
 
