@@ -730,6 +730,31 @@ if randomChickenClaimedEvent then
   end)
 end
 
+-- RandomChickenDespawned: Chicken timed out and despawned
+local randomChickenDespawnedEvent = getEvent("RandomChickenDespawned")
+if randomChickenDespawnedEvent then
+  randomChickenDespawnedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
+    local chickenId = eventData.chickenId
+    if not chickenId then
+      warn("[Client] RandomChickenDespawned: Invalid event data")
+      return
+    end
+
+    -- Destroy the visual
+    ChickenVisuals.destroy(chickenId)
+
+    -- Clear tracking if this was the nearby chicken
+    if nearestRandomChickenId == chickenId then
+      hideRandomChickenPrompt()
+      isNearRandomChicken = false
+      nearestRandomChickenId = nil
+      nearestRandomChickenType = nil
+    end
+
+    print("[Client] Random chicken despawned:", chickenId)
+  end)
+end
+
 -- RandomChickenPositionUpdated: Update random chicken position for walking animation
 local randomChickenPositionEvent = getEvent("RandomChickenPositionUpdated")
 if randomChickenPositionEvent then

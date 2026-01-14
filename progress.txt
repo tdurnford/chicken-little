@@ -2800,3 +2800,31 @@
   - Actions are logged for accountability ✓
 - Format check and build pass
 - Next: All bugfix work items completed!
+
+[2026-01-14] Completed Bugfix Work Item #3: Fix 'No Chicken Available to Claim' Console Warning
+- Root cause: Server was despawning random chickens (after 30s timeout) but not notifying 
+  clients. The client visuals remained even after server-side despawn, causing players to 
+  try claiming non-existent chickens and getting "No chicken available to claim" error.
+- Implementation approach:
+  1. Modified RandomChickenSpawn.lua:
+     - Added new UpdateResult type with spawned/despawned fields
+     - Changed update() function return type from SpawnResult? to UpdateResult
+     - update() now returns info about both spawned and despawned chickens
+  2. Added RandomChickenDespawned RemoteEvent in RemoteSetup.lua
+  3. Updated Main.server.lua game loop:
+     - Now uses the new UpdateResult type from RandomChickenSpawn.update()
+     - Handles despawned chickens by unregistering from ChickenAI
+     - Fires RandomChickenDespawned event to all clients with chickenId and reason
+     - Prints log when random chicken despawns
+  4. Updated Main.client.lua:
+     - Added handler for RandomChickenDespawned event
+     - Destroys chicken visual when despawn event received
+     - Clears nearestRandomChickenId tracking if it was the despawned chicken
+     - Hides claim prompt when chicken despawns
+- Acceptance criteria met:
+  - Players can successfully claim chickens without spurious warnings ✓
+  - Console warning only appears when truly no chicken to claim ✓
+  - Client visuals are removed when chicken despawns on server ✓
+  - Consistent behavior for claim/despawn scenarios ✓
+- Format check and build pass
+- Next: Work on remaining high-priority items (#5 Chicken Placement or #1 Egg Collection)

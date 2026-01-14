@@ -1678,10 +1678,35 @@ local function runGameLoop(deltaTime: number)
   local players = Players:GetPlayers()
 
   -- Update random chicken spawn events (global)
-  local spawnResult = RandomChickenSpawn.update(randomChickenSpawnState, currentTime)
-  if spawnResult and spawnResult.success and spawnResult.chicken then
+  local updateResult = RandomChickenSpawn.update(randomChickenSpawnState, currentTime)
+
+  -- Handle despawned chicken (timeout)
+  if updateResult.despawned then
+    local despawnedChicken = updateResult.despawned
+    -- Remove chicken from AI tracking
+    ChickenAI.unregisterChicken(chickenAIState, despawnedChicken.id)
+
+    -- Notify all players of the despawn event
+    local randomChickenDespawnedEvent = RemoteSetup.getEvent("RandomChickenDespawned")
+    if randomChickenDespawnedEvent then
+      for _, player in ipairs(players) do
+        randomChickenDespawnedEvent:FireClient(player, {
+          chickenId = despawnedChicken.id,
+          reason = "timeout",
+        })
+      end
+    end
+    print(
+      "[Main.server] Random chicken despawned:",
+      despawnedChicken.id,
+      despawnedChicken.chickenType
+    )
+  end
+
+  -- Handle newly spawned chicken
+  if updateResult.spawned then
     -- Register chicken with AI for movement tracking
-    local chicken = spawnResult.chicken
+    local chicken = updateResult.spawned
     local spawnPos = Vector3.new(chicken.position.x, chicken.position.y, chicken.position.z)
     ChickenAI.registerChicken(
       chickenAIState,
@@ -1694,10 +1719,10 @@ local function runGameLoop(deltaTime: number)
     -- Notify all players of the spawn event
     local randomChickenSpawnedEvent = RemoteSetup.getEvent("RandomChickenSpawned")
     if randomChickenSpawnedEvent then
-      local announcement = RandomChickenSpawn.getAnnouncementText(spawnResult.chicken)
+      local announcement = RandomChickenSpawn.getAnnouncementText(chicken)
       for _, player in ipairs(players) do
         randomChickenSpawnedEvent:FireClient(player, {
-          chicken = spawnResult.chicken,
+          chicken = chicken,
           announcement = announcement,
         })
       end

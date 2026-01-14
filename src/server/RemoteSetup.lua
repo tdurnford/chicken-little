@@ -27,6 +27,7 @@ local REMOTE_EVENTS = {
   "TradeCompleted",
   "RandomChickenSpawned",
   "RandomChickenClaimed",
+  "RandomChickenDespawned",
   "AlertTriggered",
   "EggLaid",
   "OfflineEarningsAwarded",

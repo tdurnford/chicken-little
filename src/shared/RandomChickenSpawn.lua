@@ -82,6 +82,11 @@ export type SpawnResult = {
   reason: string?,
 }
 
+export type UpdateResult = {
+  spawned: SpawnedChicken?,
+  despawned: SpawnedChicken?,
+}
+
 -- Get default spawn configuration
 function RandomChickenSpawn.getDefaultConfig(): SpawnConfig
   return {
@@ -373,24 +378,33 @@ function RandomChickenSpawn.claimChicken(
 end
 
 -- Update spawn state (call each frame/tick)
-function RandomChickenSpawn.update(state: SpawnEventState, currentTime: number): SpawnResult?
+-- Returns UpdateResult with spawned/despawned chicken info
+function RandomChickenSpawn.update(state: SpawnEventState, currentTime: number): UpdateResult
+  local result: UpdateResult = {
+    spawned = nil,
+    despawned = nil,
+  }
+
   if not state.isActive then
-    return nil
+    return result
   end
 
   -- Check for despawn
   if RandomChickenSpawn.shouldDespawn(state, currentTime) then
-    RandomChickenSpawn.despawnChicken(state)
+    result.despawned = RandomChickenSpawn.despawnChicken(state)
     -- Schedule next spawn
     state.nextSpawnTime = calculateNextSpawnTime(state.config, currentTime)
   end
 
   -- Check for new spawn
   if RandomChickenSpawn.shouldSpawn(state, currentTime) then
-    return RandomChickenSpawn.spawnChicken(state, currentTime)
+    local spawnResult = RandomChickenSpawn.spawnChicken(state, currentTime)
+    if spawnResult.success and spawnResult.chicken then
+      result.spawned = spawnResult.chicken
+    end
   end
 
-  return nil
+  return result
 end
 
 -- Get current chicken if any
