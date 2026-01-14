@@ -1149,7 +1149,7 @@
       "category": "Inventory-UI",
       "title": "Show $/s Generation Rate in Inventory",
       "description": "Inventory should display the money generation rate ($/s) for each chicken so players can compare.",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Add $/s column to inventory chicken list",
@@ -1163,7 +1163,8 @@
         "Rate is accurate per ChickenConfig"
       ],
       "dependencies": [],
-      "codeLocation": "src/client/InventoryUI.lua"
+      "codeLocation": "src/client/InventoryUI.lua",
+      "status": "Done"
     },
     {
       "id": 45,

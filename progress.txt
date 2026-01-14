@@ -2468,3 +2468,28 @@
   - Label is readable and well-positioned ✓
 - Format check and build pass
 - Next: Other medium priority items (#7, #17, #18, #19, #44, #48, #49, #52)
+
+[2026-01-14] Completed Bugfix Work Item #44: Show $/s Generation Rate in Inventory
+- Root cause: Players couldn't see how much money each chicken generates in inventory,
+  making it hard to compare chicken values before placing them.
+- Implementation approach:
+  1. Added formatMoneyRate() helper function to InventoryUI.lua:
+     - Formats rates with appropriate precision ($0.50/s, $1.25/s, $15.0/s, $1.5K/s)
+     - Uses K suffix for rates >= 1000
+  2. Modified createItemSlot() to display $/s rate for chickens:
+     - Adjusted icon height from 0.6 to 0.45 to make room for rate
+     - Adjusted name label height from 0.35 to 0.28 and position from 0.6 to 0.45
+     - Added RateLabel for chickens showing $/s rate
+     - Rate displayed in gold color (255, 220, 100) matching placed chickens
+     - Font size 10, bold weight for readability
+  3. Get config lookup moved before label creation to access moneyPerSecond
+- Code changes (src/client/InventoryUI.lua):
+  - Added formatMoneyRate() helper function (lines 71-82)
+  - Restructured createItemSlot() to get config first (lines 277-287)
+  - Added RateLabel creation for chickens (lines 302-314)
+- Acceptance criteria met:
+  - Each chicken in inventory shows its $/s rate ✓
+  - Players can easily compare chicken values ✓
+  - Rate is accurate per ChickenConfig ✓
+- Format check and build pass
+- Next: Other medium priority items (#7, #17, #18, #19, #48, #49, #52)

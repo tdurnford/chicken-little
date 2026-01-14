@@ -68,6 +68,19 @@ local DEFAULT_CONFIG: InventoryConfig = {
   slotPadding = 8,
 }
 
+-- Helper: Format money rate for display ($/s)
+local function formatMoneyRate(rate: number): string
+  if rate >= 1000 then
+    return string.format("$%.1fK/s", rate / 1000)
+  elseif rate >= 100 then
+    return string.format("$%.0f/s", rate)
+  elseif rate >= 10 then
+    return string.format("$%.1f/s", rate)
+  else
+    return string.format("$%.2f/s", rate)
+  end
+end
+
 -- Module state
 local state: InventoryState = {
   screenGui = nil,
@@ -250,38 +263,55 @@ local function createItemSlot(
   stroke.Parent = slotFrame
 
   -- Icon/Image placeholder (centered emoji for now)
+  -- Adjust layout: chickens need more vertical space for rate label
   local icon = Instance.new("TextLabel")
   icon.Name = "Icon"
-  icon.Size = UDim2.new(1, 0, 0.6, 0)
+  icon.Size = UDim2.new(1, 0, 0.45, 0)
   icon.Position = UDim2.new(0, 0, 0, 2)
   icon.BackgroundTransparency = 1
   icon.Text = itemType == "egg" and "🥚" or "🐔"
-  icon.TextSize = 28
+  icon.TextSize = 24
   icon.TextColor3 = rarityColor
   icon.Parent = slotFrame
 
-  -- Item name label
-  local nameLabel = Instance.new("TextLabel")
-  nameLabel.Name = "NameLabel"
-  nameLabel.Size = UDim2.new(1, -4, 0.35, 0)
-  nameLabel.Position = UDim2.new(0, 2, 0.6, 0)
-  nameLabel.BackgroundTransparency = 1
-  nameLabel.TextScaled = true
-  nameLabel.TextWrapped = true
-  nameLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
-  nameLabel.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium)
-  nameLabel.Parent = slotFrame
-
-  -- Get display name from config
+  -- Get display name and config from config
   local displayName = ""
+  local moneyPerSecond: number? = nil
   if itemType == "egg" then
     local config = EggConfig.get(itemData.eggType)
     displayName = config and config.displayName or itemData.eggType
   else
     local config = ChickenConfig.get(itemData.chickenType)
     displayName = config and config.displayName or itemData.chickenType
+    moneyPerSecond = config and config.moneyPerSecond or nil
   end
+
+  -- Item name label
+  local nameLabel = Instance.new("TextLabel")
+  nameLabel.Name = "NameLabel"
+  nameLabel.Size = UDim2.new(1, -4, 0.28, 0)
+  nameLabel.Position = UDim2.new(0, 2, 0.45, 0)
+  nameLabel.BackgroundTransparency = 1
+  nameLabel.TextScaled = true
+  nameLabel.TextWrapped = true
+  nameLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+  nameLabel.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium)
   nameLabel.Text = displayName
+  nameLabel.Parent = slotFrame
+
+  -- Money rate label for chickens ($/s)
+  if itemType == "chicken" and moneyPerSecond then
+    local rateLabel = Instance.new("TextLabel")
+    rateLabel.Name = "RateLabel"
+    rateLabel.Size = UDim2.new(1, -4, 0.22, 0)
+    rateLabel.Position = UDim2.new(0, 2, 0.73, 0)
+    rateLabel.BackgroundTransparency = 1
+    rateLabel.Text = formatMoneyRate(moneyPerSecond)
+    rateLabel.TextColor3 = Color3.fromRGB(255, 220, 100) -- Gold color matching placed chickens
+    rateLabel.TextSize = 10
+    rateLabel.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
+    rateLabel.Parent = slotFrame
+  end
 
   -- Click detection
   local clickButton = Instance.new("TextButton")
