@@ -543,10 +543,10 @@ if swingBatFunc then
           -- Unregister from predator AI
           PredatorAI.unregisterPredator(gameState.predatorAIState, targetId)
 
-          -- Fire PredatorDefeated event
+          -- Fire PredatorDefeated event to ALL clients
           local predatorDefeatedEvent = RemoteSetup.getEvent("PredatorDefeated")
           if predatorDefeatedEvent then
-            predatorDefeatedEvent:FireClient(player, targetId, true)
+            predatorDefeatedEvent:FireAllClients(targetId, true)
           end
 
           syncPlayerData(player, playerData, true)
@@ -1310,13 +1310,13 @@ local function runGameLoop(deltaTime: number)
             sectionCenterV3
           )
 
-          -- Send predator data in the format the client expects
-          predatorSpawnedEvent:FireClient(
-            player,
+          -- Send predator data to ALL clients so all players can see predators
+          predatorSpawnedEvent:FireAllClients(
             predator.id,
             predator.predatorType,
             threatLevel,
-            predatorPosition.currentPosition
+            predatorPosition.currentPosition,
+            playerData.sectionIndex or 1 -- Include section so clients know which coop is being targeted
           )
         end
       end
@@ -1326,10 +1326,9 @@ local function runGameLoop(deltaTime: number)
     local predatorPositionUpdatedEvent = RemoteSetup.getEvent("PredatorPositionUpdated")
     local updatedPositions = PredatorAI.updateAll(gameState.predatorAIState, deltaTime)
     for predatorId, position in pairs(updatedPositions) do
-      -- Send position update to client
+      -- Send position update to ALL clients so all players can see predator movement
       if predatorPositionUpdatedEvent then
-        predatorPositionUpdatedEvent:FireClient(
-          player,
+        predatorPositionUpdatedEvent:FireAllClients(
           predatorId,
           position.currentPosition,
           position.hasReachedTarget
@@ -1385,9 +1384,10 @@ local function runGameLoop(deltaTime: number)
         -- If predator escaped after attack, notify and cleanup AI
         if attackResult.predatorEscaped then
           PredatorAI.unregisterPredator(gameState.predatorAIState, predatorId)
+          -- Fire PredatorDefeated event to ALL clients (escaped after attack)
           local predatorDefeatedEvent = RemoteSetup.getEvent("PredatorDefeated")
           if predatorDefeatedEvent then
-            predatorDefeatedEvent:FireClient(player, predatorId, false)
+            predatorDefeatedEvent:FireAllClients(predatorId, false)
           end
         end
       end

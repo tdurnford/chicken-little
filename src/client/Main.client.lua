@@ -494,10 +494,17 @@ if trapCaughtEvent then
 end
 
 -- PredatorSpawned: Create predator visual and health bar
+-- Now receives predators from all sections (sectionIndex indicates which coop is being targeted)
 local predatorSpawnedEvent = getEvent("PredatorSpawned")
 if predatorSpawnedEvent then
   predatorSpawnedEvent.OnClientEvent:Connect(
-    function(predatorId: string, predatorType: string, threatLevel: string, position: Vector3)
+    function(
+      predatorId: string,
+      predatorType: string,
+      threatLevel: string,
+      position: Vector3,
+      sectionIndex: number?
+    )
       local visualState = PredatorVisuals.create(predatorId, predatorType, threatLevel, position)
       -- Create health bar if visual was created successfully
       if visualState and visualState.model then
@@ -508,7 +515,14 @@ if predatorSpawnedEvent then
       -- Show predator warning with directional indicator and message
       PredatorWarning.show(predatorId, predatorType, threatLevel, position)
       SoundEffects.playPredatorAlert(threatLevel == "Deadly" or threatLevel == "Catastrophic")
-      print("[Client] Predator spawned:", predatorId, predatorType, threatLevel)
+      print(
+        "[Client] Predator spawned:",
+        predatorId,
+        predatorType,
+        threatLevel,
+        "section:",
+        sectionIndex or "unknown"
+      )
     end
   )
 end

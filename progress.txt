@@ -2026,3 +2026,29 @@
   - Inventory count updates correctly on first claim
 - Format check passes
 - Next: Other high priority items (#35, #36, #39, #41, #42, #50, #51, #53)
+
+[2026-01-14] Completed Bugfix Work Item #42: Fix Predator NPCs Not Visible to All Players
+- Root cause: Predator events used FireClient(player, ...) which sent data only to the section owner
+- The PredatorSpawned, PredatorPositionUpdated, and PredatorDefeated events were all using FireClient
+- This meant predators only appeared on the screen of the player whose section was being attacked
+- Other players couldn't see predators attacking neighbors, breaking multiplayer visibility
+- Fixes applied to src/server/Main.server.lua:
+  1. PredatorSpawned event (line 1314): Changed FireClient to FireAllClients
+     - Now includes sectionIndex parameter so clients know which coop is being targeted
+  2. PredatorPositionUpdated event (line 1331): Changed FireClient to FireAllClients
+     - All clients receive position updates for all active predators
+  3. PredatorDefeated events (lines 549, 1390): Changed FireClient to FireAllClients
+     - Both combat defeat and escaped-after-attack paths now notify all clients
+- Updated client handler (src/client/Main.client.lua line 500):
+  - Added optional sectionIndex parameter to PredatorSpawned handler signature
+  - Updated debug log to include section info
+- Now all players see predators in all sections:
+  - Predator spawn visuals appear for all connected clients
+  - Predator walking animations update on all clients
+  - Predator defeat animations play for all clients
+- Acceptance criteria met:
+  - All players see predators in all sections
+  - Predator positions sync correctly for all clients
+  - Predator defeat is visible to all players
+- Format check and build pass
+- Next: Other high priority items (#35, #36, #39, #41, #50, #51, #53)

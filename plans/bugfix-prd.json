@@ -1114,7 +1114,7 @@
       "category": "Multiplayer-BugFix",
       "title": "Fix Predator NPCs Not Visible to All Players",
       "description": "Predator NPCs should be visible to all players on the server, not just the owner of the section.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Review PredatorSpawned event - ensure FireAllClients is used",
@@ -1128,7 +1128,8 @@
         "Predator defeat is visible to all players"
       ],
       "dependencies": [],
-      "codeLocation": "src/client/PredatorVisuals.lua"
+      "codeLocation": "src/client/PredatorVisuals.lua",
+      "status": "completed"
     },
     {
       "id": 43,
