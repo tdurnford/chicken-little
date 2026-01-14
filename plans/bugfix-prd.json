@@ -1369,7 +1369,7 @@
       "category": "Store-BugFix",
       "title": "Prevent Basic Egg from Selling Out",
       "description": "The most basic/common egg should never sell out to ensure new players always have something affordable to buy.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Identify the most basic egg type in EggConfig (Common egg)",

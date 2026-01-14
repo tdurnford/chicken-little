@@ -2052,3 +2052,25 @@
   - Predator defeat is visible to all players
 - Format check and build pass
 - Next: Other high priority items (#35, #36, #39, #41, #50, #51, #53)
+
+[2026-01-14] Completed Bugfix Work Item #53: Prevent Basic Egg from Selling Out
+- Root cause: Common eggs (basic eggs) could sell out like any other rarity, leaving new players
+  with no affordable option to buy eggs and progress in the game.
+- The purchaseEggFromInventory function in Store.lua decremented stock without special handling
+  for the basic egg type.
+- Fix applied to src/shared/Store.lua:
+  1. Added stock floor check after purchase in purchaseEggFromInventory (lines 776-780)
+     - After decrementing stock, checks if item rarity is "Common" and stock < 1
+     - If so, immediately restores stock to 1
+     - This ensures there's always at least one Common egg available
+- The fix is surgical: only affects Common rarity eggs after a purchase depletes stock
+- Other eggs (Uncommon, Rare, Epic, Legendary, Mythic) can still sell out normally
+- The replenishment system already had minStock = 1 for most rarities, so this just closes the gap
+  between purchases and replenishment
+- Acceptance criteria met:
+  - Basic/Common egg never shows as sold out (always stock >= 1)
+  - Players can always buy at least one basic egg
+  - Other eggs can still sell out normally
+  - Works correctly with store replenishment system
+- Format check and build pass
+- Next: Other high priority items (#35, #36, #39, #41, #50, #51)

@@ -773,6 +773,11 @@ function Store.purchaseEggFromInventory(
   -- Decrement stock on success
   if result.success then
     item.stock = item.stock - amount
+    -- Ensure Common eggs never sell out completely
+    -- Basic egg should always be available for new players
+    if item.rarity == "Common" and item.stock < 1 then
+      item.stock = 1
+    end
   end
 
   return result
