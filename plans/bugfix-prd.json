@@ -1018,7 +1018,7 @@
       "category": "Predator-BugFix",
       "title": "Fix Predators Attacking Without Being Near Chickens",
       "description": "Predators should only attack chickens when they are physically close to them. Currently attacking from anywhere.",
-      "completed": false,
+      "completed": true,
       "priority": "critical",
       "steps": [
         "Add proximity check before predator can deal damage to chickens",
@@ -1034,7 +1034,8 @@
       "dependencies": [
         23
       ],
-      "codeLocation": "src/shared/PredatorAttack.lua"
+      "codeLocation": "src/shared/PredatorAttack.lua",
+      "status": "completed"
     },
     {
       "id": 39,

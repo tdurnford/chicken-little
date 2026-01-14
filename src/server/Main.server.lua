@@ -41,6 +41,9 @@ local PlayerData = require(Shared:WaitForChild("PlayerData"))
 -- Offline earnings module
 local OfflineEarnings = require(Shared:WaitForChild("OfflineEarnings"))
 
+-- Player section module for coop positioning
+local PlayerSection = require(Shared:WaitForChild("PlayerSection"))
+
 -- Player Data Sync Configuration
 local DATA_SYNC_THROTTLE_INTERVAL = 0.1 -- Minimum seconds between data updates per player
 local lastDataSyncTime: { [number]: number } = {} -- Tracks last sync time per player
@@ -49,6 +52,7 @@ local lastDataSyncTime: { [number]: number } = {} -- Tracks last sync time per p
 local PREDATOR_CLEANUP_INTERVAL = 10 -- Seconds between predator cleanup passes
 local lastCleanupTime = 0
 local CHICKEN_PLACEMENT_PROTECTION_SECONDS = 5 -- Protection period for newly placed chickens
+local PREDATOR_ATTACK_RANGE_STUDS = 15 -- Predators must be within this range of coop to damage chickens
 
 -- Store Replenishment Configuration
 local lastStoreReplenishCheck = 0
@@ -1474,6 +1478,26 @@ local function runGameLoop(deltaTime: number)
     local activePredators = PredatorSpawning.getActivePredators(gameState.spawnState)
     for _, predator in ipairs(activePredators) do
       if predator.state == "attacking" then
+        -- Check if predator is within attack range of coop
+        local predatorPos = PredatorAI.getPosition(gameState.predatorAIState, predator.id)
+        if not predatorPos then
+          continue
+        end
+
+        -- Get coop center for this player's section
+        local sectionCenter = MapGeneration.getSectionPosition(playerData.sectionIndex or 1)
+        if not sectionCenter then
+          continue
+        end
+        local coopCenter = PlayerSection.getCoopCenter(sectionCenter)
+        local coopCenterV3 = Vector3.new(coopCenter.x, coopCenter.y, coopCenter.z)
+
+        -- Check distance from predator to coop
+        local distanceToCoop = (predatorPos.currentPosition - coopCenterV3).Magnitude
+        if distanceToCoop > PREDATOR_ATTACK_RANGE_STUDS then
+          continue -- Predator too far to attack chickens
+        end
+
         local predatorConfig = PredatorConfig.get(predator.predatorType)
         if predatorConfig then
           -- Damage all placed chickens (predator attacks the whole coop)

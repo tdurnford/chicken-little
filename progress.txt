@@ -1979,3 +1979,26 @@
   - Can place the same chicken again (it's now in inventory)
 - Format check and build pass
 - Next: Other critical items (#38, #40)
+
+[2026-01-14] Completed Bugfix Work Item #38: Fix Predators Attacking Without Being Near Chickens
+- Root cause: The chicken damage-over-time loop in Main.server.lua (lines 1478-1550) applied damage
+  to all placed chickens when a predator was in "attacking" state, without checking distance.
+- The initial attack (executeAttack) was correctly gated by PredatorAI.hasReachedCoop(), which
+  checks if predator has physically walked to the coop.
+- But the ongoing damage loop had no proximity check - predators could damage chickens from anywhere
+  once they entered "attacking" state.
+- Fix applied to src/server/Main.server.lua:
+  1. Added PREDATOR_ATTACK_RANGE_STUDS = 15 constant (line 55)
+  2. Imported PlayerSection module for coop positioning (line 45)
+  3. Added proximity check in chicken damage loop (lines 1481-1499):
+     - Gets predator position from PredatorAI
+     - Gets coop center from player's section via MapGeneration/PlayerSection
+     - Calculates distance and skips damage if predator is > 15 studs from coop
+- Now predators must be within 15 studs of the coop to deal damage to chickens
+- This means players can push predators away from their coop to protect chickens
+- Acceptance criteria met:
+  - Predators must be within attack range (15 studs) to damage chickens
+  - No damage dealt from distant predators
+  - Predators visibly approach before attacking (existing behavior preserved)
+- Format check and build pass
+- Next: Other critical items (#40)
