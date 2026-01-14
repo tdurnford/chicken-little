@@ -139,9 +139,20 @@ if buyEggFunc then
       return { success = false, message = "Player data not found" }
     end
 
-    local result = Store.buyEgg(playerData, eggType, quantity)
+    -- Use purchaseEggFromInventory to track stock
+    local result = Store.purchaseEggFromInventory(playerData, eggType, quantity)
     if result.success then
       syncPlayerData(player, playerData, true)
+      -- Notify all clients about stock update
+      local storeInventoryUpdatedEvent = RemoteSetup.getEvent("StoreInventoryUpdated")
+      if storeInventoryUpdatedEvent then
+        local newStock = Store.getStock("egg", eggType)
+        storeInventoryUpdatedEvent:FireAllClients({
+          itemType = "egg",
+          itemId = eggType,
+          newStock = newStock,
+        })
+      end
     end
     return result
   end
@@ -157,9 +168,20 @@ if buyChickenFunc then
       return { success = false, message = "Player data not found" }
     end
 
-    local result = Store.buyChicken(playerData, chickenType, quantity)
+    -- Use purchaseChickenFromInventory to track stock
+    local result = Store.purchaseChickenFromInventory(playerData, chickenType, quantity)
     if result.success then
       syncPlayerData(player, playerData, true)
+      -- Notify all clients about stock update
+      local storeInventoryUpdatedEvent = RemoteSetup.getEvent("StoreInventoryUpdated")
+      if storeInventoryUpdatedEvent then
+        local newStock = Store.getStock("chicken", chickenType)
+        storeInventoryUpdatedEvent:FireAllClients({
+          itemType = "chicken",
+          itemId = chickenType,
+          newStock = newStock,
+        })
+      end
     end
     return result
   end

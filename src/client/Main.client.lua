@@ -636,6 +636,24 @@ if storeReplenishedEvent then
   end)
 end
 
+-- StoreInventoryUpdated: Update store UI after individual purchases
+local storeInventoryUpdatedEvent = getEvent("StoreInventoryUpdated")
+if storeInventoryUpdatedEvent then
+  storeInventoryUpdatedEvent.OnClientEvent:Connect(function(data: any)
+    -- Update item stock display after purchase
+    if data.itemType and data.itemId and data.newStock ~= nil then
+      StoreUI.updateItemStock(data.itemType, data.itemId, data.newStock)
+    end
+    -- Refresh full inventory if provided
+    if data.inventory then
+      local Store = require(Shared:WaitForChild("Store"))
+      Store.setStoreInventory(data.inventory)
+      StoreUI.refreshInventory()
+    end
+    print("[Client] Store inventory updated:", data.itemType, data.itemId, "stock:", data.newStock)
+  end)
+end
+
 -- PlayerDamaged: Show damage number and update health bar
 local playerDamagedEvent = getEvent("PlayerDamaged")
 if playerDamagedEvent then

@@ -1543,3 +1543,33 @@
   - Format check passes
   - Build passes
 - Next: Work Items #25 (Wire Store UI), #26 (Wire Combat System), high priority wiring tasks
+
+[2026-01-14] Completed Bugfix Work Item #25: Wire Store UI to Client Main
+- Store UI was already mostly wired, added missing pieces:
+- Added StoreInventoryUpdated event handler on client:
+  - Listens for stock updates after purchases
+  - Calls StoreUI.updateItemStock() to update individual item stock display
+  - Can also refresh full inventory if data.inventory is provided
+- Updated server BuyEgg RemoteFunction handler:
+  - Changed from Store.buyEgg() to Store.purchaseEggFromInventory()
+  - This properly tracks and decrements stock in the store inventory
+  - Fires StoreInventoryUpdated event to all clients with new stock
+- Updated server BuyChicken RemoteFunction handler:
+  - Changed from Store.buyChicken() to Store.purchaseChickenFromInventory()
+  - This properly tracks and decrements stock in the store inventory
+  - Fires StoreInventoryUpdated event to all clients with new stock
+- Existing wiring verified:
+  - StoreUI.create() called on startup
+  - setupStoreInteraction() wires ProximityPrompt to StoreUI.toggle()
+  - StoreUI.onPurchase() callback wired to BuyEgg RemoteFunction
+  - StoreUI.onChickenPurchase() callback wired to BuyChicken RemoteFunction
+  - StoreUI.updateMoney() called when player data syncs
+  - StoreReplenished event refreshes entire inventory
+- Acceptance criteria met:
+  - Store prompt appears near store location (via ProximityPrompt)
+  - E key opens store UI (via ProximityPrompt Triggered)
+  - Purchases work and update inventory (via RemoteFunctions)
+  - Money balance updates correctly (via syncPlayerData)
+  - Stock updates in real-time for all players (via StoreInventoryUpdated)
+- Format check and build pass
+- Next: Work Items #26 (Wire Combat System), #27 (Wire Predator AI)

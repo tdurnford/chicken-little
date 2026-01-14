@@ -687,7 +687,7 @@
       "category": "Integration",
       "title": "Wire Store UI to Client Main",
       "description": "Connect the new StoreUI module to Main.client.lua and handle store interactions.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Require StoreUI module in Main.client.lua",
@@ -708,7 +708,8 @@
         2,
         3
       ],
-      "codeLocation": "src/client/Main.client.lua"
+      "codeLocation": "src/client/Main.client.lua",
+      "status": "completed"
     },
     {
       "id": 26,
