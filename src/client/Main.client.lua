@@ -1169,6 +1169,13 @@ local function findNearbyPlacedChicken(
 
   for _, chicken in ipairs(playerDataCache.placedChickens) do
     if chicken.spotIndex then
+      -- Verify the chicken visual exists before considering it for pickup
+      -- This prevents inconsistent pickup behavior when visuals are out of sync
+      local visualState = ChickenVisuals.get(chicken.id)
+      if not visualState then
+        continue
+      end
+
       local chickenPos = getChickenPosition(chicken.spotIndex)
       if chickenPos then
         local distance = (playerPosition - chickenPos).Magnitude

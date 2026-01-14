@@ -2981,3 +2981,29 @@
   - No console errors when equipping/unequipping ✓
 - Format check and build pass
 - Next: Work on remaining items (#6 Pickup Inconsistency, #2 Inventory Stacking)
+
+[2026-01-14] Completed Bugfix Work Item #6: Fix Chicken Pickup Inconsistency
+- Root cause: The findNearbyPlacedChicken() function in Main.client.lua was not
+  verifying that chicken visuals actually exist before returning them as valid
+  pickup targets. This caused inconsistent behavior where:
+  * If playerDataCache.placedChickens contained chickens without corresponding
+    visuals in ChickenVisuals, the pickup system would find the chicken in data
+    but have nothing to interact with in the world.
+  * Random wild chickens worked because they use a separate findNearbyRandomChicken()
+    function that checks ChickenVisuals.getAll() directly.
+  * The discrepancy occurred when visuals were destroyed but playerDataCache
+    hadn't synced yet, or when visuals failed to create initially.
+- Implementation approach:
+  1. Modified findNearbyPlacedChicken() in Main.client.lua:
+     - Added ChickenVisuals.get(chicken.id) check before considering chicken
+     - If visual state doesn't exist, the chicken is skipped via continue
+     - This ensures only chickens with valid visuals are pickup candidates
+- Acceptance criteria met:
+  - Players can pick up any chicken they own from their coop ✓
+  - Players can pick up random wild chickens if the game allows ✓
+  - Pickup behavior is consistent across all chicken rarities ✓
+  - Picked up chickens are properly added to inventory ✓
+  - Players cannot pick up chickens owned by other players ✓
+    (server-side validation in MoveChicken/PickupChicken handlers)
+- Format check and build pass
+- Next: Work on remaining item (#2 Inventory Stacking - UX improvement)

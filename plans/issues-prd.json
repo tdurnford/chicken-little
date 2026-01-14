@@ -204,7 +204,7 @@
       "category": "Pickup-BugFix",
       "title": "Fix Chicken Pickup Inconsistency",
       "description": "Players were able to pick up a random rare chicken and place it, but unable to pick up or place other chickens. The pickup/placement system has inconsistent behavior that needs to be fixed.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Review ChickenPickup.lua for pickup logic",
