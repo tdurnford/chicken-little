@@ -1,6 +1,6 @@
 --[[
 	StoreUI Module
-	Implements the store UI where players can browse and purchase eggs.
+	Implements the store UI where players can browse and purchase eggs and chickens.
 	Opens when player interacts with the central store.
 ]]
 
@@ -13,6 +13,7 @@ local StoreUI = {}
 -- Get shared modules
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local EggConfig = require(Shared:WaitForChild("EggConfig"))
+local ChickenConfig = require(Shared:WaitForChild("ChickenConfig"))
 local Store = require(Shared:WaitForChild("Store"))
 
 -- Rarity colors for visual distinction
@@ -31,24 +32,39 @@ local localPlayer = Players.LocalPlayer
 -- UI components
 local screenGui: ScreenGui? = nil
 local mainFrame: Frame? = nil
+local tabFrame: Frame? = nil
+local scrollFrame: ScrollingFrame? = nil
 local isOpen = false
+local currentTab: "eggs" | "chickens" = "eggs"
 
 -- Cached player money for UI updates
 local cachedPlayerMoney = 0
 
 -- Callbacks
-local onPurchaseCallback: ((eggType: string, quantity: number) -> any)? = nil
+local onEggPurchaseCallback: ((eggType: string, quantity: number) -> any)? = nil
+local onChickenPurchaseCallback: ((chickenType: string, quantity: number) -> any)? = nil
 
 --[[
-	Creates a single egg item card for the store.
-	@param eggType string - The egg type name
-	@param config table - The egg configuration
+	Creates a single item card for the store (works for both eggs and chickens).
+	@param itemType "egg" | "chicken" - The type of item
+	@param itemId string - The item type identifier
+	@param displayName string - Display name for the item
+	@param rarity string - Rarity tier
+	@param price number - Purchase price
 	@param parent Instance - Parent frame to add card to
 	@param index number - Index for positioning
 ]]
-local function createEggCard(eggType: string, config: any, parent: Frame, index: number): Frame
+local function createItemCard(
+  itemType: "egg" | "chicken",
+  itemId: string,
+  displayName: string,
+  rarity: string,
+  price: number,
+  parent: Frame,
+  index: number
+): Frame
   local card = Instance.new("Frame")
-  card.Name = eggType
+  card.Name = itemId
   card.Size = UDim2.new(1, -10, 0, 80)
   card.Position = UDim2.new(0, 5, 0, (index - 1) * 85 + 5)
   card.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
@@ -64,7 +80,7 @@ local function createEggCard(eggType: string, config: any, parent: Frame, index:
   rarityBar.Name = "RarityBar"
   rarityBar.Size = UDim2.new(0, 4, 1, 0)
   rarityBar.Position = UDim2.new(0, 0, 0, 0)
-  rarityBar.BackgroundColor3 = RARITY_COLORS[config.rarity] or Color3.fromRGB(128, 128, 128)
+  rarityBar.BackgroundColor3 = RARITY_COLORS[rarity] or Color3.fromRGB(128, 128, 128)
   rarityBar.BorderSizePixel = 0
   rarityBar.Parent = card
 
@@ -72,14 +88,24 @@ local function createEggCard(eggType: string, config: any, parent: Frame, index:
   rarityBarCorner.CornerRadius = UDim.new(0, 4)
   rarityBarCorner.Parent = rarityBar
 
-  -- Egg name
+  -- Item icon
+  local iconLabel = Instance.new("TextLabel")
+  iconLabel.Name = "Icon"
+  iconLabel.Size = UDim2.new(0, 30, 0, 30)
+  iconLabel.Position = UDim2.new(0, 12, 0.5, -15)
+  iconLabel.BackgroundTransparency = 1
+  iconLabel.Text = itemType == "egg" and "🥚" or "🐔"
+  iconLabel.TextSize = 24
+  iconLabel.Parent = card
+
+  -- Item name
   local nameLabel = Instance.new("TextLabel")
   nameLabel.Name = "Name"
-  nameLabel.Size = UDim2.new(0.5, -20, 0, 25)
-  nameLabel.Position = UDim2.new(0, 15, 0, 8)
+  nameLabel.Size = UDim2.new(0.4, -20, 0, 25)
+  nameLabel.Position = UDim2.new(0, 45, 0, 8)
   nameLabel.BackgroundTransparency = 1
-  nameLabel.Text = config.displayName
-  nameLabel.TextColor3 = RARITY_COLORS[config.rarity] or Color3.fromRGB(255, 255, 255)
+  nameLabel.Text = displayName
+  nameLabel.TextColor3 = RARITY_COLORS[rarity] or Color3.fromRGB(255, 255, 255)
   nameLabel.TextScaled = true
   nameLabel.Font = Enum.Font.GothamBold
   nameLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -88,10 +114,10 @@ local function createEggCard(eggType: string, config: any, parent: Frame, index:
   -- Rarity label
   local rarityLabel = Instance.new("TextLabel")
   rarityLabel.Name = "Rarity"
-  rarityLabel.Size = UDim2.new(0.5, -20, 0, 18)
-  rarityLabel.Position = UDim2.new(0, 15, 0, 33)
+  rarityLabel.Size = UDim2.new(0.4, -20, 0, 18)
+  rarityLabel.Position = UDim2.new(0, 45, 0, 33)
   rarityLabel.BackgroundTransparency = 1
-  rarityLabel.Text = config.rarity
+  rarityLabel.Text = rarity
   rarityLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
   rarityLabel.TextScaled = true
   rarityLabel.Font = Enum.Font.Gotham
@@ -102,9 +128,9 @@ local function createEggCard(eggType: string, config: any, parent: Frame, index:
   local priceLabel = Instance.new("TextLabel")
   priceLabel.Name = "Price"
   priceLabel.Size = UDim2.new(0, 80, 0, 25)
-  priceLabel.Position = UDim2.new(0.5, 0, 0, 8)
+  priceLabel.Position = UDim2.new(0.5, 0, 0.5, -12)
   priceLabel.BackgroundTransparency = 1
-  priceLabel.Text = "$" .. tostring(config.purchasePrice)
+  priceLabel.Text = "$" .. tostring(price)
   priceLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
   priceLabel.TextScaled = true
   priceLabel.Font = Enum.Font.GothamBold
@@ -129,14 +155,20 @@ local function createEggCard(eggType: string, config: any, parent: Frame, index:
 
   -- Connect buy button
   buyButton.MouseButton1Click:Connect(function()
-    if onPurchaseCallback then
-      onPurchaseCallback(eggType, 1)
+    if itemType == "egg" and onEggPurchaseCallback then
+      onEggPurchaseCallback(itemId, 1)
+    elseif itemType == "chicken" and onChickenPurchaseCallback then
+      onChickenPurchaseCallback(itemId, 1)
     end
   end)
 
+  -- Store price on card for affordability updates
+  card:SetAttribute("Price", price)
+
   -- Update affordability
   local function updateAffordability()
-    local canAfford = cachedPlayerMoney >= config.purchasePrice
+    local cardPrice = card:GetAttribute("Price") or price
+    local canAfford = cachedPlayerMoney >= cardPrice
     if canAfford then
       buyButton.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
       buyButton.TextTransparency = 0
@@ -146,7 +178,7 @@ local function createEggCard(eggType: string, config: any, parent: Frame, index:
     end
   end
 
-  -- Store update function on card for later updates
+  -- Listen for money updates
   card:SetAttribute("UpdateAffordability", true)
   card.AttributeChanged:Connect(function(attributeName)
     if attributeName == "PlayerMoney" then
@@ -156,6 +188,86 @@ local function createEggCard(eggType: string, config: any, parent: Frame, index:
 
   updateAffordability()
   return card
+end
+
+--[[
+	Populates the scroll frame with items based on current tab.
+]]
+local function populateItems()
+  if not scrollFrame then
+    return
+  end
+
+  -- Clear existing items
+  for _, child in ipairs(scrollFrame:GetChildren()) do
+    if child:IsA("Frame") then
+      child:Destroy()
+    end
+  end
+
+  if currentTab == "eggs" then
+    local availableEggs = Store.getAvailableEggs()
+    for index, item in ipairs(availableEggs) do
+      createItemCard("egg", item.id, item.displayName, item.rarity, item.price, scrollFrame, index)
+    end
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableEggs * 85 + 10)
+  else
+    local availableChickens = Store.getAvailableChickens()
+    for index, item in ipairs(availableChickens) do
+      createItemCard(
+        "chicken",
+        item.id,
+        item.displayName,
+        item.rarity,
+        item.price,
+        scrollFrame,
+        index
+      )
+    end
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableChickens * 85 + 10)
+  end
+end
+
+--[[
+	Updates tab button appearance based on current selection.
+]]
+local function updateTabAppearance()
+  if not tabFrame then
+    return
+  end
+
+  local eggsTab = tabFrame:FindFirstChild("EggsTab")
+  local chickensTab = tabFrame:FindFirstChild("ChickensTab")
+
+  if eggsTab and eggsTab:IsA("TextButton") then
+    if currentTab == "eggs" then
+      eggsTab.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
+      eggsTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+    else
+      eggsTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+      eggsTab.TextColor3 = Color3.fromRGB(180, 180, 180)
+    end
+  end
+
+  if chickensTab and chickensTab:IsA("TextButton") then
+    if currentTab == "chickens" then
+      chickensTab.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
+      chickensTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+    else
+      chickensTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+      chickensTab.TextColor3 = Color3.fromRGB(180, 180, 180)
+    end
+  end
+end
+
+--[[
+	Switches to the specified tab.
+	@param tab "eggs" | "chickens" - The tab to switch to
+]]
+local function switchTab(tab: "eggs" | "chickens")
+  currentTab = tab
+  updateTabAppearance()
+  populateItems()
 end
 
 --[[
@@ -176,8 +288,8 @@ function StoreUI.create()
   -- Main frame (centered panel)
   mainFrame = Instance.new("Frame")
   mainFrame.Name = "MainFrame"
-  mainFrame.Size = UDim2.new(0, 400, 0, 500)
-  mainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
+  mainFrame.Size = UDim2.new(0, 420, 0, 550)
+  mainFrame.Position = UDim2.new(0.5, -210, 0.5, -275)
   mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
   mainFrame.BorderSizePixel = 0
   mainFrame.Parent = screenGui
@@ -213,7 +325,7 @@ function StoreUI.create()
   titleLabel.Size = UDim2.new(1, -50, 1, 0)
   titleLabel.Position = UDim2.new(0, 15, 0, 0)
   titleLabel.BackgroundTransparency = 1
-  titleLabel.Text = "🏪 EGG STORE"
+  titleLabel.Text = "🏪 STORE"
   titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
   titleLabel.TextScaled = true
   titleLabel.Font = Enum.Font.GothamBold
@@ -265,27 +377,66 @@ function StoreUI.create()
   moneyLabel.TextXAlignment = Enum.TextXAlignment.Left
   moneyLabel.Parent = moneyFrame
 
+  -- Tab frame for Eggs/Chickens tabs
+  tabFrame = Instance.new("Frame")
+  tabFrame.Name = "TabFrame"
+  tabFrame.Size = UDim2.new(1, -20, 0, 35)
+  tabFrame.Position = UDim2.new(0, 10, 0, 90)
+  tabFrame.BackgroundTransparency = 1
+  tabFrame.Parent = mainFrame
+
+  -- Eggs tab button
+  local eggsTab = Instance.new("TextButton")
+  eggsTab.Name = "EggsTab"
+  eggsTab.Size = UDim2.new(0.5, -5, 1, 0)
+  eggsTab.Position = UDim2.new(0, 0, 0, 0)
+  eggsTab.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
+  eggsTab.Text = "🥚 Eggs"
+  eggsTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+  eggsTab.TextScaled = true
+  eggsTab.Font = Enum.Font.GothamBold
+  eggsTab.Parent = tabFrame
+
+  local eggsTabCorner = Instance.new("UICorner")
+  eggsTabCorner.CornerRadius = UDim.new(0, 6)
+  eggsTabCorner.Parent = eggsTab
+
+  eggsTab.MouseButton1Click:Connect(function()
+    switchTab("eggs")
+  end)
+
+  -- Chickens tab button
+  local chickensTab = Instance.new("TextButton")
+  chickensTab.Name = "ChickensTab"
+  chickensTab.Size = UDim2.new(0.5, -5, 1, 0)
+  chickensTab.Position = UDim2.new(0.5, 5, 0, 0)
+  chickensTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+  chickensTab.Text = "🐔 Chickens"
+  chickensTab.TextColor3 = Color3.fromRGB(180, 180, 180)
+  chickensTab.TextScaled = true
+  chickensTab.Font = Enum.Font.GothamBold
+  chickensTab.Parent = tabFrame
+
+  local chickensTabCorner = Instance.new("UICorner")
+  chickensTabCorner.CornerRadius = UDim.new(0, 6)
+  chickensTabCorner.Parent = chickensTab
+
+  chickensTab.MouseButton1Click:Connect(function()
+    switchTab("chickens")
+  end)
+
   -- Scroll frame for items
-  local scrollFrame = Instance.new("ScrollingFrame")
+  scrollFrame = Instance.new("ScrollingFrame")
   scrollFrame.Name = "ItemsScroll"
-  scrollFrame.Size = UDim2.new(1, -20, 1, -100)
-  scrollFrame.Position = UDim2.new(0, 10, 0, 90)
+  scrollFrame.Size = UDim2.new(1, -20, 1, -145)
+  scrollFrame.Position = UDim2.new(0, 10, 0, 130)
   scrollFrame.BackgroundTransparency = 1
   scrollFrame.ScrollBarThickness = 6
   scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
   scrollFrame.Parent = mainFrame
 
-  -- Add egg items
-  local availableEggs = Store.getAvailableEggs()
-  for index, item in ipairs(availableEggs) do
-    local config = EggConfig.get(item.id)
-    if config then
-      createEggCard(item.id, config, scrollFrame, index)
-    end
-  end
-
-  -- Set canvas size based on number of items
-  scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableEggs * 85 + 10)
+  -- Populate with eggs by default
+  populateItems()
 
   -- Escape key to close
   UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -297,7 +448,7 @@ function StoreUI.create()
     end
   end)
 
-  print("[StoreUI] Created")
+  print("[StoreUI] Created with tabs")
 end
 
 --[[
@@ -364,7 +515,6 @@ function StoreUI.updateMoney(money: number)
   end
 
   -- Update affordability of all cards
-  local scrollFrame = mainFrame:FindFirstChild("ItemsScroll")
   if scrollFrame then
     for _, child in ipairs(scrollFrame:GetChildren()) do
       if child:IsA("Frame") then
@@ -375,11 +525,27 @@ function StoreUI.updateMoney(money: number)
 end
 
 --[[
-	Sets the callback for when a purchase is attempted.
+	Sets the callback for when an egg purchase is attempted.
 	@param callback function - Function to call with (eggType, quantity)
 ]]
 function StoreUI.onPurchase(callback: (eggType: string, quantity: number) -> any)
-  onPurchaseCallback = callback
+  onEggPurchaseCallback = callback
+end
+
+--[[
+	Sets the callback for when a chicken purchase is attempted.
+	@param callback function - Function to call with (chickenType, quantity)
+]]
+function StoreUI.onChickenPurchase(callback: (chickenType: string, quantity: number) -> any)
+  onChickenPurchaseCallback = callback
+end
+
+--[[
+	Returns the current tab.
+	@return "eggs" | "chickens"
+]]
+function StoreUI.getCurrentTab(): string
+  return currentTab
 end
 
 return StoreUI

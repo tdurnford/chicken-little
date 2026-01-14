@@ -359,6 +359,54 @@ test("Store: sell chicken gives money", function()
   return assert_gt(data.money, initialMoney, "Money should increase after selling")
 end)
 
+test("Store: buy chicken succeeds with sufficient money", function()
+  local data = PlayerData.createDefault()
+  data.money = 10000
+  local initialChickens = #data.inventory.chickens
+  local result = Store.buyChicken(data, "BasicChick", 1)
+  local pass, msg = assert_true(result.success, "Buy should succeed: " .. result.message)
+  if not pass then
+    return pass, msg
+  end
+  pass, msg = assert_gt(10000, data.money, "Money should be deducted")
+  if not pass then
+    return pass, msg
+  end
+  return assert_eq(
+    #data.inventory.chickens,
+    initialChickens + 1,
+    "Chicken should be added to inventory"
+  )
+end)
+
+test("Store: buy chicken fails with insufficient money", function()
+  local data = PlayerData.createDefault()
+  data.money = 0
+  local result = Store.buyChicken(data, "BasicChick", 1)
+  return assert_false(result.success, "Buy chicken should fail without money")
+end)
+
+test("Store: buy invalid chicken type fails", function()
+  local data = PlayerData.createDefault()
+  data.money = 10000
+  local result = Store.buyChicken(data, "SuperChicken", 1)
+  return assert_false(result.success, "Invalid chicken type should fail")
+end)
+
+test("Store: getAvailableChickens returns items", function()
+  local chickens = Store.getAvailableChickens()
+  local pass, msg = assert_gt(#chickens, 0, "Should have at least one chicken available")
+  if not pass then
+    return pass, msg
+  end
+  local first = chickens[1]
+  pass, msg = assert_eq(first.itemType, "chicken", "Item type should be chicken")
+  if not pass then
+    return pass, msg
+  end
+  return assert_gt(first.price, 0, "Price should be positive")
+end)
+
 -- ============================================================================
 -- TradeExchange Tests
 -- ============================================================================

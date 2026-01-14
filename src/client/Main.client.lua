@@ -1353,6 +1353,26 @@ StoreUI.onPurchase(function(eggType: string, quantity: number)
   end
 end)
 
+-- Wire up store chicken purchase callback
+StoreUI.onChickenPurchase(function(chickenType: string, quantity: number)
+  local buyChickenFunc = getFunction("BuyChicken")
+  if not buyChickenFunc then
+    warn("[Client] BuyChicken RemoteFunction not found")
+    return
+  end
+
+  local result = buyChickenFunc:InvokeServer(chickenType, quantity)
+  if result then
+    if result.success then
+      SoundEffects.play("purchase")
+      print("[Client] Purchased", quantity, "x", chickenType, ":", result.message)
+    else
+      SoundEffects.play("uiError")
+      warn("[Client] Chicken purchase failed:", result.message)
+    end
+  end
+end)
+
 --[[
   Random Chicken Claim Input Handler
   Handles E key press to claim random chickens in the neutral zone.

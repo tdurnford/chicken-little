@@ -1151,3 +1151,37 @@
   - Placed chickens accumulate normally (spotIndex is set, money accumulates)
 - Format check and build pass
 - Next: Work Items #2, #9 (critical priority items), #3, #10, #14 (high priority items)
+
+[2026-01-14] Completed Bugfix Work Item #2: Create Store UI Component
+- Enhanced StoreUI.lua with tabs for Eggs and Chickens:
+  - Added tabFrame with EggsTab and ChickensTab buttons
+  - Created switchTab() function to toggle between tabs
+  - Updated populateItems() to load items based on current tab
+  - Added tab appearance updates (active tab highlighted green)
+- Created generic createItemCard() function that works for both eggs and chickens:
+  - Displays item icon (🥚 or 🐔), name, rarity, price
+  - Rarity color-coded indicator bar and text
+  - Buy button with affordability checking
+- Added chicken purchase functionality to Store.lua:
+  - Created Store.getChickenPrice() for calculating purchase prices
+  - Created Store.buyChicken() for purchasing chickens directly
+  - Created Store.getAvailableChickens() for listing purchasable chickens
+  - Created Store.canAffordChicken() helper function
+  - Added CHICKEN_PURCHASE_MULTIPLIER constant (2.0x value)
+- Added BuyChicken RemoteFunction:
+  - Added to RemoteSetup.lua REMOTE_FUNCTIONS list
+  - Added server handler in Main.server.lua
+  - Added client handler via StoreUI.onChickenPurchase()
+- Added integration tests for chicken purchases:
+  - Test buyChicken succeeds with sufficient money
+  - Test buyChicken fails with insufficient money
+  - Test buyChicken fails with invalid type
+  - Test getAvailableChickens returns items
+- Acceptance criteria met:
+  - Store UI displays all available items (eggs and chickens via tabs)
+  - Items show name, rarity color, and price
+  - Player can purchase items if they have enough money (affordability check)
+  - UI updates when purchase is made (via PlayerDataChanged sync)
+  - Note: Stock/sold-out feature deferred to Work Item #3 (Store Inventory System)
+- Format check and build pass
+- Next: Work Items #3, #9 (high priority items)

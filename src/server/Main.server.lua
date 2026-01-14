@@ -138,6 +138,24 @@ if buyEggFunc then
   end
 end
 
+-- BuyChicken RemoteFunction handler
+local buyChickenFunc = RemoteSetup.getFunction("BuyChicken")
+if buyChickenFunc then
+  buyChickenFunc.OnServerInvoke = function(player: Player, chickenType: string, quantity: number?)
+    local userId = player.UserId
+    local playerData = DataPersistence.getData(userId)
+    if not playerData then
+      return { success = false, message = "Player data not found" }
+    end
+
+    local result = Store.buyChicken(playerData, chickenType, quantity)
+    if result.success then
+      syncPlayerData(player, playerData, true)
+    end
+    return result
+  end
+end
+
 -- SellChicken RemoteFunction handler
 local sellChickenFunc = RemoteSetup.getFunction("SellChicken")
 if sellChickenFunc then

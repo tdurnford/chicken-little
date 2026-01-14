@@ -44,6 +44,7 @@ local REMOTE_FUNCTIONS = {
   "HatchEgg",
   "CollectMoney",
   "BuyEgg",
+  "BuyChicken",
   "BuyTrap",
   "PlaceTrap",
   "ActivateLock",

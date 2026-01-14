@@ -35,6 +35,9 @@ local CHICKEN_SELL_MULTIPLIER = 0.5
 -- Base price per money-per-second for chicken value calculation
 local CHICKEN_VALUE_PER_MPS = 60
 
+-- Chicken purchase price multiplier (higher than sell value for profit margin)
+local CHICKEN_PURCHASE_MULTIPLIER = 2.0
+
 -- Predator sell prices by tier (placeholder until PredatorConfig exists)
 local PREDATOR_SELL_PRICES: { [string]: number } = {
   Fox = 500,
@@ -159,6 +162,102 @@ function Store.getChickenValue(chickenType: string): number
   end
   -- Value based on money per second * multiplier
   return math.floor(config.moneyPerSecond * CHICKEN_VALUE_PER_MPS * CHICKEN_SELL_MULTIPLIER)
+end
+
+-- Calculate purchase price for a chicken based on its type
+function Store.getChickenPrice(chickenType: string): number
+  local config = ChickenConfig.get(chickenType)
+  if not config then
+    return 0
+  end
+  -- Price based on money per second * multiplier (higher than sell value)
+  return math.floor(config.moneyPerSecond * CHICKEN_VALUE_PER_MPS * CHICKEN_PURCHASE_MULTIPLIER)
+end
+
+-- Buy a chicken from the store
+function Store.buyChicken(
+  playerData: PlayerData.PlayerDataSchema,
+  chickenType: string,
+  quantity: number?
+): TransactionResult
+  local amount = quantity or 1
+
+  -- Validate chicken type
+  local chickenConfig = ChickenConfig.get(chickenType)
+  if not chickenConfig then
+    return {
+      success = false,
+      message = "Invalid chicken type: " .. tostring(chickenType),
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Validate quantity
+  if amount < 1 then
+    return {
+      success = false,
+      message = "Quantity must be at least 1",
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Calculate total cost
+  local unitPrice = Store.getChickenPrice(chickenType)
+  local totalCost = unitPrice * amount
+
+  -- Check if player can afford
+  if playerData.money < totalCost then
+    return {
+      success = false,
+      message = string.format(
+        "Insufficient funds. Need $%d but only have $%d",
+        totalCost,
+        math.floor(playerData.money)
+      ),
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Deduct money
+  playerData.money = playerData.money - totalCost
+
+  -- Add chickens to inventory
+  local firstChickenId: string? = nil
+  for i = 1, amount do
+    local chickenId = PlayerData.generateId()
+    if i == 1 then
+      firstChickenId = chickenId
+    end
+    table.insert(playerData.inventory.chickens, {
+      id = chickenId,
+      chickenType = chickenType,
+      rarity = chickenConfig.rarity,
+      accumulatedMoney = 0,
+    })
+  end
+
+  local message = amount == 1
+      and string.format("Purchased %s for $%d", chickenConfig.displayName, totalCost)
+    or string.format("Purchased %dx %s for $%d", amount, chickenConfig.displayName, totalCost)
+
+  return {
+    success = true,
+    message = message,
+    newBalance = playerData.money,
+    itemId = firstChickenId,
+  }
+end
+
+-- Check if player can afford a chicken
+function Store.canAffordChicken(
+  playerData: PlayerData.PlayerDataSchema,
+  chickenType: string
+): boolean
+  local price = Store.getChickenPrice(chickenType)
+  if price == 0 then
+    return false
+  end
+  return playerData.money >= price
 end
 
 -- Sell an egg from inventory
@@ -327,6 +426,29 @@ function Store.getAvailableEggs(): { StoreItem }
       rarity = config.rarity,
       price = config.purchasePrice,
       sellPrice = config.sellPrice,
+    })
+  end
+  -- Sort by price
+  table.sort(items, function(a, b)
+    return a.price < b.price
+  end)
+  return items
+end
+
+-- Get all available chickens for purchase
+function Store.getAvailableChickens(): { StoreItem }
+  local items = {}
+  for chickenType, config in pairs(ChickenConfig.getAll()) do
+    local price = Store.getChickenPrice(chickenType)
+    local sellPrice = Store.getChickenValue(chickenType)
+    table.insert(items, {
+      itemType = "chicken",
+      id = chickenType,
+      name = config.name,
+      displayName = config.displayName,
+      rarity = config.rarity,
+      price = price,
+      sellPrice = sellPrice,
     })
   end
   -- Sort by price
