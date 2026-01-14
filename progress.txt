@@ -3322,3 +3322,22 @@
   - No box/missing character symbols appear ✓
 - Format check passes, build passes
 - Next: Work on remaining item (Item #2 Remove Balance from Store UI)
+
+[2026-01-14] Completed UI Work Item #2: Remove Balance Display from Store UI
+- Root cause: Store UI showed "Your Balance: $X" which was redundant with main HUD.
+- Fix applied in StoreUI.lua:
+  1. Removed moneyFrame and moneyLabel creation (lines 1057-1079)
+  2. Replaced with restockFrame containing only the restock timer
+  3. Centered the restock timer text in the frame (uses full width)
+  4. Simplified updateMoney() function to only update cachedPlayerMoney and 
+     card affordability indicators (removed money label update code)
+  5. Kept cachedPlayerMoney variable as it's used for affordability checks
+- Files changed:
+  * src/client/StoreUI.lua
+- Acceptance criteria met:
+  - Store UI no longer displays 'Your Balance: $X' text ✓
+  - Restock timer still displays correctly (centered in frame) ✓
+  - Store UI layout looks clean (no gaps or misaligned elements) ✓
+  - Store purchasing still works (validates against cachedPlayerMoney) ✓
+- Format check passes, build passes
+- PRD is now COMPLETE - all 3 work items have been implemented

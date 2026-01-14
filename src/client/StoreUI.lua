@@ -1053,43 +1053,31 @@ function StoreUI.create()
     StoreUI.close()
   end)
 
-  -- Money display
-  local moneyFrame = Instance.new("Frame")
-  moneyFrame.Name = "MoneyFrame"
-  moneyFrame.Size = UDim2.new(1, -20, 0, 35)
-  moneyFrame.Position = UDim2.new(0, 10, 0, 50)
-  moneyFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-  moneyFrame.BorderSizePixel = 0
-  moneyFrame.Parent = mainFrame
+  -- Restock timer frame (balance removed - shown in main HUD)
+  local restockFrame = Instance.new("Frame")
+  restockFrame.Name = "RestockFrame"
+  restockFrame.Size = UDim2.new(1, -20, 0, 35)
+  restockFrame.Position = UDim2.new(0, 10, 0, 50)
+  restockFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+  restockFrame.BorderSizePixel = 0
+  restockFrame.Parent = mainFrame
 
-  local moneyCorner = Instance.new("UICorner")
-  moneyCorner.CornerRadius = UDim.new(0, 6)
-  moneyCorner.Parent = moneyFrame
-
-  local moneyLabel = Instance.new("TextLabel")
-  moneyLabel.Name = "MoneyLabel"
-  moneyLabel.Size = UDim2.new(0.55, -10, 1, 0)
-  moneyLabel.Position = UDim2.new(0, 5, 0, 0)
-  moneyLabel.BackgroundTransparency = 1
-  moneyLabel.Text = "Your Balance: $0"
-  moneyLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-  moneyLabel.TextScaled = true
-  moneyLabel.Font = Enum.Font.GothamBold
-  moneyLabel.TextXAlignment = Enum.TextXAlignment.Left
-  moneyLabel.Parent = moneyFrame
+  local restockCorner = Instance.new("UICorner")
+  restockCorner.CornerRadius = UDim.new(0, 6)
+  restockCorner.Parent = restockFrame
 
   -- Restock timer display
   restockTimerLabel = Instance.new("TextLabel")
   restockTimerLabel.Name = "RestockTimerLabel"
-  restockTimerLabel.Size = UDim2.new(0.45, -5, 1, 0)
-  restockTimerLabel.Position = UDim2.new(0.55, 0, 0, 0)
+  restockTimerLabel.Size = UDim2.new(1, -10, 1, 0)
+  restockTimerLabel.Position = UDim2.new(0, 5, 0, 0)
   restockTimerLabel.BackgroundTransparency = 1
   restockTimerLabel.Text = "Restocks in 0:00"
   restockTimerLabel.TextColor3 = Color3.fromRGB(150, 200, 255)
   restockTimerLabel.TextScaled = true
   restockTimerLabel.Font = Enum.Font.Gotham
-  restockTimerLabel.TextXAlignment = Enum.TextXAlignment.Right
-  restockTimerLabel.Parent = moneyFrame
+  restockTimerLabel.TextXAlignment = Enum.TextXAlignment.Center
+  restockTimerLabel.Parent = restockFrame
 
   -- Initialize timer display
   updateRestockTimer()
@@ -1412,7 +1400,7 @@ function StoreUI.isOpen(): boolean
 end
 
 --[[
-	Updates the player money display and affordability indicators.
+	Updates the cached player money and affordability indicators.
 	@param money number - The player's current money balance
 ]]
 function StoreUI.updateMoney(money: number)
@@ -1420,15 +1408,6 @@ function StoreUI.updateMoney(money: number)
 
   if not mainFrame then
     return
-  end
-
-  -- Update money label
-  local moneyFrame = mainFrame:FindFirstChild("MoneyFrame")
-  if moneyFrame then
-    local moneyLabel = moneyFrame:FindFirstChild("MoneyLabel")
-    if moneyLabel and moneyLabel:IsA("TextLabel") then
-      moneyLabel.Text = "Your Balance: $" .. tostring(math.floor(money))
-    end
   end
 
   -- Update affordability of all cards
