@@ -2640,3 +2640,58 @@
   - Placement limits enforced (can't buy more than maxPlacement per trap type) ✓
 - Format check and build pass
 - Next: Other medium priority items (#18, #19, #49)
+
+[2026-01-14] Completed Bugfix Work Item #18: Create Weapons Store
+- Root cause: Players had no way to purchase better weapons beyond the starter baseball bat.
+  This limited combat options and monetization opportunities.
+- Implementation approach:
+  1. Created WeaponConfig.lua defining 3 weapons:
+     - BaseballBat: Free starter (1 DMG, 0.5s cooldown, Basic tier)
+     - Sword: $5000 or R$75 (2 DMG, 0.4s cooldown, Standard tier)
+     - Axe: $25000 or R$250 (4 DMG, 0.8s cooldown, Premium tier)
+  2. Extended PlayerData.lua:
+     - Added ownedWeapons field (list of weapon type strings)
+     - Added equippedWeapon field (currently equipped weapon)
+     - All players start with BaseballBat owned and equipped
+     - Added validation for weapon fields
+     - Added helper functions: ownsWeapon(), addWeapon(), equipWeapon(), getEquippedWeapon(), getOwnedWeapons()
+  3. Extended Store.lua:
+     - Added WeaponConfig import
+     - Created WeaponItem type definition
+     - Implemented getAvailableWeapons() returning sorted weapon list
+     - Implemented buyWeapon() for cash purchases with ownership check
+     - Implemented buyWeaponWithRobux() for Robux purchases
+     - Implemented sellWeapon() for selling non-starter weapons
+     - Added canAffordWeapon() and getWeaponRobuxPrice() helpers
+  4. Extended StoreUI.lua with Weapons tab:
+     - Added WeaponConfig import
+     - Extended currentTab type to include "weapons"
+     - Added cachedOwnedWeapons for tracking owned weapons
+     - Created WEAPON_TIER_COLORS (Basic=gray, Standard=blue, Premium=gold)
+     - Implemented createWeaponCard() with:
+       * Tier color bar, weapon icon and name
+       * Tier and damage display
+       * Description text
+       * Owned status indicator (✓ OWNED or ★ STARTER)
+       * Cash and Robux buy buttons (hidden for owned/starter weapons)
+     - Added weapons case to populateItems()
+     - Added WeaponsTab button handling to updateTabAppearance()
+     - Changed tab layout from 4 tabs (25%) to 5 tabs (20% each) with emoji-only labels
+     - Added StoreUI.onWeaponPurchase() callback setter
+     - Added StoreUI.updateOwnedWeapons() for owned weapons state
+  5. Extended RemoteSetup.lua with BuyWeapon function
+  6. Extended Main.server.lua:
+     - Added WeaponConfig import
+     - Implemented BuyWeapon RemoteFunction handler
+     - Extended BuyItemWithRobux to handle "weapon" itemType
+  7. Extended Main.client.lua:
+     - Wired StoreUI.onWeaponPurchase callback to BuyWeapon remote
+     - Added updateOwnedWeapons call in PlayerDataChanged handler
+- Acceptance criteria met:
+  - Weapons store exists as "Weapons" tab with sword icon ✓
+  - Store sells bat (free), sword ($5000/R$75), and axe ($25000/R$250) ✓
+  - Each weapon has different damage and speed stats ✓
+  - Players can buy weapons and see owned status ✓
+  - Robux option available for non-starter weapons ✓
+- Format check and build pass
+- Next: Other medium priority items (#19, #49)

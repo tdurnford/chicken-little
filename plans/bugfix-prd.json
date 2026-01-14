@@ -503,7 +503,7 @@
       "category": "Store-Weapons",
       "title": "Create Weapons Store",
       "description": "Add a weapons store where players can buy better weapons: bat, sword, and axe.",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Create WeaponConfig.lua with weapon definitions",
@@ -527,7 +527,8 @@
       "dependencies": [
         8
       ],
-      "codeLocation": "src/shared/WeaponConfig.lua"
+      "codeLocation": "src/shared/WeaponConfig.lua",
+      "status": "completed"
     },
     {
       "id": 19,

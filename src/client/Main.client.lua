@@ -304,6 +304,11 @@ if playerDataChangedEvent then
       StoreUI.updateActivePowerUps(activePowerUpsMap)
     end
 
+    -- Update owned weapons in StoreUI
+    if data.ownedWeapons then
+      StoreUI.updateOwnedWeapons(data.ownedWeapons)
+    end
+
     -- Build section visuals if we have a section index but haven't built yet
     if data.sectionIndex and not SectionVisuals.getCurrentSection() then
       local occupiedSpots: { [number]: boolean } = {}
@@ -1918,6 +1923,27 @@ StoreUI.onTrapPurchase(function(trapType: string)
     else
       SoundEffects.play("uiError")
       warn("[Client] Trap purchase failed:", result.message)
+    end
+  end
+end)
+
+StoreUI.onWeaponPurchase(function(weaponType: string)
+  local buyWeaponFunc = getFunction("BuyWeapon")
+  if not buyWeaponFunc then
+    warn("[Client] BuyWeapon RemoteFunction not found")
+    return
+  end
+
+  local result = buyWeaponFunc:InvokeServer(weaponType)
+  if result then
+    if result.success then
+      SoundEffects.play("purchase")
+      print("[Client] Weapon purchased:", result.message)
+      -- Refresh store UI
+      StoreUI.refreshInventory()
+    else
+      SoundEffects.play("uiError")
+      warn("[Client] Weapon purchase failed:", result.message)
     end
   end
 end)

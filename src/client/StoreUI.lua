@@ -18,6 +18,7 @@ local ChickenConfig = require(Shared:WaitForChild("ChickenConfig"))
 local Store = require(Shared:WaitForChild("Store"))
 local PowerUpConfig = require(Shared:WaitForChild("PowerUpConfig"))
 local TrapConfig = require(Shared:WaitForChild("TrapConfig"))
+local WeaponConfig = require(Shared:WaitForChild("WeaponConfig"))
 
 -- Rarity colors for visual distinction
 local RARITY_COLORS: { [string]: Color3 } = {
@@ -42,7 +43,7 @@ local confirmationFrame: Frame? = nil
 local restockTimerLabel: TextLabel? = nil
 local timerConnection: RBXScriptConnection? = nil
 local isOpen = false
-local currentTab: "eggs" | "chickens" | "supplies" | "powerups" = "eggs"
+local currentTab: "eggs" | "chickens" | "supplies" | "powerups" | "weapons" = "eggs"
 
 -- Cached player money for UI updates
 local cachedPlayerMoney = 0
@@ -60,6 +61,10 @@ local onReplenishCallback: (() -> any)? = nil
 local onRobuxPurchaseCallback: ((itemType: string, itemId: string) -> any)? = nil
 local onPowerUpPurchaseCallback: ((powerUpId: string) -> any)? = nil
 local onTrapPurchaseCallback: ((trapType: string) -> any)? = nil
+local onWeaponPurchaseCallback: ((weaponType: string) -> any)? = nil
+
+-- Cached owned weapons for display
+local cachedOwnedWeapons: { [string]: boolean }? = nil
 
 --[[
 	Formats seconds into M:SS format for the restock timer.
@@ -621,6 +626,187 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   return card
 end
 
+-- Weapon tier colors for UI display
+local WEAPON_TIER_COLORS: { [string]: Color3 } = {
+  Basic = Color3.fromRGB(180, 180, 180),
+  Standard = Color3.fromRGB(50, 150, 255),
+  Premium = Color3.fromRGB(255, 165, 0),
+}
+
+--[[
+	Creates a weapon card for the store.
+	@param weaponItem Store.WeaponItem - The weapon item data
+	@param parent Frame - Parent frame to add card to
+	@param index number - Index for positioning
+]]
+local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, index: number): Frame
+  local card = Instance.new("Frame")
+  card.Name = weaponItem.id
+  card.Size = UDim2.new(1, -10, 0, 90)
+  card.Position = UDim2.new(0, 5, 0, (index - 1) * 95 + 5)
+  card.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+  card.BorderSizePixel = 0
+  card.Parent = parent
+
+  local cardCorner = Instance.new("UICorner")
+  cardCorner.CornerRadius = UDim.new(0, 8)
+  cardCorner.Parent = card
+
+  -- Tier color bar on left
+  local tierBar = Instance.new("Frame")
+  tierBar.Name = "TierBar"
+  tierBar.Size = UDim2.new(0, 4, 1, -8)
+  tierBar.Position = UDim2.new(0, 4, 0, 4)
+  tierBar.BackgroundColor3 = WEAPON_TIER_COLORS[weaponItem.tier] or Color3.fromRGB(128, 128, 128)
+  tierBar.BorderSizePixel = 0
+  tierBar.Parent = card
+
+  local tierBarCorner = Instance.new("UICorner")
+  tierBarCorner.CornerRadius = UDim.new(0, 2)
+  tierBarCorner.Parent = tierBar
+
+  -- Weapon icon
+  local iconLabel = Instance.new("TextLabel")
+  iconLabel.Name = "Icon"
+  iconLabel.Size = UDim2.new(0, 30, 0, 30)
+  iconLabel.Position = UDim2.new(0, 15, 0, 10)
+  iconLabel.BackgroundTransparency = 1
+  iconLabel.Text = weaponItem.icon
+  iconLabel.TextSize = 24
+  iconLabel.Parent = card
+
+  -- Weapon name
+  local nameLabel = Instance.new("TextLabel")
+  nameLabel.Name = "Name"
+  nameLabel.Size = UDim2.new(0.4, -20, 0, 22)
+  nameLabel.Position = UDim2.new(0, 50, 0, 8)
+  nameLabel.BackgroundTransparency = 1
+  nameLabel.Text = weaponItem.displayName
+  nameLabel.TextColor3 = WEAPON_TIER_COLORS[weaponItem.tier] or Color3.fromRGB(255, 255, 255)
+  nameLabel.TextScaled = true
+  nameLabel.Font = Enum.Font.GothamBold
+  nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+  nameLabel.Parent = card
+
+  -- Tier and damage label
+  local tierLabel = Instance.new("TextLabel")
+  tierLabel.Name = "Tier"
+  tierLabel.Size = UDim2.new(0.4, -20, 0, 16)
+  tierLabel.Position = UDim2.new(0, 50, 0, 30)
+  tierLabel.BackgroundTransparency = 1
+  tierLabel.Text = weaponItem.tier .. " • " .. weaponItem.damage .. " DMG"
+  tierLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+  tierLabel.TextScaled = true
+  tierLabel.Font = Enum.Font.Gotham
+  tierLabel.TextXAlignment = Enum.TextXAlignment.Left
+  tierLabel.Parent = card
+
+  -- Description
+  local descLabel = Instance.new("TextLabel")
+  descLabel.Name = "Description"
+  descLabel.Size = UDim2.new(0.5, -20, 0, 16)
+  descLabel.Position = UDim2.new(0, 50, 0, 48)
+  descLabel.BackgroundTransparency = 1
+  descLabel.Text = weaponItem.description
+  descLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+  descLabel.TextScaled = true
+  descLabel.Font = Enum.Font.Gotham
+  descLabel.TextXAlignment = Enum.TextXAlignment.Left
+  descLabel.Parent = card
+
+  -- Owned status
+  local isOwned = cachedOwnedWeapons and cachedOwnedWeapons[weaponItem.id]
+  local isFree = weaponItem.price == 0
+
+  local statusLabel = Instance.new("TextLabel")
+  statusLabel.Name = "Status"
+  statusLabel.Size = UDim2.new(0.4, 0, 0, 16)
+  statusLabel.Position = UDim2.new(0, 50, 0, 66)
+  statusLabel.BackgroundTransparency = 1
+  if isOwned then
+    statusLabel.Text = "✓ OWNED"
+    statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+  elseif isFree then
+    statusLabel.Text = "★ STARTER"
+    statusLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+  else
+    statusLabel.Text = ""
+  end
+  statusLabel.TextScaled = true
+  statusLabel.Font = Enum.Font.GothamBold
+  statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+  statusLabel.Parent = card
+
+  -- Buy button (cash) - only show for non-free, non-owned weapons
+  if not isOwned and not isFree then
+    local canAfford = cachedPlayerMoney >= weaponItem.price
+    local buyButton = Instance.new("TextButton")
+    buyButton.Name = "BuyButton"
+    buyButton.Size = UDim2.new(0, 70, 0, 28)
+    buyButton.Position = UDim2.new(1, -155, 0.5, -14)
+    buyButton.BackgroundColor3 = canAfford and Color3.fromRGB(50, 180, 50)
+      or Color3.fromRGB(80, 80, 80)
+    buyButton.Text = "$" .. tostring(weaponItem.price)
+    buyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    buyButton.TextTransparency = canAfford and 0 or 0.5
+    buyButton.TextScaled = true
+    buyButton.Font = Enum.Font.GothamBold
+    buyButton.Parent = card
+
+    local buyButtonCorner = Instance.new("UICorner")
+    buyButtonCorner.CornerRadius = UDim.new(0, 6)
+    buyButtonCorner.Parent = buyButton
+
+    buyButton.MouseButton1Click:Connect(function()
+      if onWeaponPurchaseCallback and canAfford then
+        onWeaponPurchaseCallback(weaponItem.id)
+      end
+    end)
+
+    -- Robux button
+    local robuxButton = Instance.new("TextButton")
+    robuxButton.Name = "RobuxButton"
+    robuxButton.Size = UDim2.new(0, 70, 0, 28)
+    robuxButton.Position = UDim2.new(1, -80, 0.5, -14)
+    robuxButton.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+    robuxButton.Text = ""
+    robuxButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    robuxButton.Parent = card
+
+    local robuxButtonCorner = Instance.new("UICorner")
+    robuxButtonCorner.CornerRadius = UDim.new(0, 6)
+    robuxButtonCorner.Parent = robuxButton
+
+    local robuxIcon = Instance.new("ImageLabel")
+    robuxIcon.Name = "RobuxIcon"
+    robuxIcon.Size = UDim2.new(0, 14, 0, 14)
+    robuxIcon.Position = UDim2.new(0, 6, 0.5, -7)
+    robuxIcon.BackgroundTransparency = 1
+    robuxIcon.Image = "rbxassetid://4915439044"
+    robuxIcon.Parent = robuxButton
+
+    local robuxPriceLabel = Instance.new("TextLabel")
+    robuxPriceLabel.Name = "Price"
+    robuxPriceLabel.Size = UDim2.new(1, -24, 1, 0)
+    robuxPriceLabel.Position = UDim2.new(0, 22, 0, 0)
+    robuxPriceLabel.BackgroundTransparency = 1
+    robuxPriceLabel.Text = tostring(weaponItem.robuxPrice)
+    robuxPriceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    robuxPriceLabel.TextScaled = true
+    robuxPriceLabel.Font = Enum.Font.GothamBold
+    robuxPriceLabel.TextXAlignment = Enum.TextXAlignment.Left
+    robuxPriceLabel.Parent = robuxButton
+
+    robuxButton.MouseButton1Click:Connect(function()
+      if onRobuxPurchaseCallback then
+        onRobuxPurchaseCallback("weapon", weaponItem.id)
+      end
+    end)
+  end
+
+  return card
+end
+
 --[[
 	Populates the scroll frame with items based on current tab.
 ]]
@@ -680,6 +866,12 @@ local function populateItems()
       createPowerUpCard(config.id, config, scrollFrame, index)
     end
     scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #powerUps * 95 + 10)
+  elseif currentTab == "weapons" then
+    local availableWeapons = Store.getAvailableWeapons()
+    for index, item in ipairs(availableWeapons) do
+      createWeaponCard(item, scrollFrame, index)
+    end
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableWeapons * 95 + 10)
   end
 end
 
@@ -695,6 +887,7 @@ local function updateTabAppearance()
   local chickensTab = tabFrame:FindFirstChild("ChickensTab")
   local suppliesTab = tabFrame:FindFirstChild("SuppliesTab")
   local powerupsTab = tabFrame:FindFirstChild("PowerupsTab")
+  local weaponsTab = tabFrame:FindFirstChild("WeaponsTab")
 
   if eggsTab and eggsTab:IsA("TextButton") then
     if currentTab == "eggs" then
@@ -735,13 +928,23 @@ local function updateTabAppearance()
       powerupsTab.TextColor3 = Color3.fromRGB(180, 180, 180)
     end
   end
+
+  if weaponsTab and weaponsTab:IsA("TextButton") then
+    if currentTab == "weapons" then
+      weaponsTab.BackgroundColor3 = Color3.fromRGB(220, 50, 50) -- Red for weapons
+      weaponsTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+    else
+      weaponsTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+      weaponsTab.TextColor3 = Color3.fromRGB(180, 180, 180)
+    end
+  end
 end
 
 --[[
 	Switches to the specified tab.
-	@param tab "eggs" | "chickens" | "supplies" | "powerups" - The tab to switch to
+	@param tab "eggs" | "chickens" | "supplies" | "powerups" | "weapons" - The tab to switch to
 ]]
-local function switchTab(tab: "eggs" | "chickens" | "supplies" | "powerups")
+local function switchTab(tab: "eggs" | "chickens" | "supplies" | "powerups" | "weapons")
   currentTab = tab
   updateTabAppearance()
   populateItems()
@@ -870,7 +1073,7 @@ function StoreUI.create()
   -- Initialize timer display
   updateRestockTimer()
 
-  -- Tab frame for Eggs/Chickens/Supplies/Power-ups tabs
+  -- Tab frame for Eggs/Chickens/Supplies/Power-ups/Weapons tabs
   tabFrame = Instance.new("Frame")
   tabFrame.Name = "TabFrame"
   tabFrame.Size = UDim2.new(1, -20, 0, 35)
@@ -881,10 +1084,10 @@ function StoreUI.create()
   -- Eggs tab button
   local eggsTab = Instance.new("TextButton")
   eggsTab.Name = "EggsTab"
-  eggsTab.Size = UDim2.new(0.25, -3, 1, 0)
+  eggsTab.Size = UDim2.new(0.2, -2, 1, 0)
   eggsTab.Position = UDim2.new(0, 0, 0, 0)
   eggsTab.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
-  eggsTab.Text = "🥚 Eggs"
+  eggsTab.Text = "🥚"
   eggsTab.TextColor3 = Color3.fromRGB(255, 255, 255)
   eggsTab.TextScaled = true
   eggsTab.Font = Enum.Font.GothamBold
@@ -901,8 +1104,8 @@ function StoreUI.create()
   -- Chickens tab button
   local chickensTab = Instance.new("TextButton")
   chickensTab.Name = "ChickensTab"
-  chickensTab.Size = UDim2.new(0.25, -3, 1, 0)
-  chickensTab.Position = UDim2.new(0.25, 1, 0, 0)
+  chickensTab.Size = UDim2.new(0.2, -2, 1, 0)
+  chickensTab.Position = UDim2.new(0.2, 1, 0, 0)
   chickensTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
   chickensTab.Text = "🐔"
   chickensTab.TextColor3 = Color3.fromRGB(180, 180, 180)
@@ -921,10 +1124,10 @@ function StoreUI.create()
   -- Supplies tab button
   local suppliesTab = Instance.new("TextButton")
   suppliesTab.Name = "SuppliesTab"
-  suppliesTab.Size = UDim2.new(0.25, -3, 1, 0)
-  suppliesTab.Position = UDim2.new(0.5, 2, 0, 0)
+  suppliesTab.Size = UDim2.new(0.2, -2, 1, 0)
+  suppliesTab.Position = UDim2.new(0.4, 2, 0, 0)
   suppliesTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-  suppliesTab.Text = "🪤 Traps"
+  suppliesTab.Text = "🪤"
   suppliesTab.TextColor3 = Color3.fromRGB(180, 180, 180)
   suppliesTab.TextScaled = true
   suppliesTab.Font = Enum.Font.GothamBold
@@ -941,8 +1144,8 @@ function StoreUI.create()
   -- Power-ups tab button
   local powerupsTab = Instance.new("TextButton")
   powerupsTab.Name = "PowerupsTab"
-  powerupsTab.Size = UDim2.new(0.25, -2, 1, 0)
-  powerupsTab.Position = UDim2.new(0.75, 3, 0, 0)
+  powerupsTab.Size = UDim2.new(0.2, -2, 1, 0)
+  powerupsTab.Position = UDim2.new(0.6, 3, 0, 0)
   powerupsTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
   powerupsTab.Text = "⚡"
   powerupsTab.TextColor3 = Color3.fromRGB(180, 180, 180)
@@ -956,6 +1159,26 @@ function StoreUI.create()
 
   powerupsTab.MouseButton1Click:Connect(function()
     switchTab("powerups")
+  end)
+
+  -- Weapons tab button
+  local weaponsTab = Instance.new("TextButton")
+  weaponsTab.Name = "WeaponsTab"
+  weaponsTab.Size = UDim2.new(0.2, -2, 1, 0)
+  weaponsTab.Position = UDim2.new(0.8, 4, 0, 0)
+  weaponsTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+  weaponsTab.Text = "⚔️"
+  weaponsTab.TextColor3 = Color3.fromRGB(180, 180, 180)
+  weaponsTab.TextScaled = true
+  weaponsTab.Font = Enum.Font.GothamBold
+  weaponsTab.Parent = tabFrame
+
+  local weaponsTabCorner = Instance.new("UICorner")
+  weaponsTabCorner.CornerRadius = UDim.new(0, 6)
+  weaponsTabCorner.Parent = weaponsTab
+
+  weaponsTab.MouseButton1Click:Connect(function()
+    switchTab("weapons")
   end)
 
   -- Scroll frame for items
@@ -1246,8 +1469,16 @@ function StoreUI.onTrapPurchase(callback: (trapType: string) -> any)
 end
 
 --[[
+	Registers a callback for weapon purchase events.
+	@param callback function(weaponType: string) - Called when player clicks buy on a weapon
+]]
+function StoreUI.onWeaponPurchase(callback: (weaponType: string) -> any)
+  onWeaponPurchaseCallback = callback
+end
+
+--[[
 	Returns the current tab.
-	@return "eggs" | "chickens" | "supplies" | "powerups"
+	@return "eggs" | "chickens" | "supplies" | "powerups" | "weapons"
 ]]
 function StoreUI.getCurrentTab(): string
   return currentTab
@@ -1259,6 +1490,23 @@ end
 ]]
 function StoreUI.refreshInventory()
   if isOpen then
+    populateItems()
+  end
+end
+
+--[[
+	Updates the cached owned weapons for display.
+	@param ownedWeapons table - List of weapon type strings the player owns
+]]
+function StoreUI.updateOwnedWeapons(ownedWeapons: { string }?)
+  cachedOwnedWeapons = {}
+  if ownedWeapons then
+    for _, weaponType in ipairs(ownedWeapons) do
+      cachedOwnedWeapons[weaponType] = true
+    end
+  end
+  -- Refresh display if on weapons tab
+  if isOpen and currentTab == "weapons" then
     populateItems()
   end
 end

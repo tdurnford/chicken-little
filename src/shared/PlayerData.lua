@@ -56,6 +56,8 @@ export type PlayerDataSchema = {
   traps: { TrapData },
   upgrades: UpgradeData,
   activePowerUps: { ActivePowerUp }?, -- Currently active power-ups
+  ownedWeapons: { string }?, -- List of weapon types the player owns
+  equippedWeapon: string?, -- Currently equipped weapon type
   sectionIndex: number?,
   lastLogoutTime: number?,
   totalPlayTime: number,
@@ -92,6 +94,8 @@ function PlayerData.createDefault(): PlayerDataSchema
       predatorResistance = 0,
     },
     activePowerUps = {},
+    ownedWeapons = { "BaseballBat" }, -- Everyone starts with a baseball bat
+    equippedWeapon = "BaseballBat", -- Bat is equipped by default
     sectionIndex = nil,
     lastLogoutTime = nil,
     totalPlayTime = 0,
@@ -305,6 +309,23 @@ function PlayerData.validate(data: any): boolean
     end
   end
 
+  -- Validate ownedWeapons (optional field)
+  if data.ownedWeapons ~= nil then
+    if type(data.ownedWeapons) ~= "table" then
+      return false
+    end
+    for _, weapon in ipairs(data.ownedWeapons) do
+      if type(weapon) ~= "string" or weapon == "" then
+        return false
+      end
+    end
+  end
+
+  -- Validate equippedWeapon (optional string)
+  if data.equippedWeapon ~= nil and type(data.equippedWeapon) ~= "string" then
+    return false
+  end
+
   -- Validate optional fields
   if data.sectionIndex ~= nil and not validateNumber(data.sectionIndex, 1, 12) then
     return false
@@ -453,6 +474,54 @@ function PlayerData.cleanupExpiredPowerUps(data: PlayerDataSchema)
   end
 
   data.activePowerUps = activePowerUps
+end
+
+-- Check if a player owns a specific weapon
+function PlayerData.ownsWeapon(data: PlayerDataSchema, weaponType: string): boolean
+  if not data.ownedWeapons then
+    return false
+  end
+  for _, weapon in ipairs(data.ownedWeapons) do
+    if weapon == weaponType then
+      return true
+    end
+  end
+  return false
+end
+
+-- Add a weapon to player's owned weapons
+function PlayerData.addWeapon(data: PlayerDataSchema, weaponType: string): boolean
+  -- Initialize if nil
+  if not data.ownedWeapons then
+    data.ownedWeapons = {}
+  end
+
+  -- Check if already owned
+  if PlayerData.ownsWeapon(data, weaponType) then
+    return false -- Already owns this weapon
+  end
+
+  table.insert(data.ownedWeapons, weaponType)
+  return true
+end
+
+-- Equip a weapon (must own it first)
+function PlayerData.equipWeapon(data: PlayerDataSchema, weaponType: string): boolean
+  if not PlayerData.ownsWeapon(data, weaponType) then
+    return false -- Can't equip what you don't own
+  end
+  data.equippedWeapon = weaponType
+  return true
+end
+
+-- Get the currently equipped weapon (defaults to BaseballBat)
+function PlayerData.getEquippedWeapon(data: PlayerDataSchema): string
+  return data.equippedWeapon or "BaseballBat"
+end
+
+-- Get all owned weapons
+function PlayerData.getOwnedWeapons(data: PlayerDataSchema): { string }
+  return data.ownedWeapons or { "BaseballBat" }
 end
 
 return PlayerData

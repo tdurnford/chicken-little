@@ -11,6 +11,7 @@ local PlayerData = require(script.Parent.PlayerData)
 local EggConfig = require(script.Parent.EggConfig)
 local ChickenConfig = require(script.Parent.ChickenConfig)
 local TrapConfig = require(script.Parent.TrapConfig)
+local WeaponConfig = require(script.Parent.WeaponConfig)
 
 -- Type definitions
 export type TransactionResult = {
@@ -1258,6 +1259,231 @@ function Store.canAffordTrap(playerData: PlayerData.PlayerDataSchema, trapType: 
     return false
   end
   return playerData.money >= trapConfig.price
+end
+
+-- Weapon store type definition
+export type WeaponItem = {
+  itemType: "weapon",
+  id: string,
+  name: string,
+  displayName: string,
+  tier: string,
+  price: number,
+  robuxPrice: number,
+  sellPrice: number,
+  damage: number,
+  description: string,
+  icon: string,
+}
+
+-- Get all available weapons for purchase
+function Store.getAvailableWeapons(): { WeaponItem }
+  local weapons = {}
+  for weaponType, config in pairs(WeaponConfig.getAll()) do
+    table.insert(weapons, {
+      itemType = "weapon",
+      id = weaponType,
+      name = config.name,
+      displayName = config.displayName,
+      tier = config.tier,
+      price = config.price,
+      robuxPrice = config.robuxPrice,
+      sellPrice = config.sellPrice,
+      damage = config.damage,
+      description = config.description,
+      icon = config.icon,
+    })
+  end
+  -- Sort by tier level then price
+  table.sort(weapons, function(a, b)
+    local aTier = WeaponConfig.getTierLevel(a.tier :: WeaponConfig.WeaponTier)
+    local bTier = WeaponConfig.getTierLevel(b.tier :: WeaponConfig.WeaponTier)
+    if aTier ~= bTier then
+      return aTier < bTier
+    end
+    return a.price < b.price
+  end)
+  return weapons
+end
+
+-- Buy a weapon from the store
+function Store.buyWeapon(
+  playerData: PlayerData.PlayerDataSchema,
+  weaponType: string
+): TransactionResult
+  -- Validate weapon type
+  local weaponConfig = WeaponConfig.get(weaponType)
+  if not weaponConfig then
+    return {
+      success = false,
+      message = "Invalid weapon type: " .. tostring(weaponType),
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Check if player already owns this weapon
+  if PlayerData.ownsWeapon(playerData, weaponType) then
+    return {
+      success = false,
+      message = "You already own " .. weaponConfig.displayName,
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Check if it's a free weapon (starter)
+  if weaponConfig.price == 0 then
+    return {
+      success = false,
+      message = weaponConfig.displayName .. " is a free starter weapon",
+      newBalance = playerData.money,
+    }
+  end
+
+  local price = weaponConfig.price
+
+  -- Check if player can afford
+  if playerData.money < price then
+    return {
+      success = false,
+      message = string.format(
+        "Insufficient funds. Need $%d but only have $%d",
+        price,
+        math.floor(playerData.money)
+      ),
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Deduct money
+  playerData.money = playerData.money - price
+
+  -- Add weapon to player's owned weapons
+  PlayerData.addWeapon(playerData, weaponType)
+
+  return {
+    success = true,
+    message = string.format("Purchased %s for $%d", weaponConfig.displayName, price),
+    newBalance = playerData.money,
+    itemId = weaponType,
+  }
+end
+
+-- Buy a weapon with Robux (bypasses money check)
+function Store.buyWeaponWithRobux(
+  playerData: PlayerData.PlayerDataSchema,
+  weaponType: string
+): TransactionResult
+  -- Validate weapon type
+  local weaponConfig = WeaponConfig.get(weaponType)
+  if not weaponConfig then
+    return {
+      success = false,
+      message = "Invalid weapon type: " .. tostring(weaponType),
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Check if player already owns this weapon
+  if PlayerData.ownsWeapon(playerData, weaponType) then
+    return {
+      success = false,
+      message = "You already own " .. weaponConfig.displayName,
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Check if it's a free weapon
+  if weaponConfig.robuxPrice == 0 then
+    return {
+      success = false,
+      message = weaponConfig.displayName .. " is a free starter weapon",
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Add weapon to player's owned weapons (Robux already deducted by platform)
+  PlayerData.addWeapon(playerData, weaponType)
+
+  return {
+    success = true,
+    message = string.format("Purchased %s with Robux", weaponConfig.displayName),
+    newBalance = playerData.money,
+    itemId = weaponType,
+  }
+end
+
+-- Sell a weapon (only non-starter weapons can be sold)
+function Store.sellWeapon(
+  playerData: PlayerData.PlayerDataSchema,
+  weaponType: string
+): TransactionResult
+  -- Validate weapon type
+  local weaponConfig = WeaponConfig.get(weaponType)
+  if not weaponConfig then
+    return {
+      success = false,
+      message = "Invalid weapon type: " .. tostring(weaponType),
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Check if player owns this weapon
+  if not PlayerData.ownsWeapon(playerData, weaponType) then
+    return {
+      success = false,
+      message = "You don't own " .. weaponConfig.displayName,
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Can't sell free starter weapons
+  if weaponConfig.sellPrice == 0 then
+    return {
+      success = false,
+      message = "Cannot sell starter weapon",
+      newBalance = playerData.money,
+    }
+  end
+
+  -- If this is the equipped weapon, switch to baseball bat
+  if playerData.equippedWeapon == weaponType then
+    playerData.equippedWeapon = "BaseballBat"
+  end
+
+  -- Remove weapon from owned weapons
+  if playerData.ownedWeapons then
+    for i, weapon in ipairs(playerData.ownedWeapons) do
+      if weapon == weaponType then
+        table.remove(playerData.ownedWeapons, i)
+        break
+      end
+    end
+  end
+
+  -- Add money
+  playerData.money = playerData.money + weaponConfig.sellPrice
+
+  return {
+    success = true,
+    message = string.format("Sold %s for $%d", weaponConfig.displayName, weaponConfig.sellPrice),
+    newBalance = playerData.money,
+    itemId = weaponType,
+  }
+end
+
+-- Check if player can afford a weapon
+function Store.canAffordWeapon(playerData: PlayerData.PlayerDataSchema, weaponType: string): boolean
+  local weaponConfig = WeaponConfig.get(weaponType)
+  if not weaponConfig then
+    return false
+  end
+  return playerData.money >= weaponConfig.price
+end
+
+-- Get weapon Robux price
+function Store.getWeaponRobuxPrice(weaponType: string): number
+  local config = WeaponConfig.get(weaponType)
+  return config and config.robuxPrice or 0
 end
 
 return Store
