@@ -396,6 +396,27 @@ if sellPredatorFunc then
   end
 end
 
+-- Create game state for a player
+local function createPlayerGameState(): PlayerGameState
+  return {
+    spawnState = PredatorSpawning.createSpawnState(),
+    lockState = CageLocking.createLockState(),
+    stealState = ChickenStealing.createStealState(),
+    batState = BaseballBat.createBatState(),
+    combatState = CombatHealth.createState(),
+    chickenHealthRegistry = ChickenHealth.createRegistry(),
+    predatorAIState = PredatorAI.createState(),
+  }
+end
+
+-- Get or create player game state
+local function getPlayerGameState(userId: number): PlayerGameState
+  if not playerGameStates[userId] then
+    playerGameStates[userId] = createPlayerGameState()
+  end
+  return playerGameStates[userId]
+end
+
 --[[
   Chicken Placement Server Handlers
   Handles PlaceChicken and PickupChicken RemoteFunctions.
@@ -1375,27 +1396,6 @@ print("[Main.server] ChickenAI initialized")
 -- Initialize store inventory
 local storeInventory = Store.initializeInventory()
 print("[Main.server] Store inventory initialized")
-
--- Create game state for a player
-local function createPlayerGameState(): PlayerGameState
-  return {
-    spawnState = PredatorSpawning.createSpawnState(),
-    lockState = CageLocking.createLockState(),
-    stealState = ChickenStealing.createStealState(),
-    batState = BaseballBat.createBatState(),
-    combatState = CombatHealth.createState(),
-    chickenHealthRegistry = ChickenHealth.createRegistry(),
-    predatorAIState = PredatorAI.createState(),
-  }
-end
-
--- Get or create player game state
-local function getPlayerGameState(userId: number): PlayerGameState
-  if not playerGameStates[userId] then
-    playerGameStates[userId] = createPlayerGameState()
-  end
-  return playerGameStates[userId]
-end
 
 -- Teleport a character to a spawn point position
 local function teleportCharacterToSpawnPoint(
