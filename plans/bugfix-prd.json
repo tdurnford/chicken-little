@@ -1304,7 +1304,8 @@
       "category": "Predator-AI",
       "title": "Improve Predator Movement and Chicken Detection",
       "description": "Predators go to center and stay there. They should move around more and leave if there are no chickens.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
       "priority": "high",
       "steps": [
         "Add patrol behavior when predator reaches coop area",

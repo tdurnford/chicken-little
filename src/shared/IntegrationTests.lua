@@ -1819,6 +1819,82 @@ test("PredatorAI: getSummary includes roaming and stalking counts", function()
   return assert_eq(summary.totalActive, 2, "Should have 2 total active")
 end)
 
+test("PredatorAI: patrol behavior activates when attacking", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  -- Move predator to reach coop
+  for _ = 1, 100 do
+    PredatorAI.updatePosition(state, "pred1", 1, os.clock())
+  end
+  local position = PredatorAI.getPosition(state, "pred1")
+  local pass, msg =
+    assert_eq(position.behaviorState, "attacking", "Should be attacking after reaching coop")
+  if not pass then
+    return pass, msg
+  end
+  -- Update position should create patrol target
+  PredatorAI.updatePosition(state, "pred1", 0.1, os.clock())
+  position = PredatorAI.getPosition(state, "pred1")
+  return assert_not_nil(position.coopCenter, "Should have coop center stored")
+end)
+
+test("PredatorAI: updateChickenPresence tracks no chickens time", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  -- Move predator to reach coop
+  for _ = 1, 100 do
+    PredatorAI.updatePosition(state, "pred1", 1, os.clock())
+  end
+  local currentTime = os.time()
+  -- First call with no chickens should not trigger despawn
+  local shouldDespawn = PredatorAI.updateChickenPresence(state, "pred1", false, currentTime)
+  local pass, msg = assert_eq(shouldDespawn, false, "Should not despawn immediately")
+  if not pass then
+    return pass, msg
+  end
+  -- Check that noChickensTime was set
+  local position = PredatorAI.getPosition(state, "pred1")
+  return assert_not_nil(position.noChickensTime, "Should have noChickensTime set")
+end)
+
+test("PredatorAI: shouldDespawn returns true after enough time without chickens", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  -- Move predator to reach coop
+  for _ = 1, 100 do
+    PredatorAI.updatePosition(state, "pred1", 1, os.clock())
+  end
+  local startTime = os.time()
+  -- First update with no chickens
+  PredatorAI.updateChickenPresence(state, "pred1", false, startTime)
+  -- Should not despawn yet
+  local shouldDespawn = PredatorAI.shouldDespawn(state, "pred1", startTime)
+  local pass, msg = assert_eq(shouldDespawn, false, "Should not despawn immediately")
+  if not pass then
+    return pass, msg
+  end
+  -- After 10 seconds (longer than despawn time of 8), should despawn
+  shouldDespawn = PredatorAI.shouldDespawn(state, "pred1", startTime + 10)
+  return assert_eq(shouldDespawn, true, "Should despawn after 10 seconds without chickens")
+end)
+
+test("PredatorAI: setTargetChicken stores target spot", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  local spotPos = Vector3.new(5, 1, 5)
+  local success = PredatorAI.setTargetChicken(state, "pred1", 3, spotPos)
+  local pass, msg = assert_eq(success, true, "setTargetChicken should succeed")
+  if not pass then
+    return pass, msg
+  end
+  local targetSpot = PredatorAI.getTargetChicken(state, "pred1")
+  return assert_eq(targetSpot, 3, "Should have target chicken spot 3")
+end)
+
 -- ============================================================================
 -- ChickenAI Tests
 -- ============================================================================

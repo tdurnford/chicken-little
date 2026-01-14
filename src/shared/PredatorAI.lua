@@ -33,6 +33,12 @@ export type PredatorPosition = {
   targetSectionIndex: number?,
   detectionRange: number,
   isStalking: boolean,
+  -- Patrol behavior fields (when attacking)
+  patrolTarget: Vector3?,
+  patrolCooldown: number?, -- Time until next patrol movement
+  targetChickenSpot: number?, -- Spot index of chicken being targeted
+  noChickensTime: number?, -- Time when no chickens was first detected
+  coopCenter: Vector3?, -- Center of the coop for patrol bounds
 }
 
 export type PredatorAIState = {
@@ -52,6 +58,14 @@ local ROAM_DURATION_MAX = 30 -- maximum seconds to roam
 local DETECTION_RANGE_BASE = 40 -- base detection range for finding sections
 local ROAM_TARGET_DISTANCE = 15 -- how far to roam to new target
 local STALKING_DURATION = 5 -- seconds to stalk before approaching
+
+-- Patrol behavior constants (when attacking at coop)
+local PATROL_RADIUS = 10 -- studs - how far predator wanders from coop center
+local PATROL_COOLDOWN_MIN = 1.5 -- minimum seconds between patrol movements
+local PATROL_COOLDOWN_MAX = 3.5 -- maximum seconds between patrol movements
+local PATROL_SPEED_MULTIPLIER = 0.5 -- slower while patrolling
+local CHICKEN_APPROACH_SPEED = 0.7 -- speed when approaching a specific chicken
+local NO_CHICKENS_DESPAWN_TIME = 8 -- seconds to wait before despawning if no chickens
 
 -- Walk speed multipliers by threat level (more dangerous = faster)
 local THREAT_SPEED_MULTIPLIER: { [string]: number } = {
@@ -195,6 +209,18 @@ function PredatorAI.generateRoamPosition(
   targetZ = math.clamp(targetZ, center.Z - halfSize, center.Z + halfSize)
 
   return Vector3.new(targetX, center.Y + 1, targetZ)
+end
+
+-- Generate a random patrol position within the coop area
+function PredatorAI.generatePatrolPosition(coopCenter: Vector3, currentPosition: Vector3): Vector3
+  -- Generate random offset from coop center
+  local angle = math.random() * math.pi * 2
+  local distance = math.random() * PATROL_RADIUS
+
+  local targetX = coopCenter.X + math.cos(angle) * distance
+  local targetZ = coopCenter.Z + math.sin(angle) * distance
+
+  return Vector3.new(targetX, coopCenter.Y + 1, targetZ)
 end
 
 -- Register a roaming predator (spawns in neutral zone, roams before selecting target)
@@ -511,7 +537,8 @@ end
 function PredatorAI.updatePosition(
   aiState: PredatorAIState,
   predatorId: string,
-  deltaTime: number
+  deltaTime: number,
+  currentTime: number?
 ): PredatorPosition?
   local position = aiState.positions[predatorId]
   if not position then
@@ -528,12 +555,61 @@ function PredatorAI.updatePosition(
     return position
   end
 
-  -- Already at target
-  if position.hasReachedTarget then
+  -- Handle attacking/patrol behavior
+  if position.hasReachedTarget and position.behaviorState == "attacking" then
+    -- Store coop center if not already stored
+    if not position.coopCenter then
+      position.coopCenter = position.targetPosition
+    end
+
+    -- Update patrol behavior
+    local time = currentTime or os.clock()
+
+    -- Check if we need to generate new patrol target
+    if
+      not position.patrolTarget or (position.patrolCooldown and time >= position.patrolCooldown)
+    then
+      position.patrolTarget =
+        PredatorAI.generatePatrolPosition(position.coopCenter, position.currentPosition)
+      -- Set next patrol cooldown
+      local cooldownDuration = PATROL_COOLDOWN_MIN
+        + math.random() * (PATROL_COOLDOWN_MAX - PATROL_COOLDOWN_MIN)
+      position.patrolCooldown = time + cooldownDuration
+    end
+
+    -- Move towards patrol target (or targeted chicken spot)
+    local moveTarget = position.patrolTarget
+    if moveTarget then
+      local toTarget = moveTarget - position.currentPosition
+      local distance = toTarget.Magnitude
+
+      if distance > ARRIVAL_THRESHOLD then
+        local direction = toTarget.Unit
+        local patrolSpeed = PredatorAI.getWalkSpeed(position.predatorType) * PATROL_SPEED_MULTIPLIER
+        -- Use faster speed if approaching a chicken
+        if position.targetChickenSpot then
+          patrolSpeed = PredatorAI.getWalkSpeed(position.predatorType) * CHICKEN_APPROACH_SPEED
+        end
+        local moveDistance = patrolSpeed * deltaTime
+
+        if moveDistance >= distance then
+          position.currentPosition = moveTarget
+          -- Reached patrol target, clear it to generate a new one next update
+          position.patrolTarget = nil
+        else
+          position.currentPosition = position.currentPosition + direction * moveDistance
+        end
+        position.facingDirection = direction
+      else
+        -- Reached patrol target
+        position.patrolTarget = nil
+      end
+    end
+
     return position
   end
 
-  -- Calculate movement
+  -- Calculate movement towards coop (approaching state)
   local toTarget = position.targetPosition - position.currentPosition
   local distance = toTarget.Magnitude
 
@@ -542,6 +618,7 @@ function PredatorAI.updatePosition(
     position.hasReachedTarget = true
     position.currentPosition = position.targetPosition
     position.behaviorState = "attacking"
+    position.coopCenter = position.targetPosition
     return position
   end
 
@@ -554,6 +631,7 @@ function PredatorAI.updatePosition(
     position.currentPosition = position.targetPosition
     position.hasReachedTarget = true
     position.behaviorState = "attacking"
+    position.coopCenter = position.targetPosition
   else
     position.currentPosition = position.currentPosition + direction * moveDistance
   end
@@ -566,12 +644,14 @@ end
 -- Update all predator positions
 function PredatorAI.updateAll(
   aiState: PredatorAIState,
-  deltaTime: number
+  deltaTime: number,
+  currentTime: number?
 ): { [string]: PredatorPosition }
   local updated = {}
+  local time = currentTime or os.clock()
 
   for predatorId, _ in pairs(aiState.positions) do
-    local position = PredatorAI.updatePosition(aiState, predatorId, deltaTime)
+    local position = PredatorAI.updatePosition(aiState, predatorId, deltaTime, time)
     if position then
       updated[predatorId] = position
     end
@@ -776,6 +856,117 @@ function PredatorAI.getNeutralZone(aiState: PredatorAIState): { center: Vector3,
     center = aiState.neutralZoneCenter,
     size = aiState.neutralZoneSize,
   }
+end
+
+-- Set a target chicken spot for the predator to approach
+function PredatorAI.setTargetChicken(
+  aiState: PredatorAIState,
+  predatorId: string,
+  spotIndex: number?,
+  spotPosition: Vector3?
+): boolean
+  local position = aiState.positions[predatorId]
+  if not position then
+    return false
+  end
+
+  position.targetChickenSpot = spotIndex
+
+  -- If a position is provided, set it as the patrol target for approach
+  if spotPosition and spotIndex then
+    position.patrolTarget = spotPosition
+    position.patrolCooldown = nil -- Clear cooldown to allow immediate approach
+  else
+    position.patrolTarget = nil
+  end
+
+  return true
+end
+
+-- Get the target chicken spot for a predator
+function PredatorAI.getTargetChicken(aiState: PredatorAIState, predatorId: string): number?
+  local position = aiState.positions[predatorId]
+  if not position then
+    return nil
+  end
+  return position.targetChickenSpot
+end
+
+-- Update chicken presence for predator (call when attacking)
+-- Returns true if predator should despawn due to no chickens for too long
+function PredatorAI.updateChickenPresence(
+  aiState: PredatorAIState,
+  predatorId: string,
+  hasChickens: boolean,
+  currentTime: number
+): boolean
+  local position = aiState.positions[predatorId]
+  if not position then
+    return false
+  end
+
+  -- Only track for predators that are attacking
+  if position.behaviorState ~= "attacking" then
+    position.noChickensTime = nil
+    return false
+  end
+
+  if hasChickens then
+    -- Reset the no-chickens timer
+    position.noChickensTime = nil
+    return false
+  else
+    -- No chickens present
+    if not position.noChickensTime then
+      -- First time noticing no chickens
+      position.noChickensTime = currentTime
+      return false
+    else
+      -- Check if enough time has passed
+      local elapsed = currentTime - position.noChickensTime
+      return elapsed >= NO_CHICKENS_DESPAWN_TIME
+    end
+  end
+end
+
+-- Check if predator should despawn due to no chickens
+function PredatorAI.shouldDespawn(
+  aiState: PredatorAIState,
+  predatorId: string,
+  currentTime: number
+): boolean
+  local position = aiState.positions[predatorId]
+  if not position then
+    return false
+  end
+
+  -- Only consider despawning for attacking predators
+  if position.behaviorState ~= "attacking" then
+    return false
+  end
+
+  if not position.noChickensTime then
+    return false
+  end
+
+  local elapsed = currentTime - position.noChickensTime
+  return elapsed >= NO_CHICKENS_DESPAWN_TIME
+end
+
+-- Get despawn time remaining (for UI/debugging)
+function PredatorAI.getDespawnTimeRemaining(
+  aiState: PredatorAIState,
+  predatorId: string,
+  currentTime: number
+): number?
+  local position = aiState.positions[predatorId]
+  if not position or not position.noChickensTime then
+    return nil
+  end
+
+  local elapsed = currentTime - position.noChickensTime
+  local remaining = NO_CHICKENS_DESPAWN_TIME - elapsed
+  return math.max(0, remaining)
 end
 
 return PredatorAI

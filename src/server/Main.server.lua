@@ -1420,7 +1420,7 @@ local function runGameLoop(deltaTime: number)
 
     -- 4.5. Update predator AI positions (walking towards coop)
     local predatorPositionUpdatedEvent = RemoteSetup.getEvent("PredatorPositionUpdated")
-    local updatedPositions = PredatorAI.updateAll(gameState.predatorAIState, deltaTime)
+    local updatedPositions = PredatorAI.updateAll(gameState.predatorAIState, deltaTime, currentTime)
     for predatorId, position in pairs(updatedPositions) do
       -- Send position update to ALL clients so all players can see predator movement
       if predatorPositionUpdatedEvent then
@@ -1653,6 +1653,59 @@ local function runGameLoop(deltaTime: number)
                     spotIndex = chicken.spotIndex,
                     killedBy = predator.predatorType,
                   })
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+
+    -- 6.75. Update predator chicken targeting and despawn logic
+    for _, predator in ipairs(activePredators) do
+      if predator.state == "attacking" then
+        local hasChickens = #playerData.placedChickens > 0
+
+        -- Update chicken presence and check if predator should despawn
+        local shouldDespawn = PredatorAI.updateChickenPresence(
+          gameState.predatorAIState,
+          predator.id,
+          hasChickens,
+          currentTime
+        )
+
+        if shouldDespawn then
+          -- Predator leaves because no chickens to attack
+          PredatorSpawning.updatePredatorState(gameState.spawnState, predator.id, "escaped")
+          PredatorAI.unregisterPredator(gameState.predatorAIState, predator.id)
+
+          -- Notify clients that predator is leaving
+          local predatorDefeatedEvent = RemoteSetup.getEvent("PredatorDefeated")
+          if predatorDefeatedEvent then
+            predatorDefeatedEvent:FireAllClients(predator.id, false) -- false = not defeated, just left
+          end
+        elseif hasChickens then
+          -- Target a random chicken for visual approach
+          local currentTarget = PredatorAI.getTargetChicken(gameState.predatorAIState, predator.id)
+          local shouldRetarget = currentTarget == nil or math.random() < 0.02 -- 2% chance to switch targets per frame
+
+          if shouldRetarget then
+            -- Pick a random chicken to approach
+            local targetChicken =
+              playerData.placedChickens[math.random(1, #playerData.placedChickens)]
+            if targetChicken and targetChicken.spotIndex then
+              local sectionCenter = MapGeneration.getSectionPosition(playerData.sectionIndex or 1)
+              if sectionCenter then
+                local spotPos =
+                  PlayerSection.getSpotPosition(targetChicken.spotIndex, sectionCenter)
+                if spotPos then
+                  local spotPosV3 = Vector3.new(spotPos.x, spotPos.y + 1, spotPos.z)
+                  PredatorAI.setTargetChicken(
+                    gameState.predatorAIState,
+                    predator.id,
+                    targetChicken.spotIndex,
+                    spotPosV3
+                  )
                 end
               end
             end

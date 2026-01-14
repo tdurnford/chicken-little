@@ -2247,3 +2247,58 @@
   - No overlapping spawn positions (8 stud minimum distance enforced)
 - Format check and build pass
 - Next: Other high priority items (#39, #51, #55)
+
+[2026-01-14] Completed Bugfix Work Item #51: Improve Predator Movement and Chicken Detection
+- Root cause: Predators would walk to coop center and stay completely still in "attacking" state.
+  This looked unnatural and predators wouldn't leave even if no chickens existed.
+- Implementation approach:
+  1. Added patrol behavior constants to PredatorAI.lua:
+     - PATROL_RADIUS = 10 studs (wandering range around coop)
+     - PATROL_COOLDOWN_MIN/MAX = 1.5-3.5 seconds (time between patrol movements)
+     - PATROL_SPEED_MULTIPLIER = 0.5 (slower while patrolling)
+     - CHICKEN_APPROACH_SPEED = 0.7 (faster when targeting a chicken)
+     - NO_CHICKENS_DESPAWN_TIME = 8 seconds
+  2. Extended PredatorPosition type with new fields:
+     - patrolTarget: Vector3? (current patrol destination)
+     - patrolCooldown: number? (time until next movement)
+     - targetChickenSpot: number? (spot index of targeted chicken)
+     - noChickensTime: number? (when no chickens was first detected)
+     - coopCenter: Vector3? (stored coop center for patrol bounds)
+  3. Added generatePatrolPosition() function to generate random positions within patrol radius
+  4. Modified updatePosition() to handle patrol behavior when attacking:
+     - Generates random patrol targets within coop area
+     - Moves between patrol points at reduced speed
+     - Faster movement when approaching targeted chicken
+  5. Added new functions:
+     - setTargetChicken()/getTargetChicken() for chicken targeting
+     - updateChickenPresence() to track no-chicken duration
+     - shouldDespawn() to check if predator should leave
+     - getDespawnTimeRemaining() for UI/debugging
+  6. Updated updateAll() to pass currentTime for patrol timing
+  7. Added server-side logic in Main.server.lua (section 6.75):
+     - Calls updateChickenPresence() for attacking predators
+     - Despawns predators after 8 seconds with no chickens
+     - Randomly targets chickens (2% chance per frame to switch targets)
+     - Gets chicken spot positions and sets them as patrol targets
+- Server changes (src/server/Main.server.lua):
+  - Added section 6.75 for chicken presence tracking and despawn logic
+  - Predators now target specific chicken spots visually
+  - Fires PredatorDefeated event when predator leaves due to no chickens
+- Shared changes (src/shared/PredatorAI.lua):
+  - Extended PredatorPosition type with patrol fields
+  - Added patrol behavior constants
+  - Added generatePatrolPosition() helper
+  - Enhanced updatePosition() with patrol movement logic
+  - Added 5 new functions for chicken targeting and despawn
+- Added 5 integration tests:
+  - "PredatorAI: patrol behavior activates when attacking"
+  - "PredatorAI: updateChickenPresence tracks no chickens time"
+  - "PredatorAI: shouldDespawn returns true after enough time without chickens"
+  - "PredatorAI: setTargetChicken stores target spot"
+- Acceptance criteria met:
+  - Predators patrol around coop area instead of standing still
+  - Predators leave if no chickens are present (after 8 seconds)
+  - Movement looks more natural and threatening (random patrol + chicken targeting)
+  - Predators target specific chickens visually (approach individual spots)
+- Format check and build pass
+- Next: Other high priority items (#39, #53, #55)
