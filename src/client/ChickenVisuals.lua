@@ -649,6 +649,37 @@ function ChickenVisuals.setPosition(chickenId: string, position: Vector3): boole
   return true
 end
 
+-- Update position with facing direction and animation state (for wandering chickens)
+function ChickenVisuals.updatePosition(
+  chickenId: string,
+  position: Vector3,
+  facingDirection: Vector3,
+  isIdle: boolean
+): boolean
+  local state = activeChickens[chickenId]
+  if not state or not state.model then
+    return false
+  end
+
+  state.position = position
+
+  -- Update animation state based on movement
+  if isIdle then
+    state.currentAnimation = "idle"
+  else
+    state.currentAnimation = "walking"
+  end
+
+  -- Create CFrame with rotation toward facing direction
+  local lookAt = position + facingDirection
+  local cframe = CFrame.lookAt(position, lookAt)
+
+  -- Apply position and rotation
+  state.model:SetPrimaryPartCFrame(cframe)
+
+  return true
+end
+
 -- Configure visual settings
 function ChickenVisuals.configure(config: VisualConfig)
   currentConfig = config

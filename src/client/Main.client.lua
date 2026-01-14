@@ -628,6 +628,20 @@ if randomChickenClaimedEvent then
   end)
 end
 
+-- RandomChickenPositionUpdated: Update random chicken position for walking animation
+local randomChickenPositionEvent = getEvent("RandomChickenPositionUpdated")
+if randomChickenPositionEvent then
+  randomChickenPositionEvent.OnClientEvent:Connect(function(data: any)
+    if not data or not data.id then
+      return
+    end
+    local position = Vector3.new(data.position.x, data.position.y, data.position.z)
+    local facingDirection =
+      Vector3.new(data.facingDirection.x, data.facingDirection.y, data.facingDirection.z)
+    ChickenVisuals.updatePosition(data.id, position, facingDirection, data.isIdle)
+  end)
+end
+
 -- AlertTriggered: Play alert sound
 local alertTriggeredEvent = getEvent("AlertTriggered")
 if alertTriggeredEvent then

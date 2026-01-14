@@ -21,6 +21,7 @@ local BaseballBat = require(Shared:WaitForChild("BaseballBat"))
 local CombatHealth = require(Shared:WaitForChild("CombatHealth"))
 local ChickenHealth = require(Shared:WaitForChild("ChickenHealth"))
 local PredatorAI = require(Shared:WaitForChild("PredatorAI"))
+local ChickenAI = require(Shared:WaitForChild("ChickenAI"))
 
 -- Store module for buy/sell operations
 local Store = require(Shared:WaitForChild("Store"))
@@ -68,6 +69,9 @@ local playerSpawnPoints: { [number]: { x: number, y: number, z: number } } = {}
 
 -- Global random chicken spawn state (shared event for all players)
 local randomChickenSpawnState: RandomChickenSpawn.SpawnEventState
+
+-- Global chicken AI state for tracking random chicken movement
+local chickenAIState: ChickenAI.ChickenAIState
 
 -- Initialize all RemoteEvents and RemoteFunctions
 local remotes = RemoteSetup.initialize()
@@ -608,6 +612,9 @@ if claimRandomChickenFunc then
     )
 
     if result.success and result.chicken then
+      -- Remove chicken from AI tracking
+      ChickenAI.unregisterChicken(chickenAIState, result.chicken.id)
+
       -- Add chicken to player's inventory
       local chickenData: PlayerData.ChickenData = {
         id = PlayerData.generateId(),
@@ -667,6 +674,19 @@ print(string.format("[Main.server] MapGeneration initialized: %d sections create
 local initialTime = os.time()
 randomChickenSpawnState = RandomChickenSpawn.createSpawnState(nil, initialTime)
 print("[Main.server] RandomChickenSpawn initialized")
+
+-- Initialize global chicken AI state for random chicken movement
+-- Use the neutral zone center and size from the spawn config
+local spawnConfig = randomChickenSpawnState.config
+chickenAIState = ChickenAI.createState(
+  Vector3.new(
+    spawnConfig.neutralZoneCenter.x,
+    spawnConfig.neutralZoneCenter.y,
+    spawnConfig.neutralZoneCenter.z
+  ),
+  spawnConfig.neutralZoneSize
+)
+print("[Main.server] ChickenAI initialized")
 
 -- Initialize store inventory
 local storeInventory = Store.initializeInventory()
@@ -885,6 +905,17 @@ local function runGameLoop(deltaTime: number)
   -- Update random chicken spawn events (global)
   local spawnResult = RandomChickenSpawn.update(randomChickenSpawnState, currentTime)
   if spawnResult and spawnResult.success and spawnResult.chicken then
+    -- Register chicken with AI for movement tracking
+    local chicken = spawnResult.chicken
+    local spawnPos = Vector3.new(chicken.position.x, chicken.position.y, chicken.position.z)
+    ChickenAI.registerChicken(
+      chickenAIState,
+      chicken.id,
+      chicken.chickenType,
+      spawnPos,
+      currentTime
+    )
+
     -- Notify all players of the spawn event
     local randomChickenSpawnedEvent = RemoteSetup.getEvent("RandomChickenSpawned")
     if randomChickenSpawnedEvent then
@@ -896,6 +927,41 @@ local function runGameLoop(deltaTime: number)
         })
       end
     end
+  end
+
+  -- Update random chicken AI positions (global) and sync to clients
+  local chickenPositions = ChickenAI.updateAll(chickenAIState, deltaTime, currentTime)
+  local activeChicken = RandomChickenSpawn.getCurrentChicken(randomChickenSpawnState)
+  if activeChicken and chickenPositions[activeChicken.id] then
+    local chickenPos = chickenPositions[activeChicken.id]
+    -- Update the spawn state position so claiming uses the current position
+    activeChicken.position = {
+      x = chickenPos.currentPosition.X,
+      y = chickenPos.currentPosition.Y,
+      z = chickenPos.currentPosition.Z,
+    }
+
+    -- Sync position to all clients
+    local positionUpdateEvent = RemoteSetup.getEvent("RandomChickenPositionUpdated")
+    if positionUpdateEvent then
+      for _, player in ipairs(players) do
+        positionUpdateEvent:FireClient(player, {
+          id = activeChicken.id,
+          position = activeChicken.position,
+          facingDirection = {
+            x = chickenPos.facingDirection.X,
+            y = chickenPos.facingDirection.Y,
+            z = chickenPos.facingDirection.Z,
+          },
+          isIdle = chickenPos.isIdle,
+        })
+      end
+    end
+  end
+
+  -- Clean up chicken AI when chicken despawns
+  if not activeChicken and ChickenAI.getActiveCount(chickenAIState) > 0 then
+    ChickenAI.reset(chickenAIState)
   end
 
   -- Update each player's game systems

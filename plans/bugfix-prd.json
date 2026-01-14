@@ -607,7 +607,8 @@
       "category": "RandomChicken-Movement",
       "title": "Implement Random Chicken Walking Behavior",
       "description": "Random chickens in the arena should walk around instead of staying static.",
-      "completed": false,
+      "completed": true,
+      "status": "complete",
       "priority": "medium",
       "steps": [
         "Create ChickenAI.lua shared module for movement logic",

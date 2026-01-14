@@ -1630,3 +1630,35 @@
 - Format check and build pass
 - Also marked Work Item #27 (Wire Predator AI to Server Main) as complete - was already implemented
 - Next: Medium priority items (#5 Robux replenish, #6 Robux purchase, #22 Chicken AI, etc.)
+
+[2026-01-14] Completed Bugfix Work Item #22: Implement Random Chicken Walking Behavior
+- Created ChickenAI.lua shared module for random chicken movement logic:
+  - Wandering behavior with random direction changes
+  - Walk speed based on chicken rarity (rarer = slightly faster)
+  - Chickens stay within neutral zone boundaries (clampToBounds)
+  - Idle state tracking between walking periods (40% chance to idle on direction change)
+  - Random target generation within neutral zone
+- Module tracks chicken positions with ChickenPosition type:
+  - currentPosition, targetPosition, walkSpeed, facingDirection
+  - isIdle, idleEndTime, nextDirectionChangeTime
+- Added global chickenAIState to Main.server.lua:
+  - Registers chickens when RandomChickenSpawn spawns them
+  - Updates all chicken positions in game loop with deltaTime
+  - Updates spawn state position so claiming uses current position
+  - Syncs positions to all clients via RandomChickenPositionUpdated event
+  - Cleans up chicken from AI when claimed or despawned
+- Added RandomChickenPositionUpdated RemoteEvent to RemoteSetup.lua
+- Updated Main.client.lua to handle position updates:
+  - Calls ChickenVisuals.updatePosition() with position, facingDirection, isIdle
+- Added ChickenVisuals.updatePosition() function:
+  - Updates chicken model position and rotation
+  - Sets animation state based on idle/walking
+  - Uses CFrame.lookAt for smooth facing direction
+- Acceptance criteria met:
+  - Random chickens move around the arena (updateAll runs in game loop)
+  - Chickens change direction periodically (nextDirectionChangeTime)
+  - Chickens stay within the neutral zone (clampToBounds)
+  - Movement looks natural with animations (idle/walking states)
+  - All clients see same chicken positions (server-synced via RemoteEvent)
+- Format check and build pass
+- Next: Work Item #28 (Wire Random Chicken AI to Server Main) - may already be complete
