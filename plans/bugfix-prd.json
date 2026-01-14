@@ -418,7 +418,8 @@
       "category": "Chicken-Income",
       "title": "Reduce Income for Damaged Chickens",
       "description": "Chickens that are damaged from attacks should generate less money proportional to their remaining health.",
-      "completed": false,
+      "completed": true,
+      "status": "complete",
       "priority": "medium",
       "steps": [
         "Modify MoneyCollection.calculateAccumulated() to check chicken health",
@@ -745,7 +746,8 @@
       "category": "Integration",
       "title": "Wire Predator AI to Server Main",
       "description": "Connect predator AI movement and spawning to Main.server.lua.",
-      "completed": false,
+      "completed": true,
+      "status": "complete",
       "priority": "high",
       "steps": [
         "Require PredatorAI module in Main.server.lua",

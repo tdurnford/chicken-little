@@ -366,28 +366,42 @@ if chickenSoldEvent then
   end)
 end
 
--- ChickenDamaged: Update chicken health bar when damaged by predator
+-- ChickenDamaged: Update chicken health bar and visual when damaged by predator
 local chickenDamagedEvent = getEvent("ChickenDamaged")
 if chickenDamagedEvent then
   chickenDamagedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
     local chickenId = eventData.chickenId
     local newHealth = eventData.newHealth
+    local maxHealth = eventData.maxHealth
 
     if chickenId and newHealth then
       ChickenHealthBar.updateHealth(chickenId, newHealth)
+
+      -- Update visual state to show reduced income indicator
+      if maxHealth and maxHealth > 0 then
+        local healthPercent = newHealth / maxHealth
+        ChickenVisuals.updateHealthState(chickenId, healthPercent)
+      end
     end
   end)
 end
 
--- ChickenHealthChanged: Update chicken health bar (regeneration)
+-- ChickenHealthChanged: Update chicken health bar and visual (regeneration)
 local chickenHealthChangedEvent = getEvent("ChickenHealthChanged")
 if chickenHealthChangedEvent then
   chickenHealthChangedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
     local chickenId = eventData.chickenId
     local newHealth = eventData.newHealth
+    local maxHealth = eventData.maxHealth
 
     if chickenId and newHealth then
       ChickenHealthBar.updateHealth(chickenId, newHealth)
+
+      -- Update visual state to restore color as health regenerates
+      if maxHealth and maxHealth > 0 then
+        local healthPercent = newHealth / maxHealth
+        ChickenVisuals.updateHealthState(chickenId, healthPercent)
+      end
     end
   end)
 end

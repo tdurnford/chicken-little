@@ -8,6 +8,7 @@ local MoneyCollection = {}
 
 -- Import dependencies
 local PlayerData = require(script.Parent.PlayerData)
+local ChickenHealth = require(script.Parent.ChickenHealth)
 
 -- Type definitions
 export type CollectionResult = {
@@ -173,9 +174,11 @@ function MoneyCollection.updateChickenMoney(
 end
 
 -- Update all placed chickens' accumulated money
+-- If a health registry is provided, damaged chickens generate less money proportionally
 function MoneyCollection.updateAllChickenMoney(
   playerData: PlayerData.PlayerDataSchema,
-  elapsedSeconds: number
+  elapsedSeconds: number,
+  healthRegistry: ChickenHealth.ChickenHealthRegistry?
 ): number
   local ChickenConfig = require(script.Parent.ChickenConfig)
   local totalGenerated = 0
@@ -183,13 +186,51 @@ function MoneyCollection.updateAllChickenMoney(
   for _, chicken in ipairs(playerData.placedChickens) do
     local config = ChickenConfig.get(chicken.chickenType)
     if config then
-      local moneyGenerated = config.moneyPerSecond * elapsedSeconds
+      local baseMoneyGenerated = config.moneyPerSecond * elapsedSeconds
+
+      -- Apply health multiplier if registry is provided
+      local healthMultiplier = 1.0
+      if healthRegistry then
+        local healthPercent = ChickenHealth.getHealthPercent(healthRegistry, chicken.id)
+        -- Only apply reduction if we found the chicken in the registry
+        -- Default to 100% if not found (chicken not registered yet)
+        if healthPercent > 0 then
+          healthMultiplier = healthPercent
+        elseif ChickenHealth.get(healthRegistry, chicken.id) then
+          -- Chicken is dead (0 health) - no income
+          healthMultiplier = 0
+        end
+      end
+
+      local moneyGenerated = baseMoneyGenerated * healthMultiplier
       chicken.accumulatedMoney = chicken.accumulatedMoney + moneyGenerated
       totalGenerated = totalGenerated + moneyGenerated
     end
   end
 
   return totalGenerated
+end
+
+-- Get income multiplier for a specific chicken based on health
+function MoneyCollection.getIncomeMultiplier(
+  healthRegistry: ChickenHealth.ChickenHealthRegistry?,
+  chickenId: string
+): number
+  if not healthRegistry then
+    return 1.0
+  end
+
+  local healthPercent = ChickenHealth.getHealthPercent(healthRegistry, chickenId)
+  -- If chicken not in registry or at full health, return 1.0
+  if healthPercent <= 0 then
+    local state = ChickenHealth.get(healthRegistry, chickenId)
+    if state and state.isDead then
+      return 0
+    end
+    return 1.0
+  end
+
+  return healthPercent
 end
 
 -- Get total accumulated money across all placed chickens (without collecting)

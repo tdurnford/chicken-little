@@ -40,6 +40,8 @@ export type ChickenVisualState = {
   moneyPerSecond: number,
   position: Vector3,
   spotIndex: number?,
+  healthPercent: number,
+  isDamaged: boolean,
 }
 
 export type MoneyPopConfig = {
@@ -454,6 +456,8 @@ function ChickenVisuals.create(
     moneyPerSecond = config.moneyPerSecond or 1,
     position = position,
     spotIndex = spotIndex,
+    healthPercent = 1.0,
+    isDamaged = false,
   }
 
   activeChickens[chickenId] = state
@@ -467,9 +471,11 @@ function ChickenVisuals.create(
           applyIdleAnimation(chickenState, deltaTime)
         end
         -- Client-side money accumulation for smooth counter (only for placed chickens)
+        -- Apply health multiplier to money generation rate
         if chickenState.moneyPerSecond > 0 and chickenState.spotIndex ~= nil then
+          local effectiveMoneyPerSecond = chickenState.moneyPerSecond * chickenState.healthPercent
           chickenState.accumulatedMoney = chickenState.accumulatedMoney
-            + (chickenState.moneyPerSecond * deltaTime)
+            + (effectiveMoneyPerSecond * deltaTime)
           updateMoneyIndicator(chickenState)
         end
       end
@@ -486,6 +492,82 @@ function ChickenVisuals.updateMoney(chickenId: string, amount: number)
     state.accumulatedMoney = amount
     updateMoneyIndicator(state)
   end
+end
+
+-- Update chicken health state and apply visual damage indicator
+-- Damaged chickens have reduced color saturation and show income penalty
+function ChickenVisuals.updateHealthState(chickenId: string, healthPercent: number): boolean
+  local state = activeChickens[chickenId]
+  if not state or not state.model then
+    return false
+  end
+
+  state.healthPercent = healthPercent
+  state.isDamaged = healthPercent < 1.0
+
+  -- Apply visual damage indicator (desaturated/darkened color)
+  local body = state.model:FindFirstChild("Body") :: BasePart?
+  local head = state.model:FindFirstChild("Head") :: BasePart?
+
+  if body or head then
+    local baseColor = getRarityColor(state.rarity)
+
+    if state.isDamaged then
+      -- Desaturate and darken based on health loss
+      -- At 50% health, chicken is 50% darker/greyer
+      local damageAmount = 1 - healthPercent
+      local h, s, v = baseColor:ToHSV()
+      -- Reduce saturation and value based on damage
+      local newS = s * healthPercent
+      local newV = v * (0.5 + 0.5 * healthPercent) -- At 0% health, 50% brightness
+      local damagedColor = Color3.fromHSV(h, newS, newV)
+
+      if body then
+        body.Color = damagedColor
+      end
+      if head then
+        head.Color = damagedColor
+      end
+    else
+      -- Restore original color at full health
+      if body then
+        body.Color = baseColor
+      end
+      if head then
+        head.Color = baseColor
+      end
+    end
+  end
+
+  -- Update money indicator to show reduced income
+  if state.moneyIndicator then
+    local bg = state.moneyIndicator:FindFirstChild("Background")
+    if bg then
+      local moneyText = bg:FindFirstChild("MoneyText") :: TextLabel?
+      if moneyText and state.isDamaged then
+        -- Show reduced income with orange/red tint
+        local intensity = healthPercent
+        moneyText.TextColor3 = Color3.fromRGB(255, math.floor(100 + intensity * 155), 50)
+      end
+    end
+  end
+
+  return true
+end
+
+-- Get whether a chicken is damaged (reduced income)
+function ChickenVisuals.isDamaged(chickenId: string): boolean
+  local state = activeChickens[chickenId]
+  return state and state.isDamaged or false
+end
+
+-- Get income multiplier for a chicken (based on health)
+function ChickenVisuals.getIncomeMultiplier(chickenId: string): number
+  local state = activeChickens[chickenId]
+  if state then
+    return state.healthPercent or 1.0
+  end
+  return 1.0
 end
 
 -- Destroy a chicken visual

@@ -1601,3 +1601,32 @@
   - Damage feedback is shown (floating damage numbers)
 - Format check and build pass
 - Next: Work Items #27 (Wire Predator AI to Server), #28 (Wire Random Chicken AI)
+
+[2026-01-14] Completed Bugfix Work Item #15: Reduce Income for Damaged Chickens
+- Modified MoneyCollection.updateAllChickenMoney() to accept optional health registry:
+  - Added ChickenHealth import to MoneyCollection.lua
+  - Check chicken health percentage from registry when generating money
+  - Apply health multiplier to income (50% health = 50% income)
+  - Dead chickens (0% health) generate no income
+- Added MoneyCollection.getIncomeMultiplier() helper function:
+  - Returns income multiplier for a specific chicken based on health
+  - Used for UI display of expected income
+- Updated Main.server.lua to pass chickenHealthRegistry to updateAllChickenMoney:
+  - Damaged chickens now generate less money on the server side
+- Added visual indicator for damaged chickens in ChickenVisuals.lua:
+  - Added healthPercent and isDamaged fields to ChickenVisualState
+  - Created updateHealthState() function to update chicken appearance
+  - Damaged chickens have desaturated/darkened color based on health loss
+  - Money indicator shows orange/red tint when damaged
+  - Client-side money accumulation also applies health multiplier
+- Updated Main.client.lua event handlers to sync visual state:
+  - ChickenDamaged event now updates visual state with health percent
+  - ChickenHealthChanged event restores color as health regenerates
+- Acceptance criteria met:
+  - Damaged chickens produce less money (server-side multiplier applied)
+  - Income scales with health percentage (50% health = 50% income)
+  - Full health chickens produce normal income (multiplier = 1.0)
+  - Visual indicator shows reduced income state (desaturated color, orange money text)
+- Format check and build pass
+- Also marked Work Item #27 (Wire Predator AI to Server Main) as complete - was already implemented
+- Next: Medium priority items (#5 Robux replenish, #6 Robux purchase, #22 Chicken AI, etc.)

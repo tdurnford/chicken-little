@@ -911,7 +911,8 @@ local function runGameLoop(deltaTime: number)
     local dataChanged = false
 
     -- 1. Update chicken money generation (accumulates locally, don't sync for this)
-    MoneyCollection.updateAllChickenMoney(playerData, deltaTime)
+    -- Damaged chickens generate less money proportional to their health
+    MoneyCollection.updateAllChickenMoney(playerData, deltaTime, gameState.chickenHealthRegistry)
 
     -- 1.5. Update egg laying for all placed chickens
     local currentTimeSeconds = os.time()
