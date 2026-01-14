@@ -2851,3 +2851,57 @@
   - Placement validation prevents placing in invalid locations ✓
 - Build passes
 - Next: Work on remaining high-priority items (#1 Egg Collection, #4 Baseball Bat, etc.)
+
+[2026-01-14] Completed Bugfix Work Item #1: Fix Egg Collection - Require Manual Pickup
+- Root cause: Eggs were being automatically added to player inventory when chickens laid them.
+  Players had no visual indication of eggs being laid and no gameplay interaction required.
+- Implementation approach:
+  1. Created WorldEgg.lua shared module:
+     - WorldEggData type with id, eggType, rarity, ownerId, chickenId, spotIndex, position, spawnTime
+     - WorldEggRegistry type for tracking world eggs per player
+     - create() to spawn a new world egg with random offset from chicken position
+     - add(), remove(), get(), getByOwner(), getAll(), getCount() registry operations
+     - isExpired() checks if egg has exceeded 5-minute despawn time
+     - updateAndGetExpired() returns and removes expired eggs for cleanup
+     - canCollect() validates egg exists and player is the owner
+     - collect() removes from registry and returns inventory egg data
+     - toNetworkData() converts to network-safe format for client events
+  2. Extended RemoteSetup.lua:
+     - Added EggSpawned, EggCollected, EggDespawned RemoteEvents
+     - Added CollectWorldEgg RemoteFunction
+  3. Extended Main.server.lua:
+     - Added WorldEgg import
+     - Added worldEggRegistry to PlayerGameState type and createPlayerGameState()
+     - Modified egg laying loop to spawn WorldEgg instead of adding to inventory
+     - Eggs spawn at chicken's spot position with random offset
+     - Added egg despawn check in game loop (removes expired eggs after 5 minutes)
+     - Added CollectWorldEgg RemoteFunction handler:
+       * Validates egg exists and player is owner
+       * Removes egg from world registry
+       * Adds egg to player inventory
+       * Fires EggCollected event to client
+  4. Extended Main.client.lua:
+     - Added WorldEgg import and worldEggVisuals tracking table
+     - Added EggSpawned handler:
+       * Creates egg visual at spawn position using EggVisuals.create()
+       * Adds ProximityPrompt with "Collect" action (8 stud range, instant)
+       * On prompt trigger, calls CollectWorldEgg server function
+       * Plays laying animation on chicken and eggPlace sound
+     - Added EggCollected handler:
+       * Destroys proximity prompt
+       * Removes egg visual using EggVisuals.destroy()
+       * Clears worldEggVisuals tracking entry
+     - Added EggDespawned handler:
+       * Same cleanup as EggCollected for expired eggs
+  5. Extended SoundEffects.lua:
+     - Added eggCollect sound ID and SOUNDS entry for collection feedback
+- Acceptance criteria met:
+  - Eggs appear as physical objects in the game world when laid ✓
+  - Eggs are NOT automatically added to inventory ✓
+  - Players must interact with eggs (proximity prompt) to collect them ✓
+  - Collected eggs are properly added to inventory ✓
+  - Egg model disappears after collection ✓
+  - Visual/audio feedback plays on collection ✓
+- Eggs auto-despawn after 5 minutes if not collected
+- Format check and build pass
+- Next: Work on remaining items (#7 Trap Purchasing, #4 Baseball Bat, #6 Pickup Inconsistency, #2 Inventory Stacking)

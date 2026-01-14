@@ -40,7 +40,7 @@
       "category": "Egg-Collection",
       "title": "Fix Egg Collection - Require Manual Pickup",
       "description": "Eggs are currently being automatically added to the player's inventory. Players should need to manually collect eggs by clicking/tapping on them or pressing a key when near them.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Review current egg spawning logic in EggHatching.lua or related modules",
@@ -64,7 +64,8 @@
       "codeLocations": [
         "src/shared/EggHatching.lua",
         "src/client/EggVisuals.lua",
-        "src/shared/MoneyCollection.lua"
+        "src/shared/MoneyCollection.lua",
+        "src/shared/WorldEgg.lua"
       ]
     },
     {

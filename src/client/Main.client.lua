@@ -36,6 +36,7 @@ local MapGeneration = require(Shared:WaitForChild("MapGeneration"))
 local PlayerSection = require(Shared:WaitForChild("PlayerSection"))
 local BaseballBat = require(Shared:WaitForChild("BaseballBat"))
 local AreaShield = require(Shared:WaitForChild("AreaShield"))
+local WorldEgg = require(Shared:WaitForChild("WorldEgg"))
 
 -- Local player reference
 local localPlayer = Players.LocalPlayer
@@ -45,6 +46,9 @@ local playerDataCache: { [string]: any } = {}
 
 -- Local bat state for client-side tracking
 local localBatState = BaseballBat.createBatState()
+
+-- Track world eggs with their visual models and proximity prompts
+local worldEggVisuals: { [string]: { model: Model, prompt: ProximityPrompt } } = {}
 
 -- Wait for Remotes folder from server
 local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
@@ -526,21 +530,107 @@ if eggHatchedEvent then
   end)
 end
 
--- EggLaid: Play laying animation and create egg visual
-local eggLaidEvent = getEvent("EggLaid")
-if eggLaidEvent then
-  eggLaidEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
-    local chickenId = eventData.chickenId
-    local eggId = eventData.eggId
-    local eggRarity = eventData.eggRarity
+-- EggSpawned: Create collectible egg visual with proximity prompt
+local eggSpawnedEvent = getEvent("EggSpawned")
+if eggSpawnedEvent then
+  eggSpawnedEvent.OnClientEvent:Connect(function(eggData: { [string]: any })
+    local eggId = eggData.id
+    local eggType = eggData.eggType
+    local eggRarity = eggData.rarity
+    local chickenId = eggData.chickenId
+    local position = eggData.position
 
     -- Play laying animation on the chicken
     if chickenId then
       ChickenVisuals.playLayingAnimation(chickenId)
     end
 
+    -- Create egg visual in world
+    local eggPosition = Vector3.new(position.x, position.y, position.z)
+    local eggVisualState = EggVisuals.create(eggId, eggType, eggPosition)
+
+    if eggVisualState and eggVisualState.model then
+      -- Add proximity prompt for collection
+      local primaryPart = eggVisualState.model.PrimaryPart
+      if primaryPart then
+        local prompt = Instance.new("ProximityPrompt")
+        prompt.ObjectText = "Egg"
+        prompt.ActionText = "Collect"
+        prompt.HoldDuration = 0
+        prompt.MaxActivationDistance = 8
+        prompt.RequiresLineOfSight = false
+        prompt.Parent = primaryPart
+
+        -- Handle collection
+        prompt.Triggered:Connect(function(playerWhoTriggered: Player)
+          if playerWhoTriggered == localPlayer then
+            local collectFunc = getFunction("CollectWorldEgg")
+            if collectFunc then
+              local result = collectFunc:InvokeServer(eggId)
+              if result and result.success then
+                SoundEffects.play("eggCollect")
+                print("[Client] Collected egg:", eggId)
+              else
+                warn(
+                  "[Client] Failed to collect egg:",
+                  result and result.message or "Unknown error"
+                )
+              end
+            end
+          end
+        end)
+
+        -- Store reference for cleanup
+        worldEggVisuals[eggId] = {
+          model = eggVisualState.model,
+          prompt = prompt,
+        }
+      end
+    end
+
     SoundEffects.play("eggPlace")
-    print("[Client] Egg laid:", eggId, "from chicken", chickenId)
+    print("[Client] Egg spawned:", eggId, "from chicken", chickenId)
+  end)
+end
+
+-- EggCollected: Clean up egg visual when collected
+local eggCollectedEvent = getEvent("EggCollected")
+if eggCollectedEvent then
+  eggCollectedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
+    local eggId = eventData.eggId
+
+    -- Remove egg visual
+    local eggVisual = worldEggVisuals[eggId]
+    if eggVisual then
+      if eggVisual.prompt then
+        eggVisual.prompt:Destroy()
+      end
+      EggVisuals.destroy(eggId)
+      worldEggVisuals[eggId] = nil
+    end
+
+    print("[Client] Egg collected and added to inventory:", eggId)
+  end)
+end
+
+-- EggDespawned: Clean up egg visual when despawned (expired)
+local eggDespawnedEvent = getEvent("EggDespawned")
+if eggDespawnedEvent then
+  eggDespawnedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
+    local eggId = eventData.eggId
+    local reason = eventData.reason
+
+    -- Remove egg visual
+    local eggVisual = worldEggVisuals[eggId]
+    if eggVisual then
+      if eggVisual.prompt then
+        eggVisual.prompt:Destroy()
+      end
+      EggVisuals.destroy(eggId)
+      worldEggVisuals[eggId] = nil
+    end
+
+    print("[Client] Egg despawned:", eggId, "reason:", reason)
   end)
 end
 

@@ -45,6 +45,7 @@ local SOUND_IDS = {
 
   -- Egg sounds
   eggPlace = "rbxassetid://5853855836", -- Egg placed down
+  eggCollect = "rbxassetid://5853855836", -- Egg collected (pickup)
   eggShake = "rbxassetid://4590657391", -- Egg shaking/anticipation
   eggHatchCommon = "rbxassetid://4590628823", -- Common hatch crack
   eggHatchRare = "rbxassetid://6042053626", -- Rare hatch with sparkle
@@ -123,6 +124,12 @@ local SOUND_CONFIGS: { [string]: SoundConfig } = {
     name = "Egg Place",
     category = "eggs",
     volume = 0.6,
+  },
+  eggCollect = {
+    id = SOUND_IDS.eggCollect,
+    name = "Egg Collect",
+    category = "eggs",
+    volume = 0.7,
   },
   eggShake = {
     id = SOUND_IDS.eggShake,

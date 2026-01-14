@@ -50,6 +50,9 @@ local WeaponConfig = require(Shared:WaitForChild("WeaponConfig"))
 -- Area shield module
 local AreaShield = require(Shared:WaitForChild("AreaShield"))
 
+-- World egg module for manual egg collection
+local WorldEgg = require(Shared:WaitForChild("WorldEgg"))
+
 -- Offline earnings module
 local OfflineEarnings = require(Shared:WaitForChild("OfflineEarnings"))
 
@@ -126,6 +129,7 @@ type PlayerGameState = {
   combatState: CombatHealth.CombatState,
   chickenHealthRegistry: ChickenHealth.ChickenHealthRegistry,
   predatorAIState: PredatorAI.PredatorAIState,
+  worldEggRegistry: WorldEgg.WorldEggRegistry,
 }
 local playerGameStates: { [number]: PlayerGameState } = {}
 
@@ -406,6 +410,7 @@ local function createPlayerGameState(): PlayerGameState
     combatState = CombatHealth.createState(),
     chickenHealthRegistry = ChickenHealth.createRegistry(),
     predatorAIState = PredatorAI.createState(),
+    worldEggRegistry = WorldEgg.createRegistry(),
   }
 end
 
@@ -599,6 +604,48 @@ if hatchEggFunc then
       syncPlayerData(player, playerData, true)
     end
     return result
+  end
+end
+
+--[[
+  World Egg Collection Handler
+  Handles CollectWorldEgg RemoteFunction.
+  Validates egg ownership and adds to player inventory.
+]]
+
+-- CollectWorldEgg RemoteFunction handler
+local collectWorldEggFunc = RemoteSetup.getFunction("CollectWorldEgg")
+if collectWorldEggFunc then
+  collectWorldEggFunc.OnServerInvoke = function(player: Player, eggId: string)
+    local userId = player.UserId
+    local playerData = DataPersistence.getData(userId)
+    if not playerData then
+      return { success = false, message = "Player data not found" }
+    end
+
+    local gameState = getPlayerGameState(userId)
+    local success, message, inventoryEgg =
+      WorldEgg.collect(gameState.worldEggRegistry, eggId, userId)
+
+    if success and inventoryEgg then
+      -- Add egg to player inventory
+      table.insert(playerData.inventory.eggs, inventoryEgg)
+
+      -- Fire EggCollected event to player
+      local eggCollectedEvent = RemoteSetup.getEvent("EggCollected")
+      if eggCollectedEvent then
+        eggCollectedEvent:FireClient(player, {
+          eggId = inventoryEgg.id,
+          eggType = inventoryEgg.eggType,
+          rarity = inventoryEgg.rarity,
+        })
+      end
+
+      syncPlayerData(player, playerData, true)
+      return { success = true, message = message, egg = inventoryEgg }
+    end
+
+    return { success = false, message = message }
   end
 end
 
@@ -1782,7 +1829,7 @@ local function runGameLoop(deltaTime: number)
 
     -- 1.5. Update egg laying for all placed chickens
     local currentTimeSeconds = os.time()
-    local eggLaidEvent = RemoteSetup.getEvent("EggLaid")
+    local eggSpawnedEvent = RemoteSetup.getEvent("EggSpawned")
     for _, chickenData in ipairs(playerData.placedChickens) do
       local chickenInstance = Chicken.new(chickenData)
       if chickenInstance and chickenInstance:canLayEgg(currentTimeSeconds) then
@@ -1793,33 +1840,42 @@ local function runGameLoop(deltaTime: number)
             eggType = Chicken.getUpgradedEggType(eggType)
           end
 
-          -- Get egg config to get rarity
-          local eggConfigData = EggConfig.get(eggType)
-          local eggRarity = if eggConfigData then eggConfigData.rarity else "Common"
+          -- Get section center to calculate egg spawn position
+          local sectionCenter = MapGeneration.getSectionPosition(playerData.sectionIndex or 1)
+          if sectionCenter and chickenData.spotIndex then
+            local spotPos = PlayerSection.getSpotPosition(chickenData.spotIndex, sectionCenter)
+            if spotPos then
+              -- Create world egg instead of adding to inventory
+              local worldEgg =
+                WorldEgg.create(eggType, userId, chickenData.id, chickenData.spotIndex, spotPos)
+              if worldEgg then
+                WorldEgg.add(gameState.worldEggRegistry, worldEgg)
 
-          -- Create new egg and add to inventory
-          local newEgg: PlayerData.EggData = {
-            id = PlayerData.generateId(),
-            eggType = eggType,
-            rarity = eggRarity,
-          }
-          table.insert(playerData.inventory.eggs, newEgg)
+                -- Update chicken's lastEggTime in player data
+                chickenData.lastEggTime = chickenInstance.lastEggTime
+                dataChanged = true
 
-          -- Update chicken's lastEggTime in player data
-          chickenData.lastEggTime = chickenInstance.lastEggTime
-
-          dataChanged = true
-
-          -- Notify player of egg laid
-          if eggLaidEvent then
-            eggLaidEvent:FireClient(player, {
-              chickenId = chickenData.id,
-              chickenType = chickenData.chickenType,
-              eggId = newEgg.id,
-              eggType = eggType,
-              eggRarity = eggRarity,
-            })
+                -- Notify player of egg spawned in world
+                if eggSpawnedEvent then
+                  eggSpawnedEvent:FireClient(player, WorldEgg.toNetworkData(worldEgg))
+                end
+              end
+            end
           end
+        end
+      end
+    end
+
+    -- 1.6. Update world eggs and handle despawns
+    local expiredEggs = WorldEgg.updateAndGetExpired(gameState.worldEggRegistry, currentTimeSeconds)
+    if #expiredEggs > 0 then
+      local eggDespawnedEvent = RemoteSetup.getEvent("EggDespawned")
+      for _, expiredEgg in ipairs(expiredEggs) do
+        if eggDespawnedEvent then
+          eggDespawnedEvent:FireClient(player, {
+            eggId = expiredEgg.id,
+            reason = "expired",
+          })
         end
       end
     end
