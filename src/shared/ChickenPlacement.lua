@@ -188,6 +188,7 @@ function ChickenPlacement.placeChicken(
     accumulatedMoney = chicken.accumulatedMoney,
     lastEggTime = chicken.lastEggTime,
     spotIndex = spotIndex,
+    placedTime = os.time(), -- Track when chicken was placed for protection period
   }
   table.insert(playerData.placedChickens, placedChicken)
 

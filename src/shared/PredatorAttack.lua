@@ -43,6 +43,7 @@ export type DefenseCheckResult = {
 -- Constants
 local APPROACH_TIME_SECONDS = 5 -- Time for predator to reach coop after spawning
 local ESCAPE_DELAY_SECONDS = 3 -- Time for predator to escape after attacking
+local CHICKEN_PLACEMENT_PROTECTION_SECONDS = 5 -- Protection period for newly placed chickens
 
 -- Check if a predator has reached the coop (transition from approaching to attacking)
 function PredatorAttack.hasReachedCoop(
@@ -71,10 +72,11 @@ function PredatorAttack.startAttacking(
   return PredatorSpawning.updatePredatorState(spawnState, predatorId, "attacking")
 end
 
--- Select random chickens from coop for attack
+-- Select random chickens from coop for attack (excluding protected chickens)
 local function selectChickensForAttack(
   playerData: PlayerData.PlayerDataSchema,
-  count: number
+  count: number,
+  currentTime: number
 ): { PlayerData.ChickenData }
   local placedChickens = playerData.placedChickens
   if #placedChickens == 0 then
@@ -84,13 +86,18 @@ local function selectChickensForAttack(
   local selected = {}
   local indices = {}
 
-  -- Create list of indices to select from
+  -- Create list of indices to select from (excluding protected chickens)
   for i = 1, #placedChickens do
-    table.insert(indices, i)
+    local chicken = placedChickens[i]
+    local placedTime = chicken.placedTime or 0
+    local timeSincePlaced = currentTime - placedTime
+    if timeSincePlaced >= CHICKEN_PLACEMENT_PROTECTION_SECONDS then
+      table.insert(indices, i)
+    end
   end
 
   -- Randomly select chickens up to count or available chickens
-  local toSelect = math.min(count, #placedChickens)
+  local toSelect = math.min(count, #indices)
   for _ = 1, toSelect do
     if #indices == 0 then
       break
@@ -118,8 +125,10 @@ end
 function PredatorAttack.executeAttack(
   playerData: PlayerData.PlayerDataSchema,
   spawnState: PredatorSpawning.SpawnState,
-  predatorId: string
+  predatorId: string,
+  currentTime: number?
 ): AttackResult
+  local attackTime = currentTime or os.time()
   local predator = PredatorSpawning.findPredator(spawnState, predatorId)
   if not predator then
     return {
@@ -185,8 +194,8 @@ function PredatorAttack.executeAttack(
     }
   end
 
-  -- Select chickens to attack
-  local chickensToAttack = selectChickensForAttack(playerData, config.chickensPerAttack)
+  -- Select chickens to attack (excluding protected chickens)
+  local chickensToAttack = selectChickensForAttack(playerData, config.chickensPerAttack, attackTime)
   local chickenIds = {}
   local chickenSpots = {} -- Map of chickenId to spotIndex
   local totalValueLost = 0

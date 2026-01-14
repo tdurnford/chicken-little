@@ -48,6 +48,7 @@ local lastDataSyncTime: { [number]: number } = {} -- Tracks last sync time per p
 -- Game Loop Configuration
 local PREDATOR_CLEANUP_INTERVAL = 10 -- Seconds between predator cleanup passes
 local lastCleanupTime = 0
+local CHICKEN_PLACEMENT_PROTECTION_SECONDS = 5 -- Protection period for newly placed chickens
 
 -- Store Replenishment Configuration
 local lastStoreReplenishCheck = 0
@@ -1350,7 +1351,7 @@ local function runGameLoop(deltaTime: number)
     -- 6. Execute attacks for predators that just started attacking
     for _, predatorId in ipairs(nowAttacking) do
       local attackResult =
-        PredatorAttack.executeAttack(playerData, gameState.spawnState, predatorId)
+        PredatorAttack.executeAttack(playerData, gameState.spawnState, predatorId, currentTime)
       if attackResult.success and attackResult.chickensLost > 0 then
         dataChanged = true
 
@@ -1480,6 +1481,13 @@ local function runGameLoop(deltaTime: number)
           local damageThisFrame = chickenDamagePerSecond * deltaTime
 
           for _, chicken in ipairs(playerData.placedChickens) do
+            -- Skip chickens in protection period (newly placed)
+            local placedTime = chicken.placedTime or 0
+            local timeSincePlaced = currentTime - placedTime
+            if timeSincePlaced < CHICKEN_PLACEMENT_PROTECTION_SECONDS then
+              continue
+            end
+
             local damageResult = ChickenHealth.applyDamage(
               gameState.chickenHealthRegistry,
               chicken.id,

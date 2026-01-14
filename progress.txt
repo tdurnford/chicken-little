@@ -1924,3 +1924,26 @@
   - No need to close/reopen inventory to see purchases (data is cached and displayed on open)
 - Format check and build pass
 - Next: Other critical items (#38, #40, #47, #54)
+
+[2026-01-14] Completed Bugfix Work Item #54: Fix Placed Chickens Disappearing Immediately
+- Root cause: When predators were in "attacking" state, newly placed chickens could be damaged
+  immediately on the next game loop frame, causing them to appear to "disappear"
+- The issue was two-fold:
+  1. Predator damage-over-time loop (Main.server.lua ~line 1482) damaged ALL placed chickens
+  2. executeAttack() in PredatorAttack.lua could select newly placed chickens for instant kill
+- Fix: Added placement protection period for newly placed chickens:
+  1. Added placedTime field to ChickenData type (PlayerData.lua line 17)
+  2. ChickenPlacement.placeChicken() now sets placedTime = os.time() (line 192)
+  3. Added CHICKEN_PLACEMENT_PROTECTION_SECONDS = 5 constant (Main.server.lua line 51)
+  4. Predator damage loop skips chickens within protection period (Main.server.lua ~line 1488-1493)
+  5. selectChickensForAttack() now accepts currentTime and skips protected chickens (PredatorAttack.lua)
+  6. executeAttack() passes attackTime to selectChickensForAttack() (PredatorAttack.lua line 199)
+- Newly placed chickens now have 5 seconds of protection from predator attacks
+- This gives players time to see their chicken appear and react to threats
+- Acceptance criteria met:
+  - Placed chickens remain visible in their spots (protection period)
+  - Chickens are not instantly killed by predators on placement
+  - Placement works correctly regardless of predator presence
+  - Chicken visuals persist until protection expires and chicken takes lethal damage
+- Format check and build pass
+- Next: Other critical items (#1, #8, #12, #20, #38, #40, #47)

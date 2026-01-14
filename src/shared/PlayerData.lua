@@ -14,6 +14,7 @@ export type ChickenData = {
   accumulatedMoney: number,
   lastEggTime: number,
   spotIndex: number?, -- nil if in inventory
+  placedTime: number?, -- os.time() when placed in coop (for protection period)
 }
 
 export type EggData = {

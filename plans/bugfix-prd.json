@@ -1391,7 +1391,7 @@
       "category": "Chicken-BugFix",
       "title": "Fix Placed Chickens Disappearing Immediately",
       "description": "When placing chickens on coop spots, they disappear immediately. May be related to predator presence in the player's section causing instant kills.",
-      "completed": false,
+      "completed": true,
       "priority": "critical",
       "steps": [
         "Review ChickenPlacement logic to ensure chickens persist after placement",
@@ -1409,7 +1409,8 @@
         "Chicken visuals persist until explicitly removed"
       ],
       "dependencies": [],
-      "codeLocation": "src/shared/ChickenPlacement.lua"
+      "codeLocation": "src/shared/ChickenPlacement.lua",
+      "status": "completed"
     }
   ],
   "priorityOrder": [
