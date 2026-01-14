@@ -30,6 +30,16 @@ local RARITY_COLORS: { [string]: Color3 } = {
   Mythic = Color3.fromRGB(255, 0, 100),
 }
 
+-- Rarity gradients for card backgrounds (start = top, end = bottom)
+local RARITY_GRADIENTS: { [string]: { start: Color3, endColor: Color3 } } = {
+  Common = { start = Color3.fromRGB(180, 180, 180), endColor = Color3.fromRGB(255, 255, 255) },
+  Uncommon = { start = Color3.fromRGB(144, 238, 144), endColor = Color3.fromRGB(34, 139, 34) },
+  Rare = { start = Color3.fromRGB(135, 206, 250), endColor = Color3.fromRGB(30, 90, 180) },
+  Epic = { start = Color3.fromRGB(200, 150, 255), endColor = Color3.fromRGB(148, 0, 211) },
+  Legendary = { start = Color3.fromRGB(255, 220, 100), endColor = Color3.fromRGB(255, 140, 0) },
+  Mythic = { start = Color3.fromRGB(255, 150, 180), endColor = Color3.fromRGB(255, 0, 100) },
+}
+
 -- Local player reference
 local localPlayer = Players.LocalPlayer
 
@@ -118,7 +128,7 @@ local function createItemCard(
   card.Name = itemId
   card.Size = UDim2.new(1, -20, 0, 104)
   card.Position = UDim2.new(0, 10, 0, (index - 1) * 112 + 10)
-  card.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+  card.BackgroundColor3 = Color3.fromRGB(255, 255, 255) -- Base color for gradient
   card.BorderSizePixel = 0
   card.Parent = parent
 
@@ -126,7 +136,26 @@ local function createItemCard(
   cardCorner.CornerRadius = UDim.new(0, 8)
   cardCorner.Parent = card
 
-  -- Rarity indicator bar
+  -- Rarity-based gradient background
+  local gradientColors = RARITY_GRADIENTS[rarity] or RARITY_GRADIENTS.Common
+  local cardGradient = Instance.new("UIGradient")
+  cardGradient.Name = "RarityGradient"
+  cardGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, gradientColors.start),
+    ColorSequenceKeypoint.new(1, gradientColors.endColor),
+  })
+  cardGradient.Rotation = 90 -- Vertical gradient (light on top)
+  cardGradient.Parent = card
+
+  -- Card stroke for definition
+  local cardStroke = Instance.new("UIStroke")
+  cardStroke.Name = "CardStroke"
+  cardStroke.Color = Color3.fromRGB(60, 40, 20) -- Dark brown to match theme
+  cardStroke.Thickness = 2
+  cardStroke.Transparency = 0.3
+  cardStroke.Parent = card
+
+  -- Rarity indicator bar (accent on left edge)
   local rarityBar = Instance.new("Frame")
   rarityBar.Name = "RarityBar"
   rarityBar.Size = UDim2.new(0, 4, 1, 0)
@@ -149,43 +178,49 @@ local function createItemCard(
   iconLabel.TextSize = 24
   iconLabel.Parent = card
 
-  -- Item name
+  -- Item name (white with dark stroke for visibility on gradients)
   local nameLabel = Instance.new("TextLabel")
   nameLabel.Name = "Name"
   nameLabel.Size = UDim2.new(0.35, -20, 0, 28)
   nameLabel.Position = UDim2.new(0, 45, 0, 12)
   nameLabel.BackgroundTransparency = 1
   nameLabel.Text = displayName
-  nameLabel.TextColor3 = RARITY_COLORS[rarity] or Color3.fromRGB(255, 255, 255)
+  nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- White for visibility
   nameLabel.TextScaled = true
   nameLabel.Font = Enum.Font.GothamBold
   nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+  nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0) -- Dark stroke
+  nameLabel.TextStrokeTransparency = 0.3
   nameLabel.Parent = card
 
-  -- Rarity label
+  -- Rarity label (dark text for readability on gradients)
   local rarityLabel = Instance.new("TextLabel")
   rarityLabel.Name = "Rarity"
   rarityLabel.Size = UDim2.new(0.35, -20, 0, 20)
   rarityLabel.Position = UDim2.new(0, 45, 0, 42)
   rarityLabel.BackgroundTransparency = 1
   rarityLabel.Text = rarity
-  rarityLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+  rarityLabel.TextColor3 = Color3.fromRGB(50, 50, 50) -- Dark grey for readability
   rarityLabel.TextScaled = true
   rarityLabel.Font = Enum.Font.Gotham
   rarityLabel.TextXAlignment = Enum.TextXAlignment.Left
+  rarityLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+  rarityLabel.TextStrokeTransparency = 0.7
   rarityLabel.Parent = card
 
-  -- Stock label
+  -- Stock label (dark text for readability)
   local stockLabel = Instance.new("TextLabel")
   stockLabel.Name = "StockLabel"
   stockLabel.Size = UDim2.new(0, 60, 0, 20)
   stockLabel.Position = UDim2.new(0, 45, 0, 70)
   stockLabel.BackgroundTransparency = 1
   stockLabel.Text = stock > 0 and ("x" .. tostring(stock)) or "SOLD OUT"
-  stockLabel.TextColor3 = stock > 0 and Color3.fromRGB(150, 150, 150) or Color3.fromRGB(255, 80, 80)
+  stockLabel.TextColor3 = stock > 0 and Color3.fromRGB(50, 50, 50) or Color3.fromRGB(180, 30, 30)
   stockLabel.TextScaled = true
   stockLabel.Font = Enum.Font.Gotham
   stockLabel.TextXAlignment = Enum.TextXAlignment.Left
+  stockLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+  stockLabel.TextStrokeTransparency = stock > 0 and 0.7 or 0.5
   stockLabel.Parent = card
 
   -- Buy button (with in-game money) - shows price directly on button

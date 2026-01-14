@@ -3380,3 +3380,33 @@
   - All items remain accessible via scrolling ✓
 - Format check passes, build passes
 - Next: Work on Phase 1 Foundation Item #12 (Scroll Frame Padding) or Phase 2 Items
+
+[2026-01-14] Completed Store Redesign Work Item #6: Apply Rarity-Based Gradient Backgrounds
+- Replaced flat dark grey card backgrounds with gradient backgrounds based on item rarity
+- Changes applied in src/client/StoreUI.lua:
+  1. Added RARITY_GRADIENTS table with start/end colors for each rarity tier:
+     - Common: Grey (180,180,180) to White (255,255,255)
+     - Uncommon: Light Green (144,238,144) to Dark Green (34,139,34)
+     - Rare: Light Blue (135,206,250) to Dark Blue (30,90,180)
+     - Epic: Light Purple (200,150,255) to Dark Purple (148,0,211)
+     - Legendary: Light Orange (255,220,100) to Dark Orange (255,140,0)
+     - Mythic: Pink (255,150,180) to Deep Pink (255,0,100)
+  2. In createItemCard function:
+     - Added UIGradient with ColorSequence from rarity start to end color
+     - Set rotation to 90 degrees (vertical gradient, light on top)
+     - Added UIStroke with dark brown color (60,40,20), thickness 2, for card definition
+     - Kept rarity bar as accent element on left edge
+  3. Updated text colors for readability on gradient backgrounds:
+     - Item name: White with black text stroke (transparency 0.3)
+     - Rarity label: Dark grey (50,50,50) with subtle white stroke
+     - Stock label: Dark grey with white stroke, red for "SOLD OUT"
+- Acceptance criteria met:
+  - Common items: Grey to White gradient background ✓
+  - Uncommon items: Light Green to Dark Green gradient ✓
+  - Rare items: Light Blue to Dark Blue gradient ✓
+  - Epic items: Light Purple to Dark Purple gradient ✓
+  - Legendary items: Light Orange to Dark Orange gradient ✓
+  - Mythic items: Pink to Deep Pink gradient ✓
+  - All text remains readable on gradient backgrounds ✓
+- Format check passes, build passes
+- Next: Work on remaining high-priority items (Item #7 Icons, Item #10 Buttons, Item #2 Header)
