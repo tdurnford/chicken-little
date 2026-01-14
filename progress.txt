@@ -2493,3 +2493,32 @@
   - Rate is accurate per ChickenConfig ✓
 - Format check and build pass
 - Next: Other medium priority items (#7, #17, #18, #19, #48, #49, #52)
+
+[2026-01-14] Completed Bugfix Work Item #52: Improve Store Buy Button Layout
+- Root cause: The store had a redundant layout with a separate "Price" label showing
+  the price, then a "BUY" button next to it. This was redundant and wasted space.
+  Additionally, the Robux button just showed "R$X" without a Robux icon.
+- Implementation approach:
+  1. Removed the separate "Price" label from item cards
+  2. Changed the buy button to show the price directly (e.g., "$100" instead of "BUY")
+  3. Increased buy button width from 60 to 80 pixels to accommodate price text
+  4. Changed sold out text from "SOLD" to "SOLD OUT" for clarity
+  5. Added Robux icon (rbxassetid://4915439044) to the Robux button
+  6. Refactored Robux button to use ImageLabel for icon + TextLabel for price
+  7. Updated updateAffordability() to show price on button in all states
+- Code changes (src/client/StoreUI.lua):
+  - Removed priceLabel creation (was lines 179-191)
+  - Modified buyButton to show price text directly
+  - Increased buyButton size from 60x30 to 80x30
+  - Adjusted buyButton position from -145 to -165 for proper spacing
+  - Changed robuxButton to use child ImageLabel + TextLabel instead of Text property
+  - Added robuxIcon ImageLabel with Roblox's official Robux icon asset
+  - Added robuxPriceLabel TextLabel for price display
+  - Updated updateAffordability() to set priceText on button
+- Acceptance criteria met:
+  - Redundant 'Buy' text button removed ✓
+  - Price shown directly on buy button (e.g., "$100") ✓
+  - Robux icon displayed on Robux price button ✓
+  - Layout is cleaner and more intuitive ✓
+- Format check and build pass
+- Next: Other medium priority items (#7, #17, #18, #19, #48, #49)

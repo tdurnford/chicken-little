@@ -1336,7 +1336,7 @@
       "category": "Store-UI",
       "title": "Improve Store Buy Button Layout",
       "description": "Remove redundant 'Buy' text button and replace with price button. Add Robux icon to Robux price button.",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Remove separate 'Buy' text button from store items",
@@ -1354,7 +1354,8 @@
       "dependencies": [
         2
       ],
-      "codeLocation": "src/client/StoreUI.lua"
+      "codeLocation": "src/client/StoreUI.lua",
+      "status": "complete"
     },
     {
       "id": 53,
