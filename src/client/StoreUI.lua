@@ -504,16 +504,15 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   tierBarCorner.CornerRadius = UDim.new(0, 2)
   tierBarCorner.Parent = tierBar
 
-  -- Icon (trap emoji)
-  local iconLabel = Instance.new("TextLabel")
-  iconLabel.Name = "Icon"
-  iconLabel.Size = UDim2.new(0, 40, 0, 40)
-  iconLabel.Position = UDim2.new(0, 15, 0, 8)
-  iconLabel.BackgroundTransparency = 1
-  iconLabel.Text = "🪤"
-  iconLabel.TextScaled = true
-  iconLabel.Font = Enum.Font.Gotham
-  iconLabel.Parent = card
+  -- Icon (trap image - using ImageLabel for reliable cross-platform display)
+  local iconImage = Instance.new("ImageLabel")
+  iconImage.Name = "Icon"
+  iconImage.Size = UDim2.new(0, 40, 0, 40)
+  iconImage.Position = UDim2.new(0, 15, 0, 8)
+  iconImage.BackgroundTransparency = 1
+  iconImage.Image = "rbxassetid://6022668885" -- Trap/cage icon
+  iconImage.ScaleType = Enum.ScaleType.Fit
+  iconImage.Parent = card
 
   -- Name label
   local nameLabel = Instance.new("TextLabel")

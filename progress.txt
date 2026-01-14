@@ -3301,3 +3301,24 @@
   - All weapon types work (same SwingBat handler) ✓
 - Format check passes, build passes
 - Next: Work on remaining items (Item #1 Trap Icon, Item #2 Remove Balance)
+
+[2026-01-14] Completed UI Work Item #1: Fix Trap Icon Displaying as Box Instead of Image
+- Root cause: The mousetrap emoji (🪤) is from Unicode 13.0 (2020) and is not 
+  supported by Roblox's Gotham font, causing it to display as a box/missing character.
+- Fix applied:
+  1. StoreUI.lua (lines 507-515): Replaced TextLabel with ImageLabel using 
+     rbxassetid://6022668885 (trap/cage icon)
+  2. InventoryUI.lua (lines 367-393): Changed to conditional rendering:
+     - Egg/chicken items still use TextLabel with well-supported emojis (🥚, 🐔)
+     - Trap items now use ImageLabel with rbxassetid://6022668885
+     - Added ImageColor3 = borderColor to match the tier color scheme
+- Files changed:
+  * src/client/StoreUI.lua - trap card now uses ImageLabel
+  * src/client/InventoryUI.lua - trap slot now uses ImageLabel
+- Acceptance criteria met:
+  - Trap icon displays as recognizable trap image in Store UI ✓
+  - Trap icon displays as recognizable trap image in Inventory UI ✓
+  - Icon displays correctly on all platforms (uses ImageLabel) ✓
+  - No box/missing character symbols appear ✓
+- Format check passes, build passes
+- Next: Work on remaining item (Item #2 Remove Balance from Store UI)

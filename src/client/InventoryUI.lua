@@ -364,22 +364,33 @@ local function createItemSlot(
   stroke.Transparency = 0.3
   stroke.Parent = slotFrame
 
-  -- Icon/Image placeholder (centered emoji for now)
-  local icon = Instance.new("TextLabel")
-  icon.Name = "Icon"
-  icon.Size = UDim2.new(1, 0, 0.32, 0)
-  icon.Position = UDim2.new(0, 0, 0, 0)
-  icon.BackgroundTransparency = 1
-  if itemType == "egg" then
-    icon.Text = "🥚"
-  elseif itemType == "chicken" then
-    icon.Text = "🐔"
+  -- Icon/Image placeholder
+  if itemType == "egg" or itemType == "chicken" then
+    local icon = Instance.new("TextLabel")
+    icon.Name = "Icon"
+    icon.Size = UDim2.new(1, 0, 0.32, 0)
+    icon.Position = UDim2.new(0, 0, 0, 0)
+    icon.BackgroundTransparency = 1
+    if itemType == "egg" then
+      icon.Text = "🥚"
+    else
+      icon.Text = "🐔"
+    end
+    icon.TextSize = 20
+    icon.TextColor3 = borderColor
+    icon.Parent = slotFrame
   else
-    icon.Text = "🪤"
+    -- Trap uses ImageLabel for reliable cross-platform display
+    local icon = Instance.new("ImageLabel")
+    icon.Name = "Icon"
+    icon.Size = UDim2.new(1, 0, 0.32, 0)
+    icon.Position = UDim2.new(0, 0, 0, 0)
+    icon.BackgroundTransparency = 1
+    icon.Image = "rbxassetid://6022668885" -- Trap/cage icon
+    icon.ScaleType = Enum.ScaleType.Fit
+    icon.ImageColor3 = borderColor
+    icon.Parent = slotFrame
   end
-  icon.TextSize = 20
-  icon.TextColor3 = borderColor
-  icon.Parent = slotFrame
 
   -- Stack count badge (only show if more than 1)
   if stackCount > 1 then
