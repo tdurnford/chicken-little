@@ -25,6 +25,7 @@ local HatchPreviewUI = require(ClientModules:WaitForChild("HatchPreviewUI"))
 local Tutorial = require(ClientModules:WaitForChild("Tutorial"))
 local SectionVisuals = require(ClientModules:WaitForChild("SectionVisuals"))
 local StoreUI = require(ClientModules:WaitForChild("StoreUI"))
+local DamageUI = require(ClientModules:WaitForChild("DamageUI"))
 
 -- Get shared modules for position calculations
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -111,6 +112,10 @@ print("[Client] StoreUI created")
 -- Create Tutorial UI
 Tutorial.create()
 print("[Client] Tutorial created")
+
+-- Create Damage UI
+DamageUI.initialize()
+print("[Client] DamageUI initialized")
 
 -- Create Random Chicken Claim Prompt UI
 local randomChickenPromptFrame: Frame? = nil
@@ -534,6 +539,33 @@ if storeReplenishedEvent then
     -- Refresh the store UI if open
     StoreUI.refreshInventory()
     print("[Client] Store inventory replenished")
+  end)
+end
+
+-- PlayerDamaged: Show damage number and update health bar
+local playerDamagedEvent = getEvent("PlayerDamaged")
+if playerDamagedEvent then
+  playerDamagedEvent.OnClientEvent:Connect(function(data: any)
+    DamageUI.onPlayerDamaged(data)
+    SoundEffects.playHurt()
+    print("[Client] Player damaged:", data.damage, "from", data.source)
+  end)
+end
+
+-- PlayerKnockback: Show knockback effect and stun visuals
+local playerKnockbackEvent = getEvent("PlayerKnockback")
+if playerKnockbackEvent then
+  playerKnockbackEvent.OnClientEvent:Connect(function(data: any)
+    DamageUI.onPlayerKnockback(data)
+    print("[Client] Player knocked back for", data.duration, "seconds")
+  end)
+end
+
+-- PlayerHealthChanged: Update health bar during regeneration
+local playerHealthChangedEvent = getEvent("PlayerHealthChanged")
+if playerHealthChangedEvent then
+  playerHealthChangedEvent.OnClientEvent:Connect(function(data: any)
+    DamageUI.onPlayerHealthChanged(data)
   end)
 end
 

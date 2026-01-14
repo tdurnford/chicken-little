@@ -63,6 +63,8 @@ local SOUND_IDS = {
   batHit = "rbxassetid://5853855836", -- Bat hit impact
   batMiss = "rbxassetid://4590657391", -- Bat miss whoosh
   playerKnockback = "rbxassetid://5853855836", -- Player knocked back
+  hurt = "rbxassetid://5853855836", -- Player takes damage
+  knockback = "rbxassetid://9063066381", -- Player stunned
 
   -- Predator sounds
   predatorSpawn = "rbxassetid://4590657391", -- Predator appears
@@ -213,6 +215,19 @@ local SOUND_CONFIGS: { [string]: SoundConfig } = {
     name = "Player Knockback",
     category = "combat",
     volume = 0.7,
+  },
+  hurt = {
+    id = SOUND_IDS.hurt,
+    name = "Player Hurt",
+    category = "combat",
+    volume = 0.6,
+    pitchVariance = 0.15,
+  },
+  knockback = {
+    id = SOUND_IDS.knockback,
+    name = "Player Stunned",
+    category = "combat",
+    volume = 0.8,
   },
 
   -- Predator sounds
@@ -507,6 +522,16 @@ function SoundEffects.playPredatorAlert(urgent: boolean): ()
   else
     SoundEffects.play("predatorSpawn")
   end
+end
+
+-- Play hurt sound when player takes damage
+function SoundEffects.playHurt(): ()
+  SoundEffects.play("hurt")
+end
+
+-- Play knockback sound when player is stunned
+function SoundEffects.playKnockback(): ()
+  SoundEffects.play("knockback")
 end
 
 -- Set mute state

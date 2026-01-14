@@ -19,6 +19,7 @@ export type PredatorTypeConfig = {
   chickensPerAttack: number, -- Number of chickens killed/stolen per attack
   catchDifficulty: number, -- 1-10 scale, affects trap success and bat hits needed
   rewardMoney: number, -- Money earned when caught
+  damage: number, -- Damage per second dealt to players in combat
   description: string,
 }
 
@@ -55,6 +56,16 @@ local THREAT_ATTACK_INTERVALS: { [ThreatLevel]: number } = {
   Catastrophic = 180, -- 3 minutes
 }
 
+-- Damage per second dealt to players by threat level
+local THREAT_DAMAGE: { [ThreatLevel]: number } = {
+  Minor = 5,
+  Moderate = 10,
+  Dangerous = 15,
+  Severe = 25,
+  Deadly = 40,
+  Catastrophic = 60,
+}
+
 -- Chickens killed per attack by threat level
 local THREAT_CHICKENS_PER_ATTACK: { [ThreatLevel]: number } = {
   Minor = 1,
@@ -77,6 +88,7 @@ local PREDATOR_TYPES: { [string]: PredatorTypeConfig } = {
     chickensPerAttack = THREAT_CHICKENS_PER_ATTACK.Minor,
     catchDifficulty = 1,
     rewardMoney = BASE_CATCH_REWARD * THREAT_REWARD_MULTIPLIERS.Minor,
+    damage = THREAT_DAMAGE.Minor,
     description = "A sneaky rodent that steals eggs",
   },
   Crow = {
@@ -88,6 +100,7 @@ local PREDATOR_TYPES: { [string]: PredatorTypeConfig } = {
     chickensPerAttack = THREAT_CHICKENS_PER_ATTACK.Minor,
     catchDifficulty = 2,
     rewardMoney = BASE_CATCH_REWARD * THREAT_REWARD_MULTIPLIERS.Minor * 1.2,
+    damage = THREAT_DAMAGE.Minor,
     description = "A clever bird that pecks at chicks",
   },
 
@@ -101,6 +114,7 @@ local PREDATOR_TYPES: { [string]: PredatorTypeConfig } = {
     chickensPerAttack = THREAT_CHICKENS_PER_ATTACK.Moderate,
     catchDifficulty = 3,
     rewardMoney = BASE_CATCH_REWARD * THREAT_REWARD_MULTIPLIERS.Moderate,
+    damage = THREAT_DAMAGE.Moderate,
     description = "A quick predator that targets small chickens",
   },
   Raccoon = {
@@ -112,6 +126,7 @@ local PREDATOR_TYPES: { [string]: PredatorTypeConfig } = {
     chickensPerAttack = THREAT_CHICKENS_PER_ATTACK.Moderate,
     catchDifficulty = 4,
     rewardMoney = BASE_CATCH_REWARD * THREAT_REWARD_MULTIPLIERS.Moderate * 1.3,
+    damage = THREAT_DAMAGE.Moderate,
     description = "A crafty scavenger that raids coops at night",
   },
 
@@ -125,6 +140,7 @@ local PREDATOR_TYPES: { [string]: PredatorTypeConfig } = {
     chickensPerAttack = THREAT_CHICKENS_PER_ATTACK.Dangerous,
     catchDifficulty = 5,
     rewardMoney = BASE_CATCH_REWARD * THREAT_REWARD_MULTIPLIERS.Dangerous,
+    damage = THREAT_DAMAGE.Dangerous,
     description = "A cunning hunter that preys on chickens",
   },
   Snake = {
@@ -136,6 +152,7 @@ local PREDATOR_TYPES: { [string]: PredatorTypeConfig } = {
     chickensPerAttack = THREAT_CHICKENS_PER_ATTACK.Dangerous,
     catchDifficulty = 6,
     rewardMoney = BASE_CATCH_REWARD * THREAT_REWARD_MULTIPLIERS.Dangerous * 1.4,
+    damage = THREAT_DAMAGE.Dangerous,
     description = "A silent predator that swallows eggs whole",
   },
 
@@ -149,6 +166,7 @@ local PREDATOR_TYPES: { [string]: PredatorTypeConfig } = {
     chickensPerAttack = THREAT_CHICKENS_PER_ATTACK.Severe,
     catchDifficulty = 7,
     rewardMoney = BASE_CATCH_REWARD * THREAT_REWARD_MULTIPLIERS.Severe,
+    damage = THREAT_DAMAGE.Severe,
     description = "A fierce pack hunter targeting your flock",
   },
   Hawk = {
@@ -160,6 +178,7 @@ local PREDATOR_TYPES: { [string]: PredatorTypeConfig } = {
     chickensPerAttack = THREAT_CHICKENS_PER_ATTACK.Severe,
     catchDifficulty = 8,
     rewardMoney = BASE_CATCH_REWARD * THREAT_REWARD_MULTIPLIERS.Severe * 1.3,
+    damage = THREAT_DAMAGE.Severe,
     description = "A swift aerial predator that swoops from above",
   },
 
@@ -173,6 +192,7 @@ local PREDATOR_TYPES: { [string]: PredatorTypeConfig } = {
     chickensPerAttack = THREAT_CHICKENS_PER_ATTACK.Deadly,
     catchDifficulty = 9,
     rewardMoney = BASE_CATCH_REWARD * THREAT_REWARD_MULTIPLIERS.Deadly,
+    damage = THREAT_DAMAGE.Deadly,
     description = "A powerful apex predator that devastates coops",
   },
   Bobcat = {
@@ -184,6 +204,7 @@ local PREDATOR_TYPES: { [string]: PredatorTypeConfig } = {
     chickensPerAttack = THREAT_CHICKENS_PER_ATTACK.Deadly,
     catchDifficulty = 9,
     rewardMoney = BASE_CATCH_REWARD * THREAT_REWARD_MULTIPLIERS.Deadly * 1.2,
+    damage = THREAT_DAMAGE.Deadly,
     description = "A stealthy feline that strikes without warning",
   },
 
@@ -197,6 +218,7 @@ local PREDATOR_TYPES: { [string]: PredatorTypeConfig } = {
     chickensPerAttack = THREAT_CHICKENS_PER_ATTACK.Catastrophic,
     catchDifficulty = 10,
     rewardMoney = BASE_CATCH_REWARD * THREAT_REWARD_MULTIPLIERS.Catastrophic,
+    damage = THREAT_DAMAGE.Catastrophic,
     description = "A massive beast that destroys entire coops",
   },
   Eagle = {
@@ -208,6 +230,7 @@ local PREDATOR_TYPES: { [string]: PredatorTypeConfig } = {
     chickensPerAttack = THREAT_CHICKENS_PER_ATTACK.Catastrophic,
     catchDifficulty = 10,
     rewardMoney = BASE_CATCH_REWARD * THREAT_REWARD_MULTIPLIERS.Catastrophic * 1.5,
+    damage = THREAT_DAMAGE.Catastrophic,
     description = "A legendary aerial hunter that terrorizes farms",
   },
 }
@@ -246,6 +269,20 @@ end
 -- Get the attack interval for a threat level
 function PredatorConfig.getThreatAttackInterval(threatLevel: ThreatLevel): number
   return THREAT_ATTACK_INTERVALS[threatLevel] or 60
+end
+
+-- Get the damage per second for a threat level
+function PredatorConfig.getThreatDamage(threatLevel: ThreatLevel): number
+  return THREAT_DAMAGE[threatLevel] or 5
+end
+
+-- Get the damage per second for a specific predator type
+function PredatorConfig.getDamage(predatorType: string): number
+  local config = PREDATOR_TYPES[predatorType]
+  if not config then
+    return 5 -- Default to Minor damage
+  end
+  return config.damage
 end
 
 -- Validate that a predator type exists
@@ -340,6 +377,11 @@ function PredatorConfig.validateAll(): { success: boolean, errors: { string } }
         errors,
         string.format("%s: Invalid chickens per attack %d", predatorType, config.chickensPerAttack)
       )
+    end
+
+    -- Check damage is positive
+    if config.damage <= 0 then
+      table.insert(errors, string.format("%s: Invalid damage %d", predatorType, config.damage))
     end
 
     -- Check threat level is valid

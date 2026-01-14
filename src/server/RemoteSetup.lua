@@ -32,6 +32,9 @@ local REMOTE_EVENTS = {
   "CompleteTutorial",
   "BatEquipped",
   "StoreReplenished",
+  "PlayerDamaged",
+  "PlayerKnockback",
+  "PlayerHealthChanged",
 }
 
 -- List of all RemoteFunctions to create

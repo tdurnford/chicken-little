@@ -1281,3 +1281,53 @@
   - All connected clients see updated inventory (StoreReplenished event broadcast)
 - Format check and build pass
 - Next: Work Items #5 (Robux Instant Replenish - uses forceReplenish()), #10, #11, #14, #16 (high priority items)
+
+[2026-01-14] Completed Bugfix Work Item #10: Implement Predator Damage to Player
+- Added THREAT_DAMAGE table to PredatorConfig with damage per second values:
+  - Minor: 5, Moderate: 10, Dangerous: 15, Severe: 25, Deadly: 40, Catastrophic: 60
+- Added 'damage' field to PredatorTypeConfig type
+- Added all 12 predators now have damage values based on threat level
+- Added PredatorConfig.getDamage() and PredatorConfig.getThreatDamage() helper functions
+- Created CombatHealth.lua shared module with:
+  - CombatState type with health, maxHealth, lastDamageTime, isKnockedBack, knockbackEndTime, inCombat
+  - createState() initializes player at 100 max health
+  - applyDamage() deals damage from predator type based on deltaTime
+  - applyFixedDamage() for testing/special attacks
+  - regenerate() restores 10 HP/second when out of combat (3 second delay)
+  - update() handles knockback expiry and regeneration
+  - Knockback lasts 1.5 seconds, restores player to 25% health after
+  - Combat range is 15 studs from predator
+- Added PlayerGameState.combatState to server Main.server.lua
+- Updated server game loop (section 6.5-6.6):
+  - Checks if player is within 15 studs of attacking predators
+  - Applies damage per frame based on predator damage value
+  - Fires PlayerDamaged event with damage, health, source info
+  - Fires PlayerKnockback event when health depletes
+  - Handles health regeneration and fires PlayerHealthChanged event
+- Added RemoteEvents: PlayerDamaged, PlayerKnockback, PlayerHealthChanged to RemoteSetup.lua
+- Created DamageUI.lua client module:
+  - Floating damage numbers that rise and fade
+  - Player health bar at top of screen (auto-hides when at full health)
+  - Health bar color codes: green >60%, yellow 30-60%, red <30%
+  - Knockback overlay with "STUNNED!" text
+- Updated Main.client.lua:
+  - Added DamageUI require and initialization
+  - Added event listeners for PlayerDamaged, PlayerKnockback, PlayerHealthChanged
+- Added SoundEffects.playHurt() and SoundEffects.playKnockback() functions
+- Added 'hurt' and 'knockback' sound configs to SoundEffects
+- Added 7 integration tests for CombatHealth:
+  - Creates valid state with full health
+  - applyDamage reduces health
+  - knockback occurs when health depletes
+  - Cannot take damage while knocked back
+  - Regenerates health when out of combat
+  - getDamage returns correct values from PredatorConfig
+  - All predators have valid damage values
+- Acceptance criteria met:
+  - Predators deal damage to players attacking them (when in 15 stud range)
+  - Damage rate varies by predator type (5-60 damage/sec)
+  - Player sees damage feedback (floating numbers, health bar)
+  - Player is knocked back if health depletes (1.5 sec stun, red overlay)
+  - Health regenerates after combat ends (10 HP/sec after 3 sec delay)
+- Format check and build pass
+- Next: Work Items #11 (Player Knockback from Bat), #14, #16, #23, #25, #26, #27, #29 (high priority items)

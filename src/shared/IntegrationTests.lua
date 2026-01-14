@@ -21,6 +21,7 @@ local OfflineEarnings = require(script.Parent.OfflineEarnings)
 local CageUpgrades = require(script.Parent.CageUpgrades)
 local RandomChickenSpawn = require(script.Parent.RandomChickenSpawn)
 local BalanceConfig = require(script.Parent.BalanceConfig)
+local CombatHealth = require(script.Parent.CombatHealth)
 
 -- Type definitions
 export type TestResult = {
@@ -942,6 +943,76 @@ test("Integration: data remains valid after operations", function()
 
   -- Validate data is still valid
   return assert_true(PlayerData.validate(data), "Data should remain valid after operations")
+end)
+
+-- ============================================================================
+-- CombatHealth Tests
+-- ============================================================================
+
+test("CombatHealth: creates valid state with full health", function()
+  local state = CombatHealth.createState()
+  local pass, msg = assert_not_nil(state, "State should be created")
+  if not pass then
+    return pass, msg
+  end
+  return assert_eq(state.health, state.maxHealth, "Should start at full health")
+end)
+
+test("CombatHealth: applyDamage reduces health", function()
+  local state = CombatHealth.createState()
+  local initialHealth = state.health
+  local result = CombatHealth.applyFixedDamage(state, 25, 0, "Test")
+  local pass, msg = assert_true(result.success, "Damage should be applied")
+  if not pass then
+    return pass, msg
+  end
+  return assert_eq(state.health, initialHealth - 25, "Health should be reduced by damage amount")
+end)
+
+test("CombatHealth: knockback occurs when health depletes", function()
+  local state = CombatHealth.createState()
+  local result = CombatHealth.applyFixedDamage(state, 150, 0, "Test")
+  local pass, msg = assert_true(result.success, "Damage should be applied")
+  if not pass then
+    return pass, msg
+  end
+  return assert_true(result.wasKnockedBack, "Should be knocked back when health depletes")
+end)
+
+test("CombatHealth: cannot take damage while knocked back", function()
+  local state = CombatHealth.createState()
+  CombatHealth.applyFixedDamage(state, 150, 0, "Test")
+  local result = CombatHealth.applyFixedDamage(state, 25, 0.5, "Test")
+  return assert_false(result.success, "Should not take damage while knocked back")
+end)
+
+test("CombatHealth: regenerates health when out of combat", function()
+  local state = CombatHealth.createState()
+  CombatHealth.applyFixedDamage(state, 30, 0, "Test")
+  local constants = CombatHealth.getConstants()
+  -- Wait for out of combat delay
+  local currentTime = constants.outOfCombatDelay + 1
+  local result = CombatHealth.regenerate(state, 1, currentTime)
+  return assert_gt(result.healthRestored, 0, "Should regenerate health when out of combat")
+end)
+
+test("CombatHealth: getDamage returns correct values from PredatorConfig", function()
+  local damage = PredatorConfig.getDamage("Bear")
+  return assert_gt(damage, 0, "Bear should have positive damage")
+end)
+
+test("CombatHealth: all predators have valid damage values", function()
+  local types = PredatorConfig.getAllTypes()
+  for _, predType in ipairs(types) do
+    local config = PredatorConfig.get(predType)
+    if not config then
+      return false, "Missing config for " .. predType
+    end
+    if config.damage <= 0 then
+      return false, "Predator " .. predType .. " should have positive damage"
+    end
+  end
+  return true, "OK"
 end)
 
 -- ============================================================================

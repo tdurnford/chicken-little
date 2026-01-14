@@ -5,7 +5,6 @@ local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 
-local Util = require(Shared:WaitForChild("Util"))
 local RemoteSetup = require(ServerScriptService:WaitForChild("RemoteSetup"))
 local DataPersistence = require(ServerScriptService:WaitForChild("DataPersistence"))
 local MapGeneration = require(Shared:WaitForChild("MapGeneration"))
@@ -19,6 +18,7 @@ local CageLocking = require(Shared:WaitForChild("CageLocking"))
 local ChickenStealing = require(Shared:WaitForChild("ChickenStealing"))
 local RandomChickenSpawn = require(Shared:WaitForChild("RandomChickenSpawn"))
 local BaseballBat = require(Shared:WaitForChild("BaseballBat"))
+local CombatHealth = require(Shared:WaitForChild("CombatHealth"))
 
 -- Store module for buy/sell operations
 local Store = require(Shared:WaitForChild("Store"))
@@ -55,6 +55,7 @@ type PlayerGameState = {
   lockState: CageLocking.LockState,
   stealState: ChickenStealing.StealState,
   batState: BaseballBat.BatState,
+  combatState: CombatHealth.CombatState,
 }
 local playerGameStates: { [number]: PlayerGameState } = {}
 
@@ -594,6 +595,7 @@ local function createPlayerGameState(): PlayerGameState
     lockState = CageLocking.createLockState(),
     stealState = ChickenStealing.createStealState(),
     batState = BaseballBat.createBatState(),
+    combatState = CombatHealth.createState(),
   }
 end
 
@@ -942,6 +944,91 @@ local function runGameLoop(deltaTime: number)
           local predatorDefeatedEvent = RemoteSetup.getEvent("PredatorDefeated")
           if predatorDefeatedEvent then
             predatorDefeatedEvent:FireClient(player, predatorId, false)
+          end
+        end
+      end
+    end
+
+    -- 6.5. Apply predator damage to player if in combat range
+    local character = player.Character
+    if character then
+      local humanoidRootPart = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+      if humanoidRootPart then
+        local playerPosition = humanoidRootPart.Position
+        local combatConstants = CombatHealth.getConstants()
+        local combatRange = combatConstants.combatRangeStuds
+
+        -- Check for attacking predators near player
+        local activePredators = PredatorSpawning.getActivePredators(gameState.spawnState)
+        local totalDamage = 0
+        local damagingPredator: string? = nil
+
+        for _, predator in ipairs(activePredators) do
+          if predator.state == "attacking" then
+            -- Get predator position from workspace
+            local predatorsFolder = game.Workspace:FindFirstChild("Predators")
+            if predatorsFolder then
+              local predatorModel = predatorsFolder:FindFirstChild(predator.id)
+              if predatorModel and predatorModel:IsA("Model") and predatorModel.PrimaryPart then
+                local distance = (predatorModel.PrimaryPart.Position - playerPosition).Magnitude
+                if distance <= combatRange then
+                  -- Player is in combat range - apply damage
+                  local predatorConfig = PredatorConfig.get(predator.predatorType)
+                  if predatorConfig then
+                    totalDamage = totalDamage + predatorConfig.damage * deltaTime
+                    damagingPredator = predator.predatorType
+                  end
+                end
+              end
+            end
+          end
+        end
+
+        -- Apply accumulated damage if any
+        if totalDamage > 0 and damagingPredator then
+          local damageResult = CombatHealth.applyFixedDamage(
+            gameState.combatState,
+            totalDamage,
+            currentTime,
+            damagingPredator
+          )
+
+          if damageResult.success then
+            -- Notify client of damage
+            local playerDamagedEvent = RemoteSetup.getEvent("PlayerDamaged")
+            if playerDamagedEvent then
+              playerDamagedEvent:FireClient(player, {
+                damage = damageResult.damageDealt,
+                newHealth = damageResult.newHealth,
+                maxHealth = gameState.combatState.maxHealth,
+                source = damagingPredator,
+              })
+            end
+
+            -- Handle knockback
+            if damageResult.wasKnockedBack then
+              local playerKnockbackEvent = RemoteSetup.getEvent("PlayerKnockback")
+              if playerKnockbackEvent then
+                playerKnockbackEvent:FireClient(player, {
+                  duration = combatConstants.knockbackDuration,
+                  source = damagingPredator,
+                })
+              end
+            end
+          end
+        end
+
+        -- 6.6. Update combat state (regeneration, knockback expiry)
+        local combatUpdate = CombatHealth.update(gameState.combatState, deltaTime, currentTime)
+        if combatUpdate.healthChanged then
+          local playerHealthChangedEvent = RemoteSetup.getEvent("PlayerHealthChanged")
+          if playerHealthChangedEvent then
+            playerHealthChangedEvent:FireClient(player, {
+              health = gameState.combatState.health,
+              maxHealth = gameState.combatState.maxHealth,
+              isKnockedBack = gameState.combatState.isKnockedBack,
+              inCombat = gameState.combatState.inCombat,
+            })
           end
         end
       end
