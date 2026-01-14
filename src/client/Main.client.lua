@@ -907,6 +907,11 @@ local nearestRandomChickenId: string? = nil
 local nearestRandomChickenType: string? = nil
 local randomChickenClaimPrompt: TextLabel? = nil
 
+-- Store interaction state
+local STORE_INTERACTION_RANGE = 12 -- studs, matches ProximityPrompt MaxActivationDistance
+local isNearStore = false
+local storePromptConnected = false
+
 --[[
 	Helper function to find the nearest random chicken within claim range.
 	Random chickens have spotIndex = nil in ChickenVisuals.
@@ -1684,6 +1689,16 @@ local function updateProximityPrompts()
       end
     end
   end
+
+  -- Check distance to store for fallback E key handling
+  local store = SectionVisuals.getStore()
+  if store then
+    local storePart = store:FindFirstChildWhichIsA("BasePart", true)
+    if storePart then
+      local storeDistance = (playerPosition - storePart.Position).Magnitude
+      isNearStore = storeDistance <= STORE_INTERACTION_RANGE
+    end
+  end
 end
 
 --[[
@@ -1725,12 +1740,29 @@ local function setupStoreInteraction()
   -- Find the StorePrompt in the store model
   local prompt = store:FindFirstChild("StorePrompt", true)
   if prompt and prompt:IsA("ProximityPrompt") then
+    -- Connect the Triggered event (fires when player activates the prompt)
     prompt.Triggered:Connect(function(playerWhoTriggered)
       if playerWhoTriggered == localPlayer then
         StoreUI.toggle()
+        print("[Client] Store opened via ProximityPrompt.Triggered")
       end
     end)
-    print("[Client] Store prompt connected")
+
+    -- Track when prompt becomes visible/hidden for fallback E key handling
+    prompt.PromptShown:Connect(function(playerToShowTo)
+      if playerToShowTo == localPlayer then
+        isNearStore = true
+      end
+    end)
+
+    prompt.PromptHidden:Connect(function(playerHiddenFrom)
+      if playerHiddenFrom == localPlayer then
+        isNearStore = false
+      end
+    end)
+
+    storePromptConnected = true
+    print("[Client] Store prompt connected with Triggered, PromptShown, and PromptHidden events")
   else
     warn("[Client] StorePrompt not found in store model")
   end
@@ -1871,6 +1903,10 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
           end
         end)
       end
+    -- Fallback: If near store and ProximityPrompt didn't handle it, toggle store manually
+    elseif isNearStore and not isNearChicken and not isNearRandomChicken then
+      StoreUI.toggle()
+      print("[Client] Store opened via fallback E key handler")
     end
   end
 end)

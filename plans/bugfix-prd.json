@@ -59,7 +59,8 @@
         "Store UI can be closed with X button or pressing E again"
       ],
       "dependencies": [],
-      "codeLocation": "src/client/Main.client.lua"
+      "codeLocation": "src/client/Main.client.lua",
+      "status": "done"
     },
     {
       "id": 2,

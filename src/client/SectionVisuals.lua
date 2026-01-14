@@ -335,6 +335,9 @@ function SectionVisuals.buildCentralStore()
     prompt.ObjectText = "Store"
     prompt.HoldDuration = 0
     prompt.MaxActivationDistance = 12
+    prompt.RequiresLineOfSight = false
+    prompt.Enabled = true
+    prompt.KeyboardKeyCode = Enum.KeyCode.E
     prompt.Parent = counterPart
   end
 

@@ -2396,3 +2396,30 @@
   - Works on both desktop and mobile (proper touch sizing) ✓
 - Format check and build pass
 - Next: Other medium priority items (#7, #17, #18, #33, #43, #44, #48, #49, #52)
+
+[2026-01-14] Completed Bugfix Work Item #1: Fix Store E Key Interaction Not Working
+- Root cause: The ProximityPrompt's Triggered event was connected, but the prompt
+  lacked explicit property settings that could cause unreliable behavior in some cases.
+  Additionally, there was no fallback mechanism if the ProximityPrompt failed to trigger.
+- Implementation approach:
+  1. Enhanced ProximityPrompt properties in SectionVisuals.lua:
+     - Added RequiresLineOfSight = false to work through obstacles
+     - Added Enabled = true explicitly for reliability
+     - Added KeyboardKeyCode = Enum.KeyCode.E to ensure E key is used
+  2. Added store proximity tracking in Main.client.lua:
+     - Added STORE_INTERACTION_RANGE = 12 constant (matches MaxActivationDistance)
+     - Added isNearStore and storePromptConnected tracking variables
+     - Connected PromptShown/PromptHidden events for state tracking
+     - Added distance-based proximity check in updateProximityPrompts() as fallback
+  3. Added fallback E key handler:
+     - When near store and not near chicken/random chicken, E key opens store
+     - This handles cases where ProximityPrompt.Triggered doesn't fire
+- Code changes:
+  - src/client/SectionVisuals.lua: Added 3 properties to ProximityPrompt creation
+  - src/client/Main.client.lua: Added store tracking vars, proximity check, E key fallback
+- Acceptance criteria met:
+  - Pressing E near store opens the store UI ✓
+  - Store UI displays available items ✓
+  - Store UI can be closed with X button or pressing E again ✓
+- Format check and build pass
+- Next: Other critical items (#8, #12) or high priority items
