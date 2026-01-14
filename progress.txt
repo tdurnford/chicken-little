@@ -2597,3 +2597,46 @@
   - Active power-ups are shown in UI ✓
 - Format check and build pass
 - Next: Other medium priority items (#17, #18, #19, #49)
+
+[2026-01-14] Completed Bugfix Work Item #17: Create Supplies Store
+- Root cause: Players had no way to purchase traps for defending against predators.
+  The store only had Eggs, Chickens, and Boosts tabs - no supplies/traps.
+- Implementation approach:
+  1. Extended Store.lua with trap purchase functions:
+     - Added TrapConfig import
+     - Created SupplyItem type definition
+     - Added TRAP_TIER_ROBUX_PRICES configuration
+     - Implemented getAvailableTraps() to get sorted trap list
+     - Implemented buyTrap() for cash purchases with placement limit checks
+     - Implemented buyTrapWithRobux() for Robux purchases
+     - Implemented sellTrap() to sell unwanted traps
+     - Added helper functions getTrapRobuxPrice() and canAffordTrap()
+  2. Extended StoreUI.lua with Supplies tab:
+     - Added TrapConfig import
+     - Extended currentTab type to include "supplies"
+     - Added onTrapPurchaseCallback
+     - Created TIER_COLORS for trap tier visual distinction
+     - Implemented createSupplyCard() with:
+       * Tier color bar (Basic=gray, Improved=green, etc.)
+       * Trap emoji icon (🪤)
+       * Name, tier label, and description
+       * Cash buy button with affordability check
+       * Robux buy button
+     - Added supplies case to populateItems()
+     - Added SuppliesTab button handling to updateTabAppearance()
+     - Changed tab layout from 3 tabs (33%) to 4 tabs (25% each)
+     - Added StoreUI.onTrapPurchase() callback setter
+  3. Extended Main.server.lua:
+     - Added TrapConfig import
+     - Implemented BuyTrap RemoteFunction handler
+     - Extended BuyItemWithRobux to handle "trap" itemType
+  4. Extended Main.client.lua:
+     - Wired StoreUI.onTrapPurchase callback to BuyTrap remote
+- Acceptance criteria met:
+  - Supplies store exists as "Traps" tab in the store ✓
+  - Players can buy all 12 trap types (from Basic WoodenSnare to Ultimate VoidPrison) ✓
+  - Robux option available for all traps (tier-based pricing: Basic R$10 to Ultimate R$1500) ✓
+  - Traps are added to player's traps list ✓
+  - Placement limits enforced (can't buy more than maxPlacement per trap type) ✓
+- Format check and build pass
+- Next: Other medium priority items (#18, #19, #49)

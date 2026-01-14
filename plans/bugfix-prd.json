@@ -474,7 +474,7 @@
       "category": "Store-Supplies",
       "title": "Create Supplies Store",
       "description": "Add a second store where players can buy traps and coop strengthening supplies.",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Create SuppliesStore.lua shared module",
@@ -495,7 +495,8 @@
       "dependencies": [
         2
       ],
-      "codeLocation": "src/shared/SuppliesStore.lua"
+      "codeLocation": "src/shared/SuppliesStore.lua",
+      "status": "completed"
     },
     {
       "id": 18,

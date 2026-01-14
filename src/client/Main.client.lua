@@ -1900,6 +1900,28 @@ StoreUI.onPowerUpPurchase(function(powerUpId: string)
   end
 end)
 
+-- Wire up store trap/supply purchase callback
+StoreUI.onTrapPurchase(function(trapType: string)
+  local buyTrapFunc = getFunction("BuyTrap")
+  if not buyTrapFunc then
+    warn("[Client] BuyTrap RemoteFunction not found")
+    return
+  end
+
+  local result = buyTrapFunc:InvokeServer(trapType)
+  if result then
+    if result.success then
+      SoundEffects.play("purchase")
+      print("[Client] Trap purchased:", result.message)
+      -- Refresh store UI
+      StoreUI.refreshInventory()
+    else
+      SoundEffects.play("uiError")
+      warn("[Client] Trap purchase failed:", result.message)
+    end
+  end
+end)
+
 --[[
   Random Chicken Claim Input Handler
   Handles E key press to claim random chickens in the neutral zone.

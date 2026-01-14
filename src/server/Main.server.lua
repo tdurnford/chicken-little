@@ -41,6 +41,9 @@ local PlayerData = require(Shared:WaitForChild("PlayerData"))
 -- Power-up configuration module
 local PowerUpConfig = require(Shared:WaitForChild("PowerUpConfig"))
 
+-- Trap configuration module
+local TrapConfig = require(Shared:WaitForChild("TrapConfig"))
+
 -- Offline earnings module
 local OfflineEarnings = require(Shared:WaitForChild("OfflineEarnings"))
 
@@ -269,6 +272,24 @@ if sellChickenFunc then
       if chickenSoldEvent then
         chickenSoldEvent:FireClient(player, { chickenId = chickenId, message = result.message })
       end
+      syncPlayerData(player, playerData, true)
+    end
+    return result
+  end
+end
+
+-- BuyTrap RemoteFunction handler
+local buyTrapFunc = RemoteSetup.getFunction("BuyTrap")
+if buyTrapFunc then
+  buyTrapFunc.OnServerInvoke = function(player: Player, trapType: string)
+    local userId = player.UserId
+    local playerData = DataPersistence.getData(userId)
+    if not playerData then
+      return { success = false, message = "Player data not found" }
+    end
+
+    local result = Store.buyTrap(playerData, trapType)
+    if result.success then
       syncPlayerData(player, playerData, true)
     end
     return result
@@ -808,11 +829,50 @@ local buyItemWithRobuxFunc = RemoteSetup.getFunction("BuyItemWithRobux")
 if buyItemWithRobuxFunc then
   buyItemWithRobuxFunc.OnServerInvoke = function(player: Player, itemType: string, itemId: string)
     -- Validate input
-    if itemType ~= "egg" and itemType ~= "chicken" then
+    if itemType ~= "egg" and itemType ~= "chicken" and itemType ~= "trap" then
       return {
         success = false,
         message = "Invalid item type",
       }
+    end
+
+    -- Handle trap purchases differently (traps use tier-based pricing)
+    if itemType == "trap" then
+      local trapConfig = TrapConfig.get(itemId)
+      if not trapConfig then
+        return {
+          success = false,
+          message = "Trap type not found",
+        }
+      end
+
+      local robuxPrice = Store.getTrapRobuxPrice(trapConfig.tier)
+
+      -- For testing: deliver item for free when product ID not set
+      -- In production, this would prompt for Robux purchase
+      local playerData = DataPersistence.get(player)
+      if not playerData then
+        return {
+          success = false,
+          message = "Player data not found",
+        }
+      end
+
+      local result = Store.buyTrapWithRobux(playerData, itemId)
+      if result.success then
+        DataPersistence.save(player)
+        local playerDataChangedEvent = RemoteSetup.getEvent("PlayerDataChanged")
+        if playerDataChangedEvent then
+          playerDataChangedEvent:FireClient(player, playerData)
+        end
+        print(
+          "[Main.server] Free Robux trap purchase (product ID not configured) for",
+          player.Name,
+          itemId
+        )
+      end
+
+      return result
     end
 
     -- Get item rarity from store inventory

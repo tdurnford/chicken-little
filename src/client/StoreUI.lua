@@ -17,6 +17,7 @@ local EggConfig = require(Shared:WaitForChild("EggConfig"))
 local ChickenConfig = require(Shared:WaitForChild("ChickenConfig"))
 local Store = require(Shared:WaitForChild("Store"))
 local PowerUpConfig = require(Shared:WaitForChild("PowerUpConfig"))
+local TrapConfig = require(Shared:WaitForChild("TrapConfig"))
 
 -- Rarity colors for visual distinction
 local RARITY_COLORS: { [string]: Color3 } = {
@@ -41,7 +42,7 @@ local confirmationFrame: Frame? = nil
 local restockTimerLabel: TextLabel? = nil
 local timerConnection: RBXScriptConnection? = nil
 local isOpen = false
-local currentTab: "eggs" | "chickens" | "powerups" = "eggs"
+local currentTab: "eggs" | "chickens" | "supplies" | "powerups" = "eggs"
 
 -- Cached player money for UI updates
 local cachedPlayerMoney = 0
@@ -58,6 +59,7 @@ local onChickenPurchaseCallback: ((chickenType: string, quantity: number) -> any
 local onReplenishCallback: (() -> any)? = nil
 local onRobuxPurchaseCallback: ((itemType: string, itemId: string) -> any)? = nil
 local onPowerUpPurchaseCallback: ((powerUpId: string) -> any)? = nil
+local onTrapPurchaseCallback: ((trapType: string) -> any)? = nil
 
 --[[
 	Formats seconds into M:SS format for the restock timer.
@@ -455,6 +457,170 @@ local function createPowerUpCard(
   return card
 end
 
+-- Tier colors for supplies/traps
+local TIER_COLORS: { [string]: Color3 } = {
+  Basic = Color3.fromRGB(180, 180, 180),
+  Improved = Color3.fromRGB(50, 200, 50),
+  Advanced = Color3.fromRGB(50, 150, 255),
+  Expert = Color3.fromRGB(160, 50, 220),
+  Master = Color3.fromRGB(255, 165, 0),
+  Ultimate = Color3.fromRGB(255, 50, 100),
+}
+
+--[[
+	Creates a supply/trap card for the store.
+	@param supplyItem Store.SupplyItem - The supply item data
+	@param parent Frame - Parent frame to add card to
+	@param index number - Index for positioning
+]]
+local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, index: number): Frame
+  local card = Instance.new("Frame")
+  card.Name = supplyItem.id
+  card.Size = UDim2.new(1, -10, 0, 90)
+  card.Position = UDim2.new(0, 5, 0, (index - 1) * 95 + 5)
+  card.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+  card.BorderSizePixel = 0
+  card.Parent = parent
+
+  local cardCorner = Instance.new("UICorner")
+  cardCorner.CornerRadius = UDim.new(0, 8)
+  cardCorner.Parent = card
+
+  -- Tier color bar on left
+  local tierBar = Instance.new("Frame")
+  tierBar.Name = "TierBar"
+  tierBar.Size = UDim2.new(0, 4, 1, -8)
+  tierBar.Position = UDim2.new(0, 4, 0, 4)
+  tierBar.BackgroundColor3 = TIER_COLORS[supplyItem.tier] or Color3.fromRGB(128, 128, 128)
+  tierBar.BorderSizePixel = 0
+  tierBar.Parent = card
+
+  local tierBarCorner = Instance.new("UICorner")
+  tierBarCorner.CornerRadius = UDim.new(0, 2)
+  tierBarCorner.Parent = tierBar
+
+  -- Icon (trap emoji)
+  local iconLabel = Instance.new("TextLabel")
+  iconLabel.Name = "Icon"
+  iconLabel.Size = UDim2.new(0, 40, 0, 40)
+  iconLabel.Position = UDim2.new(0, 15, 0, 8)
+  iconLabel.BackgroundTransparency = 1
+  iconLabel.Text = "🪤"
+  iconLabel.TextScaled = true
+  iconLabel.Font = Enum.Font.Gotham
+  iconLabel.Parent = card
+
+  -- Name label
+  local nameLabel = Instance.new("TextLabel")
+  nameLabel.Name = "Name"
+  nameLabel.Size = UDim2.new(0.5, -60, 0, 22)
+  nameLabel.Position = UDim2.new(0, 60, 0, 6)
+  nameLabel.BackgroundTransparency = 1
+  nameLabel.Text = supplyItem.displayName
+  nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+  nameLabel.TextScaled = true
+  nameLabel.Font = Enum.Font.GothamBold
+  nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+  nameLabel.Parent = card
+
+  -- Tier label
+  local tierLabel = Instance.new("TextLabel")
+  tierLabel.Name = "Tier"
+  tierLabel.Size = UDim2.new(0.5, -60, 0, 16)
+  tierLabel.Position = UDim2.new(0, 60, 0, 28)
+  tierLabel.BackgroundTransparency = 1
+  tierLabel.Text = supplyItem.tier
+  tierLabel.TextColor3 = TIER_COLORS[supplyItem.tier] or Color3.fromRGB(180, 180, 180)
+  tierLabel.TextScaled = true
+  tierLabel.Font = Enum.Font.Gotham
+  tierLabel.TextXAlignment = Enum.TextXAlignment.Left
+  tierLabel.Parent = card
+
+  -- Description label
+  local descLabel = Instance.new("TextLabel")
+  descLabel.Name = "Description"
+  descLabel.Size = UDim2.new(0.9, -60, 0, 28)
+  descLabel.Position = UDim2.new(0, 60, 0, 46)
+  descLabel.BackgroundTransparency = 1
+  descLabel.Text = supplyItem.description
+  descLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+  descLabel.TextScaled = true
+  descLabel.Font = Enum.Font.Gotham
+  descLabel.TextXAlignment = Enum.TextXAlignment.Left
+  descLabel.TextWrapped = true
+  descLabel.Parent = card
+
+  -- Cash buy button
+  local canAfford = cachedPlayerMoney >= supplyItem.price
+  local buyButton = Instance.new("TextButton")
+  buyButton.Name = "BuyButton"
+  buyButton.Size = UDim2.new(0, 80, 0, 30)
+  buyButton.Position = UDim2.new(1, -170, 0, 8)
+  buyButton.BackgroundColor3 = canAfford and Color3.fromRGB(50, 180, 50)
+    or Color3.fromRGB(80, 80, 80)
+  buyButton.Text = "$" .. tostring(supplyItem.price)
+  buyButton.TextColor3 = canAfford and Color3.fromRGB(255, 255, 255)
+    or Color3.fromRGB(150, 150, 150)
+  buyButton.TextScaled = true
+  buyButton.Font = Enum.Font.GothamBold
+  buyButton.Parent = card
+
+  local buyButtonCorner = Instance.new("UICorner")
+  buyButtonCorner.CornerRadius = UDim.new(0, 6)
+  buyButtonCorner.Parent = buyButton
+
+  -- Connect cash buy button
+  buyButton.MouseButton1Click:Connect(function()
+    if canAfford and onTrapPurchaseCallback then
+      onTrapPurchaseCallback(supplyItem.id)
+    end
+  end)
+
+  -- Robux buy button
+  local robuxButton = Instance.new("TextButton")
+  robuxButton.Name = "RobuxButton"
+  robuxButton.Size = UDim2.new(0, 70, 0, 30)
+  robuxButton.Position = UDim2.new(1, -85, 0, 8)
+  robuxButton.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+  robuxButton.Text = ""
+  robuxButton.Parent = card
+
+  local robuxButtonCorner = Instance.new("UICorner")
+  robuxButtonCorner.CornerRadius = UDim.new(0, 6)
+  robuxButtonCorner.Parent = robuxButton
+
+  -- Robux icon
+  local robuxIcon = Instance.new("ImageLabel")
+  robuxIcon.Name = "RobuxIcon"
+  robuxIcon.Size = UDim2.new(0, 14, 0, 14)
+  robuxIcon.Position = UDim2.new(0, 6, 0.5, -7)
+  robuxIcon.BackgroundTransparency = 1
+  robuxIcon.Image = "rbxassetid://4915439044"
+  robuxIcon.Parent = robuxButton
+
+  -- Robux price label
+  local robuxPriceLabel = Instance.new("TextLabel")
+  robuxPriceLabel.Name = "Price"
+  robuxPriceLabel.Size = UDim2.new(1, -24, 1, 0)
+  robuxPriceLabel.Position = UDim2.new(0, 22, 0, 0)
+  robuxPriceLabel.BackgroundTransparency = 1
+  robuxPriceLabel.Text = tostring(supplyItem.robuxPrice)
+  robuxPriceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+  robuxPriceLabel.TextScaled = true
+  robuxPriceLabel.Font = Enum.Font.GothamBold
+  robuxPriceLabel.TextXAlignment = Enum.TextXAlignment.Left
+  robuxPriceLabel.Parent = robuxButton
+
+  -- Connect Robux button
+  robuxButton.MouseButton1Click:Connect(function()
+    if onRobuxPurchaseCallback then
+      onRobuxPurchaseCallback("trap", supplyItem.id)
+    end
+  end)
+
+  return card
+end
+
 --[[
 	Populates the scroll frame with items based on current tab.
 ]]
@@ -502,6 +668,12 @@ local function populateItems()
       )
     end
     scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableChickens * 85 + 10)
+  elseif currentTab == "supplies" then
+    local availableTraps = Store.getAvailableTraps()
+    for index, item in ipairs(availableTraps) do
+      createSupplyCard(item, scrollFrame, index)
+    end
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableTraps * 95 + 10)
   elseif currentTab == "powerups" then
     local powerUps = PowerUpConfig.getAllSorted()
     for index, config in ipairs(powerUps) do
@@ -521,6 +693,7 @@ local function updateTabAppearance()
 
   local eggsTab = tabFrame:FindFirstChild("EggsTab")
   local chickensTab = tabFrame:FindFirstChild("ChickensTab")
+  local suppliesTab = tabFrame:FindFirstChild("SuppliesTab")
   local powerupsTab = tabFrame:FindFirstChild("PowerupsTab")
 
   if eggsTab and eggsTab:IsA("TextButton") then
@@ -543,6 +716,16 @@ local function updateTabAppearance()
     end
   end
 
+  if suppliesTab and suppliesTab:IsA("TextButton") then
+    if currentTab == "supplies" then
+      suppliesTab.BackgroundColor3 = Color3.fromRGB(200, 120, 50) -- Orange for supplies
+      suppliesTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+    else
+      suppliesTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+      suppliesTab.TextColor3 = Color3.fromRGB(180, 180, 180)
+    end
+  end
+
   if powerupsTab and powerupsTab:IsA("TextButton") then
     if currentTab == "powerups" then
       powerupsTab.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
@@ -556,9 +739,9 @@ end
 
 --[[
 	Switches to the specified tab.
-	@param tab "eggs" | "chickens" | "powerups" - The tab to switch to
+	@param tab "eggs" | "chickens" | "supplies" | "powerups" - The tab to switch to
 ]]
-local function switchTab(tab: "eggs" | "chickens" | "powerups")
+local function switchTab(tab: "eggs" | "chickens" | "supplies" | "powerups")
   currentTab = tab
   updateTabAppearance()
   populateItems()
@@ -687,7 +870,7 @@ function StoreUI.create()
   -- Initialize timer display
   updateRestockTimer()
 
-  -- Tab frame for Eggs/Chickens/Power-ups tabs
+  -- Tab frame for Eggs/Chickens/Supplies/Power-ups tabs
   tabFrame = Instance.new("Frame")
   tabFrame.Name = "TabFrame"
   tabFrame.Size = UDim2.new(1, -20, 0, 35)
@@ -698,7 +881,7 @@ function StoreUI.create()
   -- Eggs tab button
   local eggsTab = Instance.new("TextButton")
   eggsTab.Name = "EggsTab"
-  eggsTab.Size = UDim2.new(0.33, -4, 1, 0)
+  eggsTab.Size = UDim2.new(0.25, -3, 1, 0)
   eggsTab.Position = UDim2.new(0, 0, 0, 0)
   eggsTab.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
   eggsTab.Text = "🥚 Eggs"
@@ -718,10 +901,10 @@ function StoreUI.create()
   -- Chickens tab button
   local chickensTab = Instance.new("TextButton")
   chickensTab.Name = "ChickensTab"
-  chickensTab.Size = UDim2.new(0.33, -4, 1, 0)
-  chickensTab.Position = UDim2.new(0.33, 2, 0, 0)
+  chickensTab.Size = UDim2.new(0.25, -3, 1, 0)
+  chickensTab.Position = UDim2.new(0.25, 1, 0, 0)
   chickensTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-  chickensTab.Text = "🐔 Chickens"
+  chickensTab.Text = "🐔"
   chickensTab.TextColor3 = Color3.fromRGB(180, 180, 180)
   chickensTab.TextScaled = true
   chickensTab.Font = Enum.Font.GothamBold
@@ -735,13 +918,33 @@ function StoreUI.create()
     switchTab("chickens")
   end)
 
+  -- Supplies tab button
+  local suppliesTab = Instance.new("TextButton")
+  suppliesTab.Name = "SuppliesTab"
+  suppliesTab.Size = UDim2.new(0.25, -3, 1, 0)
+  suppliesTab.Position = UDim2.new(0.5, 2, 0, 0)
+  suppliesTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+  suppliesTab.Text = "🪤 Traps"
+  suppliesTab.TextColor3 = Color3.fromRGB(180, 180, 180)
+  suppliesTab.TextScaled = true
+  suppliesTab.Font = Enum.Font.GothamBold
+  suppliesTab.Parent = tabFrame
+
+  local suppliesTabCorner = Instance.new("UICorner")
+  suppliesTabCorner.CornerRadius = UDim.new(0, 6)
+  suppliesTabCorner.Parent = suppliesTab
+
+  suppliesTab.MouseButton1Click:Connect(function()
+    switchTab("supplies")
+  end)
+
   -- Power-ups tab button
   local powerupsTab = Instance.new("TextButton")
   powerupsTab.Name = "PowerupsTab"
-  powerupsTab.Size = UDim2.new(0.33, -2, 1, 0)
-  powerupsTab.Position = UDim2.new(0.66, 4, 0, 0)
+  powerupsTab.Size = UDim2.new(0.25, -2, 1, 0)
+  powerupsTab.Position = UDim2.new(0.75, 3, 0, 0)
   powerupsTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-  powerupsTab.Text = "⚡ Boosts"
+  powerupsTab.Text = "⚡"
   powerupsTab.TextColor3 = Color3.fromRGB(180, 180, 180)
   powerupsTab.TextScaled = true
   powerupsTab.Font = Enum.Font.GothamBold
@@ -1035,8 +1238,16 @@ function StoreUI.onPowerUpPurchase(callback: (powerUpId: string) -> any)
 end
 
 --[[
+	Sets the callback for when a trap/supply purchase is attempted.
+	@param callback function - Function to call with (trapType)
+]]
+function StoreUI.onTrapPurchase(callback: (trapType: string) -> any)
+  onTrapPurchaseCallback = callback
+end
+
+--[[
 	Returns the current tab.
-	@return "eggs" | "chickens" | "powerups"
+	@return "eggs" | "chickens" | "supplies" | "powerups"
 ]]
 function StoreUI.getCurrentTab(): string
   return currentTab

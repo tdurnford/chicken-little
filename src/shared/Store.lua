@@ -10,6 +10,7 @@ local Store = {}
 local PlayerData = require(script.Parent.PlayerData)
 local EggConfig = require(script.Parent.EggConfig)
 local ChickenConfig = require(script.Parent.ChickenConfig)
+local TrapConfig = require(script.Parent.TrapConfig)
 
 -- Type definitions
 export type TransactionResult = {
@@ -1010,6 +1011,253 @@ end
 -- Force replenish (for Robux purchase or testing)
 function Store.forceReplenish(): StoreInventory
   return Store.replenishStore()
+end
+
+-- Trap/Supply store functions
+
+-- Supply item type for store display
+export type SupplyItem = {
+  itemType: "trap",
+  id: string,
+  name: string,
+  displayName: string,
+  tier: string,
+  price: number,
+  sellPrice: number,
+  description: string,
+  robuxPrice: number,
+}
+
+-- Robux prices for traps by tier
+local TRAP_TIER_ROBUX_PRICES: { [string]: number } = {
+  Basic = 10,
+  Improved = 25,
+  Advanced = 75,
+  Expert = 200,
+  Master = 600,
+  Ultimate = 1500,
+}
+
+-- Get all available traps for purchase (sorted by tier then price)
+function Store.getAvailableTraps(): { SupplyItem }
+  local items: { SupplyItem } = {}
+  for trapType, config in pairs(TrapConfig.getAll()) do
+    local robuxPrice = TRAP_TIER_ROBUX_PRICES[config.tier] or 10
+    table.insert(items, {
+      itemType = "trap",
+      id = trapType,
+      name = config.name,
+      displayName = config.displayName,
+      tier = config.tier,
+      price = config.price,
+      sellPrice = config.sellPrice,
+      description = config.description,
+      robuxPrice = robuxPrice,
+    })
+  end
+  -- Sort by tier level then price
+  table.sort(items, function(a, b)
+    local aTier = TrapConfig.getTierLevel(a.tier :: TrapConfig.TrapTier)
+    local bTier = TrapConfig.getTierLevel(b.tier :: TrapConfig.TrapTier)
+    if aTier ~= bTier then
+      return aTier < bTier
+    end
+    return a.price < b.price
+  end)
+  return items
+end
+
+-- Buy a trap from the store
+function Store.buyTrap(playerData: PlayerData.PlayerDataSchema, trapType: string): TransactionResult
+  -- Validate trap type
+  local trapConfig = TrapConfig.get(trapType)
+  if not trapConfig then
+    return {
+      success = false,
+      message = "Invalid trap type: " .. tostring(trapType),
+      newBalance = playerData.money,
+    }
+  end
+
+  local price = trapConfig.price
+
+  -- Check if player can afford
+  if playerData.money < price then
+    return {
+      success = false,
+      message = string.format(
+        "Insufficient funds. Need $%d but only have $%d",
+        price,
+        math.floor(playerData.money)
+      ),
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Check placement limit (player can't have more than maxPlacement of this type)
+  local currentCount = 0
+  for _, trap in ipairs(playerData.traps) do
+    if trap.trapType == trapType then
+      currentCount = currentCount + 1
+    end
+  end
+
+  if currentCount >= trapConfig.maxPlacement then
+    return {
+      success = false,
+      message = string.format(
+        "Maximum placement limit reached (%d/%d)",
+        currentCount,
+        trapConfig.maxPlacement
+      ),
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Deduct money
+  playerData.money = playerData.money - price
+
+  -- Add trap to player's traps list (unplaced, spotIndex = -1)
+  local trapId = PlayerData.generateId()
+  table.insert(playerData.traps, {
+    id = trapId,
+    trapType = trapType,
+    tier = trapConfig.tierLevel,
+    spotIndex = -1, -- Not placed yet
+    cooldownEndTime = nil,
+    caughtPredator = nil,
+  })
+
+  return {
+    success = true,
+    message = string.format("Purchased %s for $%d", trapConfig.displayName, price),
+    newBalance = playerData.money,
+    itemId = trapId,
+  }
+end
+
+-- Buy a trap with Robux (bypasses money check)
+function Store.buyTrapWithRobux(
+  playerData: PlayerData.PlayerDataSchema,
+  trapType: string
+): TransactionResult
+  -- Validate trap type
+  local trapConfig = TrapConfig.get(trapType)
+  if not trapConfig then
+    return {
+      success = false,
+      message = "Invalid trap type: " .. tostring(trapType),
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Check placement limit
+  local currentCount = 0
+  for _, trap in ipairs(playerData.traps) do
+    if trap.trapType == trapType then
+      currentCount = currentCount + 1
+    end
+  end
+
+  if currentCount >= trapConfig.maxPlacement then
+    return {
+      success = false,
+      message = string.format(
+        "Maximum placement limit reached (%d/%d)",
+        currentCount,
+        trapConfig.maxPlacement
+      ),
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Add trap to player's traps list (unplaced)
+  local trapId = PlayerData.generateId()
+  table.insert(playerData.traps, {
+    id = trapId,
+    trapType = trapType,
+    tier = trapConfig.tierLevel,
+    spotIndex = -1,
+    cooldownEndTime = nil,
+    caughtPredator = nil,
+  })
+
+  return {
+    success = true,
+    message = string.format("Purchased %s with Robux", trapConfig.displayName),
+    newBalance = playerData.money,
+    itemId = trapId,
+  }
+end
+
+-- Sell a trap
+function Store.sellTrap(playerData: PlayerData.PlayerDataSchema, trapId: string): TransactionResult
+  -- Find trap in player's traps
+  local trapIndex: number? = nil
+  local trap: PlayerData.TrapData? = nil
+  for i, t in ipairs(playerData.traps) do
+    if t.id == trapId then
+      trapIndex = i
+      trap = t
+      break
+    end
+  end
+
+  if not trapIndex or not trap then
+    return {
+      success = false,
+      message = "Trap not found",
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Can't sell trap with caught predator
+  if trap.caughtPredator then
+    return {
+      success = false,
+      message = "Cannot sell trap with caught predator. Sell the predator first.",
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Get trap config for sell price
+  local trapConfig = TrapConfig.get(trap.trapType)
+  if not trapConfig then
+    return {
+      success = false,
+      message = "Invalid trap type",
+      newBalance = playerData.money,
+    }
+  end
+
+  local sellPrice = trapConfig.sellPrice
+
+  -- Remove trap
+  table.remove(playerData.traps, trapIndex)
+
+  -- Add money
+  playerData.money = playerData.money + sellPrice
+
+  return {
+    success = true,
+    message = string.format("Sold %s for $%d", trapConfig.displayName, sellPrice),
+    newBalance = playerData.money,
+    itemId = trapId,
+  }
+end
+
+-- Get Robux price for a trap tier
+function Store.getTrapRobuxPrice(tier: string): number
+  return TRAP_TIER_ROBUX_PRICES[tier] or 10
+end
+
+-- Check if player can afford a trap
+function Store.canAffordTrap(playerData: PlayerData.PlayerDataSchema, trapType: string): boolean
+  local trapConfig = TrapConfig.get(trapType)
+  if not trapConfig then
+    return false
+  end
+  return playerData.money >= trapConfig.price
 end
 
 return Store
