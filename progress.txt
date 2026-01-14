@@ -2932,3 +2932,52 @@
   - All trap types can be purchased ✓
 - Format check passes
 - Next: Work on remaining items (#4 Baseball Bat, #6 Pickup Inconsistency, #2 Inventory Stacking)
+
+[2026-01-14] Completed Bugfix Work Item #4: Fix Baseball Bat Equipping - Use Roblox Tool System
+- Root cause: The baseball bat used a custom equip system (Q key toggle, mouse click swing)
+  instead of Roblox's native Tool/Backpack system. This meant the bat didn't appear in the
+  standard hotbar UI and players couldn't use the familiar Roblox equip/unequip mechanics.
+- Implementation approach:
+  1. Created WeaponTool.lua shared module:
+     - WeaponToolConfig type for weapon tool configuration
+     - createBatModel() creates bat visual with Handle part (required by Roblox Tool system)
+     - createSwordModel() and createAxeModel() for future weapons
+     - create() creates a proper Roblox Tool instance with RequiresHandle=true, CanBeDropped=false
+     - giveToPlayer() adds Tool to player's Backpack (checks for duplicates)
+     - removeFromPlayer() removes Tool from Backpack or Character
+     - playerHasTool() checks if player has a specific weapon Tool
+     - getEquippedWeapon() returns currently equipped weapon Tool from character
+     - getWeaponType() extracts weapon type from Tool attributes
+     - restoreOwnedWeapons() restores all owned weapons to Backpack on join
+  2. Modified Main.server.lua:
+     - Added WeaponTool module import
+     - CharacterAdded handler now restores owned weapon Tools to Backpack via task.defer
+     - BuyWeapon handler now calls WeaponTool.giveToPlayer() after purchase
+     - BuyItemWithRobux handler (for Robux weapon purchases) also gives Tool
+     - SwingBat handler updated: removed equip/unequip/toggle actions (Roblox handles these)
+     - SwingBat now uses WeaponTool.getEquippedWeapon() to check if weapon is equipped
+  3. Modified Main.client.lua:
+     - Removed custom batModel, createBatVisual(), removeBatVisual(), playBatSwingAnimation()
+     - Removed custom toggleBatEquip() and swingBat() functions
+     - Removed Q key binding for bat toggle
+     - Removed 1/2/3 key bindings for weapon equip
+     - Removed mouse click binding for bat swing
+     - Removed BatEquipped event listener
+     - Added new Tool-based system:
+       * setupWeaponTool() connects Tool.Activated, .Equipped, .Unequipped events
+       * onWeaponActivated() calls SwingBat server function on Tool activation
+       * setupBackpackWatcher() watches for new Tools added to Backpack
+       * setupCharacterToolWatcher() handles equipped tools and respawns
+     - findNearbyPredator() function retained for targeting logic
+     - Removed localBatState variable (no longer needed)
+- Acceptance criteria met:
+  - Baseball bat appears in Roblox's native hotbar/backpack UI ✓
+  - Players can equip bat by clicking hotbar slot or pressing number key ✓
+  - Bat model appears in player's hand when equipped via Roblox's Tool system ✓
+  - Player can unequip by clicking hotbar again or pressing backpack key ✓
+  - Bat swing/attack works via Tool.Activated event ✓
+  - Bat ownership persists across sessions ✓ (stored in PlayerData.ownedWeapons)
+  - Bat does NOT appear in custom inventory UI ✓ (was never in InventoryUI)
+  - No console errors when equipping/unequipping ✓
+- Format check and build pass
+- Next: Work on remaining items (#6 Pickup Inconsistency, #2 Inventory Stacking)

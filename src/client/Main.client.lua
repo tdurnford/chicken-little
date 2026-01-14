@@ -44,9 +44,6 @@ local localPlayer = Players.LocalPlayer
 -- Local state cache for player data
 local playerDataCache: { [string]: any } = {}
 
--- Local bat state for client-side tracking
-local localBatState = BaseballBat.createBatState()
-
 -- Track world eggs with their visual models and proximity prompts
 local worldEggVisuals: { [string]: { model: Model, prompt: ProximityPrompt } } = {}
 
@@ -1497,120 +1494,16 @@ end)
 print("[Client] MainHUD inventory button wired")
 
 --[[
-  Baseball Bat Visual Management
-  Creates and manages the visual bat model on the player's character.
+  Weapon Tool Handling
+  Uses Roblox's native Tool system for weapon equipping.
+  Weapons appear in the player's Backpack/Hotbar and are equipped by clicking or pressing number keys.
+  Tool.Activated is used to trigger swings.
 ]]
 
--- Current bat model reference
-local batModel: Model? = nil
+-- Track currently equipped weapon tool
+local equippedWeaponTool: Tool? = nil
 
--- Create a simple bat visual attached to the player's right hand
-local function createBatVisual()
-  local character = localPlayer.Character
-  if not character then
-    return
-  end
-
-  local rightHand = character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm")
-  if not rightHand then
-    return
-  end
-
-  -- Remove existing bat if any
-  if batModel then
-    batModel:Destroy()
-    batModel = nil
-  end
-
-  -- Create a simple bat model (cylinder + handle)
-  local bat = Instance.new("Model")
-  bat.Name = "BaseballBat"
-
-  -- Bat barrel (main part)
-  local barrel = Instance.new("Part")
-  barrel.Name = "Barrel"
-  barrel.Size = Vector3.new(0.4, 2.5, 0.4)
-  barrel.BrickColor = BrickColor.new("Brown")
-  barrel.Material = Enum.Material.Wood
-  barrel.CanCollide = false
-  barrel.Anchored = false
-  barrel.Parent = bat
-
-  -- Bat handle
-  local handle = Instance.new("Part")
-  handle.Name = "Handle"
-  handle.Size = Vector3.new(0.25, 1.0, 0.25)
-  handle.BrickColor = BrickColor.new("Dark orange")
-  handle.Material = Enum.Material.Wood
-  handle.CanCollide = false
-  handle.Anchored = false
-  handle.Parent = bat
-
-  -- Weld handle to barrel
-  local handleWeld = Instance.new("Weld")
-  handleWeld.Part0 = barrel
-  handleWeld.Part1 = handle
-  handleWeld.C0 = CFrame.new(0, -1.75, 0)
-  handleWeld.Parent = barrel
-
-  -- Weld bat to right hand
-  local handWeld = Instance.new("Weld")
-  handWeld.Part0 = rightHand
-  handWeld.Part1 = barrel
-  handWeld.C0 = CFrame.new(0, -0.5, 0) * CFrame.Angles(math.rad(90), 0, math.rad(90))
-  handWeld.Parent = rightHand
-
-  bat.PrimaryPart = barrel
-  bat.Parent = character
-
-  batModel = bat
-  print("[Client] Bat visual created")
-end
-
--- Remove the bat visual from the player
-local function removeBatVisual()
-  if batModel then
-    batModel:Destroy()
-    batModel = nil
-    print("[Client] Bat visual removed")
-  end
-end
-
--- Play bat swing animation (visual only)
-local function playBatSwingAnimation()
-  -- For now, just play a sound effect
-  -- A full implementation would animate the character's arm
-  SoundEffects.playBatSwing("miss") -- Initial swing sound (before we know if we hit)
-end
-
---[[
-  Bat Equipment and Swing Handlers
-  Handles Q key for equip toggle and left mouse button for swinging.
-]]
-
--- Toggle bat equip when Q is pressed
-local function toggleBatEquip()
-  local swingBatFunc = getFunction("SwingBat")
-  if not swingBatFunc then
-    warn("[Client] SwingBat RemoteFunction not found")
-    return
-  end
-
-  local result = swingBatFunc:InvokeServer("toggle")
-  if result and result.success then
-    localBatState.isEquipped = result.isEquipped
-    if result.isEquipped then
-      createBatVisual()
-      SoundEffects.playBatSwing("swing") -- Use bat swing sound for equip
-    else
-      removeBatVisual()
-      SoundEffects.playBatSwing("miss") -- Use miss sound for unequip (softer)
-    end
-    print("[Client] Bat equipped:", result.isEquipped)
-  end
-end
-
--- Find the nearest predator targeting this player within bat range
+-- Find the nearest predator targeting this player within weapon range
 local function findNearbyPredator(): (string?, number?)
   local character = localPlayer.Character
   if not character then
@@ -1644,30 +1537,19 @@ local function findNearbyPredator(): (string?, number?)
   return bestPredatorId, bestDistance
 end
 
--- Swing the bat when left mouse button is clicked
-local function swingBat()
-  if not localBatState.isEquipped then
-    return
-  end
-
+-- Handle weapon swing when Tool is activated (clicked)
+local function onWeaponActivated(tool: Tool)
   local swingBatFunc = getFunction("SwingBat")
   if not swingBatFunc then
     warn("[Client] SwingBat RemoteFunction not found")
     return
   end
 
-  -- Check if we can swing (client-side cooldown check)
-  local currentTime = os.clock()
-  if not BaseballBat.canSwing(localBatState, currentTime) then
-    return
-  end
-
-  -- Play swing animation immediately for responsiveness
-  playBatSwingAnimation()
-  BaseballBat.performSwing(localBatState, currentTime)
+  -- Play swing sound immediately for responsiveness
+  SoundEffects.playBatSwing("miss")
 
   -- Check for nearby predator targets
-  local predatorId, distance = findNearbyPredator()
+  local predatorId, _ = findNearbyPredator()
 
   local result
   if predatorId then
@@ -1698,66 +1580,103 @@ local function swingBat()
   end
 end
 
--- Setup keyboard input for bat toggle (Q key)
-UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
-  if gameProcessed then
+-- Handle weapon equipped (via Roblox Tool system)
+local function onWeaponEquipped(tool: Tool)
+  equippedWeaponTool = tool
+  local weaponType = tool:GetAttribute("WeaponType") or tool.Name
+  print("[Client] Weapon equipped:", weaponType)
+  SoundEffects.playBatSwing("swing")
+end
+
+-- Handle weapon unequipped (via Roblox Tool system)
+local function onWeaponUnequipped(tool: Tool)
+  if equippedWeaponTool == tool then
+    equippedWeaponTool = nil
+  end
+  local weaponType = tool:GetAttribute("WeaponType") or tool.Name
+  print("[Client] Weapon unequipped:", weaponType)
+end
+
+-- Setup handlers for a weapon Tool
+local function setupWeaponTool(tool: Tool)
+  -- Only setup if it's a weapon tool (has WeaponType attribute)
+  if not tool:GetAttribute("WeaponType") then
     return
   end
 
-  if input.KeyCode == Enum.KeyCode.Q then
-    toggleBatEquip()
-  end
-end)
-print("[Client] Bat toggle key binding (Q) set up")
+  tool.Activated:Connect(function()
+    onWeaponActivated(tool)
+  end)
 
--- Setup keyboard input for weapon equip (1 key for bat, 2/3 reserved for future weapons)
-UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
-  if gameProcessed then
+  tool.Equipped:Connect(function()
+    onWeaponEquipped(tool)
+  end)
+
+  tool.Unequipped:Connect(function()
+    onWeaponUnequipped(tool)
+  end)
+
+  print("[Client] Weapon tool setup:", tool.Name)
+end
+
+-- Watch for new weapon Tools added to Backpack
+local function setupBackpackWatcher()
+  local backpack = localPlayer:WaitForChild("Backpack", 10)
+  if not backpack then
+    warn("[Client] Backpack not found")
     return
   end
 
-  if input.KeyCode == Enum.KeyCode.One then
-    -- Key 1: Equip bat (or toggle if already equipped)
-    if not localBatState.isEquipped then
-      toggleBatEquip()
+  -- Setup existing tools
+  for _, child in ipairs(backpack:GetChildren()) do
+    if child:IsA("Tool") then
+      setupWeaponTool(child)
     end
-  elseif input.KeyCode == Enum.KeyCode.Two then
-    -- Key 2: Reserved for sword (future weapon)
-    -- When sword is implemented, this will equip it
-    print("[Client] Key 2 reserved for sword (not yet implemented)")
-  elseif input.KeyCode == Enum.KeyCode.Three then
-    -- Key 3: Reserved for axe (future weapon)
-    -- When axe is implemented, this will equip it
-    print("[Client] Key 3 reserved for axe (not yet implemented)")
-  end
-end)
-print("[Client] Weapon equip key bindings (1, 2, 3) set up")
-
--- Setup mouse input for bat swing (Left Mouse Button)
-UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
-  if gameProcessed then
-    return
   end
 
-  if input.UserInputType == Enum.UserInputType.MouseButton1 then
-    swingBat()
-  end
-end)
-print("[Client] Bat swing mouse binding (Left Click) set up")
+  -- Watch for new tools
+  backpack.ChildAdded:Connect(function(child)
+    if child:IsA("Tool") then
+      setupWeaponTool(child)
+    end
+  end)
 
--- Listen for other players equipping/unequipping bats
-local batEquippedEvent = getEvent("BatEquipped")
-if batEquippedEvent then
-  batEquippedEvent.OnClientEvent:Connect(function(player: Player, isEquipped: boolean)
-    if player == localPlayer then
-      return -- Already handled locally
+  print("[Client] Backpack weapon watcher set up")
+end
+
+-- Also watch character for equipped tools (respawn handling)
+local function setupCharacterToolWatcher()
+  local function watchCharacter(character: Model)
+    -- Setup existing equipped tools
+    for _, child in ipairs(character:GetChildren()) do
+      if child:IsA("Tool") then
+        setupWeaponTool(child)
+      end
     end
 
-    -- For other players, we would create/remove their bat visual here
-    -- This is a simplified version - full implementation would track per-player bat models
-    print("[Client] Player", player.Name, "bat equipped:", isEquipped)
+    -- Watch for newly equipped tools
+    character.ChildAdded:Connect(function(child)
+      if child:IsA("Tool") then
+        setupWeaponTool(child)
+      end
+    end)
+  end
+
+  if localPlayer.Character then
+    watchCharacter(localPlayer.Character)
+  end
+
+  localPlayer.CharacterAdded:Connect(function(character)
+    watchCharacter(character)
+    -- Re-setup backpack watcher on respawn
+    task.defer(setupBackpackWatcher)
   end)
 end
+
+-- Initialize weapon tool system
+setupBackpackWatcher()
+setupCharacterToolWatcher()
+print("[Client] Weapon Tool system initialized")
 
 --[[
 	Updates lock timer display on the HUD if player has an active lock.

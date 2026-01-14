@@ -135,7 +135,7 @@
       "category": "Equipment-BugFix",
       "title": "Fix Baseball Bat Equipping - Use Roblox Tool System",
       "description": "Players are unable to equip the baseball bat. Weapons like the bat should use Roblox's native Tool/Backpack inventory system instead of the custom item inventory. This provides standard equip/unequip behavior via hotbar and backpack.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Review BaseballBat.lua and remove any custom inventory equip logic",

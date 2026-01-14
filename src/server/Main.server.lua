@@ -47,6 +47,9 @@ local TrapConfig = require(Shared:WaitForChild("TrapConfig"))
 -- Weapon configuration module
 local WeaponConfig = require(Shared:WaitForChild("WeaponConfig"))
 
+-- Weapon tool module for creating Roblox Tools
+local WeaponTool = require(Shared:WaitForChild("WeaponTool"))
+
 -- Area shield module
 local AreaShield = require(Shared:WaitForChild("AreaShield"))
 
@@ -321,6 +324,8 @@ if buyWeaponFunc then
 
     local result = Store.buyWeapon(playerData, weaponType)
     if result.success then
+      -- Give the weapon Tool to player's Backpack
+      WeaponTool.giveToPlayer(player, weaponType)
       syncPlayerData(player, playerData, true)
     end
     return result
@@ -693,7 +698,8 @@ end
 
 --[[
   Combat Server Handlers
-  Handles SwingBat RemoteFunction and BatEquipped RemoteEvent.
+  Handles SwingBat RemoteFunction for weapon attacks.
+  Uses Roblox's native Tool system - weapons are equipped via Backpack/Hotbar.
   Validates swing conditions and applies damage to predators/knockback to players.
 ]]
 
@@ -712,40 +718,22 @@ if swingBatFunc then
     local batState = gameState.batState
     local currentTime = os.clock()
 
-    -- Handle equip/unequip actions
-    if action == "equip" then
-      local equipped = BaseballBat.equip(batState)
-      if equipped then
-        -- Broadcast to all clients that this player equipped bat
-        local batEquippedEvent = RemoteSetup.getEvent("BatEquipped")
-        if batEquippedEvent then
-          batEquippedEvent:FireAllClients(player, true)
-        end
+    -- Only handle swing action - equip/unequip is now handled by Roblox Tool system
+    if action == "swing" then
+      -- Check if player has a weapon Tool equipped
+      local equippedTool = WeaponTool.getEquippedWeapon(player)
+      if not equippedTool then
+        return { success = false, message = "No weapon equipped" }
       end
-      return { success = equipped, isEquipped = batState.isEquipped }
-    elseif action == "unequip" then
-      local unequipped = BaseballBat.unequip(batState)
-      if unequipped then
-        -- Broadcast to all clients that this player unequipped bat
-        local batEquippedEvent = RemoteSetup.getEvent("BatEquipped")
-        if batEquippedEvent then
-          batEquippedEvent:FireAllClients(player, false)
-        end
+
+      -- Get weapon type from the equipped tool
+      local weaponType = WeaponTool.getWeaponType(equippedTool)
+      if not weaponType then
+        return { success = false, message = "Invalid weapon" }
       end
-      return { success = unequipped, isEquipped = batState.isEquipped }
-    elseif action == "toggle" then
-      local isNowEquipped = BaseballBat.toggle(batState)
-      -- Broadcast to all clients
-      local batEquippedEvent = RemoteSetup.getEvent("BatEquipped")
-      if batEquippedEvent then
-        batEquippedEvent:FireAllClients(player, isNowEquipped)
-      end
-      return { success = true, isEquipped = isNowEquipped }
-    elseif action == "swing" then
-      -- Check if bat is equipped
-      if not batState.isEquipped then
-        return { success = false, message = "Bat not equipped" }
-      end
+
+      -- Sync batState.isEquipped with Tool state for BaseballBat module compatibility
+      batState.isEquipped = true
 
       -- Handle predator swing
       if targetType == "predator" and targetId then
@@ -997,6 +985,8 @@ if buyItemWithRobuxFunc then
 
       local result = Store.buyWeaponWithRobux(playerData, itemId)
       if result.success then
+        -- Give the weapon Tool to player's Backpack
+        WeaponTool.giveToPlayer(player, itemId)
         DataPersistence.save(player)
         local playerDataChangedEvent = RemoteSetup.getEvent("PlayerDataChanged")
         if playerDataChangedEvent then
@@ -1543,6 +1533,19 @@ local function setupCharacterSpawning(
     -- Check bankruptcy status on respawn
     task.defer(function()
       checkAndApplyBankruptcyAssistance(player)
+    end)
+
+    -- Give owned weapon tools to player's Backpack
+    task.defer(function()
+      local playerData = DataPersistence.getData(player.UserId)
+      if playerData and playerData.ownedWeapons then
+        local weaponCount = WeaponTool.restoreOwnedWeapons(player, playerData.ownedWeapons)
+        if weaponCount > 0 then
+          print(
+            string.format("[Main.server] Restored %d weapon(s) to %s", weaponCount, player.Name)
+          )
+        end
+      end
     end)
   end)
 
