@@ -23,6 +23,7 @@ local RandomChickenSpawn = require(script.Parent.RandomChickenSpawn)
 local BalanceConfig = require(script.Parent.BalanceConfig)
 local CombatHealth = require(script.Parent.CombatHealth)
 local ChickenHealth = require(script.Parent.ChickenHealth)
+local PredatorAI = require(script.Parent.PredatorAI)
 
 -- Type definitions
 export type TestResult = {
@@ -1167,6 +1168,98 @@ test("ChickenHealth: getHealthPercent returns correct value", function()
   local percent = ChickenHealth.getHealthPercent(registry, "chicken1")
   return assert_gt(percent, 0.4, "Should be around 50%")
     and assert_lt(percent, 0.6, "Should be around 50%")
+end)
+
+-- ============================================================================
+-- PredatorAI Tests
+-- ============================================================================
+
+test("PredatorAI: createState returns valid state", function()
+  local state = PredatorAI.createState()
+  return assert_not_nil(state, "State should exist")
+    and assert_not_nil(state.positions, "Positions should exist")
+end)
+
+test("PredatorAI: registerPredator adds predator to state", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  local position = PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  return assert_not_nil(position, "Position should be returned")
+    and assert_eq(PredatorAI.getActiveCount(state), 1, "Should have 1 active predator")
+end)
+
+test("PredatorAI: predator spawns at section edge", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  local position = PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  -- Check that spawn position is far from center (at edge)
+  local distFromCenter = (position.spawnPosition - sectionCenter).Magnitude
+  return assert_gt(distFromCenter, 30, "Spawn should be at section edge")
+end)
+
+test("PredatorAI: updatePosition moves predator towards target", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  local position = PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  local initialDistance = (position.targetPosition - position.currentPosition).Magnitude
+  -- Update with 1 second of movement
+  PredatorAI.updatePosition(state, "pred1", 1)
+  local newPosition = PredatorAI.getPosition(state, "pred1")
+  local newDistance = (newPosition.targetPosition - newPosition.currentPosition).Magnitude
+  return assert_lt(newDistance, initialDistance, "Distance should decrease after moving")
+end)
+
+test("PredatorAI: predator reaches coop after enough time", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  -- Simulate movement over time (large deltaTime to reach target)
+  for _ = 1, 20 do
+    PredatorAI.updatePosition(state, "pred1", 1)
+  end
+  return assert_eq(PredatorAI.hasReachedCoop(state, "pred1"), true, "Should reach coop")
+end)
+
+test("PredatorAI: unregisterPredator removes predator", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  PredatorAI.unregisterPredator(state, "pred1")
+  return assert_eq(PredatorAI.getActiveCount(state), 0, "Should have 0 active predators")
+end)
+
+test("PredatorAI: higher threat predators move faster", function()
+  local ratSpeed = PredatorAI.getWalkSpeed("Rat") -- Minor threat
+  local bearSpeed = PredatorAI.getWalkSpeed("Bear") -- Catastrophic threat
+  return assert_gt(bearSpeed, ratSpeed, "Bear should be faster than Rat")
+end)
+
+test("PredatorAI: getProgress returns percentage", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  local initialProgress = PredatorAI.getProgress(state, "pred1")
+  PredatorAI.updatePosition(state, "pred1", 2)
+  local afterProgress = PredatorAI.getProgress(state, "pred1")
+  return assert_eq(initialProgress, 0, "Initial progress should be 0")
+    and assert_gt(afterProgress, 0, "Progress should increase after moving")
+end)
+
+test("PredatorAI: getTimeToReachCoop returns estimate", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  local timeEstimate = PredatorAI.getTimeToReachCoop(state, "pred1")
+  return assert_gt(timeEstimate, 0, "Time estimate should be positive")
+end)
+
+test("PredatorAI: getApproachingPredators returns correct list", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  PredatorAI.registerPredator(state, "pred2", "Crow", sectionCenter)
+  local approaching = PredatorAI.getApproachingPredators(state)
+  return assert_eq(#approaching, 2, "Should have 2 approaching predators")
 end)
 
 -- ============================================================================

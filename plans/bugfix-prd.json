@@ -634,7 +634,8 @@
       "category": "Predator-AI",
       "title": "Implement Predator NPC Walking Behavior",
       "description": "Predators should walk around like NPCs instead of spawning directly in player bases.",
-      "completed": false,
+      "completed": true,
+      "status": "complete",
       "priority": "high",
       "steps": [
         "Create PredatorAI.lua shared module",

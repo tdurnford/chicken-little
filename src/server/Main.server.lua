@@ -20,6 +20,7 @@ local RandomChickenSpawn = require(Shared:WaitForChild("RandomChickenSpawn"))
 local BaseballBat = require(Shared:WaitForChild("BaseballBat"))
 local CombatHealth = require(Shared:WaitForChild("CombatHealth"))
 local ChickenHealth = require(Shared:WaitForChild("ChickenHealth"))
+local PredatorAI = require(Shared:WaitForChild("PredatorAI"))
 
 -- Store module for buy/sell operations
 local Store = require(Shared:WaitForChild("Store"))
@@ -58,6 +59,7 @@ type PlayerGameState = {
   batState: BaseballBat.BatState,
   combatState: CombatHealth.CombatState,
   chickenHealthRegistry: ChickenHealth.ChickenHealthRegistry,
+  predatorAIState: PredatorAI.PredatorAIState,
 }
 local playerGameStates: { [number]: PlayerGameState } = {}
 
@@ -484,6 +486,9 @@ if swingBatFunc then
           -- Award money for defeating predator
           playerData.money = (playerData.money or 0) + result.rewardMoney
 
+          -- Unregister from predator AI
+          PredatorAI.unregisterPredator(gameState.predatorAIState, targetId)
+
           -- Fire PredatorDefeated event
           local predatorDefeatedEvent = RemoteSetup.getEvent("PredatorDefeated")
           if predatorDefeatedEvent then
@@ -654,6 +659,7 @@ local function createPlayerGameState(): PlayerGameState
     batState = BaseballBat.createBatState(),
     combatState = CombatHealth.createState(),
     chickenHealthRegistry = ChickenHealth.createRegistry(),
+    predatorAIState = PredatorAI.createState(),
   }
 end
 
@@ -953,12 +959,16 @@ local function runGameLoop(deltaTime: number)
           local predatorConfig = PredatorConfig.get(predator.predatorType)
           local threatLevel = predatorConfig and predatorConfig.threatLevel or "Minor"
 
-          -- Generate spawn position near player's section edge
+          -- Generate spawn position at section edge using PredatorAI
           local sectionCenter = MapGeneration.getSectionPosition(playerData.sectionIndex or 1)
-          local spawnPosition = Vector3.new(
-            sectionCenter.x + 25, -- Spawn at edge of section
-            sectionCenter.y + 1,
-            sectionCenter.z + (math.random() - 0.5) * 20
+          local sectionCenterV3 = Vector3.new(sectionCenter.x, sectionCenter.y, sectionCenter.z)
+
+          -- Register predator with AI for walking behavior
+          local predatorPosition = PredatorAI.registerPredator(
+            gameState.predatorAIState,
+            predator.id,
+            predator.predatorType,
+            sectionCenterV3
           )
 
           -- Send predator data in the format the client expects
@@ -967,14 +977,42 @@ local function runGameLoop(deltaTime: number)
             predator.id,
             predator.predatorType,
             threatLevel,
-            spawnPosition
+            predatorPosition.currentPosition
           )
         end
       end
     end
 
-    -- 5. Update predator states (transition spawning -> approaching -> attacking)
-    local nowAttacking = PredatorAttack.updatePredatorStates(gameState.spawnState, currentTime)
+    -- 4.5. Update predator AI positions (walking towards coop)
+    local predatorPositionUpdatedEvent = RemoteSetup.getEvent("PredatorPositionUpdated")
+    local updatedPositions = PredatorAI.updateAll(gameState.predatorAIState, deltaTime)
+    for predatorId, position in pairs(updatedPositions) do
+      -- Send position update to client
+      if predatorPositionUpdatedEvent then
+        predatorPositionUpdatedEvent:FireClient(
+          player,
+          predatorId,
+          position.currentPosition,
+          position.hasReachedTarget
+        )
+      end
+    end
+
+    -- 5. Update predator states based on AI reaching coop (not time-based)
+    -- Predators only attack when they physically reach the coop
+    local nowAttacking = {}
+    for _, predator in ipairs(PredatorSpawning.getActivePredators(gameState.spawnState)) do
+      if predator.state == "spawning" or predator.state == "approaching" then
+        -- Check if predator has reached coop via AI
+        if PredatorAI.hasReachedCoop(gameState.predatorAIState, predator.id) then
+          PredatorSpawning.updatePredatorState(gameState.spawnState, predator.id, "attacking")
+          table.insert(nowAttacking, predator.id)
+        elseif predator.state == "spawning" then
+          -- Transition from spawning to approaching
+          PredatorSpawning.updatePredatorState(gameState.spawnState, predator.id, "approaching")
+        end
+      end
+    end
 
     -- 6. Execute attacks for predators that just started attacking
     for _, predatorId in ipairs(nowAttacking) do
@@ -1005,8 +1043,9 @@ local function runGameLoop(deltaTime: number)
           end
         end
 
-        -- If predator escaped after attack, notify
+        -- If predator escaped after attack, notify and cleanup AI
         if attackResult.predatorEscaped then
+          PredatorAI.unregisterPredator(gameState.predatorAIState, predatorId)
           local predatorDefeatedEvent = RemoteSetup.getEvent("PredatorDefeated")
           if predatorDefeatedEvent then
             predatorDefeatedEvent:FireClient(player, predatorId, false)
@@ -1031,19 +1070,16 @@ local function runGameLoop(deltaTime: number)
 
         for _, predator in ipairs(activePredators) do
           if predator.state == "attacking" then
-            -- Get predator position from workspace
-            local predatorsFolder = game.Workspace:FindFirstChild("Predators")
-            if predatorsFolder then
-              local predatorModel = predatorsFolder:FindFirstChild(predator.id)
-              if predatorModel and predatorModel:IsA("Model") and predatorModel.PrimaryPart then
-                local distance = (predatorModel.PrimaryPart.Position - playerPosition).Magnitude
-                if distance <= combatRange then
-                  -- Player is in combat range - apply damage
-                  local predatorConfig = PredatorConfig.get(predator.predatorType)
-                  if predatorConfig then
-                    totalDamage = totalDamage + predatorConfig.damage * deltaTime
-                    damagingPredator = predator.predatorType
-                  end
+            -- Get predator position from AI state
+            local predatorPos = PredatorAI.getPosition(gameState.predatorAIState, predator.id)
+            if predatorPos then
+              local distance = (predatorPos.currentPosition - playerPosition).Magnitude
+              if distance <= combatRange then
+                -- Player is in combat range - apply damage
+                local predatorConfig = PredatorConfig.get(predator.predatorType)
+                if predatorConfig then
+                  totalDamage = totalDamage + predatorConfig.damage * deltaTime
+                  damagingPredator = predator.predatorType
                 end
               end
             end

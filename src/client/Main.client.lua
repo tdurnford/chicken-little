@@ -489,10 +489,31 @@ if predatorSpawnedEvent then
       if visualState and visualState.model then
         PredatorHealthBar.create(predatorId, predatorType, threatLevel, visualState.model)
       end
+      -- Start walking animation (predators now walk towards coop)
+      PredatorVisuals.setAnimation(predatorId, "walking")
       -- Show predator warning with directional indicator and message
       PredatorWarning.show(predatorId, predatorType, threatLevel, position)
       SoundEffects.playPredatorAlert(threatLevel == "Deadly" or threatLevel == "Catastrophic")
       print("[Client] Predator spawned:", predatorId, predatorType, threatLevel)
+    end
+  )
+end
+
+-- PredatorPositionUpdated: Update predator visual position as it walks towards coop
+local predatorPositionUpdatedEvent = getEvent("PredatorPositionUpdated")
+if predatorPositionUpdatedEvent then
+  predatorPositionUpdatedEvent.OnClientEvent:Connect(
+    function(predatorId: string, newPosition: Vector3, hasReachedCoop: boolean)
+      -- Update visual position
+      PredatorVisuals.updatePosition(predatorId, newPosition)
+
+      -- Update warning arrow direction
+      PredatorWarning.updatePosition(predatorId, newPosition)
+
+      -- Switch to attacking animation when reaching coop
+      if hasReachedCoop then
+        PredatorVisuals.setAnimation(predatorId, "attacking")
+      end
     end
   )
 end

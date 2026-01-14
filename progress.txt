@@ -1475,3 +1475,52 @@
 - Note: Minimap marker deferred (no minimap system exists yet)
 - Format check and build pass
 - Next: Work Items #23 (Predator NPC Walking), #25-29 (wiring tasks)
+
+[2026-01-14] Completed Bugfix Work Item #23: Implement Predator NPC Walking Behavior
+- Created PredatorAI.lua shared module:
+  - PredatorAIState type to track all predator positions
+  - PredatorPosition type with currentPosition, targetPosition, spawnPosition, walkSpeed, hasReachedTarget
+  - createState() to initialize AI tracking
+  - calculateSpawnPosition() generates positions at section edges (north/south/east/west)
+  - calculateTargetPosition() returns coop center
+  - registerPredator() adds predator with spawn position at section edge
+  - updatePosition() moves predator towards coop based on deltaTime and walkSpeed
+  - updateAll() updates all predator positions in one call
+  - hasReachedCoop() checks if predator arrived at coop
+  - getDistanceToCoop(), getTimeToReachCoop(), getProgress() for tracking
+  - unregisterPredator() removes predator when defeated/escaped/caught
+  - Threat-based walk speed multipliers (Minor=0.7x to Catastrophic=1.5x of base speed)
+- Added PredatorPositionUpdated RemoteEvent for position sync
+- Updated server Main.server.lua:
+  - Added PredatorAI to PlayerGameState
+  - Register predators with AI on spawn (calculateSpawnPosition at section edge)
+  - Update AI positions every frame (updateAll with deltaTime)
+  - Fire PredatorPositionUpdated event to sync positions to client
+  - Predators only attack when AI reports hasReachedCoop (not time-based)
+  - Unregister predators from AI when defeated or escaped
+  - Use AI positions for combat range checks (not workspace models)
+- Updated client Main.client.lua:
+  - Set "walking" animation on predator spawn
+  - Handle PredatorPositionUpdated event
+  - Update PredatorVisuals.updatePosition() for smooth movement
+  - Update PredatorWarning.updatePosition() for directional arrow
+  - Switch to "attacking" animation when hasReachedCoop
+- Added 10 integration tests for PredatorAI:
+  - createState returns valid state
+  - registerPredator adds predator to state
+  - predator spawns at section edge
+  - updatePosition moves predator towards target
+  - predator reaches coop after enough time
+  - unregisterPredator removes predator
+  - higher threat predators move faster
+  - getProgress returns percentage
+  - getTimeToReachCoop returns estimate
+  - getApproachingPredators returns correct list
+- Acceptance criteria met:
+  - Predators spawn at map boundaries (section edges)
+  - Predators walk toward player coops (smooth movement with walking animation)
+  - Movement is visible and can be intercepted (position updates every frame)
+  - Predators don't teleport into bases (spawn at edge, walk in)
+  - Attack only begins when predator reaches coop (AI-based not time-based)
+- Format check and build pass
+- Next: Work Items #24 (Predator Roaming), #25-29 (wiring tasks), medium priority items
