@@ -1379,3 +1379,59 @@
   - Visual feedback shows incapacitation state (overlay, stars, text)
 - Format check and build pass
 - Next: Work Items #14 (Chicken Health Bar), #16 (Predator Warning), #23 (Predator NPC Walking), #25-29 (high priority items)
+
+[2026-01-14] Completed Bugfix Work Item #14: Add Chicken Health Bar System
+- Added health configuration to ChickenConfig.lua:
+  - RARITY_MAX_HEALTH: Common=50, Uncommon=75, Rare=100, Epic=150, Legendary=200, Mythic=300
+  - RARITY_HEALTH_REGEN: Common=5, Uncommon=8, Rare=10, Epic=15, Legendary=20, Mythic=30 HP/sec
+  - HEALTH_REGEN_DELAY: 3 seconds before regeneration starts
+  - Added helper functions: getMaxHealth(), getHealthRegen(), getHealthRegenDelay()
+  - Added getMaxHealthForType() and getHealthRegenForType() for specific chicken types
+- Created ChickenHealth.lua shared module:
+  - ChickenHealthRegistry type to track all chicken health states
+  - ChickenHealthState type with currentHealth, maxHealth, lastDamageTime, regenRate, isDead
+  - createRegistry() and register() for tracking chickens
+  - applyDamage() deals damage and returns died status
+  - regenerate() restores health after regen delay
+  - updateAll() processes regeneration for all chickens
+  - Helper functions: get(), unregister(), isFullHealth(), isDamaged(), getHealthPercent()
+- Created ChickenHealthBar.lua client module:
+  - Billboard GUI health bar above chicken models
+  - Auto-hides when chicken is at full health
+  - Shows when damaged, color-coded (green >60%, yellow 30-60%, red <30%)
+  - Smaller and simpler than predator health bars
+- Added 3 new RemoteEvents to RemoteSetup.lua:
+  - ChickenDamaged: Sent when predator damages a chicken
+  - ChickenHealthChanged: Sent when chicken health regenerates
+  - ChickenDied: Sent when chicken dies from predator attack
+- Updated server Main.server.lua:
+  - Added chickenHealthRegistry to PlayerGameState
+  - Register chickens on placement, hatch-to-spot, and player join
+  - Unregister chickens on pickup
+  - Section 6.7: Apply predator damage to chickens when attacking (0.5x predator damage rate)
+  - Section 6.8: Regenerate chicken health when no predator is attacking
+  - Remove dead chickens from placedChickens and fire ChickenDied event
+- Updated client Main.client.lua:
+  - Require ChickenHealthBar module
+  - Create health bars when chickens are placed or loaded
+  - Destroy health bars when chickens are picked up, sold, or die
+  - Handle ChickenDamaged, ChickenHealthChanged, ChickenDied events
+- Added 10 integration tests for ChickenHealth:
+  - createRegistry returns valid registry
+  - register adds chicken to registry
+  - applyDamage reduces health correctly
+  - chicken dies when health reaches 0
+  - dead chicken cannot take more damage
+  - regenerates health after delay
+  - does not regenerate during regen delay
+  - unregister removes chicken from registry
+  - rarer chickens have more health
+  - getHealthPercent returns correct value
+- Acceptance criteria met:
+  - Chickens have health property (tracked in ChickenHealthRegistry)
+  - Health bar shows when chicken is damaged (auto-show/hide)
+  - Health bar hidden at full health
+  - Health regenerates over time when safe (after 3 sec delay)
+  - Chicken dies if health reaches 0 (removed from coop)
+- Format check and build pass
+- Next: Work Items #16 (Predator Warning), #23 (Predator NPC Walking), #25-29 (wiring tasks)

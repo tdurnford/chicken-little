@@ -391,7 +391,7 @@
       "category": "Chicken-Health",
       "title": "Add Chicken Health Bar System",
       "description": "Chickens should have a health bar that shows when predators are attacking. Health recovers if player wards off predator.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Add health field to ChickenData in PlayerData",
@@ -410,7 +410,8 @@
         "Chicken dies if health reaches 0"
       ],
       "dependencies": [],
-      "codeLocation": "src/shared/ChickenConfig.lua"
+      "codeLocation": "src/shared/ChickenConfig.lua",
+      "status": "complete"
     },
     {
       "id": 15,

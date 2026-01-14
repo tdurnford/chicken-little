@@ -22,6 +22,7 @@ local CageUpgrades = require(script.Parent.CageUpgrades)
 local RandomChickenSpawn = require(script.Parent.RandomChickenSpawn)
 local BalanceConfig = require(script.Parent.BalanceConfig)
 local CombatHealth = require(script.Parent.CombatHealth)
+local ChickenHealth = require(script.Parent.ChickenHealth)
 
 -- Type definitions
 export type TestResult = {
@@ -1058,6 +1059,114 @@ test("CombatHealth: getIncapacitateConstants returns valid values", function()
   local constants = CombatHealth.getIncapacitateConstants()
   return assert_gt(constants.duration, 0, "Duration should be positive")
     and assert_gt(constants.knockbackForce, 0, "Knockback force should be positive")
+end)
+
+-- ============================================================================
+-- ChickenHealth Tests
+-- ============================================================================
+
+test("ChickenHealth: createRegistry returns valid registry", function()
+  local registry = ChickenHealth.createRegistry()
+  return assert_not_nil(registry, "Registry should not be nil")
+    and assert_not_nil(registry.chickens, "Registry should have chickens table")
+end)
+
+test("ChickenHealth: register adds chicken to registry", function()
+  local registry = ChickenHealth.createRegistry()
+  local state = ChickenHealth.register(registry, "chicken1", "BasicChick")
+  return assert_not_nil(state, "Should return health state")
+    and assert_equals(state.chickenId, "chicken1", "Should have correct chicken id")
+    and assert_equals(state.currentHealth, state.maxHealth, "Should start at full health")
+end)
+
+test("ChickenHealth: applyDamage reduces health correctly", function()
+  local registry = ChickenHealth.createRegistry()
+  ChickenHealth.register(registry, "chicken1", "BasicChick")
+  local result = ChickenHealth.applyDamage(registry, "chicken1", 20, os.time())
+  return assert_equals(result.success, true, "Should succeed")
+    and assert_gt(result.damageDealt, 0, "Should deal damage")
+    and assert_equals(result.died, false, "Should not die from partial damage")
+end)
+
+test("ChickenHealth: chicken dies when health reaches 0", function()
+  local registry = ChickenHealth.createRegistry()
+  ChickenHealth.register(registry, "chicken1", "BasicChick")
+  local state = ChickenHealth.get(registry, "chicken1")
+  if not state then
+    return false, "State should exist"
+  end
+  local result = ChickenHealth.applyDamage(registry, "chicken1", state.maxHealth + 10, os.time())
+  return assert_equals(result.success, true, "Should succeed")
+    and assert_equals(result.died, true, "Should die when health reaches 0")
+    and assert_equals(result.newHealth, 0, "Health should be 0")
+end)
+
+test("ChickenHealth: dead chicken cannot take more damage", function()
+  local registry = ChickenHealth.createRegistry()
+  ChickenHealth.register(registry, "chicken1", "BasicChick")
+  local state = ChickenHealth.get(registry, "chicken1")
+  if not state then
+    return false, "State should exist"
+  end
+  ChickenHealth.applyDamage(registry, "chicken1", state.maxHealth + 10, os.time())
+  local result = ChickenHealth.applyDamage(registry, "chicken1", 10, os.time())
+  return assert_equals(result.success, false, "Should fail for dead chicken")
+end)
+
+test("ChickenHealth: regenerates health after delay", function()
+  local registry = ChickenHealth.createRegistry()
+  ChickenHealth.register(registry, "chicken1", "BasicChick")
+  local startTime = os.time()
+  ChickenHealth.applyDamage(registry, "chicken1", 20, startTime)
+
+  -- Wait past regen delay
+  local regenDelay = ChickenConfig.getHealthRegenDelay()
+  local laterTime = startTime + regenDelay + 1
+
+  local result = ChickenHealth.regenerate(registry, "chicken1", 1, laterTime)
+  return assert_equals(result.success, true, "Should succeed")
+    and assert_gt(result.amountHealed, 0, "Should regenerate some health")
+end)
+
+test("ChickenHealth: does not regenerate during regen delay", function()
+  local registry = ChickenHealth.createRegistry()
+  ChickenHealth.register(registry, "chicken1", "BasicChick")
+  local startTime = os.time()
+  ChickenHealth.applyDamage(registry, "chicken1", 20, startTime)
+
+  -- Try to regen immediately (within delay)
+  local result = ChickenHealth.regenerate(registry, "chicken1", 1, startTime + 1)
+  return assert_equals(result.amountHealed, 0, "Should not regenerate during delay")
+end)
+
+test("ChickenHealth: unregister removes chicken from registry", function()
+  local registry = ChickenHealth.createRegistry()
+  ChickenHealth.register(registry, "chicken1", "BasicChick")
+  local unregistered = ChickenHealth.unregister(registry, "chicken1")
+  local state = ChickenHealth.get(registry, "chicken1")
+  return assert_equals(unregistered, true, "Should return true on unregister")
+    and assert_equals(state, nil, "State should be nil after unregister")
+end)
+
+test("ChickenHealth: rarer chickens have more health", function()
+  local commonHealth = ChickenConfig.getMaxHealth("Common")
+  local rareHealth = ChickenConfig.getMaxHealth("Rare")
+  local legendaryHealth = ChickenConfig.getMaxHealth("Legendary")
+  return assert_gt(rareHealth, commonHealth, "Rare should have more health than Common")
+    and assert_gt(legendaryHealth, rareHealth, "Legendary should have more health than Rare")
+end)
+
+test("ChickenHealth: getHealthPercent returns correct value", function()
+  local registry = ChickenHealth.createRegistry()
+  ChickenHealth.register(registry, "chicken1", "BasicChick")
+  local state = ChickenHealth.get(registry, "chicken1")
+  if not state then
+    return false, "State should exist"
+  end
+  ChickenHealth.applyDamage(registry, "chicken1", state.maxHealth / 2, os.time())
+  local percent = ChickenHealth.getHealthPercent(registry, "chicken1")
+  return assert_gt(percent, 0.4, "Should be around 50%")
+    and assert_lt(percent, 0.6, "Should be around 50%")
 end)
 
 -- ============================================================================

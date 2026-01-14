@@ -26,6 +26,7 @@ local Tutorial = require(ClientModules:WaitForChild("Tutorial"))
 local SectionVisuals = require(ClientModules:WaitForChild("SectionVisuals"))
 local StoreUI = require(ClientModules:WaitForChild("StoreUI"))
 local DamageUI = require(ClientModules:WaitForChild("DamageUI"))
+local ChickenHealthBar = require(ClientModules:WaitForChild("ChickenHealthBar"))
 
 -- Get shared modules for position calculations
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -222,8 +223,14 @@ if getPlayerDataFunc then
         if chicken.spotIndex then
           local position = getChickenPosition(chicken.spotIndex)
           if position then
-            ChickenVisuals.create(chicken.id, chicken.chickenType, position, chicken.spotIndex)
+            local visualState =
+              ChickenVisuals.create(chicken.id, chicken.chickenType, position, chicken.spotIndex)
             ChickenVisuals.updateMoney(chicken.id, chicken.accumulatedMoney or 0)
+
+            -- Create health bar for the chicken
+            if visualState and visualState.model then
+              ChickenHealthBar.create(chicken.id, chicken.chickenType, visualState.model)
+            end
           end
         end
       end
@@ -298,8 +305,15 @@ if chickenPlacedEvent then
 
     local position = getChickenPosition(spotIndex)
     if position then
-      ChickenVisuals.create(chicken.id, chicken.chickenType, position, spotIndex)
+      local visualState =
+        ChickenVisuals.create(chicken.id, chicken.chickenType, position, spotIndex)
       SoundEffects.play("chickenPlace")
+
+      -- Create health bar for the chicken
+      if visualState and visualState.model then
+        ChickenHealthBar.create(chicken.id, chicken.chickenType, visualState.model)
+      end
+
       print("[Client] Chicken placed:", chicken.id)
     end
   end)
@@ -324,6 +338,7 @@ if chickenPickedUpEvent then
     end
 
     ChickenVisuals.destroy(chickenId)
+    ChickenHealthBar.destroy(chickenId)
     SoundEffects.play("chickenPickup")
 
     -- Update the spot to show as available
@@ -340,8 +355,57 @@ local chickenSoldEvent = getEvent("ChickenSold")
 if chickenSoldEvent then
   chickenSoldEvent.OnClientEvent:Connect(function(chickenId: string, sellPrice: number)
     ChickenVisuals.destroy(chickenId)
+    ChickenHealthBar.destroy(chickenId)
     SoundEffects.playMoneyCollect(sellPrice)
     print("[Client] Chicken sold:", chickenId, "for", sellPrice)
+  end)
+end
+
+-- ChickenDamaged: Update chicken health bar when damaged by predator
+local chickenDamagedEvent = getEvent("ChickenDamaged")
+if chickenDamagedEvent then
+  chickenDamagedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
+    local chickenId = eventData.chickenId
+    local newHealth = eventData.newHealth
+
+    if chickenId and newHealth then
+      ChickenHealthBar.updateHealth(chickenId, newHealth)
+    end
+  end)
+end
+
+-- ChickenHealthChanged: Update chicken health bar (regeneration)
+local chickenHealthChangedEvent = getEvent("ChickenHealthChanged")
+if chickenHealthChangedEvent then
+  chickenHealthChangedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
+    local chickenId = eventData.chickenId
+    local newHealth = eventData.newHealth
+
+    if chickenId and newHealth then
+      ChickenHealthBar.updateHealth(chickenId, newHealth)
+    end
+  end)
+end
+
+-- ChickenDied: Remove chicken visual and health bar when killed by predator
+local chickenDiedEvent = getEvent("ChickenDied")
+if chickenDiedEvent then
+  chickenDiedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
+    local chickenId = eventData.chickenId
+    local spotIndex = eventData.spotIndex
+    local killedBy = eventData.killedBy
+
+    if chickenId then
+      ChickenVisuals.destroy(chickenId)
+      ChickenHealthBar.destroy(chickenId)
+      SoundEffects.play("chickenPickup") -- Use pickup sound for death too
+
+      if spotIndex then
+        SectionVisuals.updateSpotOccupancy(spotIndex, false)
+      end
+
+      print("[Client] Chicken killed by", killedBy or "predator", ":", chickenId)
+    end
   end)
 end
 

@@ -36,6 +36,9 @@ local REMOTE_EVENTS = {
   "PlayerKnockback",
   "PlayerHealthChanged",
   "PlayerIncapacitated",
+  "ChickenDamaged",
+  "ChickenHealthChanged",
+  "ChickenDied",
 }
 
 -- List of all RemoteFunctions to create

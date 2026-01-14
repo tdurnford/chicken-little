@@ -19,6 +19,7 @@ local ChickenStealing = require(Shared:WaitForChild("ChickenStealing"))
 local RandomChickenSpawn = require(Shared:WaitForChild("RandomChickenSpawn"))
 local BaseballBat = require(Shared:WaitForChild("BaseballBat"))
 local CombatHealth = require(Shared:WaitForChild("CombatHealth"))
+local ChickenHealth = require(Shared:WaitForChild("ChickenHealth"))
 
 -- Store module for buy/sell operations
 local Store = require(Shared:WaitForChild("Store"))
@@ -56,6 +57,7 @@ type PlayerGameState = {
   stealState: ChickenStealing.StealState,
   batState: BaseballBat.BatState,
   combatState: CombatHealth.CombatState,
+  chickenHealthRegistry: ChickenHealth.ChickenHealthRegistry,
 }
 local playerGameStates: { [number]: PlayerGameState } = {}
 
@@ -238,6 +240,16 @@ if placeChickenFunc then
 
     local result = ChickenPlacement.placeChicken(playerData, chickenId, spotIndex)
     if result.success then
+      -- Register chicken with health system
+      local gameState = getPlayerGameState(userId)
+      if result.chicken and result.chicken.chickenType then
+        ChickenHealth.register(
+          gameState.chickenHealthRegistry,
+          chickenId,
+          result.chicken.chickenType
+        )
+      end
+
       -- Fire ChickenPlaced event to all clients so they can update visuals
       local chickenPlacedEvent = RemoteSetup.getEvent("ChickenPlaced")
       if chickenPlacedEvent then
@@ -269,6 +281,10 @@ if pickupChickenFunc then
 
     local result = ChickenPlacement.pickupChicken(playerData, chickenId)
     if result.success then
+      -- Unregister chicken from health system
+      local gameState = getPlayerGameState(userId)
+      ChickenHealth.unregister(gameState.chickenHealthRegistry, chickenId)
+
       -- Fire ChickenPickedUp event to all clients so they can update visuals
       local chickenPickedUpEvent = RemoteSetup.getEvent("ChickenPickedUp")
       if chickenPickedUpEvent then
@@ -319,6 +335,14 @@ if hatchEggFunc then
           local chicken = table.remove(playerData.inventory.chickens, chickenIndex)
           chicken.spotIndex = spotIndex
           table.insert(playerData.placedChickens, chicken)
+
+          -- Register chicken with health system
+          local gameState = getPlayerGameState(userId)
+          ChickenHealth.register(
+            gameState.chickenHealthRegistry,
+            result.chickenId,
+            chicken.chickenType
+          )
 
           -- Fire ChickenPlaced event
           local chickenPlacedEvent = RemoteSetup.getEvent("ChickenPlaced")
@@ -629,6 +653,7 @@ local function createPlayerGameState(): PlayerGameState
     stealState = ChickenStealing.createStealState(),
     batState = BaseballBat.createBatState(),
     combatState = CombatHealth.createState(),
+    chickenHealthRegistry = ChickenHealth.createRegistry(),
   }
 end
 
@@ -723,6 +748,14 @@ Players.PlayerAdded:Connect(function(player)
       -- Store section index in player data so client can build visuals
       if sectionIndex then
         data.sectionIndex = sectionIndex
+      end
+
+      -- Register existing placed chickens with health system
+      local gameState = getPlayerGameState(player.UserId)
+      if data.placedChickens then
+        for _, chicken in ipairs(data.placedChickens) do
+          ChickenHealth.register(gameState.chickenHealthRegistry, chicken.id, chicken.chickenType)
+        end
       end
 
       -- Calculate and apply offline earnings before syncing
@@ -1063,6 +1096,96 @@ local function runGameLoop(deltaTime: number)
               inCombat = gameState.combatState.inCombat,
             })
           end
+        end
+      end
+    end
+
+    -- 6.7. Apply predator damage to chickens when attacking
+    local activePredators = PredatorSpawning.getActivePredators(gameState.spawnState)
+    for _, predator in ipairs(activePredators) do
+      if predator.state == "attacking" then
+        local predatorConfig = PredatorConfig.get(predator.predatorType)
+        if predatorConfig then
+          -- Damage all placed chickens (predator attacks the whole coop)
+          local chickenDamagePerSecond = predatorConfig.damage * 0.5 -- Reduced from player damage
+          local damageThisFrame = chickenDamagePerSecond * deltaTime
+
+          for _, chicken in ipairs(playerData.placedChickens) do
+            local damageResult = ChickenHealth.applyDamage(
+              gameState.chickenHealthRegistry,
+              chicken.id,
+              damageThisFrame,
+              currentTime
+            )
+
+            if damageResult.success and damageResult.damageDealt > 0 then
+              -- Notify client of chicken damage
+              local chickenDamagedEvent = RemoteSetup.getEvent("ChickenDamaged")
+              if chickenDamagedEvent then
+                local healthState = ChickenHealth.get(gameState.chickenHealthRegistry, chicken.id)
+                chickenDamagedEvent:FireClient(player, {
+                  chickenId = chicken.id,
+                  damage = damageResult.damageDealt,
+                  newHealth = damageResult.newHealth,
+                  maxHealth = healthState and healthState.maxHealth or 50,
+                  source = predator.predatorType,
+                })
+              end
+
+              -- Handle chicken death
+              if damageResult.died then
+                dataChanged = true
+
+                -- Remove chicken from placed chickens
+                for i, placedChicken in ipairs(playerData.placedChickens) do
+                  if placedChicken.id == chicken.id then
+                    table.remove(playerData.placedChickens, i)
+                    break
+                  end
+                end
+
+                -- Unregister from health system
+                ChickenHealth.unregister(gameState.chickenHealthRegistry, chicken.id)
+
+                -- Notify client of chicken death
+                local chickenDiedEvent = RemoteSetup.getEvent("ChickenDied")
+                if chickenDiedEvent then
+                  chickenDiedEvent:FireClient(player, {
+                    chickenId = chicken.id,
+                    spotIndex = chicken.spotIndex,
+                    killedBy = predator.predatorType,
+                  })
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+
+    -- 6.8. Regenerate chicken health when not under attack
+    local anyPredatorAttacking = false
+    for _, predator in ipairs(activePredators) do
+      if predator.state == "attacking" then
+        anyPredatorAttacking = true
+        break
+      end
+    end
+
+    if not anyPredatorAttacking then
+      local regenUpdates =
+        ChickenHealth.updateAll(gameState.chickenHealthRegistry, deltaTime, currentTime)
+
+      -- Send health updates for chickens that regenerated
+      for chickenId, update in pairs(regenUpdates) do
+        local chickenHealthChangedEvent = RemoteSetup.getEvent("ChickenHealthChanged")
+        if chickenHealthChangedEvent then
+          local healthState = ChickenHealth.get(gameState.chickenHealthRegistry, chickenId)
+          chickenHealthChangedEvent:FireClient(player, {
+            chickenId = chickenId,
+            newHealth = update.newHealth,
+            maxHealth = healthState and healthState.maxHealth or 50,
+          })
         end
       end
     end

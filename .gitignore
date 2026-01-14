@@ -12,3 +12,5 @@ dist/
 # Tooling caches
 .aftman/
 .vscode/*.log
+
+plans/

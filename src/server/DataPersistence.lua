@@ -117,7 +117,7 @@ function DataPersistence.load(userId: number): LoadResult
       local defaultData = PlayerData.createDefault()
       defaultData.lastLogoutTime = currentTime
       playerDataCache[userId] = defaultData
-      
+
       return {
         success = true,
         message = "Offline mode - created default data",
@@ -134,12 +134,14 @@ function DataPersistence.load(userId: number): LoadResult
 
   if not success then
     -- DataStore operation failed - fallback to offline mode with default data
-    warn("[DataPersistence] Failed to load from DataStore, using default data: " .. tostring(result))
+    warn(
+      "[DataPersistence] Failed to load from DataStore, using default data: " .. tostring(result)
+    )
     local currentTime = os.time()
     local defaultData = PlayerData.createDefault()
     defaultData.lastLogoutTime = currentTime
     playerDataCache[userId] = defaultData
-    
+
     return {
       success = true,
       message = "DataStore error - using default data",

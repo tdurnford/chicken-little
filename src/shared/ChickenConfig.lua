@@ -43,6 +43,29 @@ local RARITY_EGG_INTERVALS: { [Rarity]: number } = {
   Mythic = 600, -- 10 minutes
 }
 
+-- Chicken health by rarity (rarer chickens have more health)
+local RARITY_MAX_HEALTH: { [Rarity]: number } = {
+  Common = 50,
+  Uncommon = 75,
+  Rare = 100,
+  Epic = 150,
+  Legendary = 200,
+  Mythic = 300,
+}
+
+-- Health regeneration per second when not under attack (rarer chickens regen faster)
+local RARITY_HEALTH_REGEN: { [Rarity]: number } = {
+  Common = 5,
+  Uncommon = 8,
+  Rare = 10,
+  Epic = 15,
+  Legendary = 20,
+  Mythic = 30,
+}
+
+-- Time in seconds before health starts regenerating after taking damage
+local HEALTH_REGEN_DELAY = 3
+
 -- All chicken types in the game
 local CHICKEN_TYPES: { [string]: ChickenTypeConfig } = {
   -- Common Chickens
@@ -259,6 +282,39 @@ function ChickenConfig.calculateEarnings(chickenType: string, seconds: number): 
     return 0
   end
   return config.moneyPerSecond * seconds
+end
+
+-- Get max health for a rarity
+function ChickenConfig.getMaxHealth(rarity: Rarity): number
+  return RARITY_MAX_HEALTH[rarity] or 50
+end
+
+-- Get health regen rate for a rarity (HP per second)
+function ChickenConfig.getHealthRegen(rarity: Rarity): number
+  return RARITY_HEALTH_REGEN[rarity] or 5
+end
+
+-- Get health regen delay (time before regen starts after taking damage)
+function ChickenConfig.getHealthRegenDelay(): number
+  return HEALTH_REGEN_DELAY
+end
+
+-- Get max health for a specific chicken type
+function ChickenConfig.getMaxHealthForType(chickenType: string): number
+  local config = CHICKEN_TYPES[chickenType]
+  if not config then
+    return 50
+  end
+  return RARITY_MAX_HEALTH[config.rarity] or 50
+end
+
+-- Get health regen for a specific chicken type
+function ChickenConfig.getHealthRegenForType(chickenType: string): number
+  local config = CHICKEN_TYPES[chickenType]
+  if not config then
+    return 5
+  end
+  return RARITY_HEALTH_REGEN[config.rarity] or 5
 end
 
 return ChickenConfig
