@@ -978,12 +978,14 @@ function Store.replenishStore(): StoreInventory
   -- Replenish eggs - restore stock based on rarity
   for eggType, item in pairs(inventory.eggs) do
     local baseStock = RARITY_STOCK_QUANTITIES[item.rarity] or 0
-    -- Add some randomness: 50% to 100% of base stock
-    local minStock = math.max(1, math.floor(baseStock * 0.5))
-    local newStock = math.random(minStock, baseStock)
+    local newStock
     -- Mythic has chance to get 0-1
-    if item.rarity == "Mythic" then
+    if item.rarity == "Mythic" or baseStock == 0 then
       newStock = math.random(0, 1)
+    else
+      -- Add some randomness: 50% to 100% of base stock
+      local minStock = math.max(1, math.floor(baseStock * 0.5))
+      newStock = math.random(minStock, baseStock)
     end
     item.stock = newStock
     item.maxStock = baseStock
@@ -992,12 +994,14 @@ function Store.replenishStore(): StoreInventory
   -- Replenish chickens - restore stock based on rarity
   for chickenType, item in pairs(inventory.chickens) do
     local baseStock = RARITY_STOCK_QUANTITIES[item.rarity] or 0
-    -- Add some randomness: 50% to 100% of base stock
-    local minStock = math.max(1, math.floor(baseStock * 0.5))
-    local newStock = math.random(minStock, baseStock)
+    local newStock
     -- Mythic has chance to get 0-1
-    if item.rarity == "Mythic" then
+    if item.rarity == "Mythic" or baseStock == 0 then
       newStock = math.random(0, 1)
+    else
+      -- Add some randomness: 50% to 100% of base stock
+      local minStock = math.max(1, math.floor(baseStock * 0.5))
+      newStock = math.random(minStock, baseStock)
     end
     item.stock = newStock
     item.maxStock = baseStock
