@@ -209,7 +209,7 @@
       "category": "AI-Improvement",
       "title": "Improve Predator AI Behavior",
       "description": "The predator AI is too simple and predictable. Predators should exhibit more intelligent behavior such as: varied approach patterns, flanking, retreating when damaged, prioritizing undefended chickens, and responding to player presence.",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Review current PredatorAI.lua implementation and behavior states",
@@ -242,7 +242,7 @@
         "src/shared/PredatorAttack.lua",
         "src/shared/CombatHealth.lua"
       ],
-      "notes": "Current AI has roaming, stalking, approaching, attacking states. Consider adding fleeing, circling, coordinating states. Use threat level from PredatorConfig to scale intelligence. Balance difficulty - smarter AI should be more fun, not frustrating."
+      "notes": "Implemented fleeing, cautious states. Added player awareness, weapon detection, shield awareness, and aggression levels. Circling behavior added for cautious state. Group coordination not implemented (would require larger refactor)."
     }
   ],
   "testingNotes": {

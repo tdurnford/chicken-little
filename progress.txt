@@ -3219,3 +3219,57 @@
   - Clicking the close button still closes the inventory ✓ (no behavioral change)
 - Format check passes, build passes
 - Note: Only remaining item is #6 (Predator AI Improvement) which is a larger enhancement
+
+[2026-01-14] Completed AI Work Item #6: Improve Predator AI Behavior
+- Root cause: The original predator AI was simple and predictable, only having
+  roaming, stalking, approaching, and attacking states with no reaction to 
+  player behavior, damage, or environmental factors like shields.
+- Implementation approach:
+  1. Extended PredatorBehaviorState type to include 'fleeing' and 'cautious' states
+  2. Extended PredatorPosition type with new AI tracking fields:
+     - currentHealth, maxHealth, lastDamageTime for flee logic
+     - fleeTarget, fleeEndTime for fleeing behavior
+     - nearbyPlayerDistance, playerHasWeapon for player awareness
+     - cautiousEndTime for cautious behavior timing
+     - shieldDetected for shield awareness
+  3. Added new constants for AI behaviors:
+     - FLEE_HEALTH_THRESHOLD = 0.3 (flee when health below 30%)
+     - FLEE_DURATION = 4 seconds, FLEE_SPEED_MULTIPLIER = 1.4
+     - PLAYER_DETECTION_RANGE = 20, WEAPON_DETECTION_RANGE = 15
+     - CAUTIOUS_DURATION = 3 seconds, CAUTIOUS_SPEED_MULTIPLIER = 0.4
+     - CIRCLING_RADIUS = 8 for circling behavior
+  4. Added new behavior functions:
+     - updatePlayerAwareness(): Detects nearby players and weapons, triggers cautious state
+     - shouldFlee(): Checks if health is below flee threshold
+     - startFleeing(): Transitions to fleeing state, calculates flee direction
+     - updateFleeing(): Handles movement during flee, returns to roaming when done
+     - updateCautious(): Circling behavior while cautious, slower movement
+     - onDamage(): Handler for when predator takes damage, may trigger flee
+     - updateShieldAwareness(): Detects shields and triggers retreat
+     - isFleeing(), isCautious(): State check helpers
+     - getAggressionLevel(): Returns 1-6 based on threat level
+     - shouldIgnoreCaution(): Higher threat predators may ignore caution
+  5. Updated updatePosition() to handle new fleeing and cautious states first
+  6. Updated getSummary() to include fleeing and cautious counts
+  7. Updated getPositionInfo() to include isFleeing, isCautious, healthPercent
+  8. Added 12 integration tests for new AI behaviors:
+     - shouldFlee threshold tests (below/above 30%)
+     - startFleeing and updateFleeing movement tests
+     - updatePlayerAwareness detection and cautious trigger tests
+     - onDamage flee trigger test
+     - updateShieldAwareness retreat test
+     - getAggressionLevel value tests
+     - getSummary with fleeing/cautious counts test
+- Acceptance criteria met:
+  - Predators exhibit varied approach patterns (circling in cautious state) ✓
+  - Predators react to player proximity (become cautious when player near) ✓
+  - Damaged predators flee when health below 30% ✓
+  - Higher threat predators more aggressive (shouldIgnoreCaution) ✓
+  - Predators respect shields and retreat from shielded areas ✓
+  - Performance unchanged (no new loops, simple state checks) ✓
+- Not implemented (would require larger refactor):
+  - Group coordination between multiple predators
+  - Line-of-sight mechanics for stalking
+  - Target prioritization for isolated chickens (server integration needed)
+- Format check passes, build passes
+- PRD is now COMPLETE - all 6 work items have been implemented

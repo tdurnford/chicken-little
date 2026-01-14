@@ -2136,6 +2136,135 @@ test("PredatorAI: setTargetChicken stores target spot", function()
   return assert_eq(targetSpot, 3, "Should have target chicken spot 3")
 end)
 
+test("PredatorAI: shouldFlee returns true when health below threshold", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  -- Health at 30% should trigger flee (threshold is 30%)
+  local shouldFlee = PredatorAI.shouldFlee(state, "pred1", 3, 10)
+  return assert_true(shouldFlee, "Should flee when health is at 30%")
+end)
+
+test("PredatorAI: shouldFlee returns false when health above threshold", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  -- Health at 50% should not trigger flee
+  local shouldFlee = PredatorAI.shouldFlee(state, "pred1", 5, 10)
+  return assert_false(shouldFlee, "Should not flee when health is at 50%")
+end)
+
+test("PredatorAI: startFleeing transitions to fleeing state", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  local currentTime = os.time()
+  local damageSource = Vector3.new(10, 0, 10)
+  local success = PredatorAI.startFleeing(state, "pred1", currentTime, damageSource)
+  local pass, msg = assert_true(success, "startFleeing should succeed")
+  if not pass then
+    return pass, msg
+  end
+  return assert_true(PredatorAI.isFleeing(state, "pred1"), "Should be fleeing")
+end)
+
+test("PredatorAI: updateFleeing moves predator away", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  local currentTime = os.time()
+  local damageSource = Vector3.new(10, 0, 10)
+  PredatorAI.startFleeing(state, "pred1", currentTime, damageSource)
+  local initialPos = PredatorAI.getPosition(state, "pred1").currentPosition
+  -- Update with movement
+  PredatorAI.updateFleeing(state, "pred1", 1, currentTime + 1)
+  local newPos = PredatorAI.getPosition(state, "pred1").currentPosition
+  local moved = (newPos - initialPos).Magnitude > 0
+  return assert_true(moved, "Predator should move while fleeing")
+end)
+
+test("PredatorAI: updatePlayerAwareness detects nearby player", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  local position = PredatorAI.getPosition(state, "pred1")
+  -- Player nearby
+  local playerPos = position.currentPosition + Vector3.new(10, 0, 0)
+  local currentTime = os.time()
+  local result = PredatorAI.updatePlayerAwareness(state, "pred1", playerPos, false, currentTime)
+  return assert_true(result.detected, "Should detect nearby player")
+end)
+
+test("PredatorAI: updatePlayerAwareness becomes cautious when player has weapon", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  local position = PredatorAI.getPosition(state, "pred1")
+  -- Player with weapon nearby
+  local playerPos = position.currentPosition + Vector3.new(10, 0, 0)
+  local currentTime = os.time()
+  local result = PredatorAI.updatePlayerAwareness(state, "pred1", playerPos, true, currentTime)
+  local pass, msg = assert_true(result.becameCautious, "Should become cautious")
+  if not pass then
+    return pass, msg
+  end
+  return assert_true(PredatorAI.isCautious(state, "pred1"), "Should be in cautious state")
+end)
+
+test("PredatorAI: onDamage triggers fleeing when health low", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  local currentTime = os.time()
+  local damageSource = Vector3.new(5, 0, 5)
+  local result = PredatorAI.onDamage(state, "pred1", 2, 10, damageSource, currentTime)
+  local pass, msg = assert_true(result.startedFleeing, "Should start fleeing on low health")
+  if not pass then
+    return pass, msg
+  end
+  return assert_true(PredatorAI.isFleeing(state, "pred1"), "Should be fleeing")
+end)
+
+test("PredatorAI: updateShieldAwareness causes retreat when shield active", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  local currentTime = os.time()
+  -- Shield at target position
+  local result = PredatorAI.updateShieldAwareness(state, "pred1", true, sectionCenter, currentTime)
+  return assert_true(result.retreating, "Should retreat from shielded area")
+end)
+
+test("PredatorAI: getAggressionLevel returns correct values", function()
+  local ratAggression = PredatorAI.getAggressionLevel("Rat") -- Minor
+  local bearAggression = PredatorAI.getAggressionLevel("Bear") -- Catastrophic
+  local pass, msg = assert_eq(ratAggression, 1, "Rat should have aggression 1")
+  if not pass then
+    return pass, msg
+  end
+  return assert_eq(bearAggression, 6, "Bear should have aggression 6")
+end)
+
+test("PredatorAI: getSummary includes fleeing and cautious counts", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  PredatorAI.registerPredator(state, "pred2", "Crow", sectionCenter)
+  local currentTime = os.time()
+  -- Make pred1 flee
+  PredatorAI.startFleeing(state, "pred1", currentTime, sectionCenter)
+  -- Make pred2 cautious
+  local position = PredatorAI.getPosition(state, "pred2")
+  local playerPos = position.currentPosition + Vector3.new(10, 0, 0)
+  PredatorAI.updatePlayerAwareness(state, "pred2", playerPos, true, currentTime)
+  local summary = PredatorAI.getSummary(state)
+  local pass, msg = assert_eq(summary.fleeing, 1, "Should have 1 fleeing")
+  if not pass then
+    return pass, msg
+  end
+  return assert_eq(summary.cautious, 1, "Should have 1 cautious")
+end)
+
 -- ============================================================================
 -- ChickenAI Tests
 -- ============================================================================

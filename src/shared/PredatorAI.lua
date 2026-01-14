@@ -14,7 +14,13 @@ local PredatorConfig = require(script.Parent.PredatorConfig)
 local PlayerSection = require(script.Parent.PlayerSection)
 
 -- Predator behavior states
-export type PredatorBehaviorState = "roaming" | "stalking" | "approaching" | "attacking"
+export type PredatorBehaviorState =
+  "roaming"
+  | "stalking"
+  | "approaching"
+  | "attacking"
+  | "fleeing"
+  | "cautious"
 
 -- Type definitions
 export type PredatorPosition = {
@@ -39,6 +45,16 @@ export type PredatorPosition = {
   targetChickenSpot: number?, -- Spot index of chicken being targeted
   noChickensTime: number?, -- Time when no chickens was first detected
   coopCenter: Vector3?, -- Center of the coop for patrol bounds
+  -- AI improvement fields
+  currentHealth: number?, -- Current health (for flee logic)
+  maxHealth: number?, -- Max health (for flee threshold)
+  lastDamageTime: number?, -- When predator last took damage
+  fleeTarget: Vector3?, -- Position to flee towards
+  fleeEndTime: number?, -- When fleeing ends
+  nearbyPlayerDistance: number?, -- Distance to nearest player
+  playerHasWeapon: boolean?, -- Whether nearby player has weapon
+  cautiousEndTime: number?, -- When cautious state ends
+  shieldDetected: boolean?, -- Whether a shield is detected nearby
 }
 
 export type PredatorAIState = {
@@ -66,6 +82,19 @@ local PATROL_COOLDOWN_MAX = 3.5 -- maximum seconds between patrol movements
 local PATROL_SPEED_MULTIPLIER = 0.5 -- slower while patrolling
 local CHICKEN_APPROACH_SPEED = 0.7 -- speed when approaching a specific chicken
 local NO_CHICKENS_DESPAWN_TIME = 8 -- seconds to wait before despawning if no chickens
+
+-- AI improvement constants
+local FLEE_HEALTH_THRESHOLD = 0.3 -- Flee when health drops below 30%
+local FLEE_DURATION = 4 -- Seconds to flee before reassessing
+local FLEE_SPEED_MULTIPLIER = 1.4 -- Faster when fleeing
+local FLEE_DISTANCE = 25 -- How far to flee
+local PLAYER_DETECTION_RANGE = 20 -- Range to detect nearby players
+local WEAPON_DETECTION_RANGE = 15 -- Range to detect player weapons
+local CAUTIOUS_DURATION = 3 -- Seconds to remain cautious
+local CAUTIOUS_SPEED_MULTIPLIER = 0.4 -- Much slower when cautious
+local CIRCLING_RADIUS = 8 -- Radius for circling behavior
+local CIRCLING_SPEED_MULTIPLIER = 0.6 -- Speed when circling
+local DAMAGE_MEMORY_DURATION = 5 -- Seconds to remember being damaged
 
 -- Walk speed multipliers by threat level (more dangerous = faster)
 local THREAT_SPEED_MULTIPLIER: { [string]: number } = {
@@ -487,6 +516,357 @@ function PredatorAI.shouldStartApproaching(
   return false
 end
 
+-- Update player awareness for a predator
+function PredatorAI.updatePlayerAwareness(
+  aiState: PredatorAIState,
+  predatorId: string,
+  playerPosition: Vector3?,
+  playerHasWeapon: boolean?,
+  currentTime: number
+): {
+  detected: boolean,
+  distance: number?,
+  becameCautious: boolean,
+}
+  local position = aiState.positions[predatorId]
+  if not position then
+    return { detected = false, distance = nil, becameCautious = false }
+  end
+
+  -- No player nearby
+  if not playerPosition then
+    position.nearbyPlayerDistance = nil
+    position.playerHasWeapon = nil
+    return { detected = false, distance = nil, becameCautious = false }
+  end
+
+  local distance = (playerPosition - position.currentPosition).Magnitude
+  position.nearbyPlayerDistance = distance
+  position.playerHasWeapon = playerHasWeapon or false
+
+  local detected = distance <= PLAYER_DETECTION_RANGE
+  local becameCautious = false
+
+  -- If player has weapon and is close, become cautious
+  if
+    detected
+    and playerHasWeapon
+    and distance <= WEAPON_DETECTION_RANGE
+    and position.behaviorState ~= "fleeing"
+    and position.behaviorState ~= "cautious"
+  then
+    position.behaviorState = "cautious"
+    position.cautiousEndTime = currentTime + CAUTIOUS_DURATION
+    position.walkSpeed = PredatorAI.getWalkSpeed(position.predatorType) * CAUTIOUS_SPEED_MULTIPLIER
+    becameCautious = true
+  end
+
+  return { detected = detected, distance = distance, becameCautious = becameCautious }
+end
+
+-- Check if predator should flee (health below threshold)
+function PredatorAI.shouldFlee(
+  aiState: PredatorAIState,
+  predatorId: string,
+  currentHealth: number?,
+  maxHealth: number?
+): boolean
+  local position = aiState.positions[predatorId]
+  if not position then
+    return false
+  end
+
+  -- Already fleeing
+  if position.behaviorState == "fleeing" then
+    return false
+  end
+
+  -- Update health tracking
+  if currentHealth ~= nil then
+    position.currentHealth = currentHealth
+  end
+  if maxHealth ~= nil then
+    position.maxHealth = maxHealth
+  end
+
+  -- Check health threshold
+  local health = position.currentHealth or 1
+  local max = position.maxHealth or 1
+  local healthPercent = health / max
+
+  return healthPercent <= FLEE_HEALTH_THRESHOLD and health > 0
+end
+
+-- Start fleeing behavior
+function PredatorAI.startFleeing(
+  aiState: PredatorAIState,
+  predatorId: string,
+  currentTime: number,
+  awayFromPosition: Vector3?
+): boolean
+  local position = aiState.positions[predatorId]
+  if not position then
+    return false
+  end
+
+  position.behaviorState = "fleeing"
+  position.fleeEndTime = currentTime + FLEE_DURATION
+  position.lastDamageTime = currentTime
+
+  -- Calculate flee direction (away from damage source or random)
+  local fleeDirection: Vector3
+  if awayFromPosition then
+    local towardsThreat = awayFromPosition - position.currentPosition
+    if towardsThreat.Magnitude > 0 then
+      fleeDirection = -towardsThreat.Unit
+    else
+      -- Random direction if at same position
+      local angle = math.random() * math.pi * 2
+      fleeDirection = Vector3.new(math.cos(angle), 0, math.sin(angle))
+    end
+  else
+    -- Random flee direction
+    local angle = math.random() * math.pi * 2
+    fleeDirection = Vector3.new(math.cos(angle), 0, math.sin(angle))
+  end
+
+  position.fleeTarget = position.currentPosition + fleeDirection * FLEE_DISTANCE
+  position.walkSpeed = PredatorAI.getWalkSpeed(position.predatorType) * FLEE_SPEED_MULTIPLIER
+  position.facingDirection = fleeDirection
+
+  return true
+end
+
+-- Update fleeing behavior
+function PredatorAI.updateFleeing(
+  aiState: PredatorAIState,
+  predatorId: string,
+  deltaTime: number,
+  currentTime: number
+): {
+  stillFleeing: boolean,
+  reachedFleeTarget: boolean,
+}
+  local position = aiState.positions[predatorId]
+  if not position or position.behaviorState ~= "fleeing" then
+    return { stillFleeing = false, reachedFleeTarget = false }
+  end
+
+  -- Check if flee time expired
+  if position.fleeEndTime and currentTime >= position.fleeEndTime then
+    -- Return to previous behavior (roaming is safe default)
+    position.behaviorState = "roaming"
+    position.walkSpeed = PredatorAI.getWalkSpeed(position.predatorType) * ROAM_SPEED_MULTIPLIER
+    position.fleeTarget = nil
+    position.fleeEndTime = nil
+    -- Generate new roam target
+    position.roamTarget = PredatorAI.generateRoamPosition(aiState, position.currentPosition)
+    position.roamEndTime = currentTime + ROAM_DURATION_MIN
+    return { stillFleeing = false, reachedFleeTarget = false }
+  end
+
+  -- Move towards flee target
+  local fleeTarget = position.fleeTarget
+  if fleeTarget then
+    local toTarget = fleeTarget - position.currentPosition
+    local distance = toTarget.Magnitude
+
+    if distance <= ARRIVAL_THRESHOLD then
+      -- Reached flee target, continue fleeing in same direction
+      local continueDirection = position.facingDirection
+      position.fleeTarget = position.currentPosition + continueDirection * FLEE_DISTANCE
+      return { stillFleeing = true, reachedFleeTarget = true }
+    else
+      local direction = toTarget.Unit
+      local moveDistance = position.walkSpeed * deltaTime
+
+      if moveDistance >= distance then
+        position.currentPosition = fleeTarget
+      else
+        position.currentPosition = position.currentPosition + direction * moveDistance
+      end
+      position.facingDirection = direction
+    end
+  end
+
+  return { stillFleeing = true, reachedFleeTarget = false }
+end
+
+-- Update cautious behavior
+function PredatorAI.updateCautious(
+  aiState: PredatorAIState,
+  predatorId: string,
+  deltaTime: number,
+  currentTime: number
+): {
+  stillCautious: boolean,
+  circlingPosition: Vector3?,
+}
+  local position = aiState.positions[predatorId]
+  if not position or position.behaviorState ~= "cautious" then
+    return { stillCautious = false, circlingPosition = nil }
+  end
+
+  -- Check if cautious time expired
+  if position.cautiousEndTime and currentTime >= position.cautiousEndTime then
+    -- Return to approaching if has target, otherwise roaming
+    if position.targetSectionIndex then
+      position.behaviorState = "approaching"
+      position.walkSpeed = PredatorAI.getWalkSpeed(position.predatorType)
+    else
+      position.behaviorState = "roaming"
+      position.walkSpeed = PredatorAI.getWalkSpeed(position.predatorType) * ROAM_SPEED_MULTIPLIER
+      position.roamTarget = PredatorAI.generateRoamPosition(aiState, position.currentPosition)
+      position.roamEndTime = currentTime + ROAM_DURATION_MIN
+    end
+    position.cautiousEndTime = nil
+    return { stillCautious = false, circlingPosition = nil }
+  end
+
+  -- Circling behavior - move in arc around target
+  local targetPos = position.targetPosition
+  local toTarget = targetPos - position.currentPosition
+  local distanceToTarget = toTarget.Magnitude
+
+  if distanceToTarget > 0 then
+    -- Calculate perpendicular direction for circling
+    local perpendicular = Vector3.new(-toTarget.Z, 0, toTarget.X).Unit
+    -- Alternate direction based on predator ID hash
+    local dirMod = (string.byte(position.id, 6) or 0) % 2 == 0 and 1 or -1
+    local circleDirection = perpendicular * dirMod
+
+    local moveDistance = position.walkSpeed * deltaTime
+    local newPosition = position.currentPosition + circleDirection * moveDistance
+
+    position.currentPosition = newPosition
+    position.facingDirection = toTarget.Unit
+
+    return { stillCautious = true, circlingPosition = newPosition }
+  end
+
+  return { stillCautious = true, circlingPosition = nil }
+end
+
+-- Handle damage to predator (triggers flee check)
+function PredatorAI.onDamage(
+  aiState: PredatorAIState,
+  predatorId: string,
+  currentHealth: number,
+  maxHealth: number,
+  damageSourcePosition: Vector3?,
+  currentTime: number
+): {
+  startedFleeing: boolean,
+  healthPercent: number,
+}
+  local position = aiState.positions[predatorId]
+  if not position then
+    return { startedFleeing = false, healthPercent = 0 }
+  end
+
+  position.currentHealth = currentHealth
+  position.maxHealth = maxHealth
+  position.lastDamageTime = currentTime
+
+  local healthPercent = currentHealth / maxHealth
+
+  -- Check if should start fleeing
+  if PredatorAI.shouldFlee(aiState, predatorId, currentHealth, maxHealth) then
+    PredatorAI.startFleeing(aiState, predatorId, currentTime, damageSourcePosition)
+    return { startedFleeing = true, healthPercent = healthPercent }
+  end
+
+  return { startedFleeing = false, healthPercent = healthPercent }
+end
+
+-- Update shield awareness for predator
+function PredatorAI.updateShieldAwareness(
+  aiState: PredatorAIState,
+  predatorId: string,
+  shieldActive: boolean,
+  shieldCenter: Vector3?,
+  currentTime: number
+): {
+  retreating: boolean,
+  blocked: boolean,
+}
+  local position = aiState.positions[predatorId]
+  if not position then
+    return { retreating = false, blocked = false }
+  end
+
+  position.shieldDetected = shieldActive
+
+  if not shieldActive or not shieldCenter then
+    return { retreating = false, blocked = false }
+  end
+
+  local distanceToShield = (shieldCenter - position.currentPosition).Magnitude
+
+  -- If approaching a shielded section, retreat
+  if position.behaviorState == "approaching" or position.behaviorState == "attacking" then
+    -- Check if our target is within the shielded area
+    local targetDistance = (shieldCenter - position.targetPosition).Magnitude
+    if targetDistance < 30 then -- Shield covers a reasonable radius
+      -- Start fleeing away from shield
+      PredatorAI.startFleeing(aiState, predatorId, currentTime, shieldCenter)
+      return { retreating = true, blocked = true }
+    end
+  end
+
+  return { retreating = false, blocked = false }
+end
+
+-- Check if predator is fleeing
+function PredatorAI.isFleeing(aiState: PredatorAIState, predatorId: string): boolean
+  local position = aiState.positions[predatorId]
+  return position ~= nil and position.behaviorState == "fleeing"
+end
+
+-- Check if predator is cautious
+function PredatorAI.isCautious(aiState: PredatorAIState, predatorId: string): boolean
+  local position = aiState.positions[predatorId]
+  return position ~= nil and position.behaviorState == "cautious"
+end
+
+-- Get predator aggression level (higher threat = more aggressive)
+function PredatorAI.getAggressionLevel(predatorType: string): number
+  local config = PredatorConfig.get(predatorType)
+  if not config then
+    return 1
+  end
+
+  local aggressionByThreat = {
+    Minor = 1,
+    Moderate = 2,
+    Dangerous = 3,
+    Severe = 4,
+    Deadly = 5,
+    Catastrophic = 6,
+  }
+
+  return aggressionByThreat[config.threatLevel] or 1
+end
+
+-- Check if predator should ignore caution (high aggression)
+function PredatorAI.shouldIgnoreCaution(aiState: PredatorAIState, predatorId: string): boolean
+  local position = aiState.positions[predatorId]
+  if not position then
+    return false
+  end
+
+  local aggression = PredatorAI.getAggressionLevel(position.predatorType)
+  -- Severe and above (4+) have 50% chance to ignore caution
+  if aggression >= 4 then
+    return math.random() < 0.5
+  end
+  -- Dangerous (3) has 25% chance
+  if aggression >= 3 then
+    return math.random() < 0.25
+  end
+  return false
+end
+
 -- Get predator's current behavior state
 function PredatorAI.getBehaviorState(
   aiState: PredatorAIState,
@@ -543,6 +923,20 @@ function PredatorAI.updatePosition(
   local position = aiState.positions[predatorId]
   if not position then
     return nil
+  end
+
+  local time = currentTime or os.clock()
+
+  -- Handle fleeing behavior first (highest priority)
+  if position.behaviorState == "fleeing" then
+    PredatorAI.updateFleeing(aiState, predatorId, deltaTime, time)
+    return position
+  end
+
+  -- Handle cautious behavior
+  if position.behaviorState == "cautious" then
+    PredatorAI.updateCautious(aiState, predatorId, deltaTime, time)
+    return position
   end
 
   -- Roaming predators are handled by updateRoaming
@@ -781,17 +1175,25 @@ function PredatorAI.getSummary(aiState: PredatorAIState): {
   stalking: number,
   approaching: number,
   atCoop: number,
+  fleeing: number,
+  cautious: number,
 }
   local roaming = 0
   local stalking = 0
   local approaching = 0
   local atCoop = 0
+  local fleeing = 0
+  local cautious = 0
 
   for _, position in pairs(aiState.positions) do
     if position.behaviorState == "roaming" then
       roaming = roaming + 1
     elseif position.behaviorState == "stalking" then
       stalking = stalking + 1
+    elseif position.behaviorState == "fleeing" then
+      fleeing = fleeing + 1
+    elseif position.behaviorState == "cautious" then
+      cautious = cautious + 1
     elseif position.hasReachedTarget then
       atCoop = atCoop + 1
     else
@@ -800,11 +1202,13 @@ function PredatorAI.getSummary(aiState: PredatorAIState): {
   end
 
   return {
-    totalActive = roaming + stalking + approaching + atCoop,
+    totalActive = roaming + stalking + approaching + atCoop + fleeing + cautious,
     roaming = roaming,
     stalking = stalking,
     approaching = approaching,
     atCoop = atCoop,
+    fleeing = fleeing,
+    cautious = cautious,
   }
 end
 
@@ -828,10 +1232,18 @@ function PredatorAI.getPositionInfo(
   hasReached: boolean,
   behaviorState: PredatorBehaviorState,
   isStalking: boolean,
+  isFleeing: boolean,
+  isCautious: boolean,
+  healthPercent: number?,
 }?
   local position = aiState.positions[predatorId]
   if not position then
     return nil
+  end
+
+  local healthPercent: number? = nil
+  if position.currentHealth and position.maxHealth and position.maxHealth > 0 then
+    healthPercent = position.currentHealth / position.maxHealth
   end
 
   return {
@@ -841,6 +1253,9 @@ function PredatorAI.getPositionInfo(
     hasReached = position.hasReachedTarget,
     behaviorState = position.behaviorState,
     isStalking = position.isStalking,
+    isFleeing = position.behaviorState == "fleeing",
+    isCautious = position.behaviorState == "cautious",
+    healthPercent = healthPercent,
   }
 end
 
