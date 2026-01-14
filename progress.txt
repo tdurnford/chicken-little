@@ -2128,3 +2128,29 @@
   - Toggle works correctly
   - No stuck states (proper state management)
 - Next: Other high priority items (#35, #36, #39, #41, #51, #55)
+
+[2026-01-14] Verified Bugfix Work Item #20: Fix Arena Chicken Pickup
+- Code review verified all components are properly implemented:
+  1. ClaimRandomChicken RemoteFunction exists and connected (src/server/Main.server.lua line 610-690)
+  2. Proximity detection via findNearbyRandomChicken() checks for spotIndex == nil
+  3. RandomChickenClaimPrompt UI created on client startup
+  4. E key handler (line 1764-1808) wired to claim when isNearRandomChicken && not isNearChicken
+  5. Server handler calls RandomChickenSpawn.claimChicken() for validation
+  6. Claimed chicken added to playerData.inventory.chickens
+  7. syncPlayerData called immediately after claim
+  8. Client receives playerData in result for immediate UI update
+  9. ChickenVisuals.destroy() removes visual after claim
+  10. RandomChickenClaimed event fired to all clients via FireAllClients
+- Added integration tests to verify claim logic:
+  - "RandomChickenSpawn: claim chicken succeeds when in range" - verifies claim works at distance 0
+  - "RandomChickenSpawn: claim chicken fails when out of range" - verifies claim fails at 100 studs
+- Acceptance criteria met:
+  - Players see "[E] Claim {ChickenType}" near random chickens
+  - Pressing E claims the chicken via server RemoteFunction
+  - Claimed chicken appears in player inventory immediately (via result.playerData)
+  - Chicken despawns from arena after claim (ChickenVisuals.destroy)
+  - Only one player can claim each chicken (server-side state.currentChicken set to nil)
+- Previous commit b69cf17 had fixed the inventory sync issue
+- PRD simply needed to be marked complete
+- Format check passes
+- Next: Other high priority items (#35, #36, #39, #41, #51, #55)

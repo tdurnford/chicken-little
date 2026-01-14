@@ -778,6 +778,58 @@ test("RandomChickenSpawn: spawn interval is reasonable", function()
   return assert_gte(config.spawnIntervalMax, config.spawnIntervalMin, "Max should be >= min")
 end)
 
+test("RandomChickenSpawn: claim chicken succeeds when in range", function()
+  local currentTime = os.time()
+  local state = RandomChickenSpawn.createSpawnState(nil, currentTime)
+
+  -- Force spawn a chicken
+  state.nextSpawnTime = currentTime - 1
+  local spawnResult = RandomChickenSpawn.spawnChicken(state, currentTime)
+  local pass, msg = assert_true(spawnResult.success, "Spawn should succeed")
+  if not pass then
+    return pass, msg
+  end
+  pass, msg = assert_not_nil(spawnResult.chicken, "Chicken should be spawned")
+  if not pass then
+    return pass, msg
+  end
+
+  -- Claim from exact position (distance = 0)
+  local playerPosition = spawnResult.chicken.position
+  local claimResult = RandomChickenSpawn.claimChicken(state, "player1", playerPosition, currentTime)
+  pass, msg = assert_true(claimResult.success, "Claim should succeed when at chicken position")
+  if not pass then
+    return pass, msg
+  end
+  return assert_nil(state.currentChicken, "Chicken should be removed after claim")
+end)
+
+test("RandomChickenSpawn: claim chicken fails when out of range", function()
+  local currentTime = os.time()
+  local state = RandomChickenSpawn.createSpawnState(nil, currentTime)
+
+  -- Force spawn a chicken
+  state.nextSpawnTime = currentTime - 1
+  local spawnResult = RandomChickenSpawn.spawnChicken(state, currentTime)
+  local pass, msg = assert_true(spawnResult.success, "Spawn should succeed")
+  if not pass then
+    return pass, msg
+  end
+
+  -- Claim from far away position (distance > claim range)
+  local farPosition = {
+    x = spawnResult.chicken.position.x + 100,
+    y = spawnResult.chicken.position.y,
+    z = spawnResult.chicken.position.z,
+  }
+  local claimResult = RandomChickenSpawn.claimChicken(state, "player1", farPosition, currentTime)
+  pass, msg = assert_false(claimResult.success, "Claim should fail when too far")
+  if not pass then
+    return pass, msg
+  end
+  return assert_not_nil(state.currentChicken, "Chicken should still exist after failed claim")
+end)
+
 -- ============================================================================
 -- BalanceConfig Tests
 -- ============================================================================
