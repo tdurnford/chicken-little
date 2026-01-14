@@ -49,6 +49,7 @@ local REMOTE_EVENTS = {
   "RandomChickenPositionUpdated",
   "ProtectionStatusChanged",
   "BankruptcyAssistance",
+  "PowerUpActivated",
 }
 
 -- List of all RemoteFunctions to create
@@ -82,6 +83,7 @@ local REMOTE_FUNCTIONS = {
   "ReplenishStoreWithRobux",
   "BuyItemWithRobux",
   "GetGlobalChickenCounts",
+  "BuyPowerUp",
 }
 
 -- Type for the created remotes container

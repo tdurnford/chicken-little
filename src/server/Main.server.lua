@@ -38,6 +38,9 @@ local Chicken = require(Shared:WaitForChild("Chicken"))
 local EggConfig = require(Shared:WaitForChild("EggConfig"))
 local PlayerData = require(Shared:WaitForChild("PlayerData"))
 
+-- Power-up configuration module
+local PowerUpConfig = require(Shared:WaitForChild("PowerUpConfig"))
+
 -- Offline earnings module
 local OfflineEarnings = require(Shared:WaitForChild("OfflineEarnings"))
 
@@ -82,11 +85,25 @@ local ITEM_ROBUX_PRODUCT_IDS: { [string]: number } = {
   Mythic = 0, -- R$1500 - TODO: Replace with actual Developer Product ID
 }
 
+-- Developer Product IDs for power-up purchases
+-- These IDs should be created in Roblox Studio and set here
+local POWERUP_ROBUX_PRODUCT_IDS: { [string]: number } = {
+  HatchLuck15 = 0, -- R$25 - TODO: Replace with actual Developer Product ID
+  HatchLuck60 = 0, -- R$75 - TODO: Replace with actual Developer Product ID
+  HatchLuck240 = 0, -- R$200 - TODO: Replace with actual Developer Product ID
+  EggQuality15 = 0, -- R$35 - TODO: Replace with actual Developer Product ID
+  EggQuality60 = 0, -- R$100 - TODO: Replace with actual Developer Product ID
+  EggQuality240 = 0, -- R$275 - TODO: Replace with actual Developer Product ID
+}
+
 -- Track pending replenish purchases
 local pendingReplenishPurchases: { [number]: boolean } = {}
 
 -- Track pending item purchases (userId -> {itemType, itemId, rarity})
 local pendingItemPurchases: { [number]: { itemType: string, itemId: string, rarity: string } } = {}
+
+-- Track pending power-up purchases (userId -> powerUpId)
+local pendingPowerUpPurchases: { [number]: string } = {}
 
 -- Per-player game state tracking
 type PlayerGameState = {
@@ -883,6 +900,87 @@ if buyItemWithRobuxFunc then
   end
 end
 
+-- Setup BuyPowerUp RemoteFunction handler
+-- Handles player requests to purchase power-ups with Robux
+local buyPowerUpFunc = RemoteSetup.getFunction("BuyPowerUp")
+if buyPowerUpFunc then
+  buyPowerUpFunc.OnServerInvoke = function(player: Player, powerUpId: string)
+    -- Validate power-up ID
+    local powerUpConfigData = PowerUpConfig.get(powerUpId)
+    if not powerUpConfigData then
+      return {
+        success = false,
+        message = "Invalid power-up: " .. tostring(powerUpId),
+      }
+    end
+
+    -- Get product ID for this power-up
+    local productId = POWERUP_ROBUX_PRODUCT_IDS[powerUpId]
+    if not productId or productId == 0 then
+      -- Product ID not configured - give power-up for free (development mode)
+      local playerData = DataPersistence.get(player)
+      if not playerData then
+        return {
+          success = false,
+          message = "Player data not found",
+        }
+      end
+
+      -- Add power-up to player data
+      PlayerData.addPowerUp(playerData, powerUpId, powerUpConfigData.durationSeconds)
+
+      -- Save player data
+      DataPersistence.save(player)
+
+      -- Notify client of data change
+      local playerDataChangedEvent = RemoteSetup.getEvent("PlayerDataChanged")
+      if playerDataChangedEvent then
+        playerDataChangedEvent:FireClient(player, playerData)
+      end
+
+      -- Fire power-up activated event
+      local powerUpActivatedEvent = RemoteSetup.getEvent("PowerUpActivated")
+      if powerUpActivatedEvent then
+        powerUpActivatedEvent:FireClient(player, {
+          powerUpId = powerUpId,
+          expiresAt = os.time() + powerUpConfigData.durationSeconds,
+        })
+      end
+
+      print("[Main.server] Power-up activated (free/dev mode):", powerUpId, "for", player.Name)
+
+      return {
+        success = true,
+        message = "Power-up activated! " .. powerUpConfigData.displayName,
+        powerUpId = powerUpId,
+      }
+    end
+
+    -- Store pending purchase info
+    pendingPowerUpPurchases[player.UserId] = powerUpId
+
+    -- Prompt player to purchase the developer product
+    local success, errorMessage = pcall(function()
+      MarketplaceService:PromptProductPurchase(player, productId)
+    end)
+
+    if success then
+      return {
+        success = true,
+        message = "Purchase prompt opened",
+        productId = productId,
+        robuxPrice = powerUpConfigData.robuxPrice,
+      }
+    else
+      pendingPowerUpPurchases[player.UserId] = nil
+      return {
+        success = false,
+        message = "Failed to open purchase prompt: " .. tostring(errorMessage),
+      }
+    end
+  end
+end
+
 -- ProcessReceipt callback for handling Robux purchases
 MarketplaceService.ProcessReceipt = function(receiptInfo: { [string]: any })
   local userId = receiptInfo.PlayerId
@@ -949,6 +1047,52 @@ MarketplaceService.ProcessReceipt = function(receiptInfo: { [string]: any })
 
         -- Clear pending purchase
         pendingItemPurchases[userId] = nil
+      end
+
+      return Enum.ProductPurchaseDecision.PurchaseGranted
+    end
+  end
+
+  -- Handle power-up purchase products
+  for powerUpId, powerUpProductId in pairs(POWERUP_ROBUX_PRODUCT_IDS) do
+    if productId == powerUpProductId and powerUpProductId ~= 0 then
+      -- Check if we have a pending purchase for this user
+      local pendingPowerUpId = pendingPowerUpPurchases[userId]
+      if pendingPowerUpId == powerUpId then
+        -- Deliver the power-up
+        if player then
+          local playerData = DataPersistence.get(player)
+          if playerData then
+            local powerUpConfigData = PowerUpConfig.get(powerUpId)
+            if powerUpConfigData then
+              -- Add power-up to player data
+              PlayerData.addPowerUp(playerData, powerUpId, powerUpConfigData.durationSeconds)
+
+              -- Save player data
+              DataPersistence.save(player)
+
+              -- Notify client of data change
+              local playerDataChangedEvent = RemoteSetup.getEvent("PlayerDataChanged")
+              if playerDataChangedEvent then
+                playerDataChangedEvent:FireClient(player, playerData)
+              end
+
+              -- Fire power-up activated event
+              local powerUpActivatedEvent = RemoteSetup.getEvent("PowerUpActivated")
+              if powerUpActivatedEvent then
+                powerUpActivatedEvent:FireClient(player, {
+                  powerUpId = powerUpId,
+                  expiresAt = os.time() + powerUpConfigData.durationSeconds,
+                })
+              end
+
+              print("[Main.server] Power-up purchased with Robux:", powerUpId, "for user", userId)
+            end
+          end
+        end
+
+        -- Clear pending purchase
+        pendingPowerUpPurchases[userId] = nil
       end
 
       return Enum.ProductPurchaseDecision.PurchaseGranted
@@ -1373,6 +1517,11 @@ local function runGameLoop(deltaTime: number)
       if chickenInstance and chickenInstance:canLayEgg(currentTimeSeconds) then
         local eggType = chickenInstance:layEgg(currentTimeSeconds)
         if eggType then
+          -- Apply egg quality boost if player has active power-up
+          if PlayerData.hasActivePowerUp(playerData, "EggQuality") then
+            eggType = Chicken.getUpgradedEggType(eggType)
+          end
+
           -- Get egg config to get rarity
           local eggConfigData = EggConfig.get(eggType)
           local eggRarity = if eggConfigData then eggConfigData.rarity else "Common"

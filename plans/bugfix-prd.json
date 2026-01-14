@@ -204,7 +204,7 @@
       "category": "Store-PowerUps",
       "title": "Implement Luck Power-Ups Store",
       "description": "Add purchasable power-ups that improve luck when hatching eggs and when chickens lay eggs.",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Create PowerUpConfig.lua with power-up definitions",
@@ -227,7 +227,8 @@
       "dependencies": [
         2
       ],
-      "codeLocation": "src/shared/PowerUpConfig.lua"
+      "codeLocation": "src/shared/PowerUpConfig.lua",
+      "status": "completed"
     },
     {
       "id": 8,

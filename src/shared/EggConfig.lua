@@ -266,6 +266,66 @@ function EggConfig.selectHatchOutcome(eggType: string): string?
   return config.hatchOutcomes[1].chickenType
 end
 
+-- Select a random chicken with luck boost applied
+-- Luck boost increases rare outcome chances by redistributing probabilities
+function EggConfig.selectHatchOutcomeWithLuck(eggType: string, luckMultiplier: number): string?
+  local config = EGG_TYPES[eggType]
+  if not config then
+    return nil
+  end
+
+  -- luckMultiplier of 2.0 means rare outcomes have 2x their normal chance
+  -- We boost the rarer outcomes (lower probability) at expense of common ones
+  local outcomes = config.hatchOutcomes
+  if #outcomes < 2 or luckMultiplier <= 1 then
+    -- No luck boost or not enough outcomes, use normal selection
+    return EggConfig.selectHatchOutcome(eggType)
+  end
+
+  -- Copy and adjust probabilities
+  -- Outcomes are ordered: most common (70%), mid (25%), rare (5%)
+  -- Boost the rarer ones at the expense of the most common
+  local adjustedProbs = {}
+  local totalProb = 100
+
+  for i, outcome in ipairs(outcomes) do
+    adjustedProbs[i] = outcome.probability
+  end
+
+  -- Boost the 2nd and 3rd outcomes (rarer ones)
+  if #outcomes >= 3 then
+    local rareBoost = adjustedProbs[3] * (luckMultiplier - 1)
+    local midBoost = adjustedProbs[2] * (luckMultiplier - 1) * 0.5 -- Half boost for mid tier
+
+    -- Cap the boosts so common doesn't go below 40%
+    local maxReduction = adjustedProbs[1] - 40
+    local totalBoost = rareBoost + midBoost
+    if totalBoost > maxReduction then
+      local scale = maxReduction / totalBoost
+      rareBoost = rareBoost * scale
+      midBoost = midBoost * scale
+    end
+
+    adjustedProbs[1] = adjustedProbs[1] - rareBoost - midBoost
+    adjustedProbs[2] = adjustedProbs[2] + midBoost
+    adjustedProbs[3] = adjustedProbs[3] + rareBoost
+  end
+
+  -- Use properly seeded Random instance
+  local roll = rng:NextInteger(1, 100)
+  local cumulativeProbability = 0
+
+  for i, outcome in ipairs(outcomes) do
+    cumulativeProbability = cumulativeProbability + adjustedProbs[i]
+    if roll <= cumulativeProbability then
+      return outcome.chickenType
+    end
+  end
+
+  -- Fallback
+  return outcomes[1].chickenType
+end
+
 -- Get all rarities in order
 function EggConfig.getRarities(): { Rarity }
   return { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic" }

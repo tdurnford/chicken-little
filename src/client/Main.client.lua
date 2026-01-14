@@ -283,6 +283,27 @@ if playerDataChangedEvent then
       MainHUD.setInventoryItemCount(eggCount + chickenCount)
     end
 
+    -- Update StoreUI with active power-ups
+    if data.activePowerUps then
+      local activePowerUpsMap: { [string]: number } = {}
+      local currentTime = os.time()
+      for _, powerUp in ipairs(data.activePowerUps) do
+        if currentTime < powerUp.expiresAt then
+          -- Get power-up type from ID
+          local powerUpType = nil
+          if string.find(powerUp.powerUpId, "HatchLuck") then
+            powerUpType = "HatchLuck"
+          elseif string.find(powerUp.powerUpId, "EggQuality") then
+            powerUpType = "EggQuality"
+          end
+          if powerUpType then
+            activePowerUpsMap[powerUpType] = powerUp.expiresAt
+          end
+        end
+      end
+      StoreUI.updateActivePowerUps(activePowerUpsMap)
+    end
+
     -- Build section visuals if we have a section index but haven't built yet
     if data.sectionIndex and not SectionVisuals.getCurrentSection() then
       local occupiedSpots: { [number]: boolean } = {}
@@ -1853,6 +1874,28 @@ StoreUI.onRobuxPurchase(function(itemType: string, itemId: string)
     else
       SoundEffects.play("uiError")
       warn("[Client] Robux item purchase failed:", result.message)
+    end
+  end
+end)
+
+-- Wire up store power-up purchase callback
+StoreUI.onPowerUpPurchase(function(powerUpId: string)
+  local buyPowerUpFunc = getFunction("BuyPowerUp")
+  if not buyPowerUpFunc then
+    warn("[Client] BuyPowerUp RemoteFunction not found")
+    return
+  end
+
+  local result = buyPowerUpFunc:InvokeServer(powerUpId)
+  if result then
+    if result.success then
+      SoundEffects.play("purchase")
+      print("[Client] Power-up purchase initiated:", result.message)
+      -- Refresh store to show active status
+      StoreUI.refreshInventory()
+    else
+      SoundEffects.play("uiError")
+      warn("[Client] Power-up purchase failed:", result.message)
     end
   end
 end)

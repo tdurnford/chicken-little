@@ -16,6 +16,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local EggConfig = require(Shared:WaitForChild("EggConfig"))
 local ChickenConfig = require(Shared:WaitForChild("ChickenConfig"))
 local Store = require(Shared:WaitForChild("Store"))
+local PowerUpConfig = require(Shared:WaitForChild("PowerUpConfig"))
 
 -- Rarity colors for visual distinction
 local RARITY_COLORS: { [string]: Color3 } = {
@@ -40,10 +41,13 @@ local confirmationFrame: Frame? = nil
 local restockTimerLabel: TextLabel? = nil
 local timerConnection: RBXScriptConnection? = nil
 local isOpen = false
-local currentTab: "eggs" | "chickens" = "eggs"
+local currentTab: "eggs" | "chickens" | "powerups" = "eggs"
 
 -- Cached player money for UI updates
 local cachedPlayerMoney = 0
+
+-- Cached active power-ups for display
+local cachedActivePowerUps: { [string]: number }? = nil -- powerUpType -> expiresAt
 
 -- Robux price for instant replenish (configurable)
 local ROBUX_REPLENISH_PRICE = 50
@@ -53,6 +57,7 @@ local onEggPurchaseCallback: ((eggType: string, quantity: number) -> any)? = nil
 local onChickenPurchaseCallback: ((chickenType: string, quantity: number) -> any)? = nil
 local onReplenishCallback: (() -> any)? = nil
 local onRobuxPurchaseCallback: ((itemType: string, itemId: string) -> any)? = nil
+local onPowerUpPurchaseCallback: ((powerUpId: string) -> any)? = nil
 
 --[[
 	Formats seconds into M:SS format for the restock timer.
@@ -290,6 +295,167 @@ local function createItemCard(
 end
 
 --[[
+	Creates a power-up card for the store.
+	@param powerUpId string - The power-up identifier
+	@param config table - Power-up configuration
+	@param parent Instance - Parent frame to add card to
+	@param index number - Index for positioning
+]]
+local function createPowerUpCard(
+  powerUpId: string,
+  config: PowerUpConfig.PowerUpConfig,
+  parent: Frame,
+  index: number
+): Frame
+  local card = Instance.new("Frame")
+  card.Name = powerUpId
+  card.Size = UDim2.new(1, -10, 0, 90)
+  card.Position = UDim2.new(0, 5, 0, (index - 1) * 95 + 5)
+  card.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+  card.BorderSizePixel = 0
+  card.Parent = parent
+
+  local cardCorner = Instance.new("UICorner")
+  cardCorner.CornerRadius = UDim.new(0, 8)
+  cardCorner.Parent = card
+
+  -- Power-up type indicator bar
+  local isLuck = string.find(powerUpId, "HatchLuck") ~= nil
+  local barColor = isLuck and Color3.fromRGB(50, 205, 50) or Color3.fromRGB(255, 215, 0)
+
+  local typeBar = Instance.new("Frame")
+  typeBar.Name = "TypeBar"
+  typeBar.Size = UDim2.new(0, 4, 1, 0)
+  typeBar.Position = UDim2.new(0, 0, 0, 0)
+  typeBar.BackgroundColor3 = barColor
+  typeBar.BorderSizePixel = 0
+  typeBar.Parent = card
+
+  local typeBarCorner = Instance.new("UICorner")
+  typeBarCorner.CornerRadius = UDim.new(0, 4)
+  typeBarCorner.Parent = typeBar
+
+  -- Icon
+  local iconLabel = Instance.new("TextLabel")
+  iconLabel.Name = "Icon"
+  iconLabel.Size = UDim2.new(0, 30, 0, 30)
+  iconLabel.Position = UDim2.new(0, 12, 0, 10)
+  iconLabel.BackgroundTransparency = 1
+  iconLabel.Text = config.icon
+  iconLabel.TextSize = 24
+  iconLabel.Parent = card
+
+  -- Power-up name
+  local nameLabel = Instance.new("TextLabel")
+  nameLabel.Name = "Name"
+  nameLabel.Size = UDim2.new(0.5, -20, 0, 22)
+  nameLabel.Position = UDim2.new(0, 45, 0, 8)
+  nameLabel.BackgroundTransparency = 1
+  nameLabel.Text = config.displayName
+  nameLabel.TextColor3 = barColor
+  nameLabel.TextScaled = true
+  nameLabel.Font = Enum.Font.GothamBold
+  nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+  nameLabel.Parent = card
+
+  -- Description
+  local descLabel = Instance.new("TextLabel")
+  descLabel.Name = "Description"
+  descLabel.Size = UDim2.new(0.6, -20, 0, 18)
+  descLabel.Position = UDim2.new(0, 45, 0, 30)
+  descLabel.BackgroundTransparency = 1
+  descLabel.Text = config.description
+  descLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+  descLabel.TextScaled = true
+  descLabel.Font = Enum.Font.Gotham
+  descLabel.TextXAlignment = Enum.TextXAlignment.Left
+  descLabel.Parent = card
+
+  -- Duration info
+  local durationText = PowerUpConfig.formatRemainingTime(config.durationSeconds)
+  local durationLabel = Instance.new("TextLabel")
+  durationLabel.Name = "Duration"
+  durationLabel.Size = UDim2.new(0.5, -20, 0, 16)
+  durationLabel.Position = UDim2.new(0, 45, 0, 50)
+  durationLabel.BackgroundTransparency = 1
+  durationLabel.Text = "Duration: " .. durationText
+  durationLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+  durationLabel.TextScaled = true
+  durationLabel.Font = Enum.Font.Gotham
+  durationLabel.TextXAlignment = Enum.TextXAlignment.Left
+  durationLabel.Parent = card
+
+  -- Active status (if power-up is currently active)
+  local powerUpType = PowerUpConfig.getPowerUpType(powerUpId)
+  local activeExpiresAt = cachedActivePowerUps and powerUpType and cachedActivePowerUps[powerUpType]
+  local isActive = activeExpiresAt and os.time() < activeExpiresAt
+
+  local statusLabel = Instance.new("TextLabel")
+  statusLabel.Name = "Status"
+  statusLabel.Size = UDim2.new(0.5, -20, 0, 16)
+  statusLabel.Position = UDim2.new(0, 45, 0, 68)
+  statusLabel.BackgroundTransparency = 1
+  if isActive then
+    local remaining = activeExpiresAt - os.time()
+    statusLabel.Text = "✓ ACTIVE (" .. PowerUpConfig.formatRemainingTime(remaining) .. " left)"
+    statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+  else
+    statusLabel.Text = ""
+  end
+  statusLabel.TextScaled = true
+  statusLabel.Font = Enum.Font.GothamBold
+  statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+  statusLabel.Parent = card
+
+  -- Buy button (Robux only)
+  local buyButton = Instance.new("TextButton")
+  buyButton.Name = "BuyButton"
+  buyButton.Size = UDim2.new(0, 80, 0, 35)
+  buyButton.Position = UDim2.new(1, -90, 0.5, -17)
+  buyButton.BackgroundColor3 = Color3.fromRGB(0, 162, 255) -- Robux blue
+  buyButton.Text = ""
+  buyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+  buyButton.TextScaled = true
+  buyButton.Font = Enum.Font.GothamBold
+  buyButton.Parent = card
+
+  local buyButtonCorner = Instance.new("UICorner")
+  buyButtonCorner.CornerRadius = UDim.new(0, 6)
+  buyButtonCorner.Parent = buyButton
+
+  -- Robux icon
+  local robuxIcon = Instance.new("ImageLabel")
+  robuxIcon.Name = "RobuxIcon"
+  robuxIcon.Size = UDim2.new(0, 16, 0, 16)
+  robuxIcon.Position = UDim2.new(0, 8, 0.5, -8)
+  robuxIcon.BackgroundTransparency = 1
+  robuxIcon.Image = "rbxassetid://4915439044"
+  robuxIcon.Parent = buyButton
+
+  -- Price label
+  local priceLabel = Instance.new("TextLabel")
+  priceLabel.Name = "PriceLabel"
+  priceLabel.Size = UDim2.new(1, -28, 1, 0)
+  priceLabel.Position = UDim2.new(0, 26, 0, 0)
+  priceLabel.BackgroundTransparency = 1
+  priceLabel.Text = tostring(config.robuxPrice)
+  priceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+  priceLabel.TextScaled = true
+  priceLabel.Font = Enum.Font.GothamBold
+  priceLabel.TextXAlignment = Enum.TextXAlignment.Left
+  priceLabel.Parent = buyButton
+
+  -- Connect buy button
+  buyButton.MouseButton1Click:Connect(function()
+    if onPowerUpPurchaseCallback then
+      onPowerUpPurchaseCallback(powerUpId)
+    end
+  end)
+
+  return card
+end
+
+--[[
 	Populates the scroll frame with items based on current tab.
 ]]
 local function populateItems()
@@ -320,7 +486,7 @@ local function populateItems()
       )
     end
     scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableEggs * 85 + 10)
-  else
+  elseif currentTab == "chickens" then
     local availableChickens = Store.getAvailableChickensWithStock()
     for index, item in ipairs(availableChickens) do
       createItemCard(
@@ -336,6 +502,12 @@ local function populateItems()
       )
     end
     scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableChickens * 85 + 10)
+  elseif currentTab == "powerups" then
+    local powerUps = PowerUpConfig.getAllSorted()
+    for index, config in ipairs(powerUps) do
+      createPowerUpCard(config.id, config, scrollFrame, index)
+    end
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #powerUps * 95 + 10)
   end
 end
 
@@ -349,6 +521,7 @@ local function updateTabAppearance()
 
   local eggsTab = tabFrame:FindFirstChild("EggsTab")
   local chickensTab = tabFrame:FindFirstChild("ChickensTab")
+  local powerupsTab = tabFrame:FindFirstChild("PowerupsTab")
 
   if eggsTab and eggsTab:IsA("TextButton") then
     if currentTab == "eggs" then
@@ -369,13 +542,23 @@ local function updateTabAppearance()
       chickensTab.TextColor3 = Color3.fromRGB(180, 180, 180)
     end
   end
+
+  if powerupsTab and powerupsTab:IsA("TextButton") then
+    if currentTab == "powerups" then
+      powerupsTab.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+      powerupsTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+    else
+      powerupsTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+      powerupsTab.TextColor3 = Color3.fromRGB(180, 180, 180)
+    end
+  end
 end
 
 --[[
 	Switches to the specified tab.
-	@param tab "eggs" | "chickens" - The tab to switch to
+	@param tab "eggs" | "chickens" | "powerups" - The tab to switch to
 ]]
-local function switchTab(tab: "eggs" | "chickens")
+local function switchTab(tab: "eggs" | "chickens" | "powerups")
   currentTab = tab
   updateTabAppearance()
   populateItems()
@@ -504,7 +687,7 @@ function StoreUI.create()
   -- Initialize timer display
   updateRestockTimer()
 
-  -- Tab frame for Eggs/Chickens tabs
+  -- Tab frame for Eggs/Chickens/Power-ups tabs
   tabFrame = Instance.new("Frame")
   tabFrame.Name = "TabFrame"
   tabFrame.Size = UDim2.new(1, -20, 0, 35)
@@ -515,7 +698,7 @@ function StoreUI.create()
   -- Eggs tab button
   local eggsTab = Instance.new("TextButton")
   eggsTab.Name = "EggsTab"
-  eggsTab.Size = UDim2.new(0.5, -5, 1, 0)
+  eggsTab.Size = UDim2.new(0.33, -4, 1, 0)
   eggsTab.Position = UDim2.new(0, 0, 0, 0)
   eggsTab.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
   eggsTab.Text = "🥚 Eggs"
@@ -535,8 +718,8 @@ function StoreUI.create()
   -- Chickens tab button
   local chickensTab = Instance.new("TextButton")
   chickensTab.Name = "ChickensTab"
-  chickensTab.Size = UDim2.new(0.5, -5, 1, 0)
-  chickensTab.Position = UDim2.new(0.5, 5, 0, 0)
+  chickensTab.Size = UDim2.new(0.33, -4, 1, 0)
+  chickensTab.Position = UDim2.new(0.33, 2, 0, 0)
   chickensTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
   chickensTab.Text = "🐔 Chickens"
   chickensTab.TextColor3 = Color3.fromRGB(180, 180, 180)
@@ -550,6 +733,26 @@ function StoreUI.create()
 
   chickensTab.MouseButton1Click:Connect(function()
     switchTab("chickens")
+  end)
+
+  -- Power-ups tab button
+  local powerupsTab = Instance.new("TextButton")
+  powerupsTab.Name = "PowerupsTab"
+  powerupsTab.Size = UDim2.new(0.33, -2, 1, 0)
+  powerupsTab.Position = UDim2.new(0.66, 4, 0, 0)
+  powerupsTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+  powerupsTab.Text = "⚡ Boosts"
+  powerupsTab.TextColor3 = Color3.fromRGB(180, 180, 180)
+  powerupsTab.TextScaled = true
+  powerupsTab.Font = Enum.Font.GothamBold
+  powerupsTab.Parent = tabFrame
+
+  local powerupsTabCorner = Instance.new("UICorner")
+  powerupsTabCorner.CornerRadius = UDim.new(0, 6)
+  powerupsTabCorner.Parent = powerupsTab
+
+  powerupsTab.MouseButton1Click:Connect(function()
+    switchTab("powerups")
   end)
 
   -- Scroll frame for items
@@ -824,8 +1027,16 @@ function StoreUI.onRobuxPurchase(callback: (itemType: string, itemId: string) ->
 end
 
 --[[
+	Sets the callback for when a power-up purchase is attempted.
+	@param callback function - Function to call with (powerUpId)
+]]
+function StoreUI.onPowerUpPurchase(callback: (powerUpId: string) -> any)
+  onPowerUpPurchaseCallback = callback
+end
+
+--[[
 	Returns the current tab.
-	@return "eggs" | "chickens"
+	@return "eggs" | "chickens" | "powerups"
 ]]
 function StoreUI.getCurrentTab(): string
   return currentTab
@@ -837,6 +1048,18 @@ end
 ]]
 function StoreUI.refreshInventory()
   if isOpen then
+    populateItems()
+  end
+end
+
+--[[
+	Updates the cached active power-ups for display.
+	@param activePowerUps table - Map of power-up type to expires at time
+]]
+function StoreUI.updateActivePowerUps(activePowerUps: { [string]: number }?)
+  cachedActivePowerUps = activePowerUps
+  -- Refresh display if on power-ups tab
+  if isOpen and currentTab == "powerups" then
     populateItems()
   end
 end

@@ -2550,3 +2550,50 @@
   - Counts are reasonably accurate (from cached player data) ✓
 - Format check and build pass
 - Next: Other medium priority items (#7, #17, #18, #19, #49)
+
+[2026-01-14] Completed Bugfix Work Item #7: Implement Luck Power-Ups Store
+- Root cause: Players had no way to boost their luck for rare hatches or improve the quality
+  of eggs laid by their chickens. This was a monetization opportunity and gameplay enhancement.
+- Implementation approach:
+  1. Created PowerUpConfig.lua defining 6 power-ups:
+     - HatchLuck15/60/240: 2x chance for rare hatches (15min, 1hr, 4hr durations)
+     - EggQuality15/60/240: Chickens lay eggs 1 tier higher (15min, 1hr, 4hr durations)
+     - Prices: R$25-275 scaling with duration
+  2. Extended PlayerData.lua:
+     - Added ActivePowerUp type with powerUpId, activatedTime, expiresAt
+     - Added activePowerUps field to PlayerDataSchema
+     - Added validation and helper functions for power-up management
+     - addPowerUp() extends existing power-ups of same type instead of stacking
+     - cleanupExpiredPowerUps() removes expired entries
+  3. Modified EggConfig.lua:
+     - Added selectHatchOutcomeWithLuck() function
+     - Luck boost redistributes probabilities to favor rare outcomes
+     - Common tier drops by up to 30%, rare/mid tiers get boosted
+  4. Modified EggHatching.hatch() to check for HatchLuck power-up
+  5. Modified Chicken.lua:
+     - Added getUpgradedEggType() helper with EGG_RARITY_ORDER
+     - Upgrades CommonEgg -> UncommonEgg -> RareEgg etc.
+  6. Updated Main.server.lua:
+     - Added POWERUP_ROBUX_PRODUCT_IDS configuration
+     - Added pendingPowerUpPurchases tracking
+     - Added BuyPowerUp remote function handler
+     - Extended ProcessReceipt to handle power-up purchases
+     - Applies EggQuality boost in egg laying loop
+  7. Extended StoreUI.lua:
+     - Added "Boosts" tab alongside Eggs and Chickens
+     - Tab buttons now use 33% width each
+     - Power-up cards show icon, name, description, duration, price
+     - Active power-ups show "✓ ACTIVE (X left)" status
+     - Added onPowerUpPurchase callback and updateActivePowerUps method
+  8. Updated RemoteSetup.lua with BuyPowerUp function and PowerUpActivated event
+  9. Wired client-side in Main.client.lua:
+     - Power-up purchase callback
+     - Updates StoreUI active power-ups from PlayerDataChanged
+- Acceptance criteria met:
+  - Power-ups are available for Robux purchase ✓
+  - Hatch Luck Boost increases rare chicken probability ✓
+  - Egg Quality Boost improves egg rarity from chickens ✓
+  - Power-ups have time duration and expire ✓
+  - Active power-ups are shown in UI ✓
+- Format check and build pass
+- Next: Other medium priority items (#17, #18, #19, #49)

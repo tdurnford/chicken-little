@@ -166,8 +166,20 @@ function EggHatching.hatch(playerData: PlayerData.PlayerDataSchema, eggId: strin
     }
   end
 
-  -- Select chicken using weighted random selection
-  local selectedChickenType = EggConfig.selectHatchOutcome(egg.eggType)
+  -- Check for luck boost power-up
+  local luckMultiplier = 1.0
+  if PlayerData.hasActivePowerUp(playerData, "HatchLuck") then
+    luckMultiplier = 2.0 -- Double the rare outcome chances
+  end
+
+  -- Select chicken using weighted random selection (with luck boost if active)
+  local selectedChickenType
+  if luckMultiplier > 1 then
+    selectedChickenType = EggConfig.selectHatchOutcomeWithLuck(egg.eggType, luckMultiplier)
+  else
+    selectedChickenType = EggConfig.selectHatchOutcome(egg.eggType)
+  end
+
   if not selectedChickenType then
     return {
       success = false,

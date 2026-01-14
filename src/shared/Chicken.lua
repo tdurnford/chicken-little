@@ -155,6 +155,30 @@ function Chicken:layEgg(currentTime: number?): string?
   return selectedEgg
 end
 
+-- Egg rarity order for upgrades
+local EGG_RARITY_ORDER = {
+  "CommonEgg",
+  "UncommonEgg",
+  "RareEgg",
+  "EpicEgg",
+  "LegendaryEgg",
+  "MythicEgg",
+}
+
+-- Get the upgraded egg type (one tier higher)
+function Chicken.getUpgradedEggType(eggType: string): string
+  for i, egg in ipairs(EGG_RARITY_ORDER) do
+    if egg == eggType then
+      -- Return next tier if available, otherwise return same type
+      if i < #EGG_RARITY_ORDER then
+        return EGG_RARITY_ORDER[i + 1]
+      end
+      return eggType -- Already at max tier
+    end
+  end
+  return eggType -- Fallback to original
+end
+
 -- Collect accumulated money and reset to zero
 -- Returns the amount collected
 function Chicken:collectMoney(): number
