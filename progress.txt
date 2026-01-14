@@ -2198,3 +2198,24 @@
   - Clear message explains the assistance ("You've been given $100 to help you get back on your feet!")
 - Format check and build pass
 - Next: Other high priority items (#35, #36, #39, #51, #55)
+
+[2026-01-14] Completed Bugfix Work Item #35: Fix Arena Chickens Showing Accumulated Money
+- Root cause: ChickenVisuals.create() always created a money indicator billboard GUI
+  for all chickens, regardless of whether they were arena chickens or placed chickens.
+- Arena chickens (spotIndex == nil) should not show any money display since they 
+  don't earn money until placed in a coop.
+- Fix: Modified ChickenVisuals.create() to only create the money indicator when 
+  spotIndex is provided (placed chickens).
+- Code change in src/client/ChickenVisuals.lua:
+  - Changed from unconditionally creating moneyIndicator to conditional creation
+  - Added explicit type annotation: local moneyIndicator: BillboardGui? = nil
+  - Only calls createMoneyIndicator() when spotIndex ~= nil
+- The money accumulation logic at lines 475-480 was already correct (only 
+  accumulates money for chickens with spotIndex ~= nil), but the visual 
+  indicator was still being displayed showing "$0".
+- Acceptance criteria met:
+  - Arena chickens display no money value (no billboard GUI created)
+  - Money display only appears for placed chickens (spotIndex provided)
+  - No visual clutter on arena chickens
+- Format check and build pass
+- Next: Other high priority items (#36, #39, #51, #55)

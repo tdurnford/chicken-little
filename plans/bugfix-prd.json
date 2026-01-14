@@ -958,7 +958,7 @@
       "category": "RandomChicken-BugFix",
       "title": "Fix Arena Chickens Showing Accumulated Money",
       "description": "Arena chickens should not display any accumulated money - they only earn money once placed in coop.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Update ChickenVisuals to hide money display for arena chickens",
@@ -973,7 +973,8 @@
       "dependencies": [
         21
       ],
-      "codeLocation": "src/client/ChickenVisuals.lua"
+      "codeLocation": "src/client/ChickenVisuals.lua",
+      "status": "completed"
     },
     {
       "id": 36,

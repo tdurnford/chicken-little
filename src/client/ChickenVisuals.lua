@@ -441,8 +441,11 @@ function ChickenVisuals.create(
   model:SetPrimaryPartCFrame(CFrame.new(position))
   model.Parent = workspace
 
-  -- Create money indicator
-  local moneyIndicator = createMoneyIndicator(model.PrimaryPart)
+  -- Create money indicator only for placed chickens (arena chickens have no spotIndex)
+  local moneyIndicator: BillboardGui? = nil
+  if spotIndex ~= nil then
+    moneyIndicator = createMoneyIndicator(model.PrimaryPart)
+  end
 
   -- Create state
   local state: ChickenVisualState = {
