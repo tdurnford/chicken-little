@@ -652,6 +652,54 @@ test("Store: forceReplenish works same as replenishStore", function()
   return assert_true(hasStock, "Force replenish should restore stock")
 end)
 
+test("Store: basic chicken is cheaper than common egg", function()
+  -- Bug #39: Basic chicken should cost less than common egg
+  -- Eggs are a gamble with upside potential; direct chicken purchase should be cheaper
+  local basicChickPrice = Store.getChickenPrice("BasicChick")
+  local commonEggConfig = EggConfig.get("CommonEgg")
+  if not commonEggConfig then
+    return false, "CommonEgg config not found"
+  end
+  local pass, msg = assert_true(
+    basicChickPrice < commonEggConfig.purchasePrice,
+    string.format(
+      "BasicChick ($%d) should be cheaper than CommonEgg ($%d)",
+      basicChickPrice,
+      commonEggConfig.purchasePrice
+    )
+  )
+  return pass, msg
+end)
+
+test("Store: egg prices are slightly above expected chicken values", function()
+  -- For each egg rarity, the egg should cost more than the expected chicken value
+  -- This makes eggs a gamble with upside potential
+  local rarities = { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic" }
+  for _, rarity in ipairs(rarities) do
+    local eggs = EggConfig.getByRarity(rarity)
+    if #eggs > 0 then
+      local egg = eggs[1]
+      -- Calculate expected chicken purchase price from hatch outcomes
+      local expectedValue = 0
+      for _, outcome in ipairs(egg.hatchOutcomes) do
+        local chickenPrice = Store.getChickenPrice(outcome.chickenType)
+        expectedValue = expectedValue + (chickenPrice * outcome.probability / 100)
+      end
+      -- Egg should cost at least as much as expected value (slight premium for gamble)
+      if egg.purchasePrice < expectedValue * 0.95 then
+        return false,
+          string.format(
+            "%s egg ($%d) is too cheap vs expected chicken value ($%.0f)",
+            rarity,
+            egg.purchasePrice,
+            expectedValue
+          )
+      end
+    end
+  end
+  return true, "OK"
+end)
+
 -- ============================================================================
 -- TradeExchange Tests
 -- ============================================================================

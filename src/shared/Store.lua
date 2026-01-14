@@ -56,8 +56,10 @@ local CHICKEN_SELL_MULTIPLIER = 0.5
 -- Base price per money-per-second for chicken value calculation
 local CHICKEN_VALUE_PER_MPS = 60
 
--- Chicken purchase price multiplier (higher than sell value for profit margin)
-local CHICKEN_PURCHASE_MULTIPLIER = 2.0
+-- Chicken purchase price multiplier
+-- Set to 1.5 so basic chickens ($90) are cheaper than eggs ($100)
+-- This makes eggs a "gamble" with upside potential for better chickens
+local CHICKEN_PURCHASE_MULTIPLIER = 1.5
 
 -- Predator sell prices by tier (placeholder until PredatorConfig exists)
 local PREDATOR_SELL_PRICES: { [string]: number } = {

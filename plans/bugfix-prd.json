@@ -1050,7 +1050,8 @@
       "category": "Balance-BugFix",
       "title": "Rebalance Egg and Chicken Pricing",
       "description": "Basic chicken costs more than common egg which makes no sense. Rebalance all prices so eggs are appropriately cheaper than their potential chicken output.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
       "priority": "high",
       "steps": [
         "Review EggConfig and ChickenConfig pricing",
@@ -1067,7 +1068,8 @@
         "Economy feels balanced for new players"
       ],
       "dependencies": [],
-      "codeLocation": "src/shared/BalanceConfig.lua"
+      "codeLocation": "src/shared/Store.lua",
+      "implementationNotes": "Changed CHICKEN_PURCHASE_MULTIPLIER from 2.0 to 1.5 in Store.lua. This reduces BasicChick price from $120 to $90, making it cheaper than CommonEgg ($100). Eggs now represent a gamble with upside potential - you pay a slight premium for the chance to hatch a better chicken. Added integration tests to verify pricing balance."
     },
     {
       "id": 41,

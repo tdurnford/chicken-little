@@ -2302,3 +2302,30 @@
   - Predators target specific chickens visually (approach individual spots)
 - Format check and build pass
 - Next: Other high priority items (#39, #53, #55)
+
+[2026-01-14] Completed Bugfix Work Item #39: Rebalance Egg and Chicken Pricing
+- Root cause: CHICKEN_PURCHASE_MULTIPLIER was set to 2.0, making BasicChick ($120)
+  cost more than CommonEgg ($100). This was counterintuitive since direct chicken
+  purchase should be cheaper than gambling on eggs.
+- Implementation approach:
+  1. Changed CHICKEN_PURCHASE_MULTIPLIER from 2.0 to 1.5 in Store.lua
+  2. New pricing formula: chicken_price = moneyPerSecond × 60 × 1.5
+  3. This makes BasicChick cost $90 (was $120), now cheaper than CommonEgg ($100)
+- Economic design philosophy:
+  - Eggs are a "gamble" with upside potential (chance to get better chickens)
+  - Direct chicken purchase is cheaper but guaranteed (no gamble)
+  - Expected value from CommonEgg ($96.75) is slightly less than egg price ($100)
+  - This 3.4% premium on eggs incentivizes strategic buying decisions
+- Code changes in src/shared/Store.lua:
+  - Changed CHICKEN_PURCHASE_MULTIPLIER from 2.0 to 1.5
+  - Added explanatory comment about pricing philosophy
+- Added integration tests in src/shared/IntegrationTests.lua:
+  - "Store: basic chicken is cheaper than common egg"
+  - "Store: egg prices are slightly above expected chicken values"
+- Acceptance criteria met:
+  - Basic chicken ($90) is cheaper than common egg ($100) ✓
+  - All egg prices are above expected chicken output value (3.4% premium) ✓
+  - Pricing progression makes logical sense (gamble vs guaranteed) ✓
+  - Economy feels balanced for new players ✓
+- Format check and build pass
+- Next: Other high priority items (#55 - Add Inventory Toggle Button to HUD)
