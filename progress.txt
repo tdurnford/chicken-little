@@ -1903,3 +1903,24 @@
   - EggLaid event notifies player client (line 1254)
 - Format check and build pass
 - Next: Other critical items (#38, #40, #45, #47, #54)
+
+[2026-01-14] Completed Bugfix Work Item #45: Fix Purchasing Not Updating Inventory Properly
+- Root cause: InventoryUI.updateFromPlayerData() returned early when state.contentFrame was nil
+- When inventory UI was not open, PlayerDataChanged events were received but data was discarded
+- When player opened inventory later, it showed stale data (pre-purchase state)
+- Fix in src/client/InventoryUI.lua:
+  1. Added cachedPlayerData module variable (line 90) to store latest player data
+  2. Updated updateFromPlayerData() to always cache the playerData before the nil check (lines 563-564)
+  3. Updated setVisible() to refresh inventory with cached data when becoming visible (lines 663-666)
+- Now the flow works correctly:
+  - Player purchases item from store
+  - Server fires PlayerDataChanged with new inventory
+  - InventoryUI caches the data even if UI is closed
+  - When player opens inventory (presses I), setVisible(true) triggers refresh
+  - Inventory displays the latest cached data including new purchases
+- Acceptance criteria met:
+  - Purchased items appear in inventory immediately (when opened)
+  - Inventory count updates correctly
+  - No need to close/reopen inventory to see purchases (data is cached and displayed on open)
+- Format check and build pass
+- Next: Other critical items (#38, #40, #47, #54)

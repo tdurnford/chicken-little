@@ -1178,7 +1178,7 @@
       "category": "Store-BugFix",
       "title": "Fix Purchasing Not Updating Inventory Properly",
       "description": "Purchasing eggs or chickens from store doesn't update the player's inventory display correctly.",
-      "completed": false,
+      "completed": true,
       "priority": "critical",
       "steps": [
         "Review syncPlayerData calls after purchase",
@@ -1192,7 +1192,8 @@
         "No need to close/reopen inventory to see purchases"
       ],
       "dependencies": [],
-      "codeLocation": "src/server/Main.server.lua"
+      "codeLocation": "src/server/Main.server.lua",
+      "status": "completed"
     },
     {
       "id": 46,

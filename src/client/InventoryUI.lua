@@ -86,6 +86,9 @@ local state: InventoryState = {
 -- Callback for visibility changes
 local onVisibilityChanged: ((boolean) -> ())? = nil
 
+-- Cached player data for refreshing inventory when opened
+local cachedPlayerData: any = nil
+
 local currentConfig: InventoryConfig = DEFAULT_CONFIG
 
 -- Create a tab button
@@ -557,6 +560,9 @@ end
 
 -- Update inventory from player data
 function InventoryUI.updateFromPlayerData(playerData: any)
+  -- Always cache the player data so we can refresh when inventory is opened
+  cachedPlayerData = playerData
+
   if not state.contentFrame then
     return
   end
@@ -653,6 +659,10 @@ function InventoryUI.setVisible(visible: boolean)
   state.isVisible = visible
   if state.mainFrame then
     state.mainFrame.Visible = visible
+  end
+  -- Refresh inventory with cached data when becoming visible
+  if visible and cachedPlayerData then
+    InventoryUI.updateFromPlayerData(cachedPlayerData)
   end
   if onVisibilityChanged then
     onVisibilityChanged(visible)
