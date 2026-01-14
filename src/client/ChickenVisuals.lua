@@ -466,9 +466,10 @@ function ChickenVisuals.create(
         if chickenState.currentAnimation == "idle" then
           applyIdleAnimation(chickenState, deltaTime)
         end
-        -- Client-side money accumulation for smooth counter
-        if chickenState.moneyPerSecond > 0 then
-          chickenState.accumulatedMoney = chickenState.accumulatedMoney + (chickenState.moneyPerSecond * deltaTime)
+        -- Client-side money accumulation for smooth counter (only for placed chickens)
+        if chickenState.moneyPerSecond > 0 and chickenState.spotIndex ~= nil then
+          chickenState.accumulatedMoney = chickenState.accumulatedMoney
+            + (chickenState.moneyPerSecond * deltaTime)
           updateMoneyIndicator(chickenState)
         end
       end

@@ -1135,3 +1135,19 @@
   - Tutorial is much shorter than before (7 steps → 3 steps)
 - Format check and build pass
 - Next: Work Items #2, #3, #9, #10, #14 (high priority items)
+
+[2026-01-14] Completed Bugfix Work Item #21: Fix Random Chickens Accumulating Money Before Placed
+- Fixed client-side money accumulation bug in ChickenVisuals.lua
+- Root cause: The Heartbeat update loop was accumulating money for ALL chicken visuals,
+  including arena-spawned random chickens that have spotIndex = nil
+- Fix: Added spotIndex check to money accumulation condition
+  - Changed: `if chickenState.moneyPerSecond > 0 then`
+  - To: `if chickenState.moneyPerSecond > 0 and chickenState.spotIndex ~= nil then`
+- This ensures only placed chickens (with a valid spotIndex) accumulate money client-side
+- Server-side MoneyCollection.updateAllChickenMoney() was already correct (only updates placedChickens)
+- Acceptance criteria met:
+  - Random chickens in arena show $0 accumulated (no money accumulation without spotIndex)
+  - Money only starts accumulating after placement (spotIndex becomes non-nil when placed)
+  - Placed chickens accumulate normally (spotIndex is set, money accumulates)
+- Format check and build pass
+- Next: Work Items #2, #9 (critical priority items), #3, #10, #14 (high priority items)
