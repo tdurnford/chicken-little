@@ -51,6 +51,7 @@ local onChickenPurchaseCallback: ((chickenType: string, quantity: number) -> any
 	@param displayName string - Display name for the item
 	@param rarity string - Rarity tier
 	@param price number - Purchase price
+	@param stock number - Current stock count
 	@param parent Instance - Parent frame to add card to
 	@param index number - Index for positioning
 ]]
@@ -60,6 +61,7 @@ local function createItemCard(
   displayName: string,
   rarity: string,
   price: number,
+  stock: number,
   parent: Frame,
   index: number
 ): Frame
@@ -101,7 +103,7 @@ local function createItemCard(
   -- Item name
   local nameLabel = Instance.new("TextLabel")
   nameLabel.Name = "Name"
-  nameLabel.Size = UDim2.new(0.4, -20, 0, 25)
+  nameLabel.Size = UDim2.new(0.35, -20, 0, 25)
   nameLabel.Position = UDim2.new(0, 45, 0, 8)
   nameLabel.BackgroundTransparency = 1
   nameLabel.Text = displayName
@@ -114,7 +116,7 @@ local function createItemCard(
   -- Rarity label
   local rarityLabel = Instance.new("TextLabel")
   rarityLabel.Name = "Rarity"
-  rarityLabel.Size = UDim2.new(0.4, -20, 0, 18)
+  rarityLabel.Size = UDim2.new(0.35, -20, 0, 18)
   rarityLabel.Position = UDim2.new(0, 45, 0, 33)
   rarityLabel.BackgroundTransparency = 1
   rarityLabel.Text = rarity
@@ -123,6 +125,19 @@ local function createItemCard(
   rarityLabel.Font = Enum.Font.Gotham
   rarityLabel.TextXAlignment = Enum.TextXAlignment.Left
   rarityLabel.Parent = card
+
+  -- Stock label
+  local stockLabel = Instance.new("TextLabel")
+  stockLabel.Name = "StockLabel"
+  stockLabel.Size = UDim2.new(0, 50, 0, 18)
+  stockLabel.Position = UDim2.new(0, 45, 0, 53)
+  stockLabel.BackgroundTransparency = 1
+  stockLabel.Text = stock > 0 and ("x" .. tostring(stock)) or "SOLD OUT"
+  stockLabel.TextColor3 = stock > 0 and Color3.fromRGB(150, 150, 150) or Color3.fromRGB(255, 80, 80)
+  stockLabel.TextScaled = true
+  stockLabel.Font = Enum.Font.Gotham
+  stockLabel.TextXAlignment = Enum.TextXAlignment.Left
+  stockLabel.Parent = card
 
   -- Price label
   local priceLabel = Instance.new("TextLabel")
@@ -138,13 +153,16 @@ local function createItemCard(
   priceLabel.Parent = card
 
   -- Buy button
+  local isSoldOut = stock <= 0
   local buyButton = Instance.new("TextButton")
   buyButton.Name = "BuyButton"
   buyButton.Size = UDim2.new(0, 70, 0, 35)
   buyButton.Position = UDim2.new(1, -80, 0.5, -17)
-  buyButton.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
-  buyButton.Text = "BUY"
+  buyButton.BackgroundColor3 = isSoldOut and Color3.fromRGB(80, 80, 80)
+    or Color3.fromRGB(50, 180, 50)
+  buyButton.Text = isSoldOut and "SOLD" or "BUY"
   buyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+  buyButton.TextTransparency = isSoldOut and 0.5 or 0
   buyButton.TextScaled = true
   buyButton.Font = Enum.Font.GothamBold
   buyButton.Parent = card
@@ -153,27 +171,38 @@ local function createItemCard(
   buyButtonCorner.CornerRadius = UDim.new(0, 6)
   buyButtonCorner.Parent = buyButton
 
-  -- Connect buy button
-  buyButton.MouseButton1Click:Connect(function()
-    if itemType == "egg" and onEggPurchaseCallback then
-      onEggPurchaseCallback(itemId, 1)
-    elseif itemType == "chicken" and onChickenPurchaseCallback then
-      onChickenPurchaseCallback(itemId, 1)
-    end
-  end)
+  -- Connect buy button (only if in stock)
+  if not isSoldOut then
+    buyButton.MouseButton1Click:Connect(function()
+      if itemType == "egg" and onEggPurchaseCallback then
+        onEggPurchaseCallback(itemId, 1)
+      elseif itemType == "chicken" and onChickenPurchaseCallback then
+        onChickenPurchaseCallback(itemId, 1)
+      end
+    end)
+  end
 
-  -- Store price on card for affordability updates
+  -- Store price and stock on card for affordability updates
   card:SetAttribute("Price", price)
+  card:SetAttribute("Stock", stock)
 
   -- Update affordability
   local function updateAffordability()
     local cardPrice = card:GetAttribute("Price") or price
+    local cardStock = card:GetAttribute("Stock") or stock
     local canAfford = cachedPlayerMoney >= cardPrice
-    if canAfford then
+    local soldOut = cardStock <= 0
+    if soldOut then
+      buyButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+      buyButton.Text = "SOLD"
+      buyButton.TextTransparency = 0.5
+    elseif canAfford then
       buyButton.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
+      buyButton.Text = "BUY"
       buyButton.TextTransparency = 0
     else
       buyButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+      buyButton.Text = "BUY"
       buyButton.TextTransparency = 0.5
     end
   end
@@ -181,7 +210,7 @@ local function createItemCard(
   -- Listen for money updates
   card:SetAttribute("UpdateAffordability", true)
   card.AttributeChanged:Connect(function(attributeName)
-    if attributeName == "PlayerMoney" then
+    if attributeName == "PlayerMoney" or attributeName == "Stock" then
       updateAffordability()
     end
   end)
@@ -206,13 +235,22 @@ local function populateItems()
   end
 
   if currentTab == "eggs" then
-    local availableEggs = Store.getAvailableEggs()
+    local availableEggs = Store.getAvailableEggsWithStock()
     for index, item in ipairs(availableEggs) do
-      createItemCard("egg", item.id, item.displayName, item.rarity, item.price, scrollFrame, index)
+      createItemCard(
+        "egg",
+        item.id,
+        item.displayName,
+        item.rarity,
+        item.price,
+        item.stock,
+        scrollFrame,
+        index
+      )
     end
     scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableEggs * 85 + 10)
   else
-    local availableChickens = Store.getAvailableChickens()
+    local availableChickens = Store.getAvailableChickensWithStock()
     for index, item in ipairs(availableChickens) do
       createItemCard(
         "chicken",
@@ -220,6 +258,7 @@ local function populateItems()
         item.displayName,
         item.rarity,
         item.price,
+        item.stock,
         scrollFrame,
         index
       )
@@ -546,6 +585,49 @@ end
 ]]
 function StoreUI.getCurrentTab(): string
   return currentTab
+end
+
+--[[
+	Refreshes the store inventory display.
+	Call this when inventory changes (e.g., after purchase or replenish).
+]]
+function StoreUI.refreshInventory()
+  if isOpen then
+    populateItems()
+  end
+end
+
+--[[
+	Updates the stock display for a specific item.
+	@param itemType "egg" | "chicken" - The type of item
+	@param itemId string - The item identifier
+	@param newStock number - The new stock count
+]]
+function StoreUI.updateItemStock(itemType: string, itemId: string, newStock: number)
+  if not scrollFrame then
+    return
+  end
+
+  -- Only update if we're on the matching tab
+  if
+    (itemType == "egg" and currentTab ~= "eggs")
+    or (itemType == "chicken" and currentTab ~= "chickens")
+  then
+    return
+  end
+
+  local card = scrollFrame:FindFirstChild(itemId)
+  if card and card:IsA("Frame") then
+    card:SetAttribute("Stock", newStock)
+
+    -- Update stock label
+    local stockLabel = card:FindFirstChild("StockLabel")
+    if stockLabel and stockLabel:IsA("TextLabel") then
+      stockLabel.Text = newStock > 0 and ("x" .. tostring(newStock)) or "SOLD OUT"
+      stockLabel.TextColor3 = newStock > 0 and Color3.fromRGB(150, 150, 150)
+        or Color3.fromRGB(255, 80, 80)
+    end
+  end
 end
 
 return StoreUI

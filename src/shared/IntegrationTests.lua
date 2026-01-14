@@ -408,6 +408,113 @@ test("Store: getAvailableChickens returns items", function()
 end)
 
 -- ============================================================================
+-- Store Inventory Tests
+-- ============================================================================
+
+test("Store: initializeInventory creates inventory with items", function()
+  local inventory = Store.initializeInventory()
+  local pass, msg = assert_not_nil(inventory, "Inventory should be created")
+  if not pass then
+    return pass, msg
+  end
+  pass, msg = assert_not_nil(inventory.eggs, "Eggs table should exist")
+  if not pass then
+    return pass, msg
+  end
+  pass, msg = assert_not_nil(inventory.chickens, "Chickens table should exist")
+  if not pass then
+    return pass, msg
+  end
+  -- Check that common egg has stock of 10
+  local commonEgg = inventory.eggs["CommonEgg"]
+  pass, msg = assert_not_nil(commonEgg, "Common egg should exist")
+  if not pass then
+    return pass, msg
+  end
+  return assert_eq(commonEgg.stock, 10, "Common egg should have stock of 10")
+end)
+
+test("Store: isInStock returns true for stocked items", function()
+  Store.initializeInventory()
+  local inStock = Store.isInStock("egg", "CommonEgg")
+  return assert_true(inStock, "Common egg should be in stock")
+end)
+
+test("Store: isInStock returns false for out of stock items", function()
+  local inventory = Store.initializeInventory()
+  -- Manually set stock to 0
+  inventory.eggs["CommonEgg"].stock = 0
+  Store.setStoreInventory(inventory)
+  local inStock = Store.isInStock("egg", "CommonEgg")
+  return assert_false(inStock, "Common egg with 0 stock should not be in stock")
+end)
+
+test("Store: purchaseEggFromInventory decrements stock", function()
+  Store.initializeInventory()
+  local data = PlayerData.createDefault()
+  data.money = 1000
+  local initialStock = Store.getStock("egg", "CommonEgg")
+  local result = Store.purchaseEggFromInventory(data, "CommonEgg", 1)
+  local pass, msg = assert_true(result.success, "Purchase should succeed: " .. result.message)
+  if not pass then
+    return pass, msg
+  end
+  local newStock = Store.getStock("egg", "CommonEgg")
+  return assert_eq(newStock, initialStock - 1, "Stock should decrement by 1")
+end)
+
+test("Store: purchaseEggFromInventory fails when sold out", function()
+  local inventory = Store.initializeInventory()
+  inventory.eggs["CommonEgg"].stock = 0
+  Store.setStoreInventory(inventory)
+  local data = PlayerData.createDefault()
+  data.money = 1000
+  local result = Store.purchaseEggFromInventory(data, "CommonEgg", 1)
+  return assert_false(result.success, "Purchase should fail when sold out")
+end)
+
+test("Store: purchaseChickenFromInventory decrements stock", function()
+  Store.initializeInventory()
+  local data = PlayerData.createDefault()
+  data.money = 50000
+  local initialStock = Store.getStock("chicken", "BasicChick")
+  local result = Store.purchaseChickenFromInventory(data, "BasicChick", 1)
+  local pass, msg = assert_true(result.success, "Purchase should succeed: " .. result.message)
+  if not pass then
+    return pass, msg
+  end
+  local newStock = Store.getStock("chicken", "BasicChick")
+  return assert_eq(newStock, initialStock - 1, "Stock should decrement by 1")
+end)
+
+test("Store: getAvailableEggsWithStock includes stock info", function()
+  Store.initializeInventory()
+  local eggs = Store.getAvailableEggsWithStock()
+  local pass, msg = assert_gt(#eggs, 0, "Should have eggs available")
+  if not pass then
+    return pass, msg
+  end
+  local first = eggs[1]
+  pass, msg = assert_not_nil(first.stock, "Stock field should exist")
+  if not pass then
+    return pass, msg
+  end
+  return assert_not_nil(first.maxStock, "MaxStock field should exist")
+end)
+
+test("Store: getStockForRarity returns correct values", function()
+  local pass, msg = assert_eq(Store.getStockForRarity("Common"), 10, "Common should be 10")
+  if not pass then
+    return pass, msg
+  end
+  pass, msg = assert_eq(Store.getStockForRarity("Rare"), 3, "Rare should be 3")
+  if not pass then
+    return pass, msg
+  end
+  return assert_eq(Store.getStockForRarity("Mythic"), 0, "Mythic should be 0")
+end)
+
+-- ============================================================================
 -- TradeExchange Tests
 -- ============================================================================
 

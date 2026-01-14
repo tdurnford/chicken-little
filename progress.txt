@@ -1209,3 +1209,38 @@
 - Format check and build pass
 - Next: Work Items #3, #10, #11, #14, #16, #23 (high priority items)
 
+
+[2026-01-14] Completed Bugfix Work Item #3: Implement Store Inventory System
+- Added StoreInventory type to Store.lua with stock tracking per item
+- Defined stock quantities per rarity tier:
+  - Common: 10, Uncommon: 5, Rare: 3, Epic: 2, Legendary: 1, Mythic: 0
+- Implemented Store.initializeInventory() to create initial stock based on rarity
+- Implemented Store.getStoreInventory() to get current inventory state
+- Implemented Store.setStoreInventory() for server sync
+- Implemented Store.isInStock() to check if item is available
+- Implemented Store.getStock() to get remaining stock count
+- Implemented Store.purchaseEggFromInventory() that decrements stock on purchase
+- Implemented Store.purchaseChickenFromInventory() that decrements stock on purchase
+- Added Store.getAvailableEggsWithStock() and Store.getAvailableChickensWithStock()
+- Added Store.getStockForRarity() helper function
+- Updated StoreUI.lua:
+  - createItemCard now displays stock count or "SOLD OUT" label
+  - Sold out items show grayed-out "SOLD" button instead of "BUY"
+  - Added StoreUI.refreshInventory() to refresh display when stock changes
+  - Added StoreUI.updateItemStock() to update individual item stock display
+- Added 8 integration tests for store inventory:
+  - initializeInventory creates inventory with items
+  - isInStock returns true for stocked items
+  - isInStock returns false for out of stock items
+  - purchaseEggFromInventory decrements stock
+  - purchaseEggFromInventory fails when sold out
+  - purchaseChickenFromInventory decrements stock
+  - getAvailableEggsWithStock includes stock info
+  - getStockForRarity returns correct values
+- Acceptance criteria met:
+  - Store has limited stock for each item (per rarity)
+  - Stock decrements when items are purchased
+  - Items can sell out (stock reaches 0)
+  - Sold out items cannot be purchased
+- Format check and build pass
+- Next: Work Items #4 (Store Replenishment Timer), #10, #11, #14, #16, #23 (high priority items)

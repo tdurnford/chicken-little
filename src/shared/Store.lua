@@ -29,6 +29,26 @@ export type StoreItem = {
   sellPrice: number,
 }
 
+-- Inventory item with stock count
+export type InventoryItem = {
+  itemType: "egg" | "chicken",
+  id: string,
+  name: string,
+  displayName: string,
+  rarity: string,
+  price: number,
+  sellPrice: number,
+  stock: number,
+  maxStock: number,
+}
+
+-- Store inventory state
+export type StoreInventory = {
+  eggs: { [string]: InventoryItem },
+  chickens: { [string]: InventoryItem },
+  lastReplenishTime: number,
+}
+
 -- Sell price multiplier for chickens (percentage of equivalent value)
 local CHICKEN_SELL_MULTIPLIER = 0.5
 
@@ -45,6 +65,19 @@ local PREDATOR_SELL_PRICES: { [string]: number } = {
   Bear = 10000,
   Dragon = 100000,
 }
+
+-- Stock quantities per rarity tier
+local RARITY_STOCK_QUANTITIES: { [string]: number } = {
+  Common = 10,
+  Uncommon = 5,
+  Rare = 3,
+  Epic = 2,
+  Legendary = 1,
+  Mythic = 0, -- Mythic items may not always be in stock
+}
+
+-- Global store inventory state (server-side)
+local storeInventory: StoreInventory? = nil
 
 -- Buy an egg from the store
 function Store.buyEgg(
@@ -592,6 +625,202 @@ function Store.getInventoryValue(playerData: PlayerData.PlayerDataSchema): {
     chickensValue = chickensValue,
     totalValue = eggsValue + chickensValue,
   }
+end
+
+-- Initialize store inventory with stock based on rarity
+function Store.initializeInventory(): StoreInventory
+  local inventory: StoreInventory = {
+    eggs = {},
+    chickens = {},
+    lastReplenishTime = os.time(),
+  }
+
+  -- Add all egg types with stock based on rarity
+  for eggType, config in pairs(EggConfig.getAll()) do
+    local stockQuantity = RARITY_STOCK_QUANTITIES[config.rarity] or 0
+    inventory.eggs[eggType] = {
+      itemType = "egg",
+      id = eggType,
+      name = config.name,
+      displayName = config.displayName,
+      rarity = config.rarity,
+      price = config.purchasePrice,
+      sellPrice = config.sellPrice,
+      stock = stockQuantity,
+      maxStock = stockQuantity,
+    }
+  end
+
+  -- Add all chicken types with stock based on rarity
+  for chickenType, config in pairs(ChickenConfig.getAll()) do
+    local stockQuantity = RARITY_STOCK_QUANTITIES[config.rarity] or 0
+    local price = Store.getChickenPrice(chickenType)
+    local sellPrice = Store.getChickenValue(chickenType)
+    inventory.chickens[chickenType] = {
+      itemType = "chicken",
+      id = chickenType,
+      name = config.name,
+      displayName = config.displayName,
+      rarity = config.rarity,
+      price = price,
+      sellPrice = sellPrice,
+      stock = stockQuantity,
+      maxStock = stockQuantity,
+    }
+  end
+
+  storeInventory = inventory
+  return inventory
+end
+
+-- Get the current store inventory (initializes if needed)
+function Store.getStoreInventory(): StoreInventory
+  if not storeInventory then
+    storeInventory = Store.initializeInventory()
+  end
+  return storeInventory
+end
+
+-- Set store inventory (for server sync)
+function Store.setStoreInventory(inventory: StoreInventory)
+  storeInventory = inventory
+end
+
+-- Check if an item is in stock
+function Store.isInStock(itemType: "egg" | "chicken", itemId: string): boolean
+  local inventory = Store.getStoreInventory()
+  if itemType == "egg" then
+    local item = inventory.eggs[itemId]
+    return item ~= nil and item.stock > 0
+  else
+    local item = inventory.chickens[itemId]
+    return item ~= nil and item.stock > 0
+  end
+end
+
+-- Get remaining stock for an item
+function Store.getStock(itemType: "egg" | "chicken", itemId: string): number
+  local inventory = Store.getStoreInventory()
+  if itemType == "egg" then
+    local item = inventory.eggs[itemId]
+    return item and item.stock or 0
+  else
+    local item = inventory.chickens[itemId]
+    return item and item.stock or 0
+  end
+end
+
+-- Purchase an egg from inventory (decrements stock)
+function Store.purchaseEggFromInventory(
+  playerData: PlayerData.PlayerDataSchema,
+  eggType: string,
+  quantity: number?
+): TransactionResult
+  local amount = quantity or 1
+
+  -- Check if in stock
+  if not Store.isInStock("egg", eggType) then
+    return {
+      success = false,
+      message = "Item is sold out",
+      newBalance = playerData.money,
+    }
+  end
+
+  local inventory = Store.getStoreInventory()
+  local item = inventory.eggs[eggType]
+
+  -- Check sufficient stock
+  if item.stock < amount then
+    return {
+      success = false,
+      message = string.format("Only %d in stock", item.stock),
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Attempt purchase using existing buyEgg function
+  local result = Store.buyEgg(playerData, eggType, amount)
+
+  -- Decrement stock on success
+  if result.success then
+    item.stock = item.stock - amount
+  end
+
+  return result
+end
+
+-- Purchase a chicken from inventory (decrements stock)
+function Store.purchaseChickenFromInventory(
+  playerData: PlayerData.PlayerDataSchema,
+  chickenType: string,
+  quantity: number?
+): TransactionResult
+  local amount = quantity or 1
+
+  -- Check if in stock
+  if not Store.isInStock("chicken", chickenType) then
+    return {
+      success = false,
+      message = "Item is sold out",
+      newBalance = playerData.money,
+    }
+  end
+
+  local inventory = Store.getStoreInventory()
+  local item = inventory.chickens[chickenType]
+
+  -- Check sufficient stock
+  if item.stock < amount then
+    return {
+      success = false,
+      message = string.format("Only %d in stock", item.stock),
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Attempt purchase using existing buyChicken function
+  local result = Store.buyChicken(playerData, chickenType, amount)
+
+  -- Decrement stock on success
+  if result.success then
+    item.stock = item.stock - amount
+  end
+
+  return result
+end
+
+-- Get available eggs with stock info
+function Store.getAvailableEggsWithStock(): { InventoryItem }
+  local inventory = Store.getStoreInventory()
+  local items = {}
+  for _, item in pairs(inventory.eggs) do
+    table.insert(items, item)
+  end
+  -- Sort by price
+  table.sort(items, function(a, b)
+    return a.price < b.price
+  end)
+  return items
+end
+
+-- Get available chickens with stock info
+function Store.getAvailableChickensWithStock(): { InventoryItem }
+  local inventory = Store.getStoreInventory()
+  local items = {}
+  for _, item in pairs(inventory.chickens) do
+    table.insert(items, item)
+  end
+  -- Sort by price
+  table.sort(items, function(a, b)
+    return a.price < b.price
+  end)
+  return items
+end
+
+-- Get stock quantity for a rarity
+function Store.getStockForRarity(rarity: string): number
+  return RARITY_STOCK_QUANTITIES[rarity] or 0
 end
 
 return Store
