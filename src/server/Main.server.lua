@@ -473,7 +473,40 @@ if swingBatFunc then
         -- Handle player swing (knockback)
       elseif targetType == "player" and targetId then
         local result = BaseballBat.hitPlayer(batState, targetId, currentTime)
-        -- Note: Actual knockback physics handled on client
+
+        if result.success then
+          -- Find target player and incapacitate them
+          local targetUserId = tonumber(targetId)
+          local targetPlayer: Player? = nil
+          if targetUserId then
+            for _, p in ipairs(Players:GetPlayers()) do
+              if p.UserId == targetUserId then
+                targetPlayer = p
+                break
+              end
+            end
+          end
+
+          if targetPlayer then
+            -- Get target's combat state and incapacitate them
+            local targetGameState = getPlayerGameState(targetUserId :: number)
+            local incapResult =
+              CombatHealth.incapacitate(targetGameState.combatState, tostring(userId), currentTime)
+
+            if incapResult.success then
+              -- Fire incapacitation event to target player
+              local incapEvent = RemoteSetup.getEvent("PlayerIncapacitated")
+              if incapEvent then
+                incapEvent:FireClient(targetPlayer, {
+                  duration = incapResult.duration,
+                  attackerId = tostring(userId),
+                  attackerName = player.Name,
+                })
+              end
+            end
+          end
+        end
+
         return result
 
         -- Handle miss (swing at nothing)

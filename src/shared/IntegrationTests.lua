@@ -1015,6 +1015,51 @@ test("CombatHealth: all predators have valid damage values", function()
   return true, "OK"
 end)
 
+test("CombatHealth: incapacitate sets incapacitated state", function()
+  local state = CombatHealth.createState()
+  local result = CombatHealth.incapacitate(state, "attacker123", 0)
+  return assert_true(result.success, "Should successfully incapacitate")
+    and assert_true(state.isIncapacitated, "State should be incapacitated")
+    and assert_gt(result.duration, 0, "Duration should be positive")
+end)
+
+test("CombatHealth: cannot incapacitate while already incapacitated", function()
+  local state = CombatHealth.createState()
+  CombatHealth.incapacitate(state, "attacker123", 0)
+  local result = CombatHealth.incapacitate(state, "attacker456", 0.5)
+  return assert_false(result.success, "Should not incapacitate again")
+end)
+
+test("CombatHealth: incapacitation expires after duration", function()
+  local state = CombatHealth.createState()
+  local result = CombatHealth.incapacitate(state, "attacker123", 0)
+  local duration = result.duration
+  local isIncapBefore = CombatHealth.isIncapacitated(state, 0.5)
+  local isIncapAfter = CombatHealth.isIncapacitated(state, duration + 0.1)
+  return assert_true(isIncapBefore, "Should be incapacitated before duration")
+    and assert_false(isIncapAfter, "Should not be incapacitated after duration")
+end)
+
+test("CombatHealth: canMove returns false when incapacitated", function()
+  local state = CombatHealth.createState()
+  CombatHealth.incapacitate(state, "attacker123", 0)
+  local canMove = CombatHealth.canMove(state, 0.5)
+  return assert_false(canMove, "Should not be able to move while incapacitated")
+end)
+
+test("CombatHealth: canMove returns true when incapacitation expires", function()
+  local state = CombatHealth.createState()
+  local result = CombatHealth.incapacitate(state, "attacker123", 0)
+  local canMove = CombatHealth.canMove(state, result.duration + 0.1)
+  return assert_true(canMove, "Should be able to move after incapacitation expires")
+end)
+
+test("CombatHealth: getIncapacitateConstants returns valid values", function()
+  local constants = CombatHealth.getIncapacitateConstants()
+  return assert_gt(constants.duration, 0, "Duration should be positive")
+    and assert_gt(constants.knockbackForce, 0, "Knockback force should be positive")
+end)
+
 -- ============================================================================
 -- Test Runner
 -- ============================================================================

@@ -310,7 +310,8 @@
       "category": "Combat-PvP",
       "title": "Implement Player Knockback from Bat Hit",
       "description": "When a player hits another player with a bat, the target should be thrown and incapacitated for a duration.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
       "priority": "high",
       "steps": [
         "Add PLAYER_INCAPACITATE_DURATION constant (e.g., 3 seconds)",

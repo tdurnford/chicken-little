@@ -1331,3 +1331,51 @@
   - Health regenerates after combat ends (10 HP/sec after 3 sec delay)
 - Format check and build pass
 - Next: Work Items #11 (Player Knockback from Bat), #14, #16, #23, #25, #26, #27, #29 (high priority items)
+
+[2026-01-14] Completed Bugfix Work Item #11: Implement Player Knockback from Bat Hit
+- Added PLAYER_INCAPACITATE_DURATION constant (3 seconds) to CombatHealth.lua
+- Added PLAYER_KNOCKBACK_FORCE constant (50 studs) to CombatHealth.lua
+- Extended CombatState type with incapacitation fields:
+  - isIncapacitated: boolean
+  - incapacitatedEndTime: number
+  - incapacitatedBy: string?
+- Implemented CombatHealth.incapacitate() function:
+  - Sets incapacitated state for target player
+  - Checks for existing incapacitation or knockback
+  - Returns success, duration, and message
+- Added helper functions:
+  - CombatHealth.isIncapacitated() - checks if player is incapacitated
+  - CombatHealth.getIncapacitatedRemaining() - returns seconds remaining
+  - CombatHealth.getIncapacitateConstants() - returns duration and force
+  - CombatHealth.canMove() - checks if player can move (not incap/knockback)
+- Added PlayerIncapacitated RemoteEvent to RemoteSetup.lua
+- Updated server Main.server.lua SwingBat handler:
+  - When player hits another player, finds target player
+  - Gets target's combatState and calls incapacitate()
+  - Fires PlayerIncapacitated event to target with duration and attacker info
+- Created DamageUI.showIncapacitation() visual effect:
+  - Yellow-orange overlay (different from red predator knockback)
+  - "KNOCKED OUT!" text with attacker name
+  - Spinning star animation around text (dizzy effect)
+  - Fades out after incapacitation duration
+- Updated Main.client.lua with PlayerIncapacitated handler:
+  - Triggers DamageUI.showIncapacitation() visuals
+  - Plays knockback sound
+  - Disables player movement (WalkSpeed=0, JumpPower=0)
+  - Creates BodyVelocity for throw effect (backward direction)
+  - Re-enables movement after duration expires
+- Added 6 integration tests for player incapacitation:
+  - incapacitate sets incapacitated state
+  - cannot incapacitate while already incapacitated
+  - incapacitation expires after duration
+  - canMove returns false when incapacitated
+  - canMove returns true when incapacitation expires
+  - getIncapacitateConstants returns valid values
+- Acceptance criteria met:
+  - Hitting a player with bat throws them backward (BodyVelocity knockback)
+  - Hit player is incapacitated and cannot move (WalkSpeed/JumpPower = 0)
+  - Incapacitation lasts for configured duration (3 seconds)
+  - Player regains control after timer expires (movement restored)
+  - Visual feedback shows incapacitation state (overlay, stars, text)
+- Format check and build pass
+- Next: Work Items #14 (Chicken Health Bar), #16 (Predator Warning), #23 (Predator NPC Walking), #25-29 (high priority items)

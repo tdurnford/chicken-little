@@ -15,6 +15,8 @@ local HEALTH_REGEN_PER_SECOND = 10 -- Health regenerated per second when out of 
 local OUT_OF_COMBAT_DELAY = 3 -- Seconds after last damage before regen starts
 local KNOCKBACK_DURATION = 1.5 -- Seconds player is stunned after health depletes
 local COMBAT_RANGE_STUDS = 15 -- Distance from predator to be considered "in combat"
+local PLAYER_INCAPACITATE_DURATION = 3 -- Seconds player is incapacitated after bat hit
+local PLAYER_KNOCKBACK_FORCE = 50 -- Force applied to knocked back players
 
 -- Type definitions
 export type CombatState = {
@@ -24,6 +26,9 @@ export type CombatState = {
   isKnockedBack: boolean,
   knockbackEndTime: number,
   inCombat: boolean,
+  isIncapacitated: boolean,
+  incapacitatedEndTime: number,
+  incapacitatedBy: string?,
 }
 
 export type DamageResult = {
@@ -49,6 +54,9 @@ function CombatHealth.createState(): CombatState
     isKnockedBack = false,
     knockbackEndTime = 0,
     inCombat = false,
+    isIncapacitated = false,
+    incapacitatedEndTime = 0,
+    incapacitatedBy = nil,
   }
 end
 
@@ -265,6 +273,9 @@ function CombatHealth.reset(state: CombatState): ()
   state.isKnockedBack = false
   state.knockbackEndTime = 0
   state.inCombat = false
+  state.isIncapacitated = false
+  state.incapacitatedEndTime = 0
+  state.incapacitatedBy = nil
 end
 
 -- Set health to a specific value (for testing)
@@ -335,6 +346,91 @@ end
 -- Override setHealth with proper clamp
 function CombatHealth.setHealth(state: CombatState, health: number): ()
   state.health = mathClamp(health, 0, state.maxHealth)
+end
+
+-- Check if player is incapacitated (from another player's bat hit)
+function CombatHealth.isIncapacitated(state: CombatState, currentTime: number): boolean
+  if not state.isIncapacitated then
+    return false
+  end
+  -- Check if incapacitation has expired
+  if currentTime >= state.incapacitatedEndTime then
+    state.isIncapacitated = false
+    state.incapacitatedBy = nil
+    return false
+  end
+  return true
+end
+
+-- Incapacitate player (from bat hit by another player)
+export type IncapacitateResult = {
+  success: boolean,
+  duration: number,
+  message: string,
+}
+
+function CombatHealth.incapacitate(
+  state: CombatState,
+  attackerPlayerId: string,
+  currentTime: number
+): IncapacitateResult
+  -- Cannot incapacitate if already incapacitated
+  if CombatHealth.isIncapacitated(state, currentTime) then
+    return {
+      success = false,
+      duration = 0,
+      message = "Player is already incapacitated",
+    }
+  end
+
+  -- Cannot incapacitate if knocked back from predator
+  if CombatHealth.isKnockedBack(state, currentTime) then
+    return {
+      success = false,
+      duration = 0,
+      message = "Player is already knocked back",
+    }
+  end
+
+  state.isIncapacitated = true
+  state.incapacitatedEndTime = currentTime + PLAYER_INCAPACITATE_DURATION
+  state.incapacitatedBy = attackerPlayerId
+
+  return {
+    success = true,
+    duration = PLAYER_INCAPACITATE_DURATION,
+    message = "Player incapacitated!",
+  }
+end
+
+-- Get remaining incapacitation time
+function CombatHealth.getIncapacitatedRemaining(state: CombatState, currentTime: number): number
+  if not state.isIncapacitated then
+    return 0
+  end
+  return math.max(0, state.incapacitatedEndTime - currentTime)
+end
+
+-- Get player incapacitation constants
+function CombatHealth.getIncapacitateConstants(): {
+  duration: number,
+  knockbackForce: number,
+}
+  return {
+    duration = PLAYER_INCAPACITATE_DURATION,
+    knockbackForce = PLAYER_KNOCKBACK_FORCE,
+  }
+end
+
+-- Check if player can move (not incapacitated or knocked back)
+function CombatHealth.canMove(state: CombatState, currentTime: number): boolean
+  if CombatHealth.isIncapacitated(state, currentTime) then
+    return false
+  end
+  if CombatHealth.isKnockedBack(state, currentTime) then
+    return false
+  end
+  return true
 end
 
 return CombatHealth

@@ -206,6 +206,123 @@ function DamageUI.showKnockback(duration: number, source: string?)
   end)
 end
 
+-- Show incapacitation effect (from player bat hit)
+function DamageUI.showIncapacitation(duration: number, attackerName: string?)
+  if not damageContainer then
+    return
+  end
+
+  -- Create incapacitation overlay (yellow-orange tint for player attack)
+  local overlay = Instance.new("Frame")
+  overlay.Name = "IncapacitationOverlay"
+  overlay.Size = UDim2.new(1, 0, 1, 0)
+  overlay.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
+  overlay.BackgroundTransparency = 0.6
+  overlay.BorderSizePixel = 0
+  overlay.Parent = damageContainer
+
+  -- Create "KNOCKED OUT!" text
+  local incapText = Instance.new("TextLabel")
+  incapText.Name = "IncapText"
+  incapText.Size = UDim2.new(0, 400, 0, 60)
+  incapText.Position = UDim2.new(0.5, -200, 0.35, -30)
+  incapText.BackgroundTransparency = 1
+  incapText.Text = "KNOCKED OUT!"
+  incapText.TextColor3 = Color3.fromRGB(255, 255, 255)
+  incapText.TextStrokeTransparency = 0
+  incapText.TextStrokeColor3 = Color3.fromRGB(150, 80, 0)
+  incapText.Font = Enum.Font.GothamBold
+  incapText.TextSize = 48
+  incapText.Parent = damageContainer
+
+  -- Show who hit you
+  local attackerText = Instance.new("TextLabel")
+  attackerText.Name = "AttackerText"
+  attackerText.Size = UDim2.new(0, 400, 0, 30)
+  attackerText.Position = UDim2.new(0.5, -200, 0.45, 0)
+  attackerText.BackgroundTransparency = 1
+  attackerText.Text = attackerName and ("Hit by " .. attackerName) or "Hit by another player"
+  attackerText.TextColor3 = Color3.fromRGB(255, 220, 150)
+  attackerText.TextStrokeTransparency = 0.5
+  attackerText.Font = Enum.Font.GothamBold
+  attackerText.TextSize = 24
+  attackerText.Parent = damageContainer
+
+  -- Create stars/dizzy effect
+  local starsContainer = Instance.new("Frame")
+  starsContainer.Name = "StarsContainer"
+  starsContainer.Size = UDim2.new(0, 200, 0, 50)
+  starsContainer.Position = UDim2.new(0.5, -100, 0.28, 0)
+  starsContainer.BackgroundTransparency = 1
+  starsContainer.Parent = damageContainer
+
+  -- Add spinning stars
+  for i = 1, 5 do
+    local star = Instance.new("TextLabel")
+    star.Name = "Star" .. i
+    star.Size = UDim2.new(0, 30, 0, 30)
+    local angle = (i - 1) * (2 * math.pi / 5)
+    local radius = 60
+    star.Position =
+      UDim2.new(0.5, math.cos(angle) * radius - 15, 0.5, math.sin(angle) * radius - 15)
+    star.BackgroundTransparency = 1
+    star.Text = "★"
+    star.TextColor3 = Color3.fromRGB(255, 255, 100)
+    star.TextStrokeTransparency = 0.5
+    star.Font = Enum.Font.GothamBold
+    star.TextSize = 24
+    star.Parent = starsContainer
+
+    -- Animate rotation by moving stars in a circle
+    task.spawn(function()
+      local startTime = os.clock()
+      while star and star.Parent do
+        local elapsed = os.clock() - startTime
+        if elapsed >= duration then
+          break
+        end
+        local rotAngle = angle + elapsed * 3 -- Rotate at 3 radians per second
+        star.Position =
+          UDim2.new(0.5, math.cos(rotAngle) * radius - 15, 0.5, math.sin(rotAngle) * radius - 15)
+        task.wait(0.03)
+      end
+    end)
+  end
+
+  -- Fade out after duration
+  task.delay(duration * 0.7, function()
+    local fadeInfo = TweenInfo.new(duration * 0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local overlayFade = TweenService:Create(overlay, fadeInfo, { BackgroundTransparency = 1 })
+    local textFade =
+      TweenService:Create(incapText, fadeInfo, { TextTransparency = 1, TextStrokeTransparency = 1 })
+    local attackerFade = TweenService:Create(
+      attackerText,
+      fadeInfo,
+      { TextTransparency = 1, TextStrokeTransparency = 1 }
+    )
+
+    overlayFade:Play()
+    textFade:Play()
+    attackerFade:Play()
+
+    overlayFade.Completed:Connect(function()
+      overlay:Destroy()
+      incapText:Destroy()
+      attackerText:Destroy()
+      starsContainer:Destroy()
+    end)
+  end)
+end
+
+-- Handle PlayerIncapacitated event from server
+function DamageUI.onPlayerIncapacitated(data: {
+  duration: number,
+  attackerId: string?,
+  attackerName: string?,
+})
+  DamageUI.showIncapacitation(data.duration, data.attackerName)
+end
+
 -- Update health bar display
 function DamageUI.updateHealthBar(health: number, maxHealth: number, showBar: boolean?)
   if not healthBar or not healthBarFill or not healthBarText then

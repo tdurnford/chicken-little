@@ -569,6 +569,70 @@ if playerHealthChangedEvent then
   end)
 end
 
+-- Track incapacitation state for movement control
+local isIncapacitated = false
+local incapacitatedEndTime = 0
+
+-- PlayerIncapacitated: Handle being hit by another player's bat
+local playerIncapacitatedEvent = getEvent("PlayerIncapacitated")
+if playerIncapacitatedEvent then
+  playerIncapacitatedEvent.OnClientEvent:Connect(function(data: any)
+    DamageUI.onPlayerIncapacitated(data)
+    SoundEffects.playKnockback()
+
+    -- Disable player movement
+    local character = localPlayer.Character
+    if character then
+      local humanoid = character:FindFirstChild("Humanoid") :: Humanoid?
+      if humanoid then
+        humanoid.WalkSpeed = 0
+        humanoid.JumpPower = 0
+      end
+
+      -- Apply knockback force (throw player backward)
+      local rootPart = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+      if rootPart then
+        -- Calculate knockback direction (backward from current look direction)
+        local knockbackDirection = -rootPart.CFrame.LookVector
+        local knockbackForce = 50 -- studs per second
+
+        -- Create BodyVelocity for throw effect
+        local bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.Name = "IncapKnockback"
+        bodyVelocity.MaxForce = Vector3.new(100000, 0, 100000)
+        bodyVelocity.Velocity = knockbackDirection * knockbackForce + Vector3.new(0, 20, 0)
+        bodyVelocity.Parent = rootPart
+
+        -- Remove BodyVelocity after short duration
+        task.delay(0.3, function()
+          if bodyVelocity and bodyVelocity.Parent then
+            bodyVelocity:Destroy()
+          end
+        end)
+      end
+    end
+
+    -- Set incapacitated state
+    isIncapacitated = true
+    incapacitatedEndTime = os.clock() + data.duration
+
+    -- Re-enable movement after duration
+    task.delay(data.duration, function()
+      isIncapacitated = false
+      local char = localPlayer.Character
+      if char then
+        local hum = char:FindFirstChild("Humanoid") :: Humanoid?
+        if hum then
+          hum.WalkSpeed = 16 -- Default walk speed
+          hum.JumpPower = 50 -- Default jump power
+        end
+      end
+    end)
+
+    print("[Client] Player incapacitated for", data.duration, "seconds by", data.attackerName)
+  end)
+end
+
 --[[ Utility Functions for other modules ]]
 
 -- Expose player data cache getter
