@@ -443,7 +443,8 @@
       "category": "Predator-Warning",
       "title": "Implement Predator Attack Warning System",
       "description": "Add warning notifications when predators are attacking chickens.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
       "priority": "high",
       "steps": [
         "Create PredatorWarning.lua client module",

@@ -27,6 +27,7 @@ local SectionVisuals = require(ClientModules:WaitForChild("SectionVisuals"))
 local StoreUI = require(ClientModules:WaitForChild("StoreUI"))
 local DamageUI = require(ClientModules:WaitForChild("DamageUI"))
 local ChickenHealthBar = require(ClientModules:WaitForChild("ChickenHealthBar"))
+local PredatorWarning = require(ClientModules:WaitForChild("PredatorWarning"))
 
 -- Get shared modules for position calculations
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -117,6 +118,10 @@ print("[Client] Tutorial created")
 -- Create Damage UI
 DamageUI.initialize()
 print("[Client] DamageUI initialized")
+
+-- Create Predator Warning UI
+PredatorWarning.initialize()
+print("[Client] PredatorWarning initialized")
 
 -- Create Random Chicken Claim Prompt UI
 local randomChickenPromptFrame: Frame? = nil
@@ -484,6 +489,8 @@ if predatorSpawnedEvent then
       if visualState and visualState.model then
         PredatorHealthBar.create(predatorId, predatorType, threatLevel, visualState.model)
       end
+      -- Show predator warning with directional indicator and message
+      PredatorWarning.show(predatorId, predatorType, threatLevel, position)
       SoundEffects.playPredatorAlert(threatLevel == "Deadly" or threatLevel == "Catastrophic")
       print("[Client] Predator spawned:", predatorId, predatorType, threatLevel)
     end
@@ -496,6 +503,8 @@ if predatorDefeatedEvent then
   predatorDefeatedEvent.OnClientEvent:Connect(function(predatorId: string, byPlayer: boolean)
     PredatorHealthBar.destroy(predatorId)
     PredatorVisuals.playDefeatedAnimation(predatorId)
+    -- Clear predator warning when defeated
+    PredatorWarning.clear(predatorId)
     if byPlayer then
       SoundEffects.playBatSwing("predator")
     end

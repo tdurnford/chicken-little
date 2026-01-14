@@ -1435,3 +1435,43 @@
   - Chicken dies if health reaches 0 (removed from coop)
 - Format check and build pass
 - Next: Work Items #16 (Predator Warning), #23 (Predator NPC Walking), #25-29 (wiring tasks)
+
+[2026-01-14] Completed Bugfix Work Item #16: Implement Predator Attack Warning System
+- Created PredatorWarning.lua client module:
+  - WarningState type to track active predator warnings
+  - WarningUIElements type for UI component references
+  - Threat level colors matching PredatorVisuals (Minor to Catastrophic)
+- Implemented screen flash effect on predator spawn:
+  - Flash overlay with threat-level-based color
+  - Fades out over 0.5 seconds
+- Implemented edge indicators (red border glow):
+  - Four edge frames (top, bottom, left, right)
+  - Pulsing animation while predator is active
+  - Color matches threat level
+- Implemented warning message display:
+  - "⚠️ CHICKEN UNDER ATTACK! ⚠️" centered message
+  - Shows predator type and threat level below message
+  - Auto-fades after 4 seconds
+- Implemented directional arrow indicator:
+  - Points toward predator when off-screen
+  - Uses camera projection to calculate direction
+  - Positioned at screen edge in direction of predator
+  - Hidden when predator is visible on screen
+  - Color matches threat level
+- Integrated with existing PredatorSpawned event:
+  - Calls PredatorWarning.show() with predator data
+  - Reuses existing SoundEffects.playPredatorAlert() for sound
+- Integrated with PredatorDefeated event:
+  - Calls PredatorWarning.clear() to remove warning
+  - Hides edge indicators and direction arrow when no active warnings
+- Added initialization in Main.client.lua:
+  - Required PredatorWarning module
+  - Called PredatorWarning.initialize() on startup
+- Acceptance criteria met:
+  - Players receive visual warning when predator attacks (flash + edge glow + message)
+  - Warning shows direction to predator (arrow pointing off-screen)
+  - Warning identifies predator type (display name + threat level)
+  - Warning clears after predator dealt with (PredatorWarning.clear())
+- Note: Minimap marker deferred (no minimap system exists yet)
+- Format check and build pass
+- Next: Work Items #23 (Predator NPC Walking), #25-29 (wiring tasks)
