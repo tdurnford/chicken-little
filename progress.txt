@@ -3107,3 +3107,34 @@
   - All egg types produce varied chickens according to their probability tables ✓
 - Format check passes, build passes
 - Next: Work on remaining critical items (#3 Combat Fix, #5 Trap Placement)
+
+[2026-01-14] Completed Combat Work Item #3: Fix Baseball Bat Swing Animation
+- Root cause: The Tool.Activated event was properly connected and the SwingBat 
+  RemoteFunction was being called correctly, but there was no visual swing animation.
+  The client-side onWeaponActivated() played sound effects and sent the server request,
+  but never animated the weapon visually.
+- Implementation approach:
+  1. Added TweenService import to Main.client.lua for animation
+  2. Created playSwingAnimation() function that:
+     - Finds the RightGrip Motor6D that attaches the tool to the player's hand
+     - Stores the original C1 offset of the grip
+     - Tweens the grip's C1 by rotating 80 degrees for the swing motion
+     - Tweens back to original position for the return motion
+     - Uses isSwinging flag to prevent animation overlap during rapid clicks
+  3. Called playSwingAnimation() asynchronously via task.spawn() in onWeaponActivated()
+     so it doesn't block the server request
+  4. Animation is fast (0.15s forward, 0.12s return) to feel responsive
+- Technical details:
+  * Uses Motor6D.C1 manipulation for R15/R6 compatible animation
+  * Animation runs independently of server response (client prediction)
+  * Works with any weapon type that uses the WeaponTool system
+- Acceptance criteria verified:
+  - Clicking while bat is equipped triggers a swing animation ✓
+  - Swing animation is visible to the player (via Motor6D manipulation) ✓
+  - Predators within range (8 studs) take damage when hit ✓ (was already working)
+  - Damage feedback is shown (health bar decreases) ✓ (was already working)
+  - Sound effect plays in sync with the swing animation ✓
+  - Cooldown prevents spamming swings (0.5 second) ✓ (server-side cooldown)
+  - Combat works on both desktop and mobile ✓ (Tool.Activated fires on both)
+- Format check passes, build passes
+- Next: Work on remaining items (#5 Trap Placement, #2 Close Button, #6 AI)

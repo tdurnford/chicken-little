@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 -- Get client modules
 local ClientModules = script.Parent
@@ -1544,6 +1545,69 @@ local function findNearbyPredator(): (string?, number?)
   return bestPredatorId, bestDistance
 end
 
+-- Swing animation constants
+local SWING_DURATION = 0.15 -- Fast swing
+local SWING_ANGLE = math.rad(80) -- 80 degree swing arc
+local isSwinging = false
+
+-- Play swing animation on the weapon tool
+local function playSwingAnimation(tool: Tool): ()
+  if isSwinging then
+    return
+  end
+
+  local handle = tool:FindFirstChild("Handle") :: BasePart?
+  if not handle then
+    return
+  end
+
+  -- Find the character's right arm/grip to animate from
+  local character = localPlayer.Character
+  if not character then
+    return
+  end
+
+  -- Use Motor6D for R15/R6 compatible animation
+  local rightHand = character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm")
+  if not rightHand then
+    return
+  end
+
+  -- Find the RightGrip weld that attaches the tool to the hand
+  local grip = rightHand:FindFirstChild("RightGrip") :: Motor6D?
+  if not grip or not grip:IsA("Motor6D") then
+    return
+  end
+
+  isSwinging = true
+
+  -- Store original C1 offset
+  local originalC1 = grip.C1
+
+  -- Create swing animation by rotating the grip
+  local swingC1 = originalC1 * CFrame.Angles(SWING_ANGLE, 0, 0)
+
+  -- Swing forward
+  local swingTween = TweenService:Create(
+    grip,
+    TweenInfo.new(SWING_DURATION, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    { C1 = swingC1 }
+  )
+  swingTween:Play()
+  swingTween.Completed:Wait()
+
+  -- Swing back (return)
+  local returnTween = TweenService:Create(
+    grip,
+    TweenInfo.new(SWING_DURATION * 0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+    { C1 = originalC1 }
+  )
+  returnTween:Play()
+  returnTween.Completed:Wait()
+
+  isSwinging = false
+end
+
 -- Handle weapon swing when Tool is activated (clicked)
 local function onWeaponActivated(tool: Tool)
   local swingBatFunc = getFunction("SwingBat")
@@ -1554,6 +1618,9 @@ local function onWeaponActivated(tool: Tool)
 
   -- Play swing sound immediately for responsiveness
   SoundEffects.playBatSwing("miss")
+
+  -- Play swing animation asynchronously (doesn't block server call)
+  task.spawn(playSwingAnimation, tool)
 
   -- Check for nearby predator targets
   local predatorId, _ = findNearbyPredator()
