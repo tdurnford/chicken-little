@@ -44,6 +44,9 @@ local PowerUpConfig = require(Shared:WaitForChild("PowerUpConfig"))
 -- Trap configuration module
 local TrapConfig = require(Shared:WaitForChild("TrapConfig"))
 
+-- Trap placement module
+local TrapPlacement = require(Shared:WaitForChild("TrapPlacement"))
+
 -- Weapon configuration module
 local WeaponConfig = require(Shared:WaitForChild("WeaponConfig"))
 
@@ -532,6 +535,52 @@ if moveChickenFunc then
           newSpotIndex = newSpotIndex,
           chicken = result.chicken,
         })
+      end
+      syncPlayerData(player, playerData, true)
+    end
+    return result
+  end
+end
+
+--[[
+  Trap Placement Server Handlers
+  Handles PlaceTrap RemoteFunction.
+  Places a trap from inventory to a trap spot in the player's coop.
+]]
+
+-- PlaceTrap RemoteFunction handler
+local placeTrapFunc = RemoteSetup.getFunction("PlaceTrap")
+if placeTrapFunc then
+  placeTrapFunc.OnServerInvoke = function(player: Player, trapId: string, spotIndex: number)
+    local userId = player.UserId
+    local playerData = DataPersistence.getData(userId)
+    if not playerData then
+      return { success = false, message = "Player data not found" }
+    end
+
+    local result = TrapPlacement.placeTrapFromInventory(playerData, trapId, spotIndex)
+    if result.success then
+      -- Calculate trap position for visual feedback
+      local sectionIndex = playerData.sectionIndex
+      local trapPosition = nil
+      if sectionIndex then
+        local sectionCenter = MapGeneration.getSectionPosition(sectionIndex)
+        if sectionCenter then
+          local spotPos = PlayerSection.getTrapSpotPosition(spotIndex, sectionCenter)
+          if spotPos then
+            trapPosition = Vector3.new(spotPos.x, spotPos.y, spotPos.z)
+          end
+        end
+      end
+
+      -- Fire TrapPlaced event to all clients so they can update visuals
+      local trapPlacedEvent = RemoteSetup.getEvent("TrapPlaced")
+      if trapPlacedEvent and result.trap then
+        trapPlacedEvent:FireAllClients(
+          result.trap.id,
+          result.trap.trapType,
+          trapPosition or Vector3.new(0, 0, 0)
+        )
       end
       syncPlayerData(player, playerData, true)
     end

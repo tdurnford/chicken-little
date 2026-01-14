@@ -244,6 +244,69 @@ function TrapPlacement.placeTrap(
   }
 end
 
+-- Place an existing trap from inventory to a spot
+function TrapPlacement.placeTrapFromInventory(
+  playerData: PlayerData.PlayerDataSchema,
+  trapId: string,
+  spotIndex: number
+): PlacementResult
+  -- Validate spot
+  if not TrapPlacement.isValidSpot(spotIndex) then
+    return {
+      success = false,
+      message = "Invalid spot index. Must be between 1 and " .. MAX_TRAP_SPOTS,
+      trap = nil,
+    }
+  end
+
+  -- Check if spot is available
+  if TrapPlacement.isSpotOccupied(playerData, spotIndex) then
+    return {
+      success = false,
+      message = "Spot " .. spotIndex .. " is already occupied by a trap",
+      trap = nil,
+    }
+  end
+
+  -- Find the trap
+  local trap, trapIndex = TrapPlacement.findTrap(playerData, trapId)
+  if not trap or not trapIndex then
+    return {
+      success = false,
+      message = "Trap not found",
+      trap = nil,
+    }
+  end
+
+  -- Check trap is not already placed
+  if trap.spotIndex and trap.spotIndex > 0 then
+    return {
+      success = false,
+      message = "Trap is already placed at spot " .. trap.spotIndex,
+      trap = nil,
+    }
+  end
+
+  -- Get trap config for display name
+  local config = TrapConfig.get(trap.trapType)
+  if not config then
+    return {
+      success = false,
+      message = "Invalid trap type: " .. tostring(trap.trapType),
+      trap = nil,
+    }
+  end
+
+  -- Update spot index to place the trap
+  playerData.traps[trapIndex].spotIndex = spotIndex
+
+  return {
+    success = true,
+    message = config.displayName .. " placed at spot " .. spotIndex,
+    trap = playerData.traps[trapIndex],
+  }
+end
+
 -- Pick up (remove) a trap from a spot
 function TrapPlacement.pickupTrap(
   playerData: PlayerData.PlayerDataSchema,

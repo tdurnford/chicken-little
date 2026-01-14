@@ -22,6 +22,11 @@ local SPOT_SPACING = 2 -- studs between spots
 local COOP_OFFSET_X = 0 -- centered in section
 local COOP_OFFSET_Z = -10 -- towards back of section
 
+-- Trap spot configuration (8 spots around the coop perimeter)
+local TRAP_SPOTS = 8
+local TRAP_SPOT_SIZE = 4 -- studs per trap spot
+local TRAP_DISTANCE_FROM_COOP = 12 -- studs from coop center to trap spots
+
 -- Type definitions
 export type Vector3 = {
   x: number,
@@ -41,6 +46,12 @@ export type BoundaryData = {
   position: Vector3,
   size: Vector3,
   side: string, -- "north", "south", "east", "west"
+}
+
+export type TrapSpotData = {
+  index: number,
+  position: Vector3,
+  size: number,
 }
 
 export type SectionConfig = {
@@ -84,6 +95,77 @@ end
 -- Get the maximum number of coop spots
 function PlayerSection.getMaxSpots(): number
   return COOP_SPOTS
+end
+
+-- Get the maximum number of trap spots
+function PlayerSection.getMaxTrapSpots(): number
+  return TRAP_SPOTS
+end
+
+-- Calculate position for a specific trap spot index (1-8)
+-- Trap spots are arranged in an octagon around the coop
+function PlayerSection.getTrapSpotPosition(spotIndex: number, sectionCenter: Vector3): Vector3?
+  if spotIndex < 1 or spotIndex > TRAP_SPOTS then
+    return nil
+  end
+
+  -- Calculate angle for this spot (8 spots = 45 degrees apart)
+  -- Start from front-right and go counter-clockwise
+  local angleOffset = -math.pi / 8 -- Start slightly offset to center spots
+  local angle = angleOffset + ((spotIndex - 1) * (2 * math.pi / TRAP_SPOTS))
+
+  -- Calculate position using polar coordinates
+  local offsetX = math.cos(angle) * TRAP_DISTANCE_FROM_COOP
+  local offsetZ = math.sin(angle) * TRAP_DISTANCE_FROM_COOP
+
+  return {
+    x = sectionCenter.x + COOP_OFFSET_X + offsetX,
+    y = sectionCenter.y,
+    z = sectionCenter.z + COOP_OFFSET_Z + offsetZ,
+  }
+end
+
+-- Get all trap spot data for a section
+function PlayerSection.getAllTrapSpots(sectionCenter: Vector3): { TrapSpotData }
+  local spots = {}
+  for i = 1, TRAP_SPOTS do
+    local position = PlayerSection.getTrapSpotPosition(i, sectionCenter)
+    if position then
+      table.insert(spots, {
+        index = i,
+        position = position,
+        size = TRAP_SPOT_SIZE,
+      })
+    end
+  end
+  return spots
+end
+
+-- Find the nearest available trap spot to a position
+function PlayerSection.findNearestTrapSpot(position: Vector3, sectionCenter: Vector3): TrapSpotData?
+  local spots = PlayerSection.getAllTrapSpots(sectionCenter)
+  local nearestSpot: TrapSpotData? = nil
+  local nearestDistance = math.huge
+
+  for _, spot in ipairs(spots) do
+    local dx = position.x - spot.position.x
+    local dz = position.z - spot.position.z
+    local distance = math.sqrt(dx * dx + dz * dz)
+    if distance < nearestDistance then
+      nearestDistance = distance
+      nearestSpot = spot
+    end
+  end
+
+  return nearestSpot
+end
+
+-- Check if trap spot index is valid
+function PlayerSection.isValidTrapSpotIndex(spotIndex: number): boolean
+  return type(spotIndex) == "number"
+    and spotIndex >= 1
+    and spotIndex <= TRAP_SPOTS
+    and spotIndex == math.floor(spotIndex)
 end
 
 -- Get the section dimensions

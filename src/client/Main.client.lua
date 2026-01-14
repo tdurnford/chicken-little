@@ -38,6 +38,7 @@ local PlayerSection = require(Shared:WaitForChild("PlayerSection"))
 local BaseballBat = require(Shared:WaitForChild("BaseballBat"))
 local AreaShield = require(Shared:WaitForChild("AreaShield"))
 local WorldEgg = require(Shared:WaitForChild("WorldEgg"))
+local TrapPlacement = require(Shared:WaitForChild("TrapPlacement"))
 
 -- Local player reference
 local localPlayer = Players.LocalPlayer
@@ -1254,6 +1255,50 @@ local function findNearbyAvailableSpot(playerPosition: Vector3): number?
   return nearestSpot
 end
 
+--[[
+	Helper function to find an available trap spot near the player.
+	Returns spotIndex or nil.
+]]
+local function findNearbyAvailableTrapSpot(playerPosition: Vector3): number?
+  if not playerDataCache then
+    return nil
+  end
+
+  local sectionIndex = playerDataCache.sectionIndex
+  if not sectionIndex then
+    return nil
+  end
+
+  local sectionCenter = MapGeneration.getSectionPosition(sectionIndex)
+  if not sectionCenter then
+    return nil
+  end
+
+  -- Get available trap spots
+  local availableSpots = TrapPlacement.getAvailableSpots(playerDataCache)
+  if #availableSpots == 0 then
+    return nil
+  end
+
+  -- Find the nearest available spot
+  local nearestSpot: number? = nil
+  local nearestDistance = 20 -- Max distance to detect a spot (studs)
+
+  for _, spotIndex in ipairs(availableSpots) do
+    local spotPos = PlayerSection.getTrapSpotPosition(spotIndex, sectionCenter)
+    if spotPos then
+      local spotVec = Vector3.new(spotPos.x, spotPos.y, spotPos.z)
+      local distance = (playerPosition - spotVec).Magnitude
+      if distance < nearestDistance then
+        nearestDistance = distance
+        nearestSpot = spotIndex
+      end
+    end
+  end
+
+  return nearestSpot
+end
+
 -- Wire up ChickenPickup callbacks for proximity checking
 ChickenPickup.create()
 ChickenPickup.setGetNearbyChicken(function(position: Vector3): (string?, number?)
@@ -1409,6 +1454,47 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
           warn("[Client] Sell failed:", result and result.error or "Unknown error")
         end
       end
+    end
+  elseif selectedItem.itemType == "trap" then
+    if actionType == "place" then
+      -- Check if trap is already placed
+      if selectedItem.itemData.spotIndex and selectedItem.itemData.spotIndex > 0 then
+        SoundEffects.play("uiError")
+        warn("[Client] Trap is already placed at spot", selectedItem.itemData.spotIndex)
+        return
+      end
+
+      -- Place trap from inventory to trap spot
+      local placeTrapFunc = getFunction("PlaceTrap")
+      if placeTrapFunc then
+        -- Find available trap spot near player
+        local character = localPlayer.Character
+        if character then
+          local rootPart = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+          if rootPart then
+            local spotIndex = findNearbyAvailableTrapSpot(rootPart.Position)
+            if spotIndex then
+              local result = placeTrapFunc:InvokeServer(selectedItem.itemId, spotIndex)
+              if result and result.success then
+                SoundEffects.play("trapPlace")
+                InventoryUI.clearSelection()
+                print("[Client] Trap placed at spot:", spotIndex)
+              else
+                SoundEffects.play("uiError")
+                warn("[Client] Trap place failed:", result and result.message or "Unknown error")
+              end
+            else
+              SoundEffects.play("uiError")
+              warn("[Client] No available trap spot nearby")
+            end
+          end
+        end
+      end
+    elseif actionType == "sell" then
+      -- Sell trap via SellPredator remote (traps with caught predators return sell value)
+      -- For unplaced traps, we just remove them without payment for now
+      warn("[Client] Trap selling not implemented yet")
+      SoundEffects.play("uiError")
     end
   end
 end)

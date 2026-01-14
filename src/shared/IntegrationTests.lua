@@ -16,6 +16,7 @@ local MoneyCollection = require(script.Parent.MoneyCollection)
 local ChickenPlacement = require(script.Parent.ChickenPlacement)
 local TradeExchange = require(script.Parent.TradeExchange)
 local TrapConfig = require(script.Parent.TrapConfig)
+local TrapPlacement = require(script.Parent.TrapPlacement)
 local PredatorConfig = require(script.Parent.PredatorConfig)
 local OfflineEarnings = require(script.Parent.OfflineEarnings)
 local CageUpgrades = require(script.Parent.CageUpgrades)
@@ -794,6 +795,92 @@ test("TrapConfig: higher tiers have better effectiveness", function()
       end
     end
   end
+  return true, "OK"
+end)
+
+-- ============================================================================
+-- TrapPlacement Tests
+-- ============================================================================
+
+test("TrapPlacement: can place trap from inventory to spot", function()
+  local data = PlayerData.createDefault()
+  -- Add an unplaced trap (spotIndex = -1)
+  local trapId = PlayerData.generateId()
+  table.insert(data.traps, {
+    id = trapId,
+    trapType = "BasicCageTrap",
+    tier = 1,
+    spotIndex = -1, -- In inventory
+    cooldownEndTime = nil,
+    caughtPredator = nil,
+  })
+
+  -- Place trap at spot 1
+  local result = TrapPlacement.placeTrapFromInventory(data, trapId, 1)
+  if not result.success then
+    return false, "Failed to place trap: " .. result.message
+  end
+
+  -- Verify trap is now at spot 1
+  local trap = TrapPlacement.findTrap(data, trapId)
+  if not trap or trap.spotIndex ~= 1 then
+    return false, "Trap not found at expected spot"
+  end
+
+  return true, "OK"
+end)
+
+test("TrapPlacement: cannot place trap at occupied spot", function()
+  local data = PlayerData.createDefault()
+  -- Add a placed trap at spot 1
+  table.insert(data.traps, {
+    id = PlayerData.generateId(),
+    trapType = "BasicCageTrap",
+    tier = 1,
+    spotIndex = 1,
+    cooldownEndTime = nil,
+    caughtPredator = nil,
+  })
+
+  -- Add an unplaced trap
+  local trapId2 = PlayerData.generateId()
+  table.insert(data.traps, {
+    id = trapId2,
+    trapType = "BasicCageTrap",
+    tier = 1,
+    spotIndex = -1,
+    cooldownEndTime = nil,
+    caughtPredator = nil,
+  })
+
+  -- Try to place at occupied spot 1
+  local result = TrapPlacement.placeTrapFromInventory(data, trapId2, 1)
+  if result.success then
+    return false, "Should not be able to place trap at occupied spot"
+  end
+
+  return true, "OK"
+end)
+
+test("TrapPlacement: cannot place already-placed trap", function()
+  local data = PlayerData.createDefault()
+  -- Add a placed trap at spot 1
+  local trapId = PlayerData.generateId()
+  table.insert(data.traps, {
+    id = trapId,
+    trapType = "BasicCageTrap",
+    tier = 1,
+    spotIndex = 1,
+    cooldownEndTime = nil,
+    caughtPredator = nil,
+  })
+
+  -- Try to place at spot 2 (should fail because already placed)
+  local result = TrapPlacement.placeTrapFromInventory(data, trapId, 2)
+  if result.success then
+    return false, "Should not be able to place an already-placed trap"
+  end
+
   return true, "OK"
 end)
 

@@ -3138,3 +3138,59 @@
   - Combat works on both desktop and mobile ✓ (Tool.Activated fires on both)
 - Format check passes, build passes
 - Next: Work on remaining items (#5 Trap Placement, #2 Close Button, #6 AI)
+
+[2026-01-14] Completed Feature Work Item #5: Implement Trap Placement System
+- Root cause: The PlaceTrap RemoteFunction existed in RemoteSetup but was not wired up
+  on the server, and there was no function to place traps from inventory (only buying
+  and placing in one operation). The client also had no handling for trap placement.
+- Implementation approach:
+  1. Modified TrapPlacement.lua to add placeTrapFromInventory():
+     - New function that takes trapId and spotIndex
+     - Validates spot is valid (1-8) and available
+     - Finds existing trap in playerData.traps
+     - Checks trap is unplaced (spotIndex <= 0)
+     - Updates spotIndex to place the trap
+     - Returns PlacementResult with success/failure info
+  2. Modified PlayerSection.lua to add trap spot positioning:
+     - Added TRAP_SPOTS = 8, TRAP_SPOT_SIZE = 4, TRAP_DISTANCE_FROM_COOP = 12
+     - Added TrapSpotData type definition
+     - Added getMaxTrapSpots() function
+     - Added getTrapSpotPosition() - positions 8 spots in octagon around coop
+     - Added getAllTrapSpots() - returns all trap spot data
+     - Added findNearestTrapSpot() - finds closest trap spot to position
+     - Added isValidTrapSpotIndex() - validates spot index
+  3. Modified Main.server.lua:
+     - Added TrapPlacement import
+     - Added PlaceTrap RemoteFunction handler:
+       * Gets player data from DataPersistence
+       * Calls TrapPlacement.placeTrapFromInventory()
+       * Calculates trap world position from section and spot index
+       * Fires TrapPlaced event to all clients for visual feedback
+       * Syncs player data back to client
+  4. Modified Main.client.lua:
+     - Added TrapPlacement import
+     - Added findNearbyAvailableTrapSpot() helper:
+       * Uses TrapPlacement.getAvailableSpots() to find unoccupied spots
+       * Uses PlayerSection.getTrapSpotPosition() for spot positions
+       * Returns nearest available spot within 20 studs
+     - Added trap handling in InventoryUI.onAction():
+       * Checks if trap is already placed (spotIndex > 0)
+       * Finds available trap spot near player
+       * Calls PlaceTrap RemoteFunction on server
+       * Plays trapPlace sound and clears selection on success
+       * Shows error if no available spots nearby
+  5. Added integration tests for trap placement:
+     - "TrapPlacement: can place trap from inventory to spot"
+     - "TrapPlacement: cannot place trap at occupied spot"
+     - "TrapPlacement: cannot place already-placed trap"
+- Acceptance criteria met:
+  - Players can select a trap from inventory and place it ✓
+  - Clicking Place action attempts to place at nearest spot ✓
+  - Placed traps update their spotIndex in player data ✓
+  - TrapPlaced event fired for visual feedback ✓
+  - Error messages shown for invalid placement attempts ✓
+  - Placement works for both desktop and mobile (same action handler) ✓
+- Note: Visual highlighting of available spots not implemented (would require
+  additional client-side rendering). The core placement flow is complete.
+- Format check passes, build passes
+- Next: Work on remaining items (Item #2 Close Button, Item #6 Predator AI)
