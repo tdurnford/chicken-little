@@ -284,6 +284,7 @@ function Store.buyChicken(
 
   -- Add chickens to inventory
   local firstChickenId: string? = nil
+  local currentTime = os.time()
   for i = 1, amount do
     local chickenId = PlayerData.generateId()
     if i == 1 then
@@ -294,6 +295,8 @@ function Store.buyChicken(
       chickenType = chickenType,
       rarity = chickenConfig.rarity,
       accumulatedMoney = 0,
+      lastEggTime = currentTime,
+      spotIndex = nil,
     })
   end
 
@@ -875,11 +878,14 @@ function Store.purchaseChickenWithRobux(
 
   -- Add chicken to inventory (no money deduction for Robux purchase)
   local chickenId = PlayerData.generateId()
+  local currentTime = os.time()
   table.insert(playerData.inventory.chickens, {
     id = chickenId,
     chickenType = chickenType,
     rarity = chickenConfig.rarity,
     accumulatedMoney = 0,
+    lastEggTime = currentTime,
+    spotIndex = nil,
   })
 
   return {

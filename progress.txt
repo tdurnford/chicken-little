@@ -2828,3 +2828,26 @@
   - Consistent behavior for claim/despawn scenarios ✓
 - Format check and build pass
 - Next: Work on remaining high-priority items (#5 Chicken Placement or #1 Egg Collection)
+
+[2026-01-14] Completed Bugfix Work Item #5: Fix Chicken Placement from Inventory
+- Root cause: Chickens purchased from the Store were missing the required `lastEggTime` 
+  field. When placing a chicken, ChickenPlacement.placeChicken() calls 
+  PlayerData.validateChicken() which requires `lastEggTime` to be a valid number.
+  Without this field, validation failed with "Invalid chicken data" error.
+- Why eggs worked but chickens didn't: Chickens hatched from eggs (via EggHatching.lua)
+  correctly set `lastEggTime = os.time()`. Only Store.lua was missing this field.
+- Implementation approach:
+  1. Fixed Store.lua buyChicken() (cash purchase):
+     - Added `local currentTime = os.time()` 
+     - Added `lastEggTime = currentTime` and `spotIndex = nil` to chicken data
+  2. Fixed Store.lua buyChickenWithRobux() (Robux purchase):
+     - Added `local currentTime = os.time()`
+     - Added `lastEggTime = currentTime` and `spotIndex = nil` to chicken data
+- Acceptance criteria met:
+  - Players can place chickens from inventory into their coop ✓
+  - Chicken appears at the selected placement spot ✓
+  - Chicken is removed from inventory after placement ✓
+  - Placement works for all chicken types and rarities ✓
+  - Placement validation prevents placing in invalid locations ✓
+- Build passes
+- Next: Work on remaining high-priority items (#1 Egg Collection, #4 Baseball Bat, etc.)

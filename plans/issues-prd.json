@@ -1,0 +1,285 @@
+{
+  "project": {
+    "name": "Chicken Coop Tycoon - Gameplay Issues & Bug Fixes",
+    "description": "Bug fixes and improvements for egg collection, inventory stacking, chicken claiming, equipment, placement systems, and store purchasing.",
+    "createdDate": "2026-01-14",
+    "priority": "high"
+  },
+  "mcpInstructions": {
+    "description": "Use the Roblox Studio MCP server to interact with Roblox Studio directly for testing and verification.",
+    "availableTools": [
+      {
+        "name": "run_code",
+        "description": "Execute Luau code directly in Roblox Studio. Use this to test functionality, query game state, or make runtime changes.",
+        "examples": [
+          "Check inventory contents: print(game.Players:GetPlayers()[1].PlayerData.Inventory)",
+          "Test egg collection: game.ReplicatedStorage.Remotes.CollectEgg:FireServer(eggId)",
+          "Check chicken placement: print(#workspace.PlayerSections:GetDescendants():filter(function(x) return x.Name == 'Chicken' end))"
+        ]
+      },
+      {
+        "name": "insert_model",
+        "description": "Insert a model from the Roblox marketplace into the workspace by searching for it."
+      }
+    ],
+    "workflow": [
+      "1. Before implementing a feature, use run_code to understand current game state",
+      "2. After making code changes, use run_code to verify the changes work in Roblox Studio",
+      "3. Use insert_model if you need placeholder assets for testing",
+      "4. Query game objects to ensure proper wiring between client and server"
+    ],
+    "requirements": [
+      "Roblox Studio must be running with the MCP plugin installed",
+      "The place file (build.rbxl) should be open in Studio",
+      "Studio should be in Edit mode (not Play mode) unless testing runtime behavior"
+    ]
+  },
+  "workItems": [
+    {
+      "id": 1,
+      "category": "Egg-Collection",
+      "title": "Fix Egg Collection - Require Manual Pickup",
+      "description": "Eggs are currently being automatically added to the player's inventory. Players should need to manually collect eggs by clicking/tapping on them or pressing a key when near them.",
+      "completed": false,
+      "priority": "high",
+      "steps": [
+        "Review current egg spawning logic in EggHatching.lua or related modules",
+        "Remove any automatic inventory addition when eggs are laid",
+        "Add physical egg model that appears in the chicken coop area when laid",
+        "Implement proximity prompt or click detector on egg models",
+        "Create CollectEgg RemoteEvent for client-server communication",
+        "Add server-side handler to validate and add egg to player inventory on collection",
+        "Add visual/audio feedback when egg is collected",
+        "Remove egg model from world after collection"
+      ],
+      "acceptanceCriteria": [
+        "Eggs appear as physical objects in the game world when laid",
+        "Eggs are NOT automatically added to inventory",
+        "Players must interact with eggs (click/tap or proximity prompt) to collect them",
+        "Collected eggs are properly added to inventory",
+        "Egg model disappears after collection",
+        "Visual/audio feedback plays on collection"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/shared/EggHatching.lua",
+        "src/client/EggVisuals.lua",
+        "src/shared/MoneyCollection.lua"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Inventory-UI",
+      "title": "Implement Inventory Item Stacking",
+      "description": "Inventory items of the same type should stack together with a count indicator instead of showing as individual items. For example, 3 basic chickens should show as one item with 'x3' or a count badge.",
+      "completed": false,
+      "priority": "high",
+      "steps": [
+        "Review current inventory data structure in PlayerData.lua",
+        "Modify inventory structure to support item stacking (itemType -> count mapping or add count field)",
+        "Update InventoryUI.lua to group identical items",
+        "Display stack count on inventory item cards",
+        "Update inventory add/remove functions to handle stacking",
+        "Ensure placing/using items decrements the stack count",
+        "When stack count reaches 0, remove the item entry",
+        "Update any serialization/deserialization for data persistence"
+      ],
+      "acceptanceCriteria": [
+        "Identical items in inventory show as single entry with count",
+        "Count is clearly visible on the inventory item",
+        "Adding duplicate items increments the count",
+        "Using/placing items decrements the count",
+        "Items are removed from inventory when count reaches 0",
+        "Stacking works for chickens, eggs, traps, and other stackable items"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/shared/PlayerData.lua",
+        "src/client/InventoryUI.lua"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Chicken-BugFix",
+      "title": "Fix 'No Chicken Available to Claim' Console Warning",
+      "description": "When trying to claim a chicken in the area, console shows 'no chicken available to claim' warning. Need to investigate and fix the chicken claiming logic.",
+      "completed": true,
+      "priority": "critical",
+      "steps": [
+        "Search for 'no chicken available' message in codebase to find source",
+        "Review chicken claiming logic in relevant modules",
+        "Check if chicken detection/proximity check is working correctly",
+        "Verify that claimable chickens are properly tagged or identified",
+        "Debug the chicken availability check logic",
+        "Fix the condition that incorrectly reports no chickens available",
+        "Test claiming chickens from different positions and scenarios",
+        "Add better error messaging if chicken really isn't available"
+      ],
+      "acceptanceCriteria": [
+        "Players can successfully claim chickens without console warnings",
+        "Console warning only appears when there truly are no chickens to claim",
+        "Chicken claiming works consistently across different scenarios",
+        "Clear feedback provided to player when claiming succeeds or fails"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/shared/Chicken.lua",
+        "src/shared/ChickenPlacement.lua",
+        "src/client/ChickenPickup.lua",
+        "src/shared/RandomChickenSpawn.lua"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Equipment-BugFix",
+      "title": "Fix Baseball Bat Equipping - Use Roblox Tool System",
+      "description": "Players are unable to equip the baseball bat. Weapons like the bat should use Roblox's native Tool/Backpack inventory system instead of the custom item inventory. This provides standard equip/unequip behavior via hotbar and backpack.",
+      "completed": false,
+      "priority": "high",
+      "steps": [
+        "Review BaseballBat.lua and remove any custom inventory equip logic",
+        "Create baseball bat as a proper Roblox Tool object with Handle part",
+        "Configure Tool properties (RequiresHandle, CanBeDropped, etc.)",
+        "When player purchases/receives bat, clone Tool into player.Backpack",
+        "Implement Tool.Equipped and Tool.Unequipped event handlers",
+        "Add Tool.Activated handler for swing/attack action",
+        "Remove bat from custom InventoryUI - it should appear in Roblox hotbar",
+        "Update store purchase logic to add Tool to Backpack instead of custom inventory",
+        "Ensure bat persists in PlayerData for data saving (store ownership, not the Tool itself)",
+        "On player join, restore owned weapons to Backpack from saved data"
+      ],
+      "acceptanceCriteria": [
+        "Baseball bat appears in Roblox's native hotbar/backpack UI",
+        "Players can equip bat by clicking hotbar slot or pressing number key",
+        "Bat model appears in player's hand when equipped via Roblox's Tool system",
+        "Player can unequip by clicking hotbar again or pressing backpack key",
+        "Bat swing/attack works via Tool.Activated event",
+        "Bat ownership persists across sessions",
+        "Bat does NOT appear in custom inventory UI",
+        "No console errors when equipping/unequipping"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/shared/BaseballBat.lua",
+        "src/shared/WeaponConfig.lua",
+        "src/server/Main.server.lua",
+        "src/shared/PlayerData.lua"
+      ],
+      "notes": "Roblox Tools automatically handle equip/unequip animations and hotbar display. Store weapon ownership in PlayerData but instantiate actual Tool objects in Backpack."
+    },
+    {
+      "id": 5,
+      "category": "Placement-BugFix",
+      "title": "Fix Chicken Placement from Inventory",
+      "description": "Players can place eggs from inventory but cannot place chickens. Need to fix chicken placement functionality.",
+      "completed": true,
+      "priority": "critical",
+      "steps": [
+        "Review ChickenPlacement.lua for placement logic",
+        "Compare egg placement logic (which works) with chicken placement logic",
+        "Check if chicken placement RemoteEvent/RemoteFunction is properly set up",
+        "Verify inventory UI 'Place' button works for chickens",
+        "Check if chicken models are properly configured for placement",
+        "Debug the placement flow for chickens specifically",
+        "Ensure placement spots accept chickens (not just eggs)",
+        "Test placement with different chicken rarities"
+      ],
+      "acceptanceCriteria": [
+        "Players can place chickens from inventory into their coop",
+        "Chicken appears at the selected placement spot",
+        "Chicken is removed from inventory after placement",
+        "Placement works for all chicken types and rarities",
+        "Placement validation prevents placing in invalid locations"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/shared/ChickenPlacement.lua",
+        "src/client/InventoryUI.lua",
+        "src/shared/PlayerSection.lua"
+      ]
+    },
+    {
+      "id": 6,
+      "category": "Pickup-BugFix",
+      "title": "Fix Chicken Pickup Inconsistency",
+      "description": "Players were able to pick up a random rare chicken and place it, but unable to pick up or place other chickens. The pickup/placement system has inconsistent behavior that needs to be fixed.",
+      "completed": false,
+      "priority": "high",
+      "steps": [
+        "Review ChickenPickup.lua for pickup logic",
+        "Check if pickup is restricted based on chicken ownership or type",
+        "Verify all chicken types are properly tagged for pickup",
+        "Check if there are special conditions for rare chickens vs common chickens",
+        "Review ChickenPlacement.lua for any type-specific restrictions",
+        "Debug why some chickens can be picked up and others cannot",
+        "Ensure consistent behavior across all chicken types",
+        "Add proper ownership validation for picking up chickens"
+      ],
+      "acceptanceCriteria": [
+        "Players can pick up any chicken they own from their coop",
+        "Players can pick up random wild chickens if the game allows",
+        "Pickup behavior is consistent across all chicken rarities",
+        "Picked up chickens are properly added to inventory",
+        "Players cannot pick up chickens owned by other players (unless intended)"
+      ],
+      "dependencies": [3, 5],
+      "codeLocations": [
+        "src/client/ChickenPickup.lua",
+        "src/shared/ChickenPlacement.lua",
+        "src/shared/Chicken.lua"
+      ]
+    },
+    {
+      "id": 7,
+      "category": "Store-BugFix",
+      "title": "Fix Trap Purchasing in Store",
+      "description": "Players are unable to buy traps from the store. Need to investigate and fix the trap purchasing functionality.",
+      "completed": false,
+      "priority": "high",
+      "steps": [
+        "Review Store.lua for trap item configuration",
+        "Check TrapConfig.lua for trap definitions",
+        "Verify traps are properly added to store inventory",
+        "Check purchase handler for trap-specific issues",
+        "Review StoreUI.lua for trap display and purchase button",
+        "Debug the purchase flow specifically for traps",
+        "Ensure trap purchase adds trap to player inventory correctly",
+        "Test purchasing different trap types"
+      ],
+      "acceptanceCriteria": [
+        "Traps appear in the store with correct pricing",
+        "Players can purchase traps with in-game money",
+        "Purchased traps are added to player inventory",
+        "Store stock decrements after trap purchase",
+        "UI updates to reflect purchase",
+        "All trap types can be purchased"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/shared/Store.lua",
+        "src/shared/TrapConfig.lua",
+        "src/client/StoreUI.lua"
+      ]
+    }
+  ],
+  "testingNotes": {
+    "description": "General testing guidelines for all work items",
+    "steps": [
+      "Test each fix in isolation first",
+      "Test interactions between related systems (e.g., pickup + placement)",
+      "Test with multiple players to ensure multiplayer sync",
+      "Check console for any error messages or warnings",
+      "Verify data persistence works correctly for inventory changes",
+      "Test on both desktop and mobile if applicable"
+    ]
+  },
+  "priorityOrder": [
+    "Item 3 (Chicken Claiming) - Blocks core gameplay",
+    "Item 5 (Chicken Placement) - Blocks core gameplay",
+    "Item 1 (Egg Collection) - Core gameplay mechanic",
+    "Item 7 (Trap Purchasing) - Store functionality",
+    "Item 4 (Baseball Bat) - Combat functionality",
+    "Item 6 (Pickup Inconsistency) - Related to items 3 & 5",
+    "Item 2 (Inventory Stacking) - UX improvement"
+  ]
+}
