@@ -1801,3 +1801,43 @@
   - Receipt is properly recorded (ProcessReceipt returns PurchaseGranted)
 - Format check and build pass
 - Next: #6 Robux Item Purchase, #7 Power-ups Store, #17-19 New Stores
+
+[2026-01-14] Completed Bugfix Work Item #6: Implement Robux Item Purchase
+- Updated Store.lua:
+  - Added robuxPrice field to InventoryItem type
+  - Added RARITY_ROBUX_PRICES config table (Common: R$5 to Mythic: R$1500)
+  - Added getRobuxPriceForRarity() function
+  - Updated initializeInventory() to include robuxPrice for all items
+  - Added purchaseEggWithRobux() and purchaseChickenWithRobux() functions
+- Updated RemoteSetup.lua:
+  - Added BuyItemWithRobux to REMOTE_FUNCTIONS list
+- Updated Main.server.lua:
+  - Added ITEM_ROBUX_PRODUCT_IDS config table for rarity-based product IDs
+  - Added pendingItemPurchases tracking table
+  - Added BuyItemWithRobux RemoteFunction handler:
+    - Validates item type and ID
+    - For testing (product ID = 0), delivers item for free
+    - For production, prompts MarketplaceService:PromptProductPurchase()
+  - Updated ProcessReceipt callback to handle item purchases:
+    - Checks each rarity tier's product ID
+    - Delivers purchased item to player inventory
+    - Notifies client via PlayerDataChanged event
+- Updated StoreUI.lua:
+  - Added onRobuxPurchaseCallback variable
+  - Updated createItemCard signature to include robuxPrice parameter
+  - Added "R$" button (Robux blue) next to each item's BUY button
+  - Button shows Robux price (e.g., "R$5", "R$50", etc.)
+  - Robux button always available (not affected by sold out status)
+  - Added StoreUI.onRobuxPurchase() callback setter function
+  - Updated populateItems() to pass robuxPrice to createItemCard
+- Updated Main.client.lua:
+  - Added StoreUI.onRobuxPurchase callback wiring
+  - Invokes BuyItemWithRobux RemoteFunction
+  - Plays purchase/error sounds on result
+- Acceptance criteria met:
+  - Each store item has a Robux price option displayed
+  - Players can buy items with Robux (via BuyItemWithRobux)
+  - Items are delivered to player inventory after purchase
+  - Transaction is recorded via ProcessReceipt
+- Build and format check pass
+- Next: #7 Power-ups Store, #17-19 New Stores, #19 Area Shield

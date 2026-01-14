@@ -175,7 +175,7 @@
       "category": "Store-Robux",
       "title": "Implement Robux Item Purchase",
       "description": "Players can spend Robux to buy items from the store instead of in-game money.",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Create Developer Products for Robux purchases at different tiers",
@@ -195,7 +195,8 @@
         2,
         3
       ],
-      "codeLocation": "src/server/Main.server.lua"
+      "codeLocation": "src/server/Main.server.lua",
+      "status": "completed"
     },
     {
       "id": 7,

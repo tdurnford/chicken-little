@@ -58,8 +58,22 @@ local STORE_REPLENISH_CHECK_INTERVAL = 10 -- Check every 10 seconds if replenish
 local STORE_REPLENISH_PRODUCT_ID = 0 -- TODO: Replace with actual Developer Product ID from Roblox
 local STORE_REPLENISH_ROBUX_PRICE = 50 -- Display price in Robux
 
+-- Developer Product IDs for item purchases by rarity tier
+-- These IDs should be created in Roblox Studio and set here
+local ITEM_ROBUX_PRODUCT_IDS: { [string]: number } = {
+  Common = 0, -- R$5 - TODO: Replace with actual Developer Product ID
+  Uncommon = 0, -- R$15 - TODO: Replace with actual Developer Product ID
+  Rare = 0, -- R$50 - TODO: Replace with actual Developer Product ID
+  Epic = 0, -- R$150 - TODO: Replace with actual Developer Product ID
+  Legendary = 0, -- R$500 - TODO: Replace with actual Developer Product ID
+  Mythic = 0, -- R$1500 - TODO: Replace with actual Developer Product ID
+}
+
 -- Track pending replenish purchases
 local pendingReplenishPurchases: { [number]: boolean } = {}
+
+-- Track pending item purchases (userId -> {itemType, itemId, rarity})
+local pendingItemPurchases: { [number]: { itemType: string, itemId: string, rarity: string } } = {}
 
 -- Per-player game state tracking
 type PlayerGameState = {
@@ -715,6 +729,104 @@ if replenishStoreWithRobuxFunc then
   end
 end
 
+-- Setup BuyItemWithRobux RemoteFunction handler
+-- Prompts the player to purchase an item with Robux
+local buyItemWithRobuxFunc = RemoteSetup.getFunction("BuyItemWithRobux")
+if buyItemWithRobuxFunc then
+  buyItemWithRobuxFunc.OnServerInvoke = function(player: Player, itemType: string, itemId: string)
+    -- Validate input
+    if itemType ~= "egg" and itemType ~= "chicken" then
+      return {
+        success = false,
+        message = "Invalid item type",
+      }
+    end
+
+    -- Get item rarity from store inventory
+    local storeInventory = Store.getStoreInventory()
+    local item = nil
+    if itemType == "egg" then
+      item = storeInventory.eggs[itemId]
+    else
+      item = storeInventory.chickens[itemId]
+    end
+
+    if not item then
+      return {
+        success = false,
+        message = "Item not found in store",
+      }
+    end
+
+    local rarity = item.rarity
+    local productId = ITEM_ROBUX_PRODUCT_IDS[rarity]
+
+    -- Check if product ID is configured for testing
+    if productId == 0 then
+      -- For testing: deliver item for free when product ID not set
+      local playerData = DataPersistence.get(player)
+      if not playerData then
+        return {
+          success = false,
+          message = "Player data not found",
+        }
+      end
+
+      local result
+      if itemType == "egg" then
+        result = Store.purchaseEggWithRobux(playerData, itemId)
+      else
+        result = Store.purchaseChickenWithRobux(playerData, itemId)
+      end
+
+      if result.success then
+        -- Save player data
+        DataPersistence.save(player)
+        -- Notify client of data change
+        local playerDataChangedEvent = RemoteSetup.getEvent("PlayerDataChanged")
+        if playerDataChangedEvent then
+          playerDataChangedEvent:FireClient(player, playerData)
+        end
+        print(
+          "[Main.server] Free Robux item purchase (product ID not configured) for",
+          player.Name,
+          itemType,
+          itemId
+        )
+      end
+
+      return result
+    end
+
+    -- Store pending purchase info
+    pendingItemPurchases[player.UserId] = {
+      itemType = itemType,
+      itemId = itemId,
+      rarity = rarity,
+    }
+
+    -- Prompt player to purchase the developer product
+    local success, errorMessage = pcall(function()
+      MarketplaceService:PromptProductPurchase(player, productId)
+    end)
+
+    if success then
+      return {
+        success = true,
+        message = "Purchase prompt opened",
+        productId = productId,
+        robuxPrice = item.robuxPrice,
+      }
+    else
+      pendingItemPurchases[player.UserId] = nil
+      return {
+        success = false,
+        message = "Failed to open purchase prompt: " .. tostring(errorMessage),
+      }
+    end
+  end
+end
+
 -- ProcessReceipt callback for handling Robux purchases
 MarketplaceService.ProcessReceipt = function(receiptInfo: { [string]: any })
   local userId = receiptInfo.PlayerId
@@ -741,6 +853,50 @@ MarketplaceService.ProcessReceipt = function(receiptInfo: { [string]: any })
     end
 
     return Enum.ProductPurchaseDecision.PurchaseGranted
+  end
+
+  -- Handle item purchase products (check each rarity tier)
+  for rarity, rarityProductId in pairs(ITEM_ROBUX_PRODUCT_IDS) do
+    if productId == rarityProductId and rarityProductId ~= 0 then
+      -- Check if we have a pending purchase for this user
+      local pendingPurchase = pendingItemPurchases[userId]
+      if pendingPurchase and pendingPurchase.rarity == rarity then
+        -- Deliver the item
+        if player then
+          local playerData = DataPersistence.get(player)
+          if playerData then
+            local result
+            if pendingPurchase.itemType == "egg" then
+              result = Store.purchaseEggWithRobux(playerData, pendingPurchase.itemId)
+            else
+              result = Store.purchaseChickenWithRobux(playerData, pendingPurchase.itemId)
+            end
+
+            if result.success then
+              -- Save player data
+              DataPersistence.save(player)
+              -- Notify client of data change
+              local playerDataChangedEvent = RemoteSetup.getEvent("PlayerDataChanged")
+              if playerDataChangedEvent then
+                playerDataChangedEvent:FireClient(player, playerData)
+              end
+              print(
+                "[Main.server] Item purchased with Robux:",
+                pendingPurchase.itemType,
+                pendingPurchase.itemId,
+                "for user",
+                userId
+              )
+            end
+          end
+        end
+
+        -- Clear pending purchase
+        pendingItemPurchases[userId] = nil
+      end
+
+      return Enum.ProductPurchaseDecision.PurchaseGranted
+    end
   end
 
   -- Unknown product - grant anyway to avoid issues

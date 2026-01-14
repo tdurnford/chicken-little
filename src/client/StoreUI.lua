@@ -49,6 +49,7 @@ local ROBUX_REPLENISH_PRICE = 50
 local onEggPurchaseCallback: ((eggType: string, quantity: number) -> any)? = nil
 local onChickenPurchaseCallback: ((chickenType: string, quantity: number) -> any)? = nil
 local onReplenishCallback: (() -> any)? = nil
+local onRobuxPurchaseCallback: ((itemType: string, itemId: string) -> any)? = nil
 
 --[[
 	Creates a single item card for the store (works for both eggs and chickens).
@@ -57,6 +58,7 @@ local onReplenishCallback: (() -> any)? = nil
 	@param displayName string - Display name for the item
 	@param rarity string - Rarity tier
 	@param price number - Purchase price
+	@param robuxPrice number - Robux price
 	@param stock number - Current stock count
 	@param parent Instance - Parent frame to add card to
 	@param index number - Index for positioning
@@ -67,6 +69,7 @@ local function createItemCard(
   displayName: string,
   rarity: string,
   price: number,
+  robuxPrice: number,
   stock: number,
   parent: Frame,
   index: number
@@ -158,12 +161,12 @@ local function createItemCard(
   priceLabel.TextXAlignment = Enum.TextXAlignment.Left
   priceLabel.Parent = card
 
-  -- Buy button
+  -- Buy button (with in-game money)
   local isSoldOut = stock <= 0
   local buyButton = Instance.new("TextButton")
   buyButton.Name = "BuyButton"
-  buyButton.Size = UDim2.new(0, 70, 0, 35)
-  buyButton.Position = UDim2.new(1, -80, 0.5, -17)
+  buyButton.Size = UDim2.new(0, 60, 0, 30)
+  buyButton.Position = UDim2.new(1, -145, 0.5, -15)
   buyButton.BackgroundColor3 = isSoldOut and Color3.fromRGB(80, 80, 80)
     or Color3.fromRGB(50, 180, 50)
   buyButton.Text = isSoldOut and "SOLD" or "BUY"
@@ -177,6 +180,22 @@ local function createItemCard(
   buyButtonCorner.CornerRadius = UDim.new(0, 6)
   buyButtonCorner.Parent = buyButton
 
+  -- Robux buy button (always available for Robux purchase)
+  local robuxButton = Instance.new("TextButton")
+  robuxButton.Name = "RobuxButton"
+  robuxButton.Size = UDim2.new(0, 75, 0, 30)
+  robuxButton.Position = UDim2.new(1, -80, 0.5, -15)
+  robuxButton.BackgroundColor3 = Color3.fromRGB(0, 162, 255) -- Robux blue
+  robuxButton.Text = "R$" .. tostring(robuxPrice)
+  robuxButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+  robuxButton.TextScaled = true
+  robuxButton.Font = Enum.Font.GothamBold
+  robuxButton.Parent = card
+
+  local robuxButtonCorner = Instance.new("UICorner")
+  robuxButtonCorner.CornerRadius = UDim.new(0, 6)
+  robuxButtonCorner.Parent = robuxButton
+
   -- Connect buy button (only if in stock)
   if not isSoldOut then
     buyButton.MouseButton1Click:Connect(function()
@@ -187,6 +206,13 @@ local function createItemCard(
       end
     end)
   end
+
+  -- Connect Robux button (always available)
+  robuxButton.MouseButton1Click:Connect(function()
+    if onRobuxPurchaseCallback then
+      onRobuxPurchaseCallback(itemType, itemId)
+    end
+  end)
 
   -- Store price and stock on card for affordability updates
   card:SetAttribute("Price", price)
@@ -249,6 +275,7 @@ local function populateItems()
         item.displayName,
         item.rarity,
         item.price,
+        item.robuxPrice or 5,
         item.stock,
         scrollFrame,
         index
@@ -264,6 +291,7 @@ local function populateItems()
         item.displayName,
         item.rarity,
         item.price,
+        item.robuxPrice or 5,
         item.stock,
         scrollFrame,
         index
@@ -709,6 +737,14 @@ end
 ]]
 function StoreUI.onReplenish(callback: () -> any)
   onReplenishCallback = callback
+end
+
+--[[
+	Sets the callback for when Robux item purchase is attempted.
+	@param callback function - Function to call with (itemType, itemId)
+]]
+function StoreUI.onRobuxPurchase(callback: (itemType: string, itemId: string) -> any)
+  onRobuxPurchaseCallback = callback
 end
 
 --[[

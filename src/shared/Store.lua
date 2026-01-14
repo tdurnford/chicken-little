@@ -40,6 +40,7 @@ export type InventoryItem = {
   sellPrice: number,
   stock: number,
   maxStock: number,
+  robuxPrice: number,
 }
 
 -- Store inventory state
@@ -87,6 +88,16 @@ local RARITY_WEIGHTS: { [string]: number } = {
   Epic = 8,
   Legendary = 3,
   Mythic = 1,
+}
+
+-- Robux prices per rarity tier (for buying items with Robux)
+local RARITY_ROBUX_PRICES: { [string]: number } = {
+  Common = 5,
+  Uncommon = 15,
+  Rare = 50,
+  Epic = 150,
+  Legendary = 500,
+  Mythic = 1500,
 }
 
 -- Global store inventory state (server-side)
@@ -651,6 +662,7 @@ function Store.initializeInventory(): StoreInventory
   -- Add all egg types with stock based on rarity
   for eggType, config in pairs(EggConfig.getAll()) do
     local stockQuantity = RARITY_STOCK_QUANTITIES[config.rarity] or 0
+    local robuxPrice = RARITY_ROBUX_PRICES[config.rarity] or 5
     inventory.eggs[eggType] = {
       itemType = "egg",
       id = eggType,
@@ -661,6 +673,7 @@ function Store.initializeInventory(): StoreInventory
       sellPrice = config.sellPrice,
       stock = stockQuantity,
       maxStock = stockQuantity,
+      robuxPrice = robuxPrice,
     }
   end
 
@@ -669,6 +682,7 @@ function Store.initializeInventory(): StoreInventory
     local stockQuantity = RARITY_STOCK_QUANTITIES[config.rarity] or 0
     local price = Store.getChickenPrice(chickenType)
     local sellPrice = Store.getChickenValue(chickenType)
+    local robuxPrice = RARITY_ROBUX_PRICES[config.rarity] or 5
     inventory.chickens[chickenType] = {
       itemType = "chicken",
       id = chickenType,
@@ -679,6 +693,7 @@ function Store.initializeInventory(): StoreInventory
       sellPrice = sellPrice,
       stock = stockQuantity,
       maxStock = stockQuantity,
+      robuxPrice = robuxPrice,
     }
   end
 
@@ -803,6 +818,69 @@ function Store.purchaseChickenFromInventory(
   return result
 end
 
+-- Purchase an egg with Robux (bypasses money check, adds directly to inventory)
+function Store.purchaseEggWithRobux(
+  playerData: PlayerData.PlayerDataSchema,
+  eggType: string
+): TransactionResult
+  -- Validate egg type
+  local eggConfig = EggConfig.get(eggType)
+  if not eggConfig then
+    return {
+      success = false,
+      message = "Invalid egg type: " .. tostring(eggType),
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Add egg to inventory (no money deduction for Robux purchase)
+  local eggId = PlayerData.generateId()
+  table.insert(playerData.inventory.eggs, {
+    id = eggId,
+    eggType = eggType,
+    rarity = eggConfig.rarity,
+  })
+
+  return {
+    success = true,
+    message = string.format("Purchased %s with Robux", eggConfig.displayName),
+    newBalance = playerData.money,
+    itemId = eggId,
+  }
+end
+
+-- Purchase a chicken with Robux (bypasses money check, adds directly to inventory)
+function Store.purchaseChickenWithRobux(
+  playerData: PlayerData.PlayerDataSchema,
+  chickenType: string
+): TransactionResult
+  -- Validate chicken type
+  local chickenConfig = ChickenConfig.get(chickenType)
+  if not chickenConfig then
+    return {
+      success = false,
+      message = "Invalid chicken type: " .. tostring(chickenType),
+      newBalance = playerData.money,
+    }
+  end
+
+  -- Add chicken to inventory (no money deduction for Robux purchase)
+  local chickenId = PlayerData.generateId()
+  table.insert(playerData.inventory.chickens, {
+    id = chickenId,
+    chickenType = chickenType,
+    rarity = chickenConfig.rarity,
+    accumulatedMoney = 0,
+  })
+
+  return {
+    success = true,
+    message = string.format("Purchased %s with Robux", chickenConfig.displayName),
+    newBalance = playerData.money,
+    itemId = chickenId,
+  }
+end
+
 -- Get available eggs with stock info
 function Store.getAvailableEggsWithStock(): { InventoryItem }
   local inventory = Store.getStoreInventory()
@@ -834,6 +912,11 @@ end
 -- Get stock quantity for a rarity
 function Store.getStockForRarity(rarity: string): number
   return RARITY_STOCK_QUANTITIES[rarity] or 0
+end
+
+-- Get Robux price for a rarity
+function Store.getRobuxPriceForRarity(rarity: string): number
+  return RARITY_ROBUX_PRICES[rarity] or 5
 end
 
 -- Get the replenish interval in seconds
