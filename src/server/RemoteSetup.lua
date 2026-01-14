@@ -47,6 +47,7 @@ local REMOTE_EVENTS = {
   "PredatorPositionUpdated",
   "RandomChickenPositionUpdated",
   "ProtectionStatusChanged",
+  "BankruptcyAssistance",
 }
 
 -- List of all RemoteFunctions to create

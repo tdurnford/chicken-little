@@ -58,6 +58,10 @@ local PREDATOR_ATTACK_RANGE_STUDS = 15 -- Predators must be within this range of
 local NEW_PLAYER_PROTECTION_DURATION = 180 -- 3 minutes of predator immunity for new players
 local playerJoinTimes: { [number]: number } = {} -- Tracks when each player joined (userId -> os.time())
 
+-- Bankruptcy Protection Configuration
+local BANKRUPTCY_ASSISTANCE_COOLDOWN = 300 -- 5 minute cooldown between assistance grants
+local lastBankruptcyAssistanceTime: { [number]: number } = {} -- Tracks last assistance time (userId -> os.time())
+
 -- Store Replenishment Configuration
 local lastStoreReplenishCheck = 0
 local STORE_REPLENISH_CHECK_INTERVAL = 10 -- Check every 10 seconds if replenish needed
@@ -978,6 +982,65 @@ local function teleportCharacterToSpawnPoint(
   end
 end
 
+-- Check and apply bankruptcy assistance if player is broke with no assets
+local function checkAndApplyBankruptcyAssistance(player: Player)
+  local currentTime = os.time()
+  local userId = player.UserId
+
+  -- Get player data
+  local playerData = DataPersistence.getData(userId)
+  if not playerData then
+    return
+  end
+
+  -- Check if player is actually bankrupt
+  if not PlayerData.isBankrupt(playerData) then
+    return
+  end
+
+  -- Check cooldown to prevent exploitation
+  local lastAssistance = lastBankruptcyAssistanceTime[userId]
+  if lastAssistance and (currentTime - lastAssistance) < BANKRUPTCY_ASSISTANCE_COOLDOWN then
+    local remainingCooldown = BANKRUPTCY_ASSISTANCE_COOLDOWN - (currentTime - lastAssistance)
+    print(
+      string.format(
+        "[Main.server] Bankruptcy assistance on cooldown for %s (%d seconds remaining)",
+        player.Name,
+        remainingCooldown
+      )
+    )
+    return
+  end
+
+  -- Apply bankruptcy assistance
+  local starterMoney = PlayerData.getBankruptcyStarterMoney()
+  playerData.money = playerData.money + starterMoney
+  lastBankruptcyAssistanceTime[userId] = currentTime
+
+  -- Sync player data
+  syncPlayerData(player, playerData, true)
+
+  -- Notify client about bankruptcy assistance
+  local bankruptcyEvent = RemoteSetup.getEvent("BankruptcyAssistance")
+  if bankruptcyEvent then
+    bankruptcyEvent:FireClient(player, {
+      moneyAwarded = starterMoney,
+      message = string.format(
+        "You've been given $%d to help you get back on your feet!",
+        starterMoney
+      ),
+    })
+  end
+
+  print(
+    string.format(
+      "[Main.server] Awarded $%d bankruptcy assistance to %s",
+      starterMoney,
+      player.Name
+    )
+  )
+end
+
 -- Handle character spawning/respawning to player's section
 local function setupCharacterSpawning(
   player: Player,
@@ -1003,6 +1066,11 @@ local function setupCharacterSpawning(
         )
       )
     end
+
+    -- Check bankruptcy status on respawn
+    task.defer(function()
+      checkAndApplyBankruptcyAssistance(player)
+    end)
   end)
 
   -- If character already exists, teleport immediately
@@ -1133,6 +1201,9 @@ Players.PlayerRemoving:Connect(function(player)
 
   -- Clean up player join time tracking
   playerJoinTimes[player.UserId] = nil
+
+  -- Clean up bankruptcy assistance cooldown tracking
+  lastBankruptcyAssistanceTime[player.UserId] = nil
 end)
 
 print("[Main.server] " .. RemoteSetup.getSummary())

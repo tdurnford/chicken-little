@@ -65,6 +65,10 @@ local VALID_RARITIES = {
   Mythic = true,
 }
 
+-- Bankruptcy protection constants
+local CHEAPEST_ITEM_PRICE = 100 -- Common egg costs $100
+local BANKRUPTCY_STARTER_MONEY = 100 -- Amount given to bankrupt players
+
 -- Creates default player data with starting money (enough to buy a common egg)
 function PlayerData.createDefault(): PlayerDataSchema
   return {
@@ -295,6 +299,37 @@ function PlayerData.clone(data: PlayerDataSchema): PlayerDataSchema
     return copy
   end
   return deepClone(data)
+end
+
+-- Check if a player is bankrupt (cannot afford anything and has no assets)
+function PlayerData.isBankrupt(data: PlayerDataSchema): boolean
+  -- Has money to buy cheapest item? Not bankrupt
+  if data.money >= CHEAPEST_ITEM_PRICE then
+    return false
+  end
+
+  -- Has any eggs in inventory? Not bankrupt (can hatch them)
+  if data.inventory and data.inventory.eggs and #data.inventory.eggs > 0 then
+    return false
+  end
+
+  -- Has any chickens in inventory? Not bankrupt (can sell or place them)
+  if data.inventory and data.inventory.chickens and #data.inventory.chickens > 0 then
+    return false
+  end
+
+  -- Has any placed chickens? Not bankrupt (can collect money)
+  if data.placedChickens and #data.placedChickens > 0 then
+    return false
+  end
+
+  -- No assets and not enough money - player is bankrupt
+  return true
+end
+
+-- Get the starter money amount for bankruptcy assistance
+function PlayerData.getBankruptcyStarterMoney(): number
+  return BANKRUPTCY_STARTER_MONEY
 end
 
 return PlayerData

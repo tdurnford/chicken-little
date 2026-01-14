@@ -2154,3 +2154,47 @@
 - PRD simply needed to be marked complete
 - Format check passes
 - Next: Other high priority items (#35, #36, #39, #41, #51, #55)
+
+[2026-01-14] Completed Bugfix Work Item #41: Add Bankruptcy Protection for Players
+- Root cause: Players could get completely stuck with no eggs, no chickens, no placed chickens,
+  and not enough money to buy the cheapest item (Common Egg at $100)
+- This created a dead-end state where players could not progress and would abandon the game
+- Implementation approach:
+  1. Added isBankrupt() function to PlayerData.lua
+     - Returns true if: money < $100 AND no eggs AND no inventory chickens AND no placed chickens
+  2. Added getBankruptcyStarterMoney() function returning $100
+  3. Added BANKRUPTCY_ASSISTANCE_COOLDOWN = 300 seconds (5 minutes) to prevent exploitation
+  4. Added lastBankruptcyAssistanceTime tracking dictionary in Main.server.lua
+  5. Created checkAndApplyBankruptcyAssistance() function that:
+     - Checks if player is bankrupt
+     - Checks cooldown hasn't expired
+     - Awards $100 starter money
+     - Fires BankruptcyAssistance event to client
+  6. Integrated bankruptcy check into CharacterAdded (respawn) event
+  7. Added BankruptcyAssistance RemoteEvent to RemoteSetup.lua
+  8. Added client handler in Main.client.lua
+  9. Added showBankruptcyAssistance() function to MainHUD.lua with notification UI
+- Server changes (src/server/Main.server.lua):
+  - Added bankruptcy config constants and tracking dictionary
+  - Created checkAndApplyBankruptcyAssistance() helper function
+  - Integrated into CharacterAdded callback with task.defer
+  - Clean up tracking on PlayerRemoving
+- Client changes (src/client/Main.client.lua):
+  - Added BankruptcyAssistance event listener
+  - Routes to MainHUD.showBankruptcyAssistance()
+- Client changes (src/client/MainHUD.lua):
+  - Added showBankruptcyAssistance() function with animated notification
+  - Blue-themed notification with gold title
+  - Auto-dismisses after 4 seconds with fade animation
+- Shared changes (src/shared/PlayerData.lua):
+  - Added CHEAPEST_ITEM_PRICE = 100 and BANKRUPTCY_STARTER_MONEY = 100 constants
+  - Added isBankrupt() function with comprehensive asset checking
+  - Added getBankruptcyStarterMoney() function
+- Added 5 integration tests for bankruptcy functions
+- Acceptance criteria met:
+  - Bankrupt players receive starter money ($100) on respawn
+  - Players can always afford at least one egg after assistance
+  - Cannot be exploited (5 minute cooldown between grants)
+  - Clear message explains the assistance ("You've been given $100 to help you get back on your feet!")
+- Format check and build pass
+- Next: Other high priority items (#35, #36, #39, #51, #55)

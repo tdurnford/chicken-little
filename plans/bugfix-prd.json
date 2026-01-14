@@ -1072,7 +1072,7 @@
       "category": "Economy-Safety",
       "title": "Add Bankruptcy Protection for Players",
       "description": "If player has no eggs, no chickens, no money to buy anything, and respawns, give them starter money to continue playing.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Create isBankrupt() check function in PlayerData",

@@ -739,6 +739,17 @@ if protectionStatusChangedEvent then
   end)
 end
 
+-- BankruptcyAssistance: Handle receiving assistance money when broke
+local bankruptcyAssistanceEvent = getEvent("BankruptcyAssistance")
+if bankruptcyAssistanceEvent then
+  bankruptcyAssistanceEvent.OnClientEvent:Connect(function(data: any)
+    SoundEffects.play("uiNotification")
+    print("[Client] Bankruptcy assistance received: $" .. tostring(data.moneyAwarded))
+    -- Show notification via MainHUD
+    MainHUD.showBankruptcyAssistance(data)
+  end)
+end
+
 -- Track incapacitation state for movement control
 local isIncapacitated = false
 local incapacitatedEndTime = 0

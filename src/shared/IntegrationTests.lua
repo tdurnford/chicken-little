@@ -163,6 +163,50 @@ test("PlayerData: tutorialComplete field exists", function()
   return assert_eq(data.tutorialComplete, false, "New players should have tutorialComplete = false")
 end)
 
+test("PlayerData: isBankrupt returns false with sufficient money", function()
+  local data = PlayerData.createDefault()
+  data.money = 100 -- Enough to buy cheapest item
+  return assert_false(PlayerData.isBankrupt(data), "Should not be bankrupt with $100")
+end)
+
+test("PlayerData: isBankrupt returns true when broke with no assets", function()
+  local data = PlayerData.createDefault()
+  data.money = 50 -- Not enough to buy anything
+  data.inventory.eggs = {}
+  data.inventory.chickens = {}
+  data.placedChickens = {}
+  return assert_true(PlayerData.isBankrupt(data), "Should be bankrupt with $50 and no assets")
+end)
+
+test("PlayerData: isBankrupt returns false with eggs in inventory", function()
+  local data = PlayerData.createDefault()
+  data.money = 0
+  table.insert(data.inventory.eggs, {
+    id = PlayerData.generateId(),
+    eggType = "CommonEgg",
+    rarity = "Common",
+  })
+  return assert_false(PlayerData.isBankrupt(data), "Should not be bankrupt with eggs in inventory")
+end)
+
+test("PlayerData: isBankrupt returns false with placed chickens", function()
+  local data = PlayerData.createDefault()
+  data.money = 0
+  table.insert(data.placedChickens, {
+    id = PlayerData.generateId(),
+    chickenType = "BasicChick",
+    rarity = "Common",
+    accumulatedMoney = 0,
+    lastEggTime = os.time(),
+    spotIndex = 1,
+  })
+  return assert_false(PlayerData.isBankrupt(data), "Should not be bankrupt with placed chickens")
+end)
+
+test("PlayerData: getBankruptcyStarterMoney returns 100", function()
+  return assert_eq(PlayerData.getBankruptcyStarterMoney(), 100, "Starter money should be $100")
+end)
+
 -- ============================================================================
 -- ChickenConfig Tests
 -- ============================================================================

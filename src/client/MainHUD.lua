@@ -546,4 +546,89 @@ function MainHUD.setProtectionStatus(data: {
   end
 end
 
+-- Show bankruptcy assistance notification
+function MainHUD.showBankruptcyAssistance(data: {
+  moneyAwarded: number,
+  message: string,
+})
+  if not state.screenGui then
+    return
+  end
+
+  -- Create a notification frame
+  local notificationFrame = Instance.new("Frame")
+  notificationFrame.Name = "BankruptcyNotification"
+  notificationFrame.Size = UDim2.new(0, 300, 0, 80)
+  notificationFrame.Position = UDim2.new(0.5, 0, 0.35, 0)
+  notificationFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+  notificationFrame.BackgroundColor3 = Color3.fromRGB(20, 60, 100) -- Dark blue
+  notificationFrame.BackgroundTransparency = 0.1
+  notificationFrame.BorderSizePixel = 0
+  notificationFrame.Parent = state.screenGui
+
+  -- Corner rounding
+  local corner = Instance.new("UICorner")
+  corner.CornerRadius = UDim.new(0, 12)
+  corner.Parent = notificationFrame
+
+  -- Border stroke
+  local stroke = Instance.new("UIStroke")
+  stroke.Color = Color3.fromRGB(100, 180, 255) -- Light blue border
+  stroke.Thickness = 3
+  stroke.Parent = notificationFrame
+
+  -- Title label
+  local titleLabel = Instance.new("TextLabel")
+  titleLabel.Name = "TitleLabel"
+  titleLabel.Size = UDim2.new(1, -20, 0, 28)
+  titleLabel.Position = UDim2.new(0, 10, 0, 8)
+  titleLabel.BackgroundTransparency = 1
+  titleLabel.Text = "💰 Starter Assistance"
+  titleLabel.TextColor3 = Color3.fromRGB(255, 215, 0) -- Gold
+  titleLabel.TextSize = 18
+  titleLabel.Font = Enum.Font.GothamBold
+  titleLabel.TextXAlignment = Enum.TextXAlignment.Center
+  titleLabel.Parent = notificationFrame
+
+  -- Message label
+  local messageLabel = Instance.new("TextLabel")
+  messageLabel.Name = "MessageLabel"
+  messageLabel.Size = UDim2.new(1, -20, 0, 36)
+  messageLabel.Position = UDim2.new(0, 10, 0, 38)
+  messageLabel.BackgroundTransparency = 1
+  messageLabel.Text = data.message
+  messageLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+  messageLabel.TextSize = 14
+  messageLabel.Font = Enum.Font.Gotham
+  messageLabel.TextWrapped = true
+  messageLabel.TextXAlignment = Enum.TextXAlignment.Center
+  messageLabel.Parent = notificationFrame
+
+  -- Animate in
+  notificationFrame.BackgroundTransparency = 1
+  local tween = TweenService:Create(
+    notificationFrame,
+    TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    { BackgroundTransparency = 0.1 }
+  )
+  tween:Play()
+
+  -- Auto-dismiss after 4 seconds
+  task.delay(4, function()
+    if notificationFrame and notificationFrame.Parent then
+      local fadeOut = TweenService:Create(
+        notificationFrame,
+        TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        { BackgroundTransparency = 1 }
+      )
+      fadeOut:Play()
+      fadeOut.Completed:Connect(function()
+        if notificationFrame and notificationFrame.Parent then
+          notificationFrame:Destroy()
+        end
+      end)
+    end
+  end)
+end
+
 return MainHUD
