@@ -45,6 +45,10 @@ local lastDataSyncTime: { [number]: number } = {} -- Tracks last sync time per p
 local PREDATOR_CLEANUP_INTERVAL = 10 -- Seconds between predator cleanup passes
 local lastCleanupTime = 0
 
+-- Store Replenishment Configuration
+local lastStoreReplenishCheck = 0
+local STORE_REPLENISH_CHECK_INTERVAL = 10 -- Check every 10 seconds if replenish needed
+
 -- Per-player game state tracking
 type PlayerGameState = {
   spawnState: PredatorSpawning.SpawnState,
@@ -579,6 +583,10 @@ local initialTime = os.time()
 randomChickenSpawnState = RandomChickenSpawn.createSpawnState(nil, initialTime)
 print("[Main.server] RandomChickenSpawn initialized")
 
+-- Initialize store inventory
+local storeInventory = Store.initializeInventory()
+print("[Main.server] Store inventory initialized")
+
 -- Create game state for a player
 local function createPlayerGameState(): PlayerGameState
   return {
@@ -953,6 +961,23 @@ local function runGameLoop(deltaTime: number)
       if removed > 0 then
         -- Optional: Log cleanup for debugging
         -- print(string.format("[Main.server] Cleaned up %d inactive predators for user %d", removed, userId))
+      end
+    end
+  end
+
+  -- 8. Check for store replenishment (every STORE_REPLENISH_CHECK_INTERVAL seconds)
+  if currentTime - lastStoreReplenishCheck >= STORE_REPLENISH_CHECK_INTERVAL then
+    lastStoreReplenishCheck = currentTime
+    if Store.needsReplenish() then
+      local newInventory = Store.replenishStore()
+      print("[Main.server] Store inventory replenished")
+
+      -- Notify all connected players
+      local storeReplenishedEvent = RemoteSetup.getEvent("StoreReplenished")
+      if storeReplenishedEvent then
+        for _, player in ipairs(Players:GetPlayers()) do
+          storeReplenishedEvent:FireClient(player, newInventory)
+        end
       end
     end
   end

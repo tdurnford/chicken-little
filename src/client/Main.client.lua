@@ -524,6 +524,19 @@ if alertTriggeredEvent then
   end)
 end
 
+-- StoreReplenished: Update store inventory display
+local storeReplenishedEvent = getEvent("StoreReplenished")
+if storeReplenishedEvent then
+  storeReplenishedEvent.OnClientEvent:Connect(function(newInventory: any)
+    -- Update local store inventory cache
+    local Store = require(Shared:WaitForChild("Store"))
+    Store.setStoreInventory(newInventory)
+    -- Refresh the store UI if open
+    StoreUI.refreshInventory()
+    print("[Client] Store inventory replenished")
+  end)
+end
+
 --[[ Utility Functions for other modules ]]
 
 -- Expose player data cache getter

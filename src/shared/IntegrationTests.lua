@@ -514,6 +514,94 @@ test("Store: getStockForRarity returns correct values", function()
   return assert_eq(Store.getStockForRarity("Mythic"), 0, "Mythic should be 0")
 end)
 
+test("Store: getReplenishInterval returns 300 seconds", function()
+  local interval = Store.getReplenishInterval()
+  return assert_eq(interval, 300, "Replenish interval should be 300 seconds (5 minutes)")
+end)
+
+test("Store: replenishStore restores stock", function()
+  local inventory = Store.initializeInventory()
+  -- Deplete stock
+  for _, item in pairs(inventory.eggs) do
+    item.stock = 0
+  end
+  -- Verify stock is depleted
+  local depleted = true
+  for _, item in pairs(inventory.eggs) do
+    if item.stock > 0 then
+      depleted = false
+      break
+    end
+  end
+  local pass, msg = assert_true(depleted, "Stock should be depleted")
+  if not pass then
+    return pass, msg
+  end
+  -- Replenish store
+  local newInventory = Store.replenishStore()
+  -- Verify stock is restored
+  local hasStock = false
+  for _, item in pairs(newInventory.eggs) do
+    if item.stock > 0 then
+      hasStock = true
+      break
+    end
+  end
+  return assert_true(hasStock, "Stock should be restored after replenish")
+end)
+
+test("Store: replenishStore updates lastReplenishTime", function()
+  Store.initializeInventory()
+  local beforeTime = os.time()
+  local newInventory = Store.replenishStore()
+  local afterTime = os.time()
+  local pass, msg = assert_true(
+    newInventory.lastReplenishTime >= beforeTime,
+    "lastReplenishTime should be at or after start"
+  )
+  if not pass then
+    return pass, msg
+  end
+  return assert_true(
+    newInventory.lastReplenishTime <= afterTime,
+    "lastReplenishTime should be at or before end"
+  )
+end)
+
+test("Store: needsReplenish returns false immediately after replenish", function()
+  Store.initializeInventory()
+  Store.replenishStore()
+  return assert_false(
+    Store.needsReplenish(),
+    "Should not need replenish immediately after replenishing"
+  )
+end)
+
+test("Store: getTimeUntilReplenish returns positive value after replenish", function()
+  Store.initializeInventory()
+  Store.replenishStore()
+  local remaining = Store.getTimeUntilReplenish()
+  return assert_gt(remaining, 0, "Time until replenish should be greater than 0")
+end)
+
+test("Store: forceReplenish works same as replenishStore", function()
+  local inventory = Store.initializeInventory()
+  -- Deplete stock
+  for _, item in pairs(inventory.eggs) do
+    item.stock = 0
+  end
+  -- Force replenish
+  local newInventory = Store.forceReplenish()
+  local hasStock = false
+  for _, item in pairs(newInventory.eggs) do
+    if item.stock > 0 then
+      hasStock = true
+      break
+    end
+  end
+  return assert_true(hasStock, "Force replenish should restore stock")
+end)
+
 -- ============================================================================
 -- TradeExchange Tests
 -- ============================================================================

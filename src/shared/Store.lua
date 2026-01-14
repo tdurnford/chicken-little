@@ -76,6 +76,19 @@ local RARITY_STOCK_QUANTITIES: { [string]: number } = {
   Mythic = 0, -- Mythic items may not always be in stock
 }
 
+-- Store replenishment interval in seconds (5 minutes)
+local REPLENISH_INTERVAL = 300
+
+-- Rarity weights for weighted random selection (higher = more common)
+local RARITY_WEIGHTS: { [string]: number } = {
+  Common = 100,
+  Uncommon = 50,
+  Rare = 20,
+  Epic = 8,
+  Legendary = 3,
+  Mythic = 1,
+}
+
 -- Global store inventory state (server-side)
 local storeInventory: StoreInventory? = nil
 
@@ -821,6 +834,92 @@ end
 -- Get stock quantity for a rarity
 function Store.getStockForRarity(rarity: string): number
   return RARITY_STOCK_QUANTITIES[rarity] or 0
+end
+
+-- Get the replenish interval in seconds
+function Store.getReplenishInterval(): number
+  return REPLENISH_INTERVAL
+end
+
+-- Check if store needs replenishing
+function Store.needsReplenish(): boolean
+  local inventory = Store.getStoreInventory()
+  local currentTime = os.time()
+  return (currentTime - inventory.lastReplenishTime) >= REPLENISH_INTERVAL
+end
+
+-- Get time until next replenish in seconds
+function Store.getTimeUntilReplenish(): number
+  local inventory = Store.getStoreInventory()
+  local currentTime = os.time()
+  local elapsed = currentTime - inventory.lastReplenishTime
+  local remaining = REPLENISH_INTERVAL - elapsed
+  return math.max(0, remaining)
+end
+
+-- Weighted random selection helper
+local function selectWeightedRarity(): string
+  local totalWeight = 0
+  for _, weight in pairs(RARITY_WEIGHTS) do
+    totalWeight = totalWeight + weight
+  end
+
+  local roll = math.random() * totalWeight
+  local cumulative = 0
+
+  for rarity, weight in pairs(RARITY_WEIGHTS) do
+    cumulative = cumulative + weight
+    if roll <= cumulative then
+      return rarity
+    end
+  end
+
+  return "Common" -- Fallback
+end
+
+-- Replenish store inventory with new stock
+-- Resets all items to their max stock based on rarity weights
+function Store.replenishStore(): StoreInventory
+  local inventory = Store.getStoreInventory()
+  local currentTime = os.time()
+
+  -- Replenish eggs - restore stock based on rarity
+  for eggType, item in pairs(inventory.eggs) do
+    local baseStock = RARITY_STOCK_QUANTITIES[item.rarity] or 0
+    -- Add some randomness: 50% to 100% of base stock
+    local minStock = math.max(1, math.floor(baseStock * 0.5))
+    local newStock = math.random(minStock, baseStock)
+    -- Mythic has chance to get 0-1
+    if item.rarity == "Mythic" then
+      newStock = math.random(0, 1)
+    end
+    item.stock = newStock
+    item.maxStock = baseStock
+  end
+
+  -- Replenish chickens - restore stock based on rarity
+  for chickenType, item in pairs(inventory.chickens) do
+    local baseStock = RARITY_STOCK_QUANTITIES[item.rarity] or 0
+    -- Add some randomness: 50% to 100% of base stock
+    local minStock = math.max(1, math.floor(baseStock * 0.5))
+    local newStock = math.random(minStock, baseStock)
+    -- Mythic has chance to get 0-1
+    if item.rarity == "Mythic" then
+      newStock = math.random(0, 1)
+    end
+    item.stock = newStock
+    item.maxStock = baseStock
+  end
+
+  -- Update timestamp
+  inventory.lastReplenishTime = currentTime
+
+  return inventory
+end
+
+-- Force replenish (for Robux purchase or testing)
+function Store.forceReplenish(): StoreInventory
+  return Store.replenishStore()
 end
 
 return Store

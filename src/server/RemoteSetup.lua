@@ -31,6 +31,7 @@ local REMOTE_EVENTS = {
   "OfflineEarningsAwarded",
   "CompleteTutorial",
   "BatEquipped",
+  "StoreReplenished",
 }
 
 -- List of all RemoteFunctions to create
