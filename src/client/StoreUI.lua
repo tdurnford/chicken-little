@@ -6,6 +6,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local StoreUI = {}
@@ -36,6 +37,8 @@ local tabFrame: Frame? = nil
 local scrollFrame: ScrollingFrame? = nil
 local replenishButton: TextButton? = nil
 local confirmationFrame: Frame? = nil
+local restockTimerLabel: TextLabel? = nil
+local timerConnection: RBXScriptConnection? = nil
 local isOpen = false
 local currentTab: "eggs" | "chickens" = "eggs"
 
@@ -50,6 +53,31 @@ local onEggPurchaseCallback: ((eggType: string, quantity: number) -> any)? = nil
 local onChickenPurchaseCallback: ((chickenType: string, quantity: number) -> any)? = nil
 local onReplenishCallback: (() -> any)? = nil
 local onRobuxPurchaseCallback: ((itemType: string, itemId: string) -> any)? = nil
+
+--[[
+	Formats seconds into M:SS format for the restock timer.
+	@param seconds number - Time remaining in seconds
+	@return string - Formatted time string
+]]
+local function formatRestockTime(seconds: number): string
+  if seconds <= 0 then
+    return "Restocking..."
+  end
+  local minutes = math.floor(seconds / 60)
+  local secs = math.floor(seconds % 60)
+  return string.format("Restocks in %d:%02d", minutes, secs)
+end
+
+--[[
+	Updates the restock timer display.
+]]
+local function updateRestockTimer()
+  if not restockTimerLabel then
+    return
+  end
+  local timeRemaining = Store.getTimeUntilReplenish()
+  restockTimerLabel.Text = formatRestockTime(timeRemaining)
+end
 
 --[[
 	Creates a single item card for the store (works for both eggs and chickens).
@@ -440,7 +468,7 @@ function StoreUI.create()
 
   local moneyLabel = Instance.new("TextLabel")
   moneyLabel.Name = "MoneyLabel"
-  moneyLabel.Size = UDim2.new(1, -10, 1, 0)
+  moneyLabel.Size = UDim2.new(0.55, -10, 1, 0)
   moneyLabel.Position = UDim2.new(0, 5, 0, 0)
   moneyLabel.BackgroundTransparency = 1
   moneyLabel.Text = "Your Balance: $0"
@@ -449,6 +477,22 @@ function StoreUI.create()
   moneyLabel.Font = Enum.Font.GothamBold
   moneyLabel.TextXAlignment = Enum.TextXAlignment.Left
   moneyLabel.Parent = moneyFrame
+
+  -- Restock timer display
+  restockTimerLabel = Instance.new("TextLabel")
+  restockTimerLabel.Name = "RestockTimerLabel"
+  restockTimerLabel.Size = UDim2.new(0.45, -5, 1, 0)
+  restockTimerLabel.Position = UDim2.new(0.55, 0, 0, 0)
+  restockTimerLabel.BackgroundTransparency = 1
+  restockTimerLabel.Text = "Restocks in 0:00"
+  restockTimerLabel.TextColor3 = Color3.fromRGB(150, 200, 255)
+  restockTimerLabel.TextScaled = true
+  restockTimerLabel.Font = Enum.Font.Gotham
+  restockTimerLabel.TextXAlignment = Enum.TextXAlignment.Right
+  restockTimerLabel.Parent = moneyFrame
+
+  -- Initialize timer display
+  updateRestockTimer()
 
   -- Tab frame for Eggs/Chickens tabs
   tabFrame = Instance.new("Frame")
@@ -651,6 +695,21 @@ function StoreUI.open()
   end
   screenGui.Enabled = true
   isOpen = true
+
+  -- Start timer update loop (updates every second, not every frame)
+  updateRestockTimer()
+  if timerConnection then
+    timerConnection:Disconnect()
+  end
+  local lastUpdate = 0
+  timerConnection = RunService.Heartbeat:Connect(function(deltaTime)
+    lastUpdate = lastUpdate + deltaTime
+    if lastUpdate >= 1 then
+      lastUpdate = 0
+      updateRestockTimer()
+    end
+  end)
+
   print("[StoreUI] Opened")
 end
 
@@ -663,6 +722,13 @@ function StoreUI.close()
   end
   screenGui.Enabled = false
   isOpen = false
+
+  -- Stop timer update loop
+  if timerConnection then
+    timerConnection:Disconnect()
+    timerConnection = nil
+  end
+
   print("[StoreUI] Closed")
 end
 

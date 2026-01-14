@@ -910,7 +910,8 @@
       "category": "Store-UI",
       "title": "Add Store Restock Timer Display",
       "description": "Store UI should display a countdown timer showing when the store will be restocked.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
       "priority": "medium",
       "steps": [
         "Track lastReplenishTime and send to clients with store data",

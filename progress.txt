@@ -2423,3 +2423,24 @@
   - Store UI can be closed with X button or pressing E again ✓
 - Format check and build pass
 - Next: Other critical items (#8, #12) or high priority items
+
+[2026-01-14] Completed Bugfix Work Item #33: Add Store Restock Timer Display
+- Root cause: Players had no visibility into when the store would restock,
+  making it unclear when to check back for new items.
+- Implementation approach:
+  1. Added RunService import to StoreUI.lua for timer updates
+  2. Added restockTimerLabel and timerConnection module variables
+  3. Created formatRestockTime() helper to format seconds as "Restocks in M:SS"
+  4. Created updateRestockTimer() to query Store.getTimeUntilReplenish() and update label
+  5. Added timer label in money frame (right-aligned, light blue color)
+  6. Modified StoreUI.open() to start heartbeat-based timer update loop (every 1 second)
+  7. Modified StoreUI.close() to disconnect timer connection and clean up
+- Timer shows "Restocking..." when countdown reaches zero
+- Uses existing Store.getTimeUntilReplenish() which calculates from lastReplenishTime
+- Optimized to update once per second instead of every frame for performance
+- Acceptance criteria met:
+  - Store UI displays 'Restocks in X:XX' countdown ✓
+  - Timer updates in real-time (every second) ✓
+  - Timer resets after replenishment occurs (via Store module) ✓
+- Format check and build pass
+- Next: Other medium priority items (#7, #17, #18, #19, #43, #44, #48, #49, #52)
