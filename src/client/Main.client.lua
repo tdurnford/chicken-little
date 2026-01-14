@@ -28,12 +28,14 @@ local StoreUI = require(ClientModules:WaitForChild("StoreUI"))
 local DamageUI = require(ClientModules:WaitForChild("DamageUI"))
 local ChickenHealthBar = require(ClientModules:WaitForChild("ChickenHealthBar"))
 local PredatorWarning = require(ClientModules:WaitForChild("PredatorWarning"))
+local ShieldUI = require(ClientModules:WaitForChild("ShieldUI"))
 
 -- Get shared modules for position calculations
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local MapGeneration = require(Shared:WaitForChild("MapGeneration"))
 local PlayerSection = require(Shared:WaitForChild("PlayerSection"))
 local BaseballBat = require(Shared:WaitForChild("BaseballBat"))
+local AreaShield = require(Shared:WaitForChild("AreaShield"))
 
 -- Local player reference
 local localPlayer = Players.LocalPlayer
@@ -125,6 +127,15 @@ print("[Client] DamageUI initialized")
 -- Create Predator Warning UI
 PredatorWarning.initialize()
 print("[Client] PredatorWarning initialized")
+
+-- Create Shield UI using MainHUD's ScreenGui
+local mainHudScreenGui = MainHUD.getScreenGui()
+if mainHudScreenGui then
+  ShieldUI.create(mainHudScreenGui)
+  print("[Client] ShieldUI created")
+else
+  warn("[Client] Cannot create ShieldUI - no MainHUD ScreenGui")
+end
 
 -- Create Random Chicken Claim Prompt UI
 local randomChickenPromptFrame: Frame? = nil
@@ -307,6 +318,12 @@ if playerDataChangedEvent then
     -- Update owned weapons in StoreUI
     if data.ownedWeapons then
       StoreUI.updateOwnedWeapons(data.ownedWeapons)
+    end
+
+    -- Update ShieldUI with current shield state
+    if data.shieldState then
+      local status = AreaShield.getStatus(data.shieldState, os.time())
+      ShieldUI.updateStatus(status)
     end
 
     -- Build section visuals if we have a section index but haven't built yet
@@ -817,6 +834,62 @@ if bankruptcyAssistanceEvent then
     MainHUD.showBankruptcyAssistance(data)
   end)
 end
+
+-- ShieldActivated: Handle shield activation by any player
+local shieldActivatedEvent = getEvent("ShieldActivated")
+if shieldActivatedEvent then
+  shieldActivatedEvent.OnClientEvent:Connect(
+    function(userId: number, sectionIndex: number, shieldData: any)
+      -- Update ShieldUI if this is our shield
+      if userId == localPlayer.UserId then
+        local status = AreaShield.getStatus({
+          isActive = true,
+          activatedTime = os.time(),
+          expiresAt = shieldData.expiresAt,
+          cooldownEndTime = shieldData.expiresAt + AreaShield.getConstants().shieldCooldown,
+        }, os.time())
+        ShieldUI.updateStatus(status)
+        ShieldUI.showActivationFeedback(true, "Shield activated!")
+        SoundEffects.play("uiNotification")
+      end
+      -- Visual effect for shield could be added here for all players to see
+      print("[Client] Shield activated for user", userId, "in section", sectionIndex)
+    end
+  )
+end
+
+-- ShieldDeactivated: Handle shield expiration
+local shieldDeactivatedEvent = getEvent("ShieldDeactivated")
+if shieldDeactivatedEvent then
+  shieldDeactivatedEvent.OnClientEvent:Connect(function(userId: number, sectionIndex: number)
+    -- Update ShieldUI if this is our shield
+    if userId == localPlayer.UserId then
+      -- Shield expired, update to show cooldown state
+      local cachedData = playerDataCache
+      if cachedData and cachedData.shieldState then
+        local status = AreaShield.getStatus(cachedData.shieldState, os.time())
+        ShieldUI.updateStatus(status)
+      end
+    end
+    print("[Client] Shield deactivated for user", userId, "in section", sectionIndex)
+  end)
+end
+
+-- Wire ShieldUI activation callback to server
+local activateShieldFunc = getFunction("ActivateShield")
+ShieldUI.onActivate(function()
+  if activateShieldFunc then
+    local result = activateShieldFunc:InvokeServer()
+    if result then
+      if result.success then
+        print("[Client] Shield activation successful:", result.message)
+      else
+        ShieldUI.showActivationFeedback(false, result.message)
+        print("[Client] Shield activation failed:", result.message)
+      end
+    end
+  end
+end)
 
 -- Track incapacitation state for movement control
 local isIncapacitated = false

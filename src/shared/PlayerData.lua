@@ -49,6 +49,13 @@ export type InventoryData = {
   chickens: { ChickenData }, -- Chickens not placed in coop
 }
 
+export type ShieldState = {
+  isActive: boolean,
+  activatedTime: number?,
+  expiresAt: number?,
+  cooldownEndTime: number?,
+}
+
 export type PlayerDataSchema = {
   money: number,
   inventory: InventoryData,
@@ -58,6 +65,7 @@ export type PlayerDataSchema = {
   activePowerUps: { ActivePowerUp }?, -- Currently active power-ups
   ownedWeapons: { string }?, -- List of weapon types the player owns
   equippedWeapon: string?, -- Currently equipped weapon type
+  shieldState: ShieldState?, -- Area shield protection state
   sectionIndex: number?,
   lastLogoutTime: number?,
   totalPlayTime: number,
@@ -96,6 +104,12 @@ function PlayerData.createDefault(): PlayerDataSchema
     activePowerUps = {},
     ownedWeapons = { "BaseballBat" }, -- Everyone starts with a baseball bat
     equippedWeapon = "BaseballBat", -- Bat is equipped by default
+    shieldState = {
+      isActive = false,
+      activatedTime = nil,
+      expiresAt = nil,
+      cooldownEndTime = nil,
+    },
     sectionIndex = nil,
     lastLogoutTime = nil,
     totalPlayTime = 0,
@@ -324,6 +338,31 @@ function PlayerData.validate(data: any): boolean
   -- Validate equippedWeapon (optional string)
   if data.equippedWeapon ~= nil and type(data.equippedWeapon) ~= "string" then
     return false
+  end
+
+  -- Validate shieldState (optional field)
+  if data.shieldState ~= nil then
+    if type(data.shieldState) ~= "table" then
+      return false
+    end
+    if type(data.shieldState.isActive) ~= "boolean" then
+      return false
+    end
+    if
+      data.shieldState.activatedTime ~= nil
+      and not validateNumber(data.shieldState.activatedTime, 0)
+    then
+      return false
+    end
+    if data.shieldState.expiresAt ~= nil and not validateNumber(data.shieldState.expiresAt, 0) then
+      return false
+    end
+    if
+      data.shieldState.cooldownEndTime ~= nil
+      and not validateNumber(data.shieldState.cooldownEndTime, 0)
+    then
+      return false
+    end
   end
 
   -- Validate optional fields

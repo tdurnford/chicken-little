@@ -47,6 +47,9 @@ local TrapConfig = require(Shared:WaitForChild("TrapConfig"))
 -- Weapon configuration module
 local WeaponConfig = require(Shared:WaitForChild("WeaponConfig"))
 
+-- Area shield module
+local AreaShield = require(Shared:WaitForChild("AreaShield"))
+
 -- Offline earnings module
 local OfflineEarnings = require(Shared:WaitForChild("OfflineEarnings"))
 
@@ -313,6 +316,43 @@ if buyWeaponFunc then
     if result.success then
       syncPlayerData(player, playerData, true)
     end
+    return result
+  end
+end
+
+-- ActivateShield RemoteFunction handler
+local activateShieldFunc = RemoteSetup.getFunction("ActivateShield")
+if activateShieldFunc then
+  activateShieldFunc.OnServerInvoke = function(player: Player)
+    local userId = player.UserId
+    local playerData = DataPersistence.getData(userId)
+    if not playerData then
+      return { success = false, message = "Player data not found" }
+    end
+
+    -- Initialize shield state if not present
+    if not playerData.shieldState then
+      playerData.shieldState = AreaShield.createDefaultState()
+    end
+
+    local currentTime = os.time()
+    local result = AreaShield.activate(playerData.shieldState, currentTime)
+
+    if result.success then
+      -- Sync player data
+      syncPlayerData(player, playerData, true)
+
+      -- Fire ShieldActivated event to all clients so they can see the shield effect
+      local shieldActivatedEvent = RemoteSetup.getEvent("ShieldActivated")
+      if shieldActivatedEvent then
+        shieldActivatedEvent:FireAllClients(userId, playerData.sectionIndex or 1, {
+          isActive = true,
+          expiresAt = playerData.shieldState.expiresAt,
+          durationTotal = AreaShield.getConstants().shieldDuration,
+        })
+      end
+    end
+
     return result
   end
 end
@@ -1695,11 +1735,33 @@ local function runGameLoop(deltaTime: number)
       -- This just tracks that the timer is done
     end
 
+    -- 3.5. Update shield state and check for expiration
+    if playerData.shieldState then
+      local shieldUpdate = AreaShield.update(playerData.shieldState, currentTime)
+      if shieldUpdate.expired then
+        -- Shield just expired - notify all clients
+        local shieldDeactivatedEvent = RemoteSetup.getEvent("ShieldDeactivated")
+        if shieldDeactivatedEvent then
+          shieldDeactivatedEvent:FireAllClients(player.UserId, playerData.sectionIndex or 1)
+        end
+        syncPlayerData(player, playerData, true)
+      end
+    end
+
     -- 4. Update predator spawning (check if should spawn new predator)
     -- Skip predator spawning for new players who still have protection
     local joinTime = playerJoinTimes[player.UserId]
     local isProtected = joinTime and (currentTime - joinTime) < NEW_PLAYER_PROTECTION_DURATION
-    if not isProtected and PredatorSpawning.shouldSpawn(gameState.spawnState, currentTime) then
+
+    -- Skip predator spawning if shield is active
+    local hasShieldActive = playerData.shieldState
+      and AreaShield.isActive(playerData.shieldState, currentTime)
+
+    if
+      not isProtected
+      and not hasShieldActive
+      and PredatorSpawning.shouldSpawn(gameState.spawnState, currentTime)
+    then
       local result = PredatorSpawning.spawn(gameState.spawnState, currentTime, playerId)
       if result.success and result.predator then
         -- Notify player of predator spawn

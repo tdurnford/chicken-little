@@ -535,7 +535,7 @@
       "category": "Defense-Shield",
       "title": "Implement Area Shield Button",
       "description": "Add a button that creates a 60-second shield keeping predators and players out of player's area.",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Create ShieldButton physical object in each player section",
@@ -556,7 +556,8 @@
         "Button is disabled during cooldown"
       ],
       "dependencies": [],
-      "codeLocation": "src/shared/AreaShield.lua"
+      "codeLocation": "src/shared/AreaShield.lua",
+      "status": "completed"
     },
     {
       "id": 20,
