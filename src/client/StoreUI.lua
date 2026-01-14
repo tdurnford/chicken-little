@@ -34,15 +34,21 @@ local screenGui: ScreenGui? = nil
 local mainFrame: Frame? = nil
 local tabFrame: Frame? = nil
 local scrollFrame: ScrollingFrame? = nil
+local replenishButton: TextButton? = nil
+local confirmationFrame: Frame? = nil
 local isOpen = false
 local currentTab: "eggs" | "chickens" = "eggs"
 
 -- Cached player money for UI updates
 local cachedPlayerMoney = 0
 
+-- Robux price for instant replenish (configurable)
+local ROBUX_REPLENISH_PRICE = 50
+
 -- Callbacks
 local onEggPurchaseCallback: ((eggType: string, quantity: number) -> any)? = nil
 local onChickenPurchaseCallback: ((chickenType: string, quantity: number) -> any)? = nil
+local onReplenishCallback: (() -> any)? = nil
 
 --[[
 	Creates a single item card for the store (works for both eggs and chickens).
@@ -467,12 +473,130 @@ function StoreUI.create()
   -- Scroll frame for items
   scrollFrame = Instance.new("ScrollingFrame")
   scrollFrame.Name = "ItemsScroll"
-  scrollFrame.Size = UDim2.new(1, -20, 1, -145)
+  scrollFrame.Size = UDim2.new(1, -20, 1, -195) -- Reduced height to make room for replenish button
   scrollFrame.Position = UDim2.new(0, 10, 0, 130)
   scrollFrame.BackgroundTransparency = 1
   scrollFrame.ScrollBarThickness = 6
   scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
   scrollFrame.Parent = mainFrame
+
+  -- Replenish Now button (Robux purchase)
+  replenishButton = Instance.new("TextButton")
+  replenishButton.Name = "ReplenishButton"
+  replenishButton.Size = UDim2.new(1, -20, 0, 40)
+  replenishButton.Position = UDim2.new(0, 10, 1, -50)
+  replenishButton.BackgroundColor3 = Color3.fromRGB(0, 162, 255) -- Robux blue
+  replenishButton.Text = "⏱ Replenish Now - R$" .. tostring(ROBUX_REPLENISH_PRICE)
+  replenishButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+  replenishButton.TextScaled = true
+  replenishButton.Font = Enum.Font.GothamBold
+  replenishButton.Parent = mainFrame
+
+  local replenishCorner = Instance.new("UICorner")
+  replenishCorner.CornerRadius = UDim.new(0, 8)
+  replenishCorner.Parent = replenishButton
+
+  -- Confirmation dialog (hidden by default)
+  confirmationFrame = Instance.new("Frame")
+  confirmationFrame.Name = "ConfirmationFrame"
+  confirmationFrame.Size = UDim2.new(0, 300, 0, 150)
+  confirmationFrame.Position = UDim2.new(0.5, -150, 0.5, -75)
+  confirmationFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+  confirmationFrame.BorderSizePixel = 0
+  confirmationFrame.Visible = false
+  confirmationFrame.ZIndex = 10
+  confirmationFrame.Parent = screenGui
+
+  local confirmCorner = Instance.new("UICorner")
+  confirmCorner.CornerRadius = UDim.new(0, 12)
+  confirmCorner.Parent = confirmationFrame
+
+  -- Confirmation title
+  local confirmTitle = Instance.new("TextLabel")
+  confirmTitle.Name = "Title"
+  confirmTitle.Size = UDim2.new(1, 0, 0, 35)
+  confirmTitle.Position = UDim2.new(0, 0, 0, 10)
+  confirmTitle.BackgroundTransparency = 1
+  confirmTitle.Text = "Confirm Purchase"
+  confirmTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+  confirmTitle.TextScaled = true
+  confirmTitle.Font = Enum.Font.GothamBold
+  confirmTitle.ZIndex = 11
+  confirmTitle.Parent = confirmationFrame
+
+  -- Confirmation message
+  local confirmMessage = Instance.new("TextLabel")
+  confirmMessage.Name = "Message"
+  confirmMessage.Size = UDim2.new(1, -20, 0, 40)
+  confirmMessage.Position = UDim2.new(0, 10, 0, 45)
+  confirmMessage.BackgroundTransparency = 1
+  confirmMessage.Text = "Instantly replenish store stock for R$"
+    .. tostring(ROBUX_REPLENISH_PRICE)
+    .. "?"
+  confirmMessage.TextColor3 = Color3.fromRGB(200, 200, 200)
+  confirmMessage.TextScaled = true
+  confirmMessage.Font = Enum.Font.Gotham
+  confirmMessage.TextWrapped = true
+  confirmMessage.ZIndex = 11
+  confirmMessage.Parent = confirmationFrame
+
+  -- Confirm button
+  local confirmButton = Instance.new("TextButton")
+  confirmButton.Name = "ConfirmButton"
+  confirmButton.Size = UDim2.new(0, 100, 0, 35)
+  confirmButton.Position = UDim2.new(0.5, -110, 1, -50)
+  confirmButton.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+  confirmButton.Text = "Confirm"
+  confirmButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+  confirmButton.TextScaled = true
+  confirmButton.Font = Enum.Font.GothamBold
+  confirmButton.ZIndex = 11
+  confirmButton.Parent = confirmationFrame
+
+  local confirmBtnCorner = Instance.new("UICorner")
+  confirmBtnCorner.CornerRadius = UDim.new(0, 6)
+  confirmBtnCorner.Parent = confirmButton
+
+  -- Cancel button
+  local cancelButton = Instance.new("TextButton")
+  cancelButton.Name = "CancelButton"
+  cancelButton.Size = UDim2.new(0, 100, 0, 35)
+  cancelButton.Position = UDim2.new(0.5, 10, 1, -50)
+  cancelButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+  cancelButton.Text = "Cancel"
+  cancelButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+  cancelButton.TextScaled = true
+  cancelButton.Font = Enum.Font.GothamBold
+  cancelButton.ZIndex = 11
+  cancelButton.Parent = confirmationFrame
+
+  local cancelBtnCorner = Instance.new("UICorner")
+  cancelBtnCorner.CornerRadius = UDim.new(0, 6)
+  cancelBtnCorner.Parent = cancelButton
+
+  -- Replenish button opens confirmation
+  replenishButton.MouseButton1Click:Connect(function()
+    if confirmationFrame then
+      confirmationFrame.Visible = true
+    end
+  end)
+
+  -- Confirm button triggers replenish
+  confirmButton.MouseButton1Click:Connect(function()
+    if confirmationFrame then
+      confirmationFrame.Visible = false
+    end
+    if onReplenishCallback then
+      onReplenishCallback()
+    end
+  end)
+
+  -- Cancel button closes confirmation
+  cancelButton.MouseButton1Click:Connect(function()
+    if confirmationFrame then
+      confirmationFrame.Visible = false
+    end
+  end)
 
   -- Populate with eggs by default
   populateItems()
@@ -577,6 +701,14 @@ end
 ]]
 function StoreUI.onChickenPurchase(callback: (chickenType: string, quantity: number) -> any)
   onChickenPurchaseCallback = callback
+end
+
+--[[
+	Sets the callback for when Robux replenish is attempted.
+	@param callback function - Function to call when replenish is confirmed
+]]
+function StoreUI.onReplenish(callback: () -> any)
+  onReplenishCallback = callback
 end
 
 --[[

@@ -75,6 +75,7 @@ local REMOTE_FUNCTIONS = {
   "GetStoreInventory",
   "EquipWeapon",
   "ActivateShield",
+  "ReplenishStoreWithRobux",
 }
 
 -- Type for the created remotes container

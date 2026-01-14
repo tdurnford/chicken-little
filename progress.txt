@@ -1766,3 +1766,38 @@
   - Tests are added to IntegrationTests.lua
 - Format check and build pass
 - Next: Medium priority items (#5 Robux replenish, #6 Robux purchase, #7 Power-ups, etc.)
+
+[2026-01-14] Completed Bugfix Work Item #5: Implement Robux Instant Store Replenish
+- Added MarketplaceService import to server Main.server.lua
+- Added Robux product configuration constants:
+  - STORE_REPLENISH_PRODUCT_ID (configurable, 0 for testing mode)
+  - STORE_REPLENISH_ROBUX_PRICE (50 Robux display price)
+  - pendingReplenishPurchases tracking table
+- Added ReplenishStoreWithRobux to RemoteSetup.lua REMOTE_FUNCTIONS list
+- Added ReplenishStoreWithRobux RemoteFunction handler in server Main:
+  - When product ID is 0 (not configured), performs free replenish for testing
+  - When configured, prompts player with MarketplaceService:PromptProductPurchase()
+  - Returns success/failure with product info
+- Added MarketplaceService.ProcessReceipt callback:
+  - Handles STORE_REPLENISH_PRODUCT_ID purchases
+  - Calls Store.forceReplenish() on purchase
+  - Fires StoreReplenished event to all clients
+  - Returns PurchaseGranted
+- Updated StoreUI.lua:
+  - Added replenishButton and confirmationFrame module-level variables
+  - Added ROBUX_REPLENISH_PRICE constant (50)
+  - Added onReplenishCallback for Robux replenish action
+  - Reduced scrollFrame height to make room for replenish button
+  - Added "Replenish Now - R$50" button with Robux blue color
+  - Added confirmation dialog with Confirm/Cancel buttons
+  - Added StoreUI.onReplenish() callback setter function
+- Wired client Main.client.lua:
+  - Added StoreUI.onReplenish callback to invoke ReplenishStoreWithRobux
+  - Plays purchase sound on success, error sound on failure
+- Acceptance criteria met:
+  - Players can purchase instant replenish with Robux (via MarketplaceService)
+  - Store inventory updates immediately after purchase (Store.forceReplenish)
+  - All players see the refreshed inventory (StoreReplenished event to all clients)
+  - Receipt is properly recorded (ProcessReceipt returns PurchaseGranted)
+- Format check and build pass
+- Next: #6 Robux Item Purchase, #7 Power-ups Store, #17-19 New Stores

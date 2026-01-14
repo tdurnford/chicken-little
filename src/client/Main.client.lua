@@ -1659,6 +1659,26 @@ StoreUI.onChickenPurchase(function(chickenType: string, quantity: number)
   end
 end)
 
+-- Wire up store Robux replenish callback
+StoreUI.onReplenish(function()
+  local replenishFunc = getFunction("ReplenishStoreWithRobux")
+  if not replenishFunc then
+    warn("[Client] ReplenishStoreWithRobux RemoteFunction not found")
+    return
+  end
+
+  local result = replenishFunc:InvokeServer()
+  if result then
+    if result.success then
+      SoundEffects.play("purchase")
+      print("[Client] Store replenish initiated:", result.message)
+    else
+      SoundEffects.play("uiError")
+      warn("[Client] Store replenish failed:", result.message)
+    end
+  end
+end)
+
 --[[
   Random Chicken Claim Input Handler
   Handles E key press to claim random chickens in the neutral zone.

@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local RunService = game:GetService("RunService")
+local MarketplaceService = game:GetService("MarketplaceService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 
@@ -51,6 +52,14 @@ local lastCleanupTime = 0
 -- Store Replenishment Configuration
 local lastStoreReplenishCheck = 0
 local STORE_REPLENISH_CHECK_INTERVAL = 10 -- Check every 10 seconds if replenish needed
+
+-- Robux Product Configuration
+-- Developer Product ID for instant store replenish (set this in Roblox Studio)
+local STORE_REPLENISH_PRODUCT_ID = 0 -- TODO: Replace with actual Developer Product ID from Roblox
+local STORE_REPLENISH_ROBUX_PRICE = 50 -- Display price in Robux
+
+-- Track pending replenish purchases
+local pendingReplenishPurchases: { [number]: boolean } = {}
 
 -- Per-player game state tracking
 type PlayerGameState = {
@@ -657,7 +666,86 @@ if claimRandomChickenFunc then
   end
 end
 
--- Initialize DataPersistence system (handles player data saving/loading)
+-- Setup ReplenishStoreWithRobux RemoteFunction handler
+-- Prompts the player to purchase the Robux product for instant store replenish
+local replenishStoreWithRobuxFunc = RemoteSetup.getFunction("ReplenishStoreWithRobux")
+if replenishStoreWithRobuxFunc then
+  replenishStoreWithRobuxFunc.OnServerInvoke = function(player: Player)
+    -- Check if product ID is configured
+    if STORE_REPLENISH_PRODUCT_ID == 0 then
+      -- For testing: perform free replenish when product ID not set
+      local newInventory = Store.forceReplenish()
+      print("[Main.server] Free store replenish (product ID not configured) for", player.Name)
+
+      -- Notify all connected players about replenish
+      local storeReplenishedEvent = RemoteSetup.getEvent("StoreReplenished")
+      if storeReplenishedEvent then
+        for _, p in ipairs(Players:GetPlayers()) do
+          storeReplenishedEvent:FireClient(p, newInventory)
+        end
+      end
+
+      return {
+        success = true,
+        message = "Store replenished! (Free - product not configured)",
+        productId = 0,
+        robuxPrice = 0,
+      }
+    end
+
+    -- Prompt player to purchase the developer product
+    local success, errorMessage = pcall(function()
+      MarketplaceService:PromptProductPurchase(player, STORE_REPLENISH_PRODUCT_ID)
+    end)
+
+    if success then
+      pendingReplenishPurchases[player.UserId] = true
+      return {
+        success = true,
+        message = "Purchase prompt opened",
+        productId = STORE_REPLENISH_PRODUCT_ID,
+        robuxPrice = STORE_REPLENISH_ROBUX_PRICE,
+      }
+    else
+      return {
+        success = false,
+        message = "Failed to open purchase prompt: " .. tostring(errorMessage),
+      }
+    end
+  end
+end
+
+-- ProcessReceipt callback for handling Robux purchases
+MarketplaceService.ProcessReceipt = function(receiptInfo: { [string]: any })
+  local userId = receiptInfo.PlayerId
+  local productId = receiptInfo.ProductId
+  local player = Players:GetPlayerByUserId(userId)
+
+  print("[Main.server] ProcessReceipt:", productId, "for user", userId)
+
+  -- Handle store replenish product
+  if productId == STORE_REPLENISH_PRODUCT_ID then
+    -- Perform store replenish
+    local newInventory = Store.forceReplenish()
+    print("[Main.server] Store replenished via Robux purchase for user", userId)
+
+    -- Clear pending purchase flag
+    pendingReplenishPurchases[userId] = nil
+
+    -- Notify all connected players about replenish
+    local storeReplenishedEvent = RemoteSetup.getEvent("StoreReplenished")
+    if storeReplenishedEvent then
+      for _, p in ipairs(Players:GetPlayers()) do
+        storeReplenishedEvent:FireClient(p, newInventory)
+      end
+    end
+
+    return Enum.ProductPurchaseDecision.PurchaseGranted
+  end
+
+  -- Unknown product - grant anyway to avoid issues
+  return Enum.ProductPurchaseDecision.PurchaseGranted
+end
 local dataPersistenceStarted = DataPersistence.start()
 if dataPersistenceStarted then
   print("[Main.server] DataPersistence initialized successfully")
