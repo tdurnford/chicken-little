@@ -53,7 +53,7 @@ local BUTTON_CONFIGS: { [ButtonType]: { text: string, icon: string?, color: Colo
   },
   cancel = {
     text = "Cancel",
-    icon = "✕",
+    icon = "X",
     color = Color3.fromRGB(180, 80, 80),
   },
   sell = {

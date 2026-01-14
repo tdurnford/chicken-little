@@ -743,7 +743,7 @@ local function createMainFrame(screenGui: ScreenGui, config: InventoryConfig): F
   closeButton.Size = UDim2.new(0, 28, 0, 28)
   closeButton.Position = UDim2.new(1, -32, 0, 4)
   closeButton.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
-  closeButton.Text = "✕"
+  closeButton.Text = "X"
   closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
   closeButton.TextSize = 14
   closeButton.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)

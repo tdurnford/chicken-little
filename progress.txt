@@ -3194,3 +3194,28 @@
   additional client-side rendering). The core placement flow is complete.
 - Format check passes, build passes
 - Next: Work on remaining items (Item #2 Close Button, Item #6 Predator AI)
+
+[2026-01-14] Completed UI Work Item #2: Fix Inventory Close Button Showing Box Instead of X
+- Root cause: The Unicode character '✕' (U+2715) is not supported by the GothamSSm font
+  used in Roblox UI, causing it to render as a box/square placeholder character.
+- Implementation approach:
+  1. Searched codebase for all occurrences of '✕' character
+  2. Found 5 occurrences across 3 files:
+     - src/client/InventoryUI.lua:746 (close button)
+     - src/client/TradeUI.lua:187 (remove button)
+     - src/client/TradeUI.lua:328 (cancel button)
+     - src/client/TradeUI.lua:481 (decline button)
+     - src/client/MobileTouchControls.lua:56 (cancel icon)
+  3. Replaced all '✕' with 'X' which renders reliably in GothamSSm font
+- Files changed:
+  * InventoryUI.lua - closeButton.Text = "X"
+  * TradeUI.lua - removeButton.Text = "X", cancelButton.Text = "X Cancel", 
+    declineButton.Text = "X Decline"
+  * MobileTouchControls.lua - cancel icon = "X"
+- Acceptance criteria met:
+  - Close button displays a clear X symbol, not a box ✓
+  - X symbol is readable and properly styled ✓
+  - Close button is consistent across all platforms (desktop, mobile) ✓
+  - Clicking the close button still closes the inventory ✓ (no behavioral change)
+- Format check passes, build passes
+- Note: Only remaining item is #6 (Predator AI Improvement) which is a larger enhancement

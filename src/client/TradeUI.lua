@@ -184,7 +184,7 @@ local function createTradeItemSlot(item: TradeItem, isLocal: boolean, layoutOrde
     removeButton.Size = UDim2.new(0, 28, 0, 28)
     removeButton.Position = UDim2.new(1, -34, 0.5, -14)
     removeButton.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
-    removeButton.Text = "✕"
+    removeButton.Text = "X"
     removeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     removeButton.TextSize = 14
     removeButton.FontFace =
@@ -325,7 +325,7 @@ local function createActionButtons(parent: Frame): (TextButton, TextButton)
   cancelButton.Size = UDim2.new(0.5, -4, 1, 0)
   cancelButton.Position = UDim2.new(0.5, 4, 0, 0)
   cancelButton.BackgroundColor3 = Color3.fromRGB(180, 80, 80)
-  cancelButton.Text = "✕ Cancel"
+  cancelButton.Text = "X Cancel"
   cancelButton.TextColor3 = Color3.fromRGB(255, 255, 255)
   cancelButton.TextSize = 14
   cancelButton.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
@@ -478,7 +478,7 @@ local function createRequestFrame(screenGui: ScreenGui): Frame
   declineButton.Size = UDim2.new(0.5, -12, 0, 32)
   declineButton.Position = UDim2.new(0.5, 4, 1, -40)
   declineButton.BackgroundColor3 = Color3.fromRGB(180, 80, 80)
-  declineButton.Text = "✕ Decline"
+  declineButton.Text = "X Decline"
   declineButton.TextColor3 = Color3.fromRGB(255, 255, 255)
   declineButton.TextSize = 13
   declineButton.FontFace =
