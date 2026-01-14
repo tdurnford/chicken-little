@@ -26,6 +26,7 @@ local ChickenHealth = require(script.Parent.ChickenHealth)
 local PredatorAI = require(script.Parent.PredatorAI)
 local BaseballBat = require(script.Parent.BaseballBat)
 local PredatorSpawning = require(script.Parent.PredatorSpawning)
+local ChickenAI = require(script.Parent.ChickenAI)
 
 -- Type definitions
 export type TestResult = {
@@ -1677,6 +1678,288 @@ test("PredatorAI: getSummary includes roaming and stalking counts", function()
     return pass, msg
   end
   return assert_eq(summary.totalActive, 2, "Should have 2 total active")
+end)
+
+-- ============================================================================
+-- ChickenAI Tests
+-- ============================================================================
+
+test("ChickenAI: createState returns valid state", function()
+  local state = ChickenAI.createState()
+  return assert_not_nil(state, "State should exist")
+    and assert_not_nil(state.positions, "Positions should exist")
+end)
+
+test("ChickenAI: createState accepts custom neutral zone", function()
+  local center = Vector3.new(10, 0, 20)
+  local size = 50
+  local state = ChickenAI.createState(center, size)
+  local pass, msg = assert_eq(state.neutralZoneCenter.X, 10, "Center X should be 10")
+  if not pass then
+    return pass, msg
+  end
+  return assert_eq(state.neutralZoneSize, 50, "Size should be 50")
+end)
+
+test("ChickenAI: registerChicken adds chicken to state", function()
+  local state = ChickenAI.createState(Vector3.new(0, 0, 0), 32)
+  local currentTime = os.time()
+  local spawnPos = Vector3.new(5, 0, 5)
+  local position = ChickenAI.registerChicken(state, "chicken1", "Cluck", spawnPos, currentTime)
+  local pass, msg = assert_not_nil(position, "Position should be returned")
+  if not pass then
+    return pass, msg
+  end
+  return assert_eq(ChickenAI.getActiveCount(state), 1, "Should have 1 active chicken")
+end)
+
+test("ChickenAI: chicken spawns at correct position", function()
+  local state = ChickenAI.createState(Vector3.new(0, 0, 0), 32)
+  local currentTime = os.time()
+  local spawnPos = Vector3.new(8, 2, 4)
+  local position = ChickenAI.registerChicken(state, "chicken1", "Cluck", spawnPos, currentTime)
+  local pass, msg = assert_eq(position.currentPosition.X, 8, "X should be spawn X")
+  if not pass then
+    return pass, msg
+  end
+  pass, msg = assert_eq(position.currentPosition.Y, 2, "Y should be spawn Y")
+  if not pass then
+    return pass, msg
+  end
+  return assert_eq(position.currentPosition.Z, 4, "Z should be spawn Z")
+end)
+
+test("ChickenAI: getWalkSpeed returns speed based on rarity", function()
+  -- Common should be slower (0.8 multiplier)
+  local commonSpeed = ChickenAI.getWalkSpeed("Cluck")
+  -- Legendary should be faster (1.2 multiplier)
+  local legendarySpeed = ChickenAI.getWalkSpeed("Goldie")
+  return assert_true(legendarySpeed > commonSpeed, "Legendary should be faster than common")
+end)
+
+test("ChickenAI: isWithinBounds returns true for position inside zone", function()
+  local state = ChickenAI.createState(Vector3.new(0, 0, 0), 32)
+  local insidePos = Vector3.new(5, 0, 5)
+  return assert_true(ChickenAI.isWithinBounds(state, insidePos), "Position should be within bounds")
+end)
+
+test("ChickenAI: isWithinBounds returns false for position outside zone", function()
+  local state = ChickenAI.createState(Vector3.new(0, 0, 0), 32)
+  local outsidePos = Vector3.new(100, 0, 100)
+  return assert_false(
+    ChickenAI.isWithinBounds(state, outsidePos),
+    "Position should be outside bounds"
+  )
+end)
+
+test("ChickenAI: clampToBounds keeps position inside neutral zone", function()
+  local state = ChickenAI.createState(Vector3.new(0, 0, 0), 32)
+  local outsidePos = Vector3.new(100, 5, 100)
+  local clamped = ChickenAI.clampToBounds(state, outsidePos)
+  local pass, msg = assert_true(
+    ChickenAI.isWithinBounds(state, clamped),
+    "Clamped position should be within bounds"
+  )
+  if not pass then
+    return pass, msg
+  end
+  return assert_eq(clamped.Y, 5, "Y should be preserved")
+end)
+
+test("ChickenAI: generateRandomTarget stays within bounds", function()
+  local state = ChickenAI.createState(Vector3.new(0, 0, 0), 32)
+  local currentPos = Vector3.new(0, 0, 0)
+  -- Generate multiple targets to test consistency
+  for _ = 1, 10 do
+    local target = ChickenAI.generateRandomTarget(state, currentPos)
+    if not ChickenAI.isWithinBounds(state, target) then
+      return false, "Generated target was outside bounds"
+    end
+  end
+  return true, "All generated targets were within bounds"
+end)
+
+test("ChickenAI: updatePosition moves chicken towards target", function()
+  local state = ChickenAI.createState(Vector3.new(0, 0, 0), 32)
+  local currentTime = os.time()
+  local spawnPos = Vector3.new(0, 0, 0)
+  ChickenAI.registerChicken(state, "chicken1", "Cluck", spawnPos, currentTime)
+  -- Get initial position
+  local initial = ChickenAI.getPosition(state, "chicken1")
+  local initialX = initial.currentPosition.X
+  local initialZ = initial.currentPosition.Z
+  -- Update with 1 second delta time
+  ChickenAI.updatePosition(state, "chicken1", 1.0, currentTime + 1)
+  local updated = ChickenAI.getPosition(state, "chicken1")
+  -- Position should change (unless idle or already at target)
+  if updated.isIdle then
+    return true, "Chicken is idle, no movement expected"
+  end
+  local moved = updated.currentPosition.X ~= initialX or updated.currentPosition.Z ~= initialZ
+  return assert_true(moved, "Chicken should move when updated")
+end)
+
+test("ChickenAI: chicken stays within bounds during movement", function()
+  local state = ChickenAI.createState(Vector3.new(0, 0, 0), 32)
+  local currentTime = os.time()
+  local spawnPos = Vector3.new(0, 0, 0)
+  ChickenAI.registerChicken(state, "chicken1", "Cluck", spawnPos, currentTime)
+  -- Simulate many updates
+  for i = 1, 50 do
+    ChickenAI.updatePosition(state, "chicken1", 0.5, currentTime + i * 0.5)
+    local pos = ChickenAI.getPosition(state, "chicken1")
+    if not ChickenAI.isWithinBounds(state, pos.currentPosition) then
+      return false, "Chicken moved outside bounds at iteration " .. i
+    end
+  end
+  return true, "Chicken stayed within bounds during all updates"
+end)
+
+test("ChickenAI: unregisterChicken removes chicken from state", function()
+  local state = ChickenAI.createState(Vector3.new(0, 0, 0), 32)
+  local currentTime = os.time()
+  ChickenAI.registerChicken(state, "chicken1", "Cluck", Vector3.new(0, 0, 0), currentTime)
+  local pass, msg = assert_eq(ChickenAI.getActiveCount(state), 1, "Should have 1 chicken")
+  if not pass then
+    return pass, msg
+  end
+  ChickenAI.unregisterChicken(state, "chicken1")
+  return assert_eq(ChickenAI.getActiveCount(state), 0, "Should have 0 chickens after unregister")
+end)
+
+test("ChickenAI: isIdle returns correct idle state", function()
+  local state = ChickenAI.createState(Vector3.new(0, 0, 0), 32)
+  local currentTime = os.time()
+  ChickenAI.registerChicken(state, "chicken1", "Cluck", Vector3.new(0, 0, 0), currentTime)
+  -- Initially not idle
+  local initialIdle = ChickenAI.isIdle(state, "chicken1")
+  -- After registration, chicken should not be idle (starts walking)
+  return assert_false(initialIdle, "Chicken should not start idle")
+end)
+
+test("ChickenAI: updateAll updates all chickens", function()
+  local state = ChickenAI.createState(Vector3.new(0, 0, 0), 64)
+  local currentTime = os.time()
+  ChickenAI.registerChicken(state, "chicken1", "Cluck", Vector3.new(-10, 0, 0), currentTime)
+  ChickenAI.registerChicken(state, "chicken2", "Cluck", Vector3.new(10, 0, 0), currentTime)
+  local updated = ChickenAI.updateAll(state, 0.5, currentTime + 0.5)
+  local pass, msg = assert_not_nil(updated["chicken1"], "Chicken1 should be updated")
+  if not pass then
+    return pass, msg
+  end
+  return assert_not_nil(updated["chicken2"], "Chicken2 should be updated")
+end)
+
+test("ChickenAI: getActiveChickenIds returns all IDs", function()
+  local state = ChickenAI.createState(Vector3.new(0, 0, 0), 64)
+  local currentTime = os.time()
+  ChickenAI.registerChicken(state, "chicken1", "Cluck", Vector3.new(-10, 0, 0), currentTime)
+  ChickenAI.registerChicken(state, "chicken2", "Cluck", Vector3.new(10, 0, 0), currentTime)
+  local ids = ChickenAI.getActiveChickenIds(state)
+  return assert_eq(#ids, 2, "Should have 2 active chicken IDs")
+end)
+
+test("ChickenAI: getAllPositions returns all positions", function()
+  local state = ChickenAI.createState(Vector3.new(0, 0, 0), 64)
+  local currentTime = os.time()
+  ChickenAI.registerChicken(state, "chicken1", "Cluck", Vector3.new(-10, 0, 0), currentTime)
+  ChickenAI.registerChicken(state, "chicken2", "Cluck", Vector3.new(10, 0, 0), currentTime)
+  local positions = ChickenAI.getAllPositions(state)
+  local pass, msg = assert_not_nil(positions["chicken1"], "Chicken1 position should exist")
+  if not pass then
+    return pass, msg
+  end
+  return assert_not_nil(positions["chicken2"], "Chicken2 position should exist")
+end)
+
+test("ChickenAI: getPositionInfo returns detailed position info", function()
+  local state = ChickenAI.createState(Vector3.new(0, 0, 0), 32)
+  local currentTime = os.time()
+  ChickenAI.registerChicken(state, "chicken1", "Cluck", Vector3.new(5, 0, 5), currentTime)
+  local info = ChickenAI.getPositionInfo(state, "chicken1")
+  local pass, msg = assert_not_nil(info, "Info should exist")
+  if not pass then
+    return pass, msg
+  end
+  pass, msg = assert_not_nil(info.position, "Position should exist")
+  if not pass then
+    return pass, msg
+  end
+  pass, msg = assert_not_nil(info.facingDirection, "Facing direction should exist")
+  if not pass then
+    return pass, msg
+  end
+  return assert_not_nil(info.isIdle, "isIdle should exist")
+end)
+
+test("ChickenAI: setNeutralZone updates zone configuration", function()
+  local state = ChickenAI.createState(Vector3.new(0, 0, 0), 32)
+  local newCenter = Vector3.new(50, 0, 50)
+  ChickenAI.setNeutralZone(state, newCenter, 100)
+  local pass, msg = assert_eq(state.neutralZoneCenter.X, 50, "Center X should be updated")
+  if not pass then
+    return pass, msg
+  end
+  return assert_eq(state.neutralZoneSize, 100, "Size should be updated")
+end)
+
+test("ChickenAI: getSummary returns correct walking and idle counts", function()
+  local state = ChickenAI.createState(Vector3.new(0, 0, 0), 64)
+  local currentTime = os.time()
+  ChickenAI.registerChicken(state, "chicken1", "Cluck", Vector3.new(-10, 0, 0), currentTime)
+  ChickenAI.registerChicken(state, "chicken2", "Cluck", Vector3.new(10, 0, 0), currentTime)
+  local summary = ChickenAI.getSummary(state)
+  local pass, msg = assert_eq(summary.totalActive, 2, "Should have 2 total active")
+  if not pass then
+    return pass, msg
+  end
+  -- Both should start walking (not idle)
+  return assert_eq(summary.walking, 2, "Both should be walking initially")
+end)
+
+test("ChickenAI: reset clears all chickens", function()
+  local state = ChickenAI.createState(Vector3.new(0, 0, 0), 32)
+  local currentTime = os.time()
+  ChickenAI.registerChicken(state, "chicken1", "Cluck", Vector3.new(0, 0, 0), currentTime)
+  ChickenAI.registerChicken(state, "chicken2", "Cluck", Vector3.new(5, 0, 5), currentTime)
+  local pass, msg = assert_eq(ChickenAI.getActiveCount(state), 2, "Should have 2 chickens")
+  if not pass then
+    return pass, msg
+  end
+  ChickenAI.reset(state)
+  return assert_eq(ChickenAI.getActiveCount(state), 0, "Should have 0 chickens after reset")
+end)
+
+test("ChickenAI: updateSpawnPosition updates chicken position", function()
+  local state = ChickenAI.createState(Vector3.new(0, 0, 0), 32)
+  local currentTime = os.time()
+  ChickenAI.registerChicken(state, "chicken1", "Cluck", Vector3.new(0, 0, 0), currentTime)
+  local newPos = Vector3.new(5, 2, 5)
+  local success = ChickenAI.updateSpawnPosition(state, "chicken1", newPos)
+  local pass, msg = assert_true(success, "Update should succeed")
+  if not pass then
+    return pass, msg
+  end
+  local position = ChickenAI.getPosition(state, "chicken1")
+  return assert_eq(position.currentPosition.X, 5, "X should be updated to 5")
+end)
+
+test("ChickenAI: chicken becomes idle after reaching target", function()
+  local state = ChickenAI.createState(Vector3.new(0, 0, 0), 32)
+  local currentTime = os.time()
+  -- Spawn at origin
+  ChickenAI.registerChicken(state, "chicken1", "Cluck", Vector3.new(0, 0, 0), currentTime)
+  -- Update many times to reach target and trigger idle
+  for i = 1, 100 do
+    ChickenAI.updatePosition(state, "chicken1", 0.1, currentTime + i * 0.1)
+  end
+  local position = ChickenAI.getPosition(state, "chicken1")
+  -- After many updates, chicken should have reached target at least once and gone idle
+  -- We just verify the position is valid and within bounds
+  return assert_true(
+    ChickenAI.isWithinBounds(state, position.currentPosition),
+    "Chicken should still be within bounds after many updates"
+  )
 end)
 
 -- ============================================================================

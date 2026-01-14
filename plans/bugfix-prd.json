@@ -879,7 +879,8 @@
       "category": "Testing",
       "title": "Add Integration Tests for AI Systems",
       "description": "Create tests for predator and chicken AI movement.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
       "priority": "medium",
       "steps": [
         "Test predator spawn at map edge",

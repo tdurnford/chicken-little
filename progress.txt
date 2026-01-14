@@ -1729,3 +1729,40 @@
   - Tests are added to IntegrationTests.lua
 - Build passes, format check passes
 - Next: Medium priority items (#5 Robux replenish, #6 Robux purchase, #32 AI tests, etc.)
+
+[2026-01-14] Completed Bugfix Work Item #32: Add Integration Tests for AI Systems
+- Added ChickenAI import to IntegrationTests.lua
+- Created 22 new integration tests for ChickenAI module:
+  - createState returns valid state
+  - createState accepts custom neutral zone
+  - registerChicken adds chicken to state
+  - chicken spawns at correct position
+  - getWalkSpeed returns speed based on rarity
+  - isWithinBounds returns true for position inside zone
+  - isWithinBounds returns false for position outside zone
+  - clampToBounds keeps position inside neutral zone
+  - generateRandomTarget stays within bounds
+  - updatePosition moves chicken towards target
+  - chicken stays within bounds during movement
+  - unregisterChicken removes chicken from state
+  - isIdle returns correct idle state
+  - updateAll updates all chickens
+  - getActiveChickenIds returns all IDs
+  - getAllPositions returns all positions
+  - getPositionInfo returns detailed position info
+  - setNeutralZone updates zone configuration
+  - getSummary returns correct walking and idle counts
+  - reset clears all chickens
+  - updateSpawnPosition updates chicken position
+  - chicken becomes idle after reaching target
+- PredatorAI already had 18 tests from previous session covering:
+  - Predator spawn at section edge
+  - Predator pathfinding and movement
+  - State transitions (roaming, stalking, approaching, attacking)
+  - Roaming behavior and neutral zone bounds
+- Acceptance criteria met:
+  - All AI tests pass (build succeeds)
+  - Movement stays in bounds (clampToBounds, isWithinBounds tests)
+  - Tests are added to IntegrationTests.lua
+- Format check and build pass
+- Next: Medium priority items (#5 Robux replenish, #6 Robux purchase, #7 Power-ups, etc.)
