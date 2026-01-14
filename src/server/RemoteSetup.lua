@@ -81,6 +81,7 @@ local REMOTE_FUNCTIONS = {
   "ActivateShield",
   "ReplenishStoreWithRobux",
   "BuyItemWithRobux",
+  "GetGlobalChickenCounts",
 }
 
 -- Type for the created remotes container

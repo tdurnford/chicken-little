@@ -163,6 +163,14 @@ if getPlayerDataFunc then
   end
 end
 
+-- Setup GetGlobalChickenCounts RemoteFunction handler
+local getGlobalChickenCountsFunc = RemoteSetup.getFunction("GetGlobalChickenCounts")
+if getGlobalChickenCountsFunc then
+  getGlobalChickenCountsFunc.OnServerInvoke = function(_player: Player)
+    return DataPersistence.getGlobalChickenCounts()
+  end
+end
+
 --[[
   Store Server Handlers
   Handles BuyEgg, SellChicken, SellEgg, and SellPredator RemoteFunctions.

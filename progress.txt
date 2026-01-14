@@ -2522,3 +2522,31 @@
   - Layout is cleaner and more intuitive ✓
 - Format check and build pass
 - Next: Other medium priority items (#7, #17, #18, #19, #48, #49)
+
+[2026-01-14] Completed Bugfix Work Item #48: Show Chicken Rarity and Global Count in Inventory
+- Root cause: Players couldn't see chicken rarity or how many of each type exist globally,
+  making it hard to understand the value and rarity of their chickens.
+- Implementation approach:
+  1. Added GetGlobalChickenCounts RemoteFunction to RemoteSetup.lua
+  2. Implemented DataPersistence.getGlobalChickenCounts() to aggregate counts from all players
+     - Counts both placed chickens and inventory chickens across all cached player data
+     - Returns a table mapping chickenType to total count
+  3. Added server handler in Main.server.lua for GetGlobalChickenCounts
+  4. Updated InventoryUI.lua with client-side changes:
+     - Added cachedGlobalChickenCounts cache and fetchGlobalChickenCounts() helper
+     - Modified createItemSlot() layout for chickens:
+       * Icon (32% height)
+       * Name label (20% height)
+       * Rarity label with color coding (14% height)
+       * $/s rate label (16% height)
+       * Global count label "X exist" (16% height)
+     - Rarity label uses RARITY_COLORS for color coding
+     - Global counts fetched when switching to chickens tab
+     - setTab() now refreshes display to update counts
+- Color coding: Common=gray, Uncommon=green, Rare=blue, Epic=purple, Legendary=gold, Mythic=pink
+- Acceptance criteria met:
+  - Inventory shows rarity with color (color-coded rarity labels) ✓
+  - Shows global count of that chicken type across all players ✓
+  - Counts are reasonably accurate (from cached player data) ✓
+- Format check and build pass
+- Next: Other medium priority items (#7, #17, #18, #19, #49)

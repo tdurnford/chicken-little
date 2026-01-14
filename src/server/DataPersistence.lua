@@ -478,4 +478,30 @@ function DataPersistence.isAutoSaveRunning(): boolean
   return autoSaveConnection ~= nil
 end
 
+-- Get global chicken counts across all players (placed + inventory)
+-- Returns a table mapping chickenType to total count
+function DataPersistence.getGlobalChickenCounts(): { [string]: number }
+  local counts: { [string]: number } = {}
+
+  for _, playerData in pairs(playerDataCache) do
+    -- Count placed chickens
+    if playerData.placedChickens then
+      for _, chicken in ipairs(playerData.placedChickens) do
+        local chickenType = chicken.chickenType
+        counts[chickenType] = (counts[chickenType] or 0) + 1
+      end
+    end
+
+    -- Count inventory chickens
+    if playerData.inventory and playerData.inventory.chickens then
+      for _, chicken in ipairs(playerData.inventory.chickens) do
+        local chickenType = chicken.chickenType
+        counts[chickenType] = (counts[chickenType] or 0) + 1
+      end
+    end
+  end
+
+  return counts
+end
+
 return DataPersistence

@@ -102,7 +102,31 @@ local onVisibilityChanged: ((boolean) -> ())? = nil
 -- Cached player data for refreshing inventory when opened
 local cachedPlayerData: any = nil
 
+-- Cached global chicken counts (chickenType -> count)
+local cachedGlobalChickenCounts: { [string]: number } = {}
+
 local currentConfig: InventoryConfig = DEFAULT_CONFIG
+
+-- Fetch global chicken counts from server
+local function fetchGlobalChickenCounts()
+  local Remotes = ReplicatedStorage:FindFirstChild("Remotes")
+  if not Remotes then
+    return
+  end
+
+  local getGlobalCountsFunc = Remotes:FindFirstChild("GetGlobalChickenCounts")
+  if not getGlobalCountsFunc or not getGlobalCountsFunc:IsA("RemoteFunction") then
+    return
+  end
+
+  local success, result = pcall(function()
+    return getGlobalCountsFunc:InvokeServer()
+  end)
+
+  if success and result then
+    cachedGlobalChickenCounts = result
+  end
+end
 
 -- Create a tab button
 local function createTabButton(
@@ -263,34 +287,36 @@ local function createItemSlot(
   stroke.Parent = slotFrame
 
   -- Icon/Image placeholder (centered emoji for now)
-  -- Adjust layout: chickens need more vertical space for rate label
+  -- Adjust layout: chickens need more vertical space for additional labels
   local icon = Instance.new("TextLabel")
   icon.Name = "Icon"
-  icon.Size = UDim2.new(1, 0, 0.45, 0)
-  icon.Position = UDim2.new(0, 0, 0, 2)
+  icon.Size = UDim2.new(1, 0, 0.32, 0)
+  icon.Position = UDim2.new(0, 0, 0, 0)
   icon.BackgroundTransparency = 1
   icon.Text = itemType == "egg" and "🥚" or "🐔"
-  icon.TextSize = 24
+  icon.TextSize = 20
   icon.TextColor3 = rarityColor
   icon.Parent = slotFrame
 
   -- Get display name and config from config
   local displayName = ""
   local moneyPerSecond: number? = nil
+  local chickenType: string? = nil
   if itemType == "egg" then
     local config = EggConfig.get(itemData.eggType)
     displayName = config and config.displayName or itemData.eggType
   else
-    local config = ChickenConfig.get(itemData.chickenType)
-    displayName = config and config.displayName or itemData.chickenType
+    chickenType = itemData.chickenType
+    local config = ChickenConfig.get(chickenType)
+    displayName = config and config.displayName or chickenType
     moneyPerSecond = config and config.moneyPerSecond or nil
   end
 
   -- Item name label
   local nameLabel = Instance.new("TextLabel")
   nameLabel.Name = "NameLabel"
-  nameLabel.Size = UDim2.new(1, -4, 0.28, 0)
-  nameLabel.Position = UDim2.new(0, 2, 0.45, 0)
+  nameLabel.Size = UDim2.new(1, -4, 0.20, 0)
+  nameLabel.Position = UDim2.new(0, 2, 0.32, 0)
   nameLabel.BackgroundTransparency = 1
   nameLabel.TextScaled = true
   nameLabel.TextWrapped = true
@@ -299,18 +325,49 @@ local function createItemSlot(
   nameLabel.Text = displayName
   nameLabel.Parent = slotFrame
 
+  -- Rarity label for chickens (color-coded)
+  if itemType == "chicken" then
+    local rarityLabel = Instance.new("TextLabel")
+    rarityLabel.Name = "RarityLabel"
+    rarityLabel.Size = UDim2.new(1, -4, 0.14, 0)
+    rarityLabel.Position = UDim2.new(0, 2, 0.52, 0)
+    rarityLabel.BackgroundTransparency = 1
+    rarityLabel.Text = rarity
+    rarityLabel.TextColor3 = rarityColor
+    rarityLabel.TextSize = 9
+    rarityLabel.FontFace =
+      Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
+    rarityLabel.Parent = slotFrame
+  end
+
   -- Money rate label for chickens ($/s)
   if itemType == "chicken" and moneyPerSecond then
     local rateLabel = Instance.new("TextLabel")
     rateLabel.Name = "RateLabel"
-    rateLabel.Size = UDim2.new(1, -4, 0.22, 0)
-    rateLabel.Position = UDim2.new(0, 2, 0.73, 0)
+    rateLabel.Size = UDim2.new(1, -4, 0.16, 0)
+    rateLabel.Position = UDim2.new(0, 2, 0.66, 0)
     rateLabel.BackgroundTransparency = 1
     rateLabel.Text = formatMoneyRate(moneyPerSecond)
     rateLabel.TextColor3 = Color3.fromRGB(255, 220, 100) -- Gold color matching placed chickens
-    rateLabel.TextSize = 10
+    rateLabel.TextSize = 9
     rateLabel.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
     rateLabel.Parent = slotFrame
+  end
+
+  -- Global count label for chickens
+  if itemType == "chicken" and chickenType then
+    local globalCount = cachedGlobalChickenCounts[chickenType] or 0
+    local globalLabel = Instance.new("TextLabel")
+    globalLabel.Name = "GlobalLabel"
+    globalLabel.Size = UDim2.new(1, -4, 0.16, 0)
+    globalLabel.Position = UDim2.new(0, 2, 0.82, 0)
+    globalLabel.BackgroundTransparency = 1
+    globalLabel.Text = tostring(globalCount) .. " exist"
+    globalLabel.TextColor3 = Color3.fromRGB(150, 150, 180)
+    globalLabel.TextSize = 8
+    globalLabel.FontFace =
+      Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular)
+    globalLabel.Parent = slotFrame
   end
 
   -- Click detection
@@ -586,6 +643,10 @@ function InventoryUI.setTab(tab: "eggs" | "chickens")
   state.selectedItem = nil
   updateTabAppearance()
   updateActionButtons()
+  -- Refresh inventory display to update global counts when switching to chickens tab
+  if cachedPlayerData then
+    InventoryUI.updateFromPlayerData(cachedPlayerData)
+  end
 end
 
 -- Update inventory from player data
@@ -595,6 +656,11 @@ function InventoryUI.updateFromPlayerData(playerData: any)
 
   if not state.contentFrame then
     return
+  end
+
+  -- Fetch global chicken counts when on chickens tab
+  if state.currentTab == "chickens" then
+    fetchGlobalChickenCounts()
   end
 
   -- Clear existing slots and empty labels

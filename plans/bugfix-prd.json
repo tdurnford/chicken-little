@@ -1240,7 +1240,8 @@
       "category": "Inventory-UI",
       "title": "Show Chicken Rarity and Global Count in Inventory",
       "description": "Inventory should show chicken rarity and how many of that chicken type exist globally in the game.",
-      "completed": false,
+      "completed": true,
+      "status": "completed",
       "priority": "medium",
       "steps": [
         "Add rarity display with color coding to inventory items",
