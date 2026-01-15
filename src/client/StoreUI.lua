@@ -1502,21 +1502,46 @@ function StoreUI.create()
   titleLabel.TextStrokeTransparency = 0 -- Fully visible stroke
   titleLabel.Parent = titleBar
 
-  -- Close button
+  -- Close button (red wooden square with white painted X)
   local closeButton = Instance.new("TextButton")
   closeButton.Name = "CloseButton"
   closeButton.Size = UDim2.new(0, 35, 0, 35)
   closeButton.Position = UDim2.new(1, -40, 0, 5)
-  closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+  closeButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50) -- Red wood color
   closeButton.Text = "X"
   closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
   closeButton.TextScaled = true
-  closeButton.Font = Enum.Font.GothamBold
+  closeButton.Font = Enum.Font.FredokaOne -- Cartoony font for X
+  closeButton.TextStrokeColor3 = Color3.fromRGB(80, 20, 20) -- Dark red stroke
+  closeButton.TextStrokeTransparency = 0 -- Fully visible stroke
   closeButton.Parent = titleBar
 
   local closeCorner = Instance.new("UICorner")
-  closeCorner.CornerRadius = UDim.new(0, 6)
+  closeCorner.CornerRadius = UDim.new(0, 6) -- Slight rounding for wooden look
   closeCorner.Parent = closeButton
+
+  -- UIStroke for depth (darker red border)
+  local closeStroke = Instance.new("UIStroke")
+  closeStroke.Color = Color3.fromRGB(120, 30, 30) -- Darker red for depth
+  closeStroke.Thickness = 2
+  closeStroke.Parent = closeButton
+
+  -- Store original colors for hover effect
+  local closeDefaultBg = Color3.fromRGB(180, 50, 50)
+  local closeHoverBg = Color3.fromRGB(220, 70, 70) -- Brighter red on hover
+  local closeDefaultStroke = Color3.fromRGB(120, 30, 30)
+  local closeHoverStroke = Color3.fromRGB(160, 50, 50)
+
+  -- Hover effect: slightly brighter red on MouseEnter
+  closeButton.MouseEnter:Connect(function()
+    closeButton.BackgroundColor3 = closeHoverBg
+    closeStroke.Color = closeHoverStroke
+  end)
+
+  closeButton.MouseLeave:Connect(function()
+    closeButton.BackgroundColor3 = closeDefaultBg
+    closeStroke.Color = closeDefaultStroke
+  end)
 
   closeButton.MouseButton1Click:Connect(function()
     StoreUI.close()

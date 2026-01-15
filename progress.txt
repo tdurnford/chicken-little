@@ -3536,3 +3536,22 @@
 - Format check passes, build passes
 - Next: Work on remaining medium priority items (Item #3 Close Button, Item #8 Typography, Item #9 Subtext, Item #11 Replenish Button, Item #12 Scroll Padding)
 
+
+[2026-01-15] Completed Store Redesign Work Item #3: Redesign Close Button as Wooden 'X'
+- Transformed close button into a red wooden square with white painted 'X'
+- Changes applied in src/client/StoreUI.lua lines 1505-1545:
+  1. Changed BackgroundColor3 to RGB(180, 50, 50) for red wood color
+  2. Font changed to Enum.Font.FredokaOne for cartoony appearance
+  3. Added TextStrokeColor3 RGB(80, 20, 20) with TextStrokeTransparency 0 for visible stroke
+  4. UICorner kept at 6px radius for slight wooden rounding
+  5. Added UIStroke with RGB(120, 30, 30) color, thickness 2 for depth/border effect
+  6. Implemented hover effect via MouseEnter/MouseLeave:
+     - Default: RGB(180, 50, 50) background, RGB(120, 30, 30) stroke
+     - Hover: RGB(220, 70, 70) background, RGB(160, 50, 50) stroke (brighter red)
+- Acceptance criteria met:
+  - Close button appears as red wooden square ✓
+  - White X is clearly visible with dark red stroke ✓
+  - Button has subtle depth from UIStroke border ✓
+  - Hover state provides visual feedback (brightness change) ✓
+- Format check passes, build passes
+- Next: Work on remaining medium priority items (Item #8 Typography, Item #9 Subtext, Item #11 Replenish Button, Item #12 Scroll Padding)
