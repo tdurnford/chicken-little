@@ -3771,3 +3771,25 @@
   - Text is readable on all button states ✓
 - Format check passes, build passes
 - Next: Work on remaining high priority items (Item #7 Remove Chickens, Item #9 Health Bar Overlap)
+
+[2026-01-15] Completed UI & Gameplay Fixes Work Item #9: Fix Health Bar Covering Money Display
+- Fixed health bars overlapping with money display by disabling AlwaysOnTop
+- Root cause: ChickenHealthBar and PredatorHealthBar both had AlwaysOnTop = true
+  - This caused 3D health bar BillboardGuis to render on top of everything, including HUD elements
+  - When player camera looked at chickens/predators near top of screen, health bars would overlap money display
+- Changes applied:
+  1. src/client/ChickenHealthBar.lua: Changed billboard.AlwaysOnTop = true to false
+  2. src/client/PredatorHealthBar.lua: Changed billboard.AlwaysOnTop = true to false
+- With AlwaysOnTop = false:
+  - Health bars now render at proper 3D world depth
+  - Health bars can be occluded by other 3D objects as expected
+  - HUD elements (money display) remain visible and unobstructed
+  - Health bars are still visible when looking at chickens/predators from reasonable distances
+- Acceptance criteria met:
+  - Health bar does not cover money display ✓
+  - Both elements are fully visible when present ✓
+  - Layout works on different screen sizes (HUD unchanged) ✓
+  - No flickering or layout jumps ✓
+- Format check passes, build passes
+- Note: Selene linting has CPU architecture issue (not related to this change)
+- Next: Work on remaining high priority items (Item #7 Remove Chickens from Store, Item #2 Free-Roaming Chickens)

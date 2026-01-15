@@ -68,7 +68,7 @@ local function createHealthBarBillboard(parent: BasePart, state: HealthBarState)
   billboard.Name = "PredatorHealthBar"
   billboard.Size = UDim2.new(0, HEALTH_BAR_WIDTH, 0, HEALTH_BAR_HEIGHT)
   billboard.StudsOffset = Vector3.new(0, 3, 0)
-  billboard.AlwaysOnTop = true
+  billboard.AlwaysOnTop = false
   billboard.Adornee = parent
   billboard.Parent = parent
 
