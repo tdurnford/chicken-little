@@ -3555,3 +3555,22 @@
   - Hover state provides visual feedback (brightness change) ✓
 - Format check passes, build passes
 - Next: Work on remaining medium priority items (Item #8 Typography, Item #9 Subtext, Item #11 Replenish Button, Item #12 Scroll Padding)
+
+[2026-01-15] Completed Store Redesign Work Item #8: Update Typography to Cartoony Fonts
+- Updated all item name labels to use FredokaOne font for cartoony chunky appearance
+- Changes applied in src/client/StoreUI.lua:
+  1. createItemCard (egg cards): nameLabel.Font changed to Enum.Font.FredokaOne
+  2. createPowerUpCard: nameLabel.Font changed to Enum.Font.FredokaOne
+  3. createSupplyCard (trap cards): nameLabel.Font changed to Enum.Font.FredokaOne
+  4. createWeaponCard: nameLabel.Font changed to Enum.Font.FredokaOne
+  5. All item name TextStrokeTransparency changed from 0.3 to 0 for bolder pop effect
+  6. Body text fonts updated to Enum.Font.GothamMedium for improved readability:
+     - rarityLabel, stockLabel, tierLabel, descLabel across all card types
+  7. Header/title fonts already using FredokaOne (unchanged from previous work)
+- Acceptance criteria met:
+  - Item names use chunky, cartoony font (FredokaOne) ✓
+  - Item names have visible text stroke outline (transparency 0) ✓
+  - Body text remains readable with GothamMedium font ✓
+  - Overall typography feels playful and cohesive ✓
+- Format check passes, build passes
+- Next: Work on remaining medium priority items (Item #9 Subtext, Item #11 Replenish Button, Item #12 Scroll Padding)

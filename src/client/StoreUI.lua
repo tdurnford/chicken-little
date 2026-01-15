@@ -215,10 +215,10 @@ local function createItemCard(
   nameLabel.Text = displayName
   nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- White for visibility
   nameLabel.TextScaled = true
-  nameLabel.Font = Enum.Font.GothamBold
+  nameLabel.Font = Enum.Font.FredokaOne -- Cartoony chunky font
   nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-  nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0) -- Dark stroke
-  nameLabel.TextStrokeTransparency = 0.3
+  nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0) -- Dark stroke for pop effect
+  nameLabel.TextStrokeTransparency = 0
   nameLabel.Parent = card
 
   -- Rarity label (dark text for readability on gradients)
@@ -230,7 +230,7 @@ local function createItemCard(
   rarityLabel.Text = rarity
   rarityLabel.TextColor3 = Color3.fromRGB(50, 50, 50) -- Dark grey for readability
   rarityLabel.TextScaled = true
-  rarityLabel.Font = Enum.Font.Gotham
+  rarityLabel.Font = Enum.Font.GothamMedium -- Standard body font
   rarityLabel.TextXAlignment = Enum.TextXAlignment.Left
   rarityLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
   rarityLabel.TextStrokeTransparency = 0.7
@@ -245,7 +245,7 @@ local function createItemCard(
   stockLabel.Text = stock > 0 and ("x" .. tostring(stock)) or "SOLD OUT"
   stockLabel.TextColor3 = stock > 0 and Color3.fromRGB(50, 50, 50) or Color3.fromRGB(180, 30, 30)
   stockLabel.TextScaled = true
-  stockLabel.Font = Enum.Font.Gotham
+  stockLabel.Font = Enum.Font.GothamMedium -- Standard body font
   stockLabel.TextXAlignment = Enum.TextXAlignment.Left
   stockLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
   stockLabel.TextStrokeTransparency = stock > 0 and 0.7 or 0.5
@@ -557,10 +557,10 @@ local function createPowerUpCard(
   nameLabel.Text = config.displayName
   nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
   nameLabel.TextScaled = true
-  nameLabel.Font = Enum.Font.GothamBold
+  nameLabel.Font = Enum.Font.FredokaOne -- Cartoony chunky font
   nameLabel.TextXAlignment = Enum.TextXAlignment.Left
   nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-  nameLabel.TextStrokeTransparency = 0.3
+  nameLabel.TextStrokeTransparency = 0
   nameLabel.Parent = card
 
   -- Description
@@ -572,7 +572,7 @@ local function createPowerUpCard(
   descLabel.Text = config.description
   descLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
   descLabel.TextScaled = true
-  descLabel.Font = Enum.Font.Gotham
+  descLabel.Font = Enum.Font.GothamMedium -- Standard body font
   descLabel.TextXAlignment = Enum.TextXAlignment.Left
   descLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
   descLabel.TextStrokeTransparency = 0.7
@@ -777,10 +777,10 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   nameLabel.Text = supplyItem.displayName
   nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
   nameLabel.TextScaled = true
-  nameLabel.Font = Enum.Font.GothamBold
+  nameLabel.Font = Enum.Font.FredokaOne -- Cartoony chunky font
   nameLabel.TextXAlignment = Enum.TextXAlignment.Left
   nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-  nameLabel.TextStrokeTransparency = 0.3
+  nameLabel.TextStrokeTransparency = 0
   nameLabel.Parent = card
 
   -- Tier label (dark for readability)
@@ -792,7 +792,7 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   tierLabel.Text = supplyItem.tier
   tierLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
   tierLabel.TextScaled = true
-  tierLabel.Font = Enum.Font.Gotham
+  tierLabel.Font = Enum.Font.GothamMedium -- Standard body font
   tierLabel.TextXAlignment = Enum.TextXAlignment.Left
   tierLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
   tierLabel.TextStrokeTransparency = 0.7
@@ -807,7 +807,7 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   descLabel.Text = supplyItem.description
   descLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
   descLabel.TextScaled = true
-  descLabel.Font = Enum.Font.Gotham
+  descLabel.Font = Enum.Font.GothamMedium -- Standard body font
   descLabel.TextXAlignment = Enum.TextXAlignment.Left
   descLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
   descLabel.TextStrokeTransparency = 0.7
@@ -1074,10 +1074,10 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
   nameLabel.Text = weaponItem.displayName
   nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
   nameLabel.TextScaled = true
-  nameLabel.Font = Enum.Font.GothamBold
+  nameLabel.Font = Enum.Font.FredokaOne -- Cartoony chunky font
   nameLabel.TextXAlignment = Enum.TextXAlignment.Left
   nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-  nameLabel.TextStrokeTransparency = 0.3
+  nameLabel.TextStrokeTransparency = 0
   nameLabel.Parent = card
 
   -- Tier and damage label (dark for readability)
@@ -1089,7 +1089,7 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
   tierLabel.Text = weaponItem.tier .. " • " .. weaponItem.damage .. " DMG"
   tierLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
   tierLabel.TextScaled = true
-  tierLabel.Font = Enum.Font.Gotham
+  tierLabel.Font = Enum.Font.GothamMedium -- Standard body font
   tierLabel.TextXAlignment = Enum.TextXAlignment.Left
   tierLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
   tierLabel.TextStrokeTransparency = 0.7
