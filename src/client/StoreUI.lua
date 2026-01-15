@@ -237,62 +237,157 @@ local function createItemCard(
   stockLabel.TextStrokeTransparency = stock > 0 and 0.7 or 0.5
   stockLabel.Parent = card
 
-  -- Buy button (with in-game money) - shows price directly on button
+  -- Buy button (with in-game money) - stacked vertically on right
   local isSoldOut = stock <= 0
   local buyButton = Instance.new("TextButton")
   buyButton.Name = "BuyButton"
-  buyButton.Size = UDim2.new(0, 80, 0, 30)
-  buyButton.Position = UDim2.new(1, -165, 0.5, -15)
+  buyButton.Size = UDim2.new(0, 85, 0, 38)
+  buyButton.Position = UDim2.new(1, -95, 0, 8) -- Top right, stacked vertically
   buyButton.BackgroundColor3 = isSoldOut and Color3.fromRGB(80, 80, 80)
     or Color3.fromRGB(50, 180, 50)
-  buyButton.Text = isSoldOut and "SOLD OUT" or ("$" .. tostring(price))
+  buyButton.Text = "" -- Text handled by child labels
   buyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
   buyButton.TextTransparency = isSoldOut and 0.5 or 0
   buyButton.TextScaled = true
   buyButton.Font = Enum.Font.GothamBold
+  buyButton.ZIndex = 2
   buyButton.Parent = card
 
   local buyButtonCorner = Instance.new("UICorner")
-  buyButtonCorner.CornerRadius = UDim.new(0, 6)
+  buyButtonCorner.CornerRadius = UDim.new(0, 8)
   buyButtonCorner.Parent = buyButton
 
-  -- Robux buy button (always available for Robux purchase)
+  -- Cash button icon and price label
+  local cashIcon = Instance.new("TextLabel")
+  cashIcon.Name = "CashIcon"
+  cashIcon.Size = UDim2.new(0, 24, 1, 0)
+  cashIcon.Position = UDim2.new(0, 4, 0, 0)
+  cashIcon.BackgroundTransparency = 1
+  cashIcon.Text = "💵"
+  cashIcon.TextSize = 18
+  cashIcon.ZIndex = 3
+  cashIcon.Parent = buyButton
+
+  local cashPriceLabel = Instance.new("TextLabel")
+  cashPriceLabel.Name = "CashPriceLabel"
+  cashPriceLabel.Size = UDim2.new(1, -32, 1, 0)
+  cashPriceLabel.Position = UDim2.new(0, 28, 0, 0)
+  cashPriceLabel.BackgroundTransparency = 1
+  cashPriceLabel.Text = isSoldOut and "SOLD" or ("$" .. tostring(price))
+  cashPriceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+  cashPriceLabel.TextScaled = true
+  cashPriceLabel.Font = Enum.Font.GothamBold
+  cashPriceLabel.TextXAlignment = Enum.TextXAlignment.Left
+  cashPriceLabel.ZIndex = 3
+  cashPriceLabel.Parent = buyButton
+
+  -- Shine effect for cash button
+  local cashShine = Instance.new("UIGradient")
+  cashShine.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200)),
+  })
+  cashShine.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.7),
+    NumberSequenceKeypoint.new(0.3, 0.9),
+    NumberSequenceKeypoint.new(1, 0.85),
+  })
+  cashShine.Rotation = 45
+  cashShine.Parent = buyButton
+
+  -- Hover effect for cash button
+  local cashOriginalColor = buyButton.BackgroundColor3
+  buyButton.MouseEnter:Connect(function()
+    if not isSoldOut then
+      buyButton.BackgroundColor3 = Color3.fromRGB(70, 220, 70) -- Brighter green
+    end
+  end)
+  buyButton.MouseLeave:Connect(function()
+    -- Restore based on current affordability state
+    local canAfford = cachedPlayerMoney >= (card:GetAttribute("Price") or price)
+    local soldOut = (card:GetAttribute("Stock") or stock) <= 0
+    if soldOut then
+      buyButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    elseif canAfford then
+      buyButton.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
+    else
+      buyButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    end
+  end)
+
+  -- Robux buy button (stacked below cash button)
   local robuxButton = Instance.new("TextButton")
   robuxButton.Name = "RobuxButton"
-  robuxButton.Size = UDim2.new(0, 80, 0, 30)
-  robuxButton.Position = UDim2.new(1, -80, 0.5, -15)
-  robuxButton.BackgroundColor3 = Color3.fromRGB(0, 162, 255) -- Robux blue
+  robuxButton.Size = UDim2.new(0, 85, 0, 38)
+  robuxButton.Position = UDim2.new(1, -95, 0, 52) -- Below cash button
+  robuxButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215) -- Premium blue
   robuxButton.Text = "" -- Text handled by child labels
   robuxButton.TextColor3 = Color3.fromRGB(255, 255, 255)
   robuxButton.TextScaled = true
   robuxButton.Font = Enum.Font.GothamBold
+  robuxButton.ZIndex = 2
   robuxButton.Parent = card
 
   local robuxButtonCorner = Instance.new("UICorner")
-  robuxButtonCorner.CornerRadius = UDim.new(0, 6)
+  robuxButtonCorner.CornerRadius = UDim.new(0, 8)
   robuxButtonCorner.Parent = robuxButton
 
-  -- Robux icon (using Roblox's official Robux icon)
-  local robuxIcon = Instance.new("ImageLabel")
-  robuxIcon.Name = "RobuxIcon"
-  robuxIcon.Size = UDim2.new(0, 16, 0, 16)
-  robuxIcon.Position = UDim2.new(0, 8, 0.5, -8)
-  robuxIcon.BackgroundTransparency = 1
-  robuxIcon.Image = "rbxassetid://4915439044" -- Robux icon asset
-  robuxIcon.Parent = robuxButton
+  -- UIStroke for premium button 'juicy' look
+  local robuxStroke = Instance.new("UIStroke")
+  robuxStroke.Color = Color3.fromRGB(100, 200, 255) -- Light blue glow
+  robuxStroke.Thickness = 2
+  robuxStroke.Parent = robuxButton
+
+  -- Gem icon for premium button
+  local gemIcon = Instance.new("TextLabel")
+  gemIcon.Name = "GemIcon"
+  gemIcon.Size = UDim2.new(0, 24, 1, 0)
+  gemIcon.Position = UDim2.new(0, 4, 0, 0)
+  gemIcon.BackgroundTransparency = 1
+  gemIcon.Text = "💎"
+  gemIcon.TextSize = 18
+  gemIcon.ZIndex = 3
+  gemIcon.Parent = robuxButton
 
   -- Robux price text
   local robuxPriceLabel = Instance.new("TextLabel")
   robuxPriceLabel.Name = "RobuxPriceLabel"
-  robuxPriceLabel.Size = UDim2.new(1, -28, 1, 0)
-  robuxPriceLabel.Position = UDim2.new(0, 26, 0, 0)
+  robuxPriceLabel.Size = UDim2.new(1, -32, 1, 0)
+  robuxPriceLabel.Position = UDim2.new(0, 28, 0, 0)
   robuxPriceLabel.BackgroundTransparency = 1
   robuxPriceLabel.Text = tostring(robuxPrice)
   robuxPriceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
   robuxPriceLabel.TextScaled = true
   robuxPriceLabel.Font = Enum.Font.GothamBold
   robuxPriceLabel.TextXAlignment = Enum.TextXAlignment.Left
+  robuxPriceLabel.ZIndex = 3
   robuxPriceLabel.Parent = robuxButton
+
+  -- Shine effect for premium button
+  local premiumShine = Instance.new("UIGradient")
+  premiumShine.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200)),
+  })
+  premiumShine.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.7),
+    NumberSequenceKeypoint.new(0.3, 0.9),
+    NumberSequenceKeypoint.new(1, 0.85),
+  })
+  premiumShine.Rotation = 45
+  premiumShine.Parent = robuxButton
+
+  -- Hover effect for premium button
+  robuxButton.MouseEnter:Connect(function()
+    robuxButton.BackgroundColor3 = Color3.fromRGB(30, 150, 255) -- Brighter blue
+    robuxStroke.Color = Color3.fromRGB(150, 220, 255)
+  end)
+  robuxButton.MouseLeave:Connect(function()
+    robuxButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+    robuxStroke.Color = Color3.fromRGB(100, 200, 255)
+  end)
 
   -- Connect buy button (only if in stock)
   if not isSoldOut then
@@ -316,7 +411,7 @@ local function createItemCard(
   card:SetAttribute("Price", price)
   card:SetAttribute("Stock", stock)
 
-  -- Update affordability - shows price on button
+  -- Update affordability - shows price on button via cashPriceLabel
   local function updateAffordability()
     local cardPrice = card:GetAttribute("Price") or price
     local cardStock = card:GetAttribute("Stock") or stock
@@ -325,16 +420,19 @@ local function createItemCard(
     local priceText = "$" .. tostring(cardPrice)
     if soldOut then
       buyButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-      buyButton.Text = "SOLD OUT"
-      buyButton.TextTransparency = 0.5
+      cashPriceLabel.Text = "SOLD"
+      cashPriceLabel.TextTransparency = 0.5
+      cashIcon.TextTransparency = 0.5
     elseif canAfford then
       buyButton.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
-      buyButton.Text = priceText
-      buyButton.TextTransparency = 0
+      cashPriceLabel.Text = priceText
+      cashPriceLabel.TextTransparency = 0
+      cashIcon.TextTransparency = 0
     else
       buyButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-      buyButton.Text = priceText
-      buyButton.TextTransparency = 0.5
+      cashPriceLabel.Text = priceText
+      cashPriceLabel.TextTransparency = 0.5
+      cashIcon.TextTransparency = 0.5
     end
   end
 

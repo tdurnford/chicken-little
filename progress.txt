@@ -3430,3 +3430,42 @@
   - Restock timer is styled with urgency gradient ✓
 - Format check passes, build passes
 - Next: Work on remaining high-priority items (Item #7 Icons, Item #10 Buttons, Item #4 Tabs)
+
+[2026-01-15] Completed Store Redesign Work Item #7: Enlarge Item Icons with Pop-Out Effect
+- Note: This item was already implemented in a previous session but PRD wasn't updated
+- Verified implementation in src/client/StoreUI.lua createItemCard function:
+  1. Icon size increased to 60x60 (from 30x30) - line 187
+  2. Icon position set to UDim2.new(0, -10, 0.5, -30) for left edge overlap - line 188
+  3. ZIndex set to 3 for pop-out effect above card edge - line 192
+  4. Drop shadow implemented via iconShadow TextLabel - lines 174-183
+  5. TextSize increased to 48 for emoji icons - line 191
+- Acceptance criteria verified:
+  - Item icons are twice as large (60x60 vs 30x30) ✓
+  - Icons overlap the left edge of the card by ~10px ✓
+  - Icons appear to 'pop out' from the card (ZIndex 3) ✓
+  - Drop shadow adds depth to the icon ✓
+  - Icon scaling doesn't break card layout ✓
+- PRD updated to mark item #7 as completed
+
+[2026-01-15] Completed Store Redesign Work Item #10: Enhance Purchase Buttons with Visual Hierarchy
+- Redesigned purchase buttons in createItemCard function with stacked vertical layout
+- Changes applied in src/client/StoreUI.lua:
+  1. Stacked buttons vertically: cash at position (1, -95, 0, 8), premium at (1, -95, 0, 52)
+  2. Button size increased to 85x38 for better touch targets
+  3. Cash button: Green background RGB(50, 180, 50) with 💵 emoji + price label
+  4. Premium button: Blue background RGB(0, 120, 215) with 💎 emoji + price label
+  5. Added UIStroke to premium button (light blue RGB(100, 200, 255), thickness 2) for 'juicy' look
+  6. Added UIGradient shine effect to both buttons (45 degree rotation, subtle transparency)
+  7. Added hover effects:
+     - Cash button: brightens to RGB(70, 220, 70) on MouseEnter
+     - Premium button: brightens to RGB(30, 150, 255) and stroke to RGB(150, 220, 255)
+  8. Updated updateAffordability function to use cashPriceLabel.Text instead of buyButton.Text
+  9. Added ZIndex layering for proper button element ordering
+- Acceptance criteria met:
+  - Buttons are stacked vertically on the right ✓
+  - Each button shows currency icon + price ✓
+  - Premium currency button has visible stroke/glow effect ✓
+  - Buttons have hover state feedback ✓
+  - Visual hierarchy makes premium option stand out ✓
+- Format check passes, build passes
+- Next: Work on remaining high-priority items (Item #4 Tabs, Item #13 Apply to All Tabs)
