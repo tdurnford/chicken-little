@@ -413,3 +413,42 @@ The `updateChickenPresence` function in PredatorAI.lua only considered whether c
 - ✅ Predators never despawn while actively attacking a player
 - ✅ Predators can still despawn when no chickens present (after delay) if not engaging player
 - ✅ Combat feels complete - predator stays until defeated or player escapes
+
+## 2026-01-15: Increase Night Time Brightness (bugfix-prd.json Work Item #4) - COMPLETED
+
+Increased night time brightness and ambient lighting to make gameplay easier during night.
+
+### Root cause:
+Night settings were too dark with Brightness at 1.0 and low ambient values, making it difficult for players to see chickens, predators, and UI clearly.
+
+### Changes made:
+- Updated `LIGHTING_PRESETS.night` in DayNightCycle.lua:
+  - Increased Brightness from 1.0 to 1.4
+  - Increased Ambient RGB from (120, 130, 160) to (150, 160, 190)
+  - Increased OutdoorAmbient RGB from (100, 110, 140) to (130, 140, 170)
+  - Brightened ColorShift_Top from (140, 160, 200) to (160, 175, 210)
+  - Brightened ColorShift_Bottom from (100, 120, 160) to (120, 140, 175)
+- Updated `COLOR_CORRECTION_PRESETS.night`:
+  - Increased Brightness from 0 to 0.02
+  - Reduced Contrast from 0.05 to 0.03
+  - Reduced Saturation penalty from -0.05 to -0.02 (less desaturated)
+  - Brightened TintColor from (210, 220, 255) to (220, 228, 255)
+- Updated `BLOOM_PRESETS.night`:
+  - Increased Intensity from 0.2 to 0.35
+  - Increased Size from 10 to 12
+  - Reduced Threshold from 1.2 to 1.0 (bloom activates easier)
+
+### Files modified:
+- src/shared/DayNightCycle.lua
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Night is now brighter while still feeling atmospheric and distinct from daytime
+- Players should be able to see chickens, predators, and UI clearly at night
+
+### Acceptance criteria met:
+- ✅ Night is noticeably darker than day but still easily playable
+- ✅ Players can see their chickens, predators, and UI clearly at night
+- ✅ Transition to/from night is still smooth
+- ✅ Night still feels atmospheric and different from daytime

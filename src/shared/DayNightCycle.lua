@@ -48,11 +48,11 @@ local LIGHTING_PRESETS = {
     ColorShift_Bottom = Color3.fromRGB(180, 160, 140),
   },
   night = {
-    Ambient = Color3.fromRGB(120, 130, 160),
-    OutdoorAmbient = Color3.fromRGB(100, 110, 140),
-    Brightness = 1.0,
-    ColorShift_Top = Color3.fromRGB(140, 160, 200),
-    ColorShift_Bottom = Color3.fromRGB(100, 120, 160),
+    Ambient = Color3.fromRGB(150, 160, 190),
+    OutdoorAmbient = Color3.fromRGB(130, 140, 170),
+    Brightness = 1.4,
+    ColorShift_Top = Color3.fromRGB(160, 175, 210),
+    ColorShift_Bottom = Color3.fromRGB(120, 140, 175),
   },
 }
 
@@ -72,10 +72,10 @@ local COLOR_CORRECTION_PRESETS = {
     TintColor = Color3.fromRGB(255, 240, 220),
   },
   night = {
-    Brightness = 0,
-    Contrast = 0.05,
-    Saturation = -0.05,
-    TintColor = Color3.fromRGB(210, 220, 255),
+    Brightness = 0.02,
+    Contrast = 0.03,
+    Saturation = -0.02,
+    TintColor = Color3.fromRGB(220, 228, 255),
   },
 }
 
@@ -84,7 +84,7 @@ local BLOOM_PRESETS = {
   dawn = { Intensity = 0.8, Size = 20, Threshold = 0.9 },
   day = { Intensity = 0.3, Size = 15, Threshold = 1 },
   dusk = { Intensity = 1.0, Size = 24, Threshold = 0.85 },
-  night = { Intensity = 0.2, Size = 10, Threshold = 1.2 },
+  night = { Intensity = 0.35, Size = 12, Threshold = 1.0 },
 }
 
 -- State type
