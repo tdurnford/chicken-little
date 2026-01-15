@@ -77,3 +77,47 @@ Implemented clean currency formatting that removes unnecessary decimal places fr
   - $1000 -> `$1K`
   - $1500 -> `$1.5K`
   - $1000000 -> `$1M`
+
+---
+
+## 2026-01-15: Implement Day/Night Cycle System (Work Item #4) - COMPLETED
+
+Implemented a complete day/night cycle system with smooth lighting transitions and visual effects.
+
+### Changes made:
+- Created new `DayNightCycle.lua` module in src/shared/ with:
+  - 20-minute full cycle (real-time)
+  - Four time periods: dawn (5-7), day (7-18), dusk (18-20), night (20-5)
+  - Smooth interpolation between lighting presets
+  - ColorCorrection effect with period-specific tints (blue at night, warm at dawn/dusk)
+  - Bloom effect (stronger at dawn/dusk for atmospheric glow)
+  - Helper functions: `isNight()`, `isDawn()`, `isDusk()`, `isDay()`, `getTimeOfDay()`, `getGameTime()`
+  - `getPredatorSpawnMultiplier()` for future predator night spawning (Work Item #5)
+  - `getTimeInfo()` for client synchronization
+- Integrated into Main.server.lua:
+  - Added require statement for DayNightCycle module
+  - Added dayNightState variable declaration
+  - Initialized state after store inventory
+  - Added `DayNightCycle.update()` call in main game loop (runs every frame)
+- Added 5 integration tests for DayNightCycle module in IntegrationTests.lua
+
+### Files modified:
+- src/shared/DayNightCycle.lua (new file)
+- src/server/Main.server.lua
+- src/shared/IntegrationTests.lua
+
+### Technical details:
+- Lighting properties interpolated: ClockTime, Ambient, OutdoorAmbient, Brightness, ColorShift_Top, ColorShift_Bottom
+- Lighting presets per period with smooth transitions at boundaries
+- Uses `os.time()` for consistent server-side timing
+- Creates ColorCorrectionEffect and BloomEffect instances in Lighting service
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Manual testing recommended: observe lighting changes over 20-minute cycle
+- Expected behavior:
+  - Dawn (5-7): Warm orange/pink lighting, moderate bloom
+  - Day (7-18): Bright clear lighting, minimal effects
+  - Dusk (18-20): Warm orange/pink lighting, strongest bloom
+  - Night (20-5): Dark blue tint, reduced brightness, subtle effects

@@ -65,6 +65,9 @@ local OfflineEarnings = require(Shared:WaitForChild("OfflineEarnings"))
 -- Player section module for coop positioning
 local PlayerSection = require(Shared:WaitForChild("PlayerSection"))
 
+-- Day/Night cycle module
+local DayNightCycle = require(Shared:WaitForChild("DayNightCycle"))
+
 -- Admin commands module
 local AdminCommands = require(ServerScriptService:WaitForChild("AdminCommands"))
 
@@ -155,6 +158,9 @@ local randomChickenSpawnState: RandomChickenSpawn.SpawnEventState
 
 -- Global chicken AI state for tracking random chicken movement
 local chickenAIState: ChickenAI.ChickenAIState
+
+-- Global day/night cycle state
+local dayNightState: DayNightCycle.DayNightState
 
 -- Initialize all RemoteEvents and RemoteFunctions
 local remotes = RemoteSetup.initialize()
@@ -1599,6 +1605,10 @@ print("[Main.server] ChickenAI initialized")
 local storeInventory = Store.initializeInventory()
 print("[Main.server] Store inventory initialized")
 
+-- Initialize day/night cycle
+dayNightState = DayNightCycle.init()
+print("[Main.server] Day/Night cycle initialized")
+
 -- Teleport a character to a spawn point position
 local function teleportCharacterToSpawnPoint(
   character: Model,
@@ -1929,6 +1939,9 @@ local gameLoopConnection: RBXScriptConnection?
 local function runGameLoop(deltaTime: number)
   local currentTime = os.time()
   local players = Players:GetPlayers()
+
+  -- Update day/night cycle lighting
+  DayNightCycle.update(dayNightState)
 
   -- Update random chicken spawn events (global)
   local updateResult = RandomChickenSpawn.update(randomChickenSpawnState, currentTime)

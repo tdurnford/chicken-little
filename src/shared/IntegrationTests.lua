@@ -28,6 +28,7 @@ local PredatorAI = require(script.Parent.PredatorAI)
 local BaseballBat = require(script.Parent.BaseballBat)
 local PredatorSpawning = require(script.Parent.PredatorSpawning)
 local ChickenAI = require(script.Parent.ChickenAI)
+local DayNightCycle = require(script.Parent.DayNightCycle)
 
 -- Type definitions
 export type TestResult = {
@@ -2663,6 +2664,100 @@ test("ChickenAI: chicken becomes idle after reaching target", function()
     ChickenAI.isWithinBounds(state, position.currentPosition),
     "Chicken should still be within bounds after many updates"
   )
+end)
+
+-- ============================================================================
+-- DayNightCycle Tests
+-- ============================================================================
+
+test("DayNightCycle: getTimeOfDay returns valid period", function()
+  -- Create a mock state with a start time
+  local state = {
+    startTime = os.time(),
+    colorCorrection = nil,
+    bloom = nil,
+  }
+  local timeOfDay = DayNightCycle.getTimeOfDay(state)
+  local validPeriods = { day = true, night = true, dawn = true, dusk = true }
+  return assert_true(
+    validPeriods[timeOfDay] ~= nil,
+    "Time of day should be valid period: " .. timeOfDay
+  )
+end)
+
+test("DayNightCycle: getGameTime returns number in range 0-24", function()
+  local state = {
+    startTime = os.time(),
+    colorCorrection = nil,
+    bloom = nil,
+  }
+  local gameTime = DayNightCycle.getGameTime(state)
+  local pass, msg = assert_true(gameTime >= 0, "Game time should be >= 0")
+  if not pass then
+    return pass, msg
+  end
+  return assert_true(gameTime < 24, "Game time should be < 24")
+end)
+
+test("DayNightCycle: getPredatorSpawnMultiplier returns valid multiplier", function()
+  local state = {
+    startTime = os.time(),
+    colorCorrection = nil,
+    bloom = nil,
+  }
+  local multiplier = DayNightCycle.getPredatorSpawnMultiplier(state)
+  local pass, msg = assert_true(multiplier >= 0.5, "Multiplier should be >= 0.5")
+  if not pass then
+    return pass, msg
+  end
+  return assert_true(multiplier <= 2.0, "Multiplier should be <= 2.0")
+end)
+
+test("DayNightCycle: isNight/isDawn/isDusk/isDay return booleans", function()
+  local state = {
+    startTime = os.time(),
+    colorCorrection = nil,
+    bloom = nil,
+  }
+  local isNight = DayNightCycle.isNight(state)
+  local isDawn = DayNightCycle.isDawn(state)
+  local isDusk = DayNightCycle.isDusk(state)
+  local isDay = DayNightCycle.isDay(state)
+
+  -- Exactly one should be true
+  local trueCount = 0
+  if isNight then
+    trueCount = trueCount + 1
+  end
+  if isDawn then
+    trueCount = trueCount + 1
+  end
+  if isDusk then
+    trueCount = trueCount + 1
+  end
+  if isDay then
+    trueCount = trueCount + 1
+  end
+
+  return assert_eq(trueCount, 1, "Exactly one time period should be active")
+end)
+
+test("DayNightCycle: getTimeInfo returns valid info", function()
+  local state = {
+    startTime = os.time(),
+    colorCorrection = nil,
+    bloom = nil,
+  }
+  local info = DayNightCycle.getTimeInfo(state)
+  local pass, msg = assert_not_nil(info.gameTime, "gameTime should exist")
+  if not pass then
+    return pass, msg
+  end
+  pass, msg = assert_not_nil(info.timeOfDay, "timeOfDay should exist")
+  if not pass then
+    return pass, msg
+  end
+  return assert_true(type(info.isNight) == "boolean", "isNight should be boolean")
 end)
 
 -- ============================================================================

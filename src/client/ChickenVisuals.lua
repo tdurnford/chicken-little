@@ -330,13 +330,15 @@ local function applyWalkingAnimation(state: ChickenVisualState, deltaTime: numbe
   -- Lerp facing direction for smooth rotation
   if state.targetFacingDirection and state.currentFacingDirection then
     local rotLerpFactor = math.min(1, deltaTime * ROTATION_LERP_SPEED)
-    state.currentFacingDirection = state.currentFacingDirection:Lerp(state.targetFacingDirection, rotLerpFactor)
+    state.currentFacingDirection =
+      state.currentFacingDirection:Lerp(state.targetFacingDirection, rotLerpFactor)
   elseif state.targetFacingDirection then
     state.currentFacingDirection = state.targetFacingDirection
   end
 
   -- Add subtle bob while walking
-  local bobOffset = math.sin(animationTime * IDLE_BOB_SPEED * 1.5) * (currentConfig.idleBobAmount * 0.5)
+  local bobOffset = math.sin(animationTime * IDLE_BOB_SPEED * 1.5)
+    * (currentConfig.idleBobAmount * 0.5)
   local displayPosition = state.position + Vector3.new(0, bobOffset, 0)
 
   -- Apply position and rotation
@@ -762,10 +764,7 @@ function ChickenVisuals.setPosition(chickenId: string, position: Vector3): boole
 end
 
 -- Move chicken to a new position (for placed chickens)
-function ChickenVisuals.moveToPosition(
-  chickenId: string,
-  position: Vector3
-): boolean
+function ChickenVisuals.moveToPosition(chickenId: string, position: Vector3): boolean
   local state = activeChickens[chickenId]
   if not state or not state.model then
     return false
