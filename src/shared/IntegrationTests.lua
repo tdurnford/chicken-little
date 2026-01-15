@@ -1165,6 +1165,134 @@ test("RandomChickenSpawn: selectRandomChickenType with Epic max returns valid ra
   return true, "All spawned chickens were within Epic or lower rarity"
 end)
 
+test("RandomChickenSpawn: createSpawnZonesFromMap creates correct number of zones", function()
+  local zones = RandomChickenSpawn.createSpawnZonesFromMap({
+    gridColumns = 4,
+    gridRows = 3,
+    sectionWidth = 64,
+    sectionDepth = 64,
+    sectionGap = 4,
+    originPosition = { x = 0, y = 0, z = 0 },
+  })
+  return assert_eq(#zones, 12, "Should create 12 spawn zones for 4x3 grid")
+end)
+
+test("RandomChickenSpawn: spawn zones have valid positions across map", function()
+  local zones = RandomChickenSpawn.createSpawnZonesFromMap({
+    gridColumns = 4,
+    gridRows = 3,
+    sectionWidth = 64,
+    sectionDepth = 64,
+    sectionGap = 4,
+    originPosition = { x = 0, y = 0, z = 0 },
+  })
+
+  -- Zones should be spread across map (not all at origin)
+  local minX, maxX = math.huge, -math.huge
+  local minZ, maxZ = math.huge, -math.huge
+  for _, zone in ipairs(zones) do
+    minX = math.min(minX, zone.center.x)
+    maxX = math.max(maxX, zone.center.x)
+    minZ = math.min(minZ, zone.center.z)
+    maxZ = math.max(maxZ, zone.center.z)
+  end
+
+  -- Map should span at least 100 studs in each direction
+  local xSpan = maxX - minX
+  local zSpan = maxZ - minZ
+  if xSpan < 100 then
+    return false, "X span too small: " .. tostring(xSpan)
+  end
+  if zSpan < 50 then
+    return false, "Z span too small: " .. tostring(zSpan)
+  end
+  return true, "Spawn zones spread across map correctly"
+end)
+
+test("RandomChickenSpawn: spawned chicken includes spawn zone info", function()
+  local zones = RandomChickenSpawn.createSpawnZonesFromMap({
+    gridColumns = 4,
+    gridRows = 3,
+    sectionWidth = 64,
+    sectionDepth = 64,
+    sectionGap = 4,
+    originPosition = { x = 0, y = 0, z = 0 },
+  })
+
+  local config = {
+    spawnIntervalMin = 10,
+    spawnIntervalMax = 20,
+    despawnTime = 30,
+    neutralZoneCenter = { x = 0, y = 0, z = 0 },
+    neutralZoneSize = 32,
+    claimRange = 8,
+    spawnZones = zones,
+  }
+
+  local state = RandomChickenSpawn.createSpawnState(config, os.time())
+  state.nextSpawnTime = 0 -- Force spawn
+  local result = RandomChickenSpawn.spawnChicken(state, os.time(), "Mythic")
+
+  if not result.success then
+    return false, "Spawn failed: " .. (result.reason or "unknown")
+  end
+  if not result.chicken then
+    return false, "No chicken in result"
+  end
+  if not result.chicken.spawnZone then
+    return false, "Chicken missing spawnZone info"
+  end
+  return true, "Spawned chicken includes spawn zone boundary info"
+end)
+
+test("RandomChickenSpawn: multiple spawns use different zones", function()
+  local zones = RandomChickenSpawn.createSpawnZonesFromMap({
+    gridColumns = 4,
+    gridRows = 3,
+    sectionWidth = 64,
+    sectionDepth = 64,
+    sectionGap = 4,
+    originPosition = { x = 0, y = 0, z = 0 },
+  })
+
+  local config = {
+    spawnIntervalMin = 10,
+    spawnIntervalMax = 20,
+    despawnTime = 30,
+    neutralZoneCenter = { x = 0, y = 0, z = 0 },
+    neutralZoneSize = 32,
+    claimRange = 8,
+    spawnZones = zones,
+  }
+
+  -- Track which zone centers are used
+  local usedZones: { [string]: boolean } = {}
+  local state = RandomChickenSpawn.createSpawnState(config, os.time())
+
+  for i = 1, 24 do
+    state.currentChicken = nil
+    state.nextSpawnTime = 0
+    local result = RandomChickenSpawn.spawnChicken(state, os.time() + i, "Mythic")
+    if result.success and result.chicken and result.chicken.spawnZone then
+      local key = tostring(result.chicken.spawnZone.center.x)
+        .. ","
+        .. tostring(result.chicken.spawnZone.center.z)
+      usedZones[key] = true
+    end
+  end
+
+  local zonesUsed = 0
+  for _ in pairs(usedZones) do
+    zonesUsed = zonesUsed + 1
+  end
+
+  -- With 24 spawns across 12 zones, we should use at least 3 different zones
+  if zonesUsed < 3 then
+    return false, "Only " .. tostring(zonesUsed) .. " zones used in 24 spawns"
+  end
+  return true, "Multiple spawns distributed across " .. tostring(zonesUsed) .. " different zones"
+end)
+
 -- ============================================================================
 -- BalanceConfig Tests
 -- ============================================================================

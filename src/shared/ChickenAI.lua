@@ -25,6 +25,9 @@ export type ChickenPosition = {
   idleEndTime: number,
   nextDirectionChangeTime: number,
   stateChanged: boolean, -- True when target/idle state changed (needs client sync)
+  -- Per-chicken boundary (for map-wide spawning)
+  boundaryCenter: Vector3?,
+  boundarySize: number?,
 }
 
 export type ChickenAIState = {
@@ -135,6 +138,29 @@ function ChickenAI.generateRandomTarget(aiState: ChickenAIState, currentPosition
   return Vector3.new(targetX, currentPosition.Y, targetZ)
 end
 
+-- Generate a random target position with explicit boundary parameters
+-- Used for per-chicken boundaries in map-wide spawning
+function ChickenAI.generateRandomTargetWithBounds(
+  currentPosition: Vector3,
+  boundaryCenter: Vector3,
+  boundarySize: number
+): Vector3
+  local halfSize = boundarySize / 2 - BOUNDARY_MARGIN
+
+  -- Generate random offset from current position (between 5-15 studs away)
+  local distance = 5 + math.random() * 10
+  local angle = math.random() * math.pi * 2
+
+  local targetX = currentPosition.X + math.cos(angle) * distance
+  local targetZ = currentPosition.Z + math.sin(angle) * distance
+
+  -- Clamp to bounds
+  targetX = math.clamp(targetX, boundaryCenter.X - halfSize, boundaryCenter.X + halfSize)
+  targetZ = math.clamp(targetZ, boundaryCenter.Z - halfSize, boundaryCenter.Z + halfSize)
+
+  return Vector3.new(targetX, currentPosition.Y, targetZ)
+end
+
 -- Generate a random idle duration
 local function getRandomIdleDuration(): number
   return MIN_IDLE_TIME + math.random() * (MAX_IDLE_TIME - MIN_IDLE_TIME)
@@ -146,15 +172,24 @@ local function getRandomWalkDuration(): number
 end
 
 -- Register a chicken for AI tracking
+-- Optional boundaryCenter and boundarySize allow per-chicken boundaries for map-wide spawning
 function ChickenAI.registerChicken(
   aiState: ChickenAIState,
   chickenId: string,
   chickenType: string,
   spawnPosition: Vector3,
-  currentTime: number
+  currentTime: number,
+  boundaryCenter: Vector3?,
+  boundarySize: number?
 ): ChickenPosition
   local walkSpeed = ChickenAI.getWalkSpeed(chickenType)
-  local targetPosition = ChickenAI.generateRandomTarget(aiState, spawnPosition)
+
+  -- Use per-chicken boundary if provided, otherwise use global AI state bounds
+  local effectiveCenter = boundaryCenter or aiState.neutralZoneCenter
+  local effectiveSize = boundarySize or aiState.neutralZoneSize
+
+  local targetPosition =
+    ChickenAI.generateRandomTargetWithBounds(spawnPosition, effectiveCenter, effectiveSize)
 
   -- Calculate initial facing direction
   local direction = (targetPosition - spawnPosition)
@@ -175,6 +210,8 @@ function ChickenAI.registerChicken(
     idleEndTime = 0,
     nextDirectionChangeTime = currentTime + getRandomWalkDuration(),
     stateChanged = true, -- New chicken needs initial sync
+    boundaryCenter = boundaryCenter,
+    boundarySize = boundarySize,
   }
 
   aiState.positions[chickenId] = position
@@ -193,12 +230,20 @@ function ChickenAI.updatePosition(
     return nil
   end
 
+  -- Determine effective boundary (per-chicken or global)
+  local effectiveCenter = position.boundaryCenter or aiState.neutralZoneCenter
+  local effectiveSize = position.boundarySize or aiState.neutralZoneSize
+
   -- Handle idle state
   if position.isIdle then
     if currentTime >= position.idleEndTime then
       -- End idle, start walking again
       position.isIdle = false
-      position.targetPosition = ChickenAI.generateRandomTarget(aiState, position.currentPosition)
+      position.targetPosition = ChickenAI.generateRandomTargetWithBounds(
+        position.currentPosition,
+        effectiveCenter,
+        effectiveSize
+      )
       position.nextDirectionChangeTime = currentTime + getRandomWalkDuration()
 
       local direction = (position.targetPosition - position.currentPosition)
@@ -221,7 +266,11 @@ function ChickenAI.updatePosition(
       return position
     else
       -- Just change direction
-      position.targetPosition = ChickenAI.generateRandomTarget(aiState, position.currentPosition)
+      position.targetPosition = ChickenAI.generateRandomTargetWithBounds(
+        position.currentPosition,
+        effectiveCenter,
+        effectiveSize
+      )
       position.nextDirectionChangeTime = currentTime + getRandomWalkDuration()
 
       local direction = (position.targetPosition - position.currentPosition)

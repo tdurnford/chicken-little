@@ -9,6 +9,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local RemoteSetup = require(ServerScriptService:WaitForChild("RemoteSetup"))
 local DataPersistence = require(ServerScriptService:WaitForChild("DataPersistence"))
 local MapGeneration = require(Shared:WaitForChild("MapGeneration"))
+local PlayerSection = require(Shared:WaitForChild("PlayerSection"))
 
 -- Game loop modules
 local MoneyCollection = require(Shared:WaitForChild("MoneyCollection"))
@@ -1584,10 +1585,39 @@ print(string.format("[Main.server] MapGeneration initialized: %d sections create
 SectionLabels.initialize(mapState)
 print("[Main.server] SectionLabels initialized")
 
--- Initialize global random chicken spawn state
+-- Initialize global random chicken spawn state with map-wide spawn zones
 local initialTime = os.time()
-randomChickenSpawnState = RandomChickenSpawn.createSpawnState(nil, initialTime)
-print("[Main.server] RandomChickenSpawn initialized")
+local mapConfig = MapGeneration.getConfig()
+local sectionSize = PlayerSection.getSectionSize()
+
+-- Create spawn zones for each player section across the map
+local spawnZones = RandomChickenSpawn.createSpawnZonesFromMap({
+  gridColumns = mapConfig.gridColumns,
+  gridRows = mapConfig.gridRows,
+  sectionWidth = sectionSize.x,
+  sectionDepth = sectionSize.z,
+  sectionGap = mapConfig.sectionGap,
+  originPosition = mapConfig.originPosition,
+})
+
+-- Create spawn config with map-wide zones
+local randomSpawnConfig: RandomChickenSpawn.SpawnConfig = {
+  spawnIntervalMin = 120, -- 2 minutes minimum
+  spawnIntervalMax = 300, -- 5 minutes maximum
+  despawnTime = 30, -- 30 seconds to claim
+  neutralZoneCenter = { x = 0, y = 0, z = 0 }, -- fallback center
+  neutralZoneSize = 32, -- fallback size
+  claimRange = 8,
+  spawnZones = spawnZones, -- Map-wide spawn zones
+}
+
+randomChickenSpawnState = RandomChickenSpawn.createSpawnState(randomSpawnConfig, initialTime)
+print(
+  string.format(
+    "[Main.server] RandomChickenSpawn initialized with %d spawn zones across the map",
+    #spawnZones
+  )
+)
 
 -- Initialize global chicken AI state for random chicken movement
 -- Use the neutral zone center and size from the spawn config
@@ -2005,12 +2035,27 @@ local function runGameLoop(deltaTime: number)
     -- Register chicken with AI for movement tracking
     local chicken = updateResult.spawned
     local spawnPos = Vector3.new(chicken.position.x, chicken.position.y, chicken.position.z)
+
+    -- Pass spawn zone boundary for AI movement (map-wide spawning)
+    local boundaryCenter: Vector3? = nil
+    local boundarySize: number? = nil
+    if chicken.spawnZone then
+      boundaryCenter = Vector3.new(
+        chicken.spawnZone.center.x,
+        chicken.spawnZone.center.y,
+        chicken.spawnZone.center.z
+      )
+      boundarySize = chicken.spawnZone.size
+    end
+
     ChickenAI.registerChicken(
       chickenAIState,
       chicken.id,
       chicken.chickenType,
       spawnPos,
-      currentTime
+      currentTime,
+      boundaryCenter,
+      boundarySize
     )
 
     -- Notify all players of the spawn event

@@ -23,6 +23,12 @@ local DEFAULT_DESPAWN_TIME = 30 -- seconds before unclaimed chicken despawns
 local NEUTRAL_ZONE_SIZE = 32 -- studs, size of neutral spawn area
 local CLAIM_RANGE = 8 -- studs, how close player must be to claim
 
+-- Spawn zone type for multi-zone spawning (spawn across entire map)
+export type SpawnZone = {
+  center: Vector3,
+  size: number,
+}
+
 -- Rarity weights for spawn selection (higher = more common in events)
 local SPAWN_RARITY_WEIGHTS: { [ChickenConfig.Rarity]: number } = {
   Common = 0, -- Common chickens don't spawn in events
@@ -91,6 +97,7 @@ export type SpawnConfig = {
   neutralZoneCenter: Vector3,
   neutralZoneSize: number,
   claimRange: number,
+  spawnZones: { SpawnZone }?, -- Multiple spawn zones across the map (if nil, uses neutralZoneCenter)
 }
 
 export type SpawnedChicken = {
@@ -100,6 +107,8 @@ export type SpawnedChicken = {
   position: Vector3,
   spawnedAt: number,
   despawnAt: number,
+  -- Spawn zone boundary for AI movement (map-wide spawning)
+  spawnZone: SpawnZone?,
 }
 
 export type SpawnEventState = {
@@ -140,7 +149,48 @@ function RandomChickenSpawn.getDefaultConfig(): SpawnConfig
     neutralZoneCenter = { x = 0, y = 0, z = 0 },
     neutralZoneSize = NEUTRAL_ZONE_SIZE,
     claimRange = CLAIM_RANGE,
+    spawnZones = nil, -- nil means use single neutralZoneCenter
   }
+end
+
+-- Create spawn zones from a map configuration
+-- This generates spawn zones for each player section in the map grid
+function RandomChickenSpawn.createSpawnZonesFromMap(mapConfig: {
+  gridColumns: number,
+  gridRows: number,
+  sectionWidth: number,
+  sectionDepth: number,
+  sectionGap: number,
+  originPosition: Vector3,
+}): { SpawnZone }
+  local zones: { SpawnZone } = {}
+  local totalSections = mapConfig.gridColumns * mapConfig.gridRows
+
+  for i = 1, totalSections do
+    local index0 = i - 1
+    local row = math.floor(index0 / mapConfig.gridColumns)
+    local column = index0 % mapConfig.gridColumns
+
+    -- Calculate offset from grid center
+    local offsetX = (column - (mapConfig.gridColumns - 1) / 2)
+      * (mapConfig.sectionWidth + mapConfig.sectionGap)
+    local offsetZ = (row - (mapConfig.gridRows - 1) / 2)
+      * (mapConfig.sectionDepth + mapConfig.sectionGap)
+
+    -- Spawn zone is smaller than section to keep chickens away from walls
+    local zoneSize = math.min(mapConfig.sectionWidth, mapConfig.sectionDepth) - 16
+
+    table.insert(zones, {
+      center = {
+        x = mapConfig.originPosition.x + offsetX,
+        y = mapConfig.originPosition.y,
+        z = mapConfig.originPosition.z + offsetZ,
+      },
+      size = zoneSize,
+    })
+  end
+
+  return zones
 end
 
 -- Generate a unique ID for spawned chickens
@@ -166,24 +216,50 @@ end
 -- Minimum distance between consecutive spawn positions to ensure visible variety
 local MIN_SPAWN_DISTANCE = 8 -- studs
 
--- Get random position within neutral zone, ensuring minimum distance from last spawn
-function RandomChickenSpawn.getRandomSpawnPosition(
+-- Internal type for spawn position with zone info
+type SpawnPositionResult = {
+  position: Vector3,
+  zone: SpawnZone?,
+}
+
+-- Get random position within a spawn zone or across all zones (for map-wide spawning)
+-- If spawnZones are configured, randomly picks a zone then a position within it
+-- Returns both the position and the selected zone for AI boundary tracking
+function RandomChickenSpawn.getRandomSpawnPositionWithZone(
   config: SpawnConfig,
   lastPosition: Vector3?
-): Vector3
-  local halfSize = config.neutralZoneSize / 2
+): SpawnPositionResult
   local maxAttempts = 10 -- Prevent infinite loops
+
+  -- Determine spawn zone to use
+  local zoneCenter: Vector3
+  local zoneSize: number
+  local selectedZone: SpawnZone? = nil
+
+  if config.spawnZones and #config.spawnZones > 0 then
+    -- Pick a random zone from the available spawn zones (map-wide spawning)
+    local randomZoneIndex = math.random(1, #config.spawnZones)
+    selectedZone = config.spawnZones[randomZoneIndex]
+    zoneCenter = selectedZone.center
+    zoneSize = selectedZone.size
+  else
+    -- Fall back to single neutral zone
+    zoneCenter = config.neutralZoneCenter
+    zoneSize = config.neutralZoneSize
+  end
+
+  local halfSize = zoneSize / 2
 
   for _ = 1, maxAttempts do
     local newPosition = {
-      x = config.neutralZoneCenter.x + (math.random() - 0.5) * halfSize * 2,
-      y = config.neutralZoneCenter.y,
-      z = config.neutralZoneCenter.z + (math.random() - 0.5) * halfSize * 2,
+      x = zoneCenter.x + (math.random() - 0.5) * halfSize * 2,
+      y = zoneCenter.y,
+      z = zoneCenter.z + (math.random() - 0.5) * halfSize * 2,
     }
 
     -- If no last position, or if new position is far enough away, use it
     if not lastPosition then
-      return newPosition
+      return { position = newPosition, zone = selectedZone }
     end
 
     -- Calculate distance from last position
@@ -192,17 +268,29 @@ function RandomChickenSpawn.getRandomSpawnPosition(
     local distance = math.sqrt(dx * dx + dz * dz)
 
     if distance >= MIN_SPAWN_DISTANCE then
-      return newPosition
+      return { position = newPosition, zone = selectedZone }
     end
   end
 
   -- Fallback: return a position anyway after max attempts
-  -- (ensures we don't get stuck, even if slightly close to last position)
   return {
-    x = config.neutralZoneCenter.x + (math.random() - 0.5) * halfSize * 2,
-    y = config.neutralZoneCenter.y,
-    z = config.neutralZoneCenter.z + (math.random() - 0.5) * halfSize * 2,
+    position = {
+      x = zoneCenter.x + (math.random() - 0.5) * halfSize * 2,
+      y = zoneCenter.y,
+      z = zoneCenter.z + (math.random() - 0.5) * halfSize * 2,
+    },
+    zone = selectedZone,
   }
+end
+
+-- Get random position within neutral zone, ensuring minimum distance from last spawn
+-- Legacy function for backward compatibility
+function RandomChickenSpawn.getRandomSpawnPosition(
+  config: SpawnConfig,
+  lastPosition: Vector3?
+): Vector3
+  local result = RandomChickenSpawn.getRandomSpawnPositionWithZone(config, lastPosition)
+  return result.position
 end
 
 -- Select a random chicken type based on rarity weights
@@ -312,21 +400,23 @@ function RandomChickenSpawn.spawnChicken(
     }
   end
 
-  -- Create spawned chicken
-  local position = RandomChickenSpawn.getRandomSpawnPosition(state.config, state.lastSpawnPosition)
+  -- Create spawned chicken with spawn zone info for AI boundary
+  local spawnResult =
+    RandomChickenSpawn.getRandomSpawnPositionWithZone(state.config, state.lastSpawnPosition)
   local spawnedChicken: SpawnedChicken = {
     id = generateSpawnId(),
     chickenType = chickenType,
     rarity = chickenConfig.rarity,
-    position = position,
+    position = spawnResult.position,
     spawnedAt = currentTime,
     despawnAt = currentTime + state.config.despawnTime,
+    spawnZone = spawnResult.zone,
   }
 
   -- Update state
   state.currentChicken = spawnedChicken
   state.lastSpawnTime = currentTime
-  state.lastSpawnPosition = position
+  state.lastSpawnPosition = spawnResult.position
   state.totalSpawns = state.totalSpawns + 1
   state.nextSpawnTime = calculateNextSpawnTime(state.config, currentTime)
 

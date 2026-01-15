@@ -692,3 +692,56 @@ The random chicken spawn system allowed all rarities (Uncommon through Mythic) t
 - ✅ Legendary chickens are gated behind 30 minutes of playtime
 - ✅ Added minimum requirement before legendary spawns are possible
 - ✅ Game balance preserved for new players
+
+## 2026-01-15: Random Chickens Spawn Across Entire Map (ui-fixes-prd.json Work Item - HIGH) - COMPLETED
+
+Implemented map-wide spawning for random chickens so they can appear anywhere on the map instead of just one fixed location.
+
+### Root cause:
+The RandomChickenSpawn module used a single "neutral zone" centered at (0,0,0) with size 32 studs. All random chickens spawned in this small 32x32 area, making them predictable and easy to camp.
+
+### Changes made:
+- Added `SpawnZone` type to RandomChickenSpawn.lua for defining spawn areas
+- Added `spawnZones` field to `SpawnConfig` type for multi-zone spawning
+- Added `createSpawnZonesFromMap()` function that generates spawn zones for each of the 12 player sections in the 4x3 map grid (48 stud zones per section)
+- Added `getRandomSpawnPositionWithZone()` function that randomly selects a zone, then a position within it
+- Added `spawnZone` field to `SpawnedChicken` type to track which zone a chicken spawned in
+- Updated `spawnChicken()` to use new zone-aware spawning and track zone info
+- Updated ChickenAI module:
+  - Added `boundaryCenter` and `boundarySize` fields to `ChickenPosition` type for per-chicken boundaries
+  - Added `generateRandomTargetWithBounds()` function for explicit boundary parameters
+  - Updated `registerChicken()` to accept optional boundary parameters
+  - Updated `updatePosition()` to use per-chicken boundaries when generating new targets
+- Updated Main.server.lua:
+  - Added PlayerSection import
+  - Creates spawn zones from map config on initialization
+  - Passes spawn zone boundary to ChickenAI when registering spawned chickens
+  - Logs number of spawn zones created
+- Added 4 integration tests:
+  - createSpawnZonesFromMap creates correct number of zones (12 for 4x3)
+  - Spawn zones have valid positions across map
+  - Spawned chicken includes spawn zone info
+  - Multiple spawns use different zones
+
+### Files modified:
+- src/shared/RandomChickenSpawn.lua (new types, functions, zone tracking)
+- src/shared/ChickenAI.lua (per-chicken boundaries)
+- src/server/Main.server.lua (map-wide zone initialization)
+- src/shared/IntegrationTests.lua (4 new tests)
+- plans/ui-fixes-prd.json (marked as completed)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Expected behavior:
+  - Server creates 12 spawn zones on startup (one per player section)
+  - Each random chicken spawn randomly selects one of the 12 zones
+  - Chicken spawns within that zone's 48-stud area
+  - Chicken AI keeps chicken roaming within its spawn zone boundary
+  - Players must search the entire map to find random chickens
+
+### Acceptance criteria met:
+- ✅ Modified spawn location selection to use multiple areas
+- ✅ Random positions generated across the entire map (12 zones)
+- ✅ Per-chicken boundaries prevent chickens from leaving their zone
+- ✅ Integration tests verify spawn distribution across zones
