@@ -656,9 +656,24 @@ function ChickenVisuals.resetAccumulatedMoney(chickenId: string, remainder: numb
   if state then
     state.accumulatedMoney = remainder or 0
     -- Update the money display immediately
-    if state.moneyLabel then
-      local displayAmount = math.floor(state.accumulatedMoney)
-      state.moneyLabel.Text = "$" .. tostring(displayAmount)
+    updateMoneyIndicator(state)
+
+    -- Flash animation to indicate collection
+    if state.moneyIndicator then
+      local bg = state.moneyIndicator:FindFirstChild("Background")
+      if bg then
+        local moneyText = bg:FindFirstChild("MoneyText") :: TextLabel?
+        if moneyText then
+          -- Flash white then return to green
+          moneyText.TextColor3 = Color3.fromRGB(255, 255, 255)
+          local flashTween = TweenService:Create(
+            moneyText,
+            TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            { TextColor3 = Color3.fromRGB(100, 255, 100) }
+          )
+          flashTween:Play()
+        end
+      end
     end
   end
 end

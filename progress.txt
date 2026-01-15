@@ -4235,3 +4235,27 @@
   - Client receives target information for visual feedback ✓
 - Format check passes, build passes
 - Next: Work on remaining items (Item #2 Money Display, Item #6 Remove Unassigned, etc.)
+
+[2026-01-15] Completed Gameplay & UI Fixes Work Item #2: Show Accumulated Money on Placed Chickens
+- Root cause: The money indicator system was mostly implemented but resetAccumulatedMoney() had a bug
+  that referenced state.moneyLabel (non-existent field) instead of using the proper update function.
+
+1. src/client/ChickenVisuals.lua:
+   - Fixed resetAccumulatedMoney() to call updateMoneyIndicator(state) instead of broken moneyLabel reference
+   - Added white-to-green flash animation (0.3s TweenService tween) when money is collected
+   - Flash provides clear visual feedback that money was successfully collected
+
+- Existing implementation review:
+  * createMoneyIndicator() (lines 218-265) - BillboardGui with rate text ($/s) and amount text
+  * updateMoneyIndicator() (lines 268-286) - Updates display with formatted currency
+  * ChickenVisuals.create() (lines 462-467) - Creates indicator for placed chickens (spotIndex != nil)
+  * Heartbeat loop (lines 496-502) - Accumulates money client-side for smooth updates
+  * Uses MoneyScaling.formatCurrency() for K/M/B abbreviations
+
+- Acceptance criteria met:
+  - Accumulated money is visible above each placed chicken ✓
+  - Amount updates in real-time as money accumulates ✓
+  - Display resets when money is collected (with flash animation) ✓
+  - Uses formatted currency display for large amounts ✓
+- Format check passes
+- Next: Work on remaining items (Item #6 Remove Unassigned, Item #8 Store Buttons, etc.)

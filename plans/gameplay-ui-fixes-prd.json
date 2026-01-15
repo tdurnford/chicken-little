@@ -40,7 +40,7 @@
       "category": "UI-World",
       "title": "Show Accumulated Money on Placed Chickens",
       "description": "Chickens in the player's area should display how much money they've accumulated since the last collection, giving players clear feedback on earnings.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Create a BillboardGui with TextLabel for money display above each chicken",
@@ -63,7 +63,7 @@
         "src/client/ChickenHealthBar.lua",
         "src/client/Main.client.lua"
       ],
-      "technicalNotes": "ChickenVisuals already tracks accumulatedMoney via getAccumulatedMoney(). Add BillboardGui below existing health bar or integrate into it."
+      "technicalNotes": "Fixed: The money indicator system was already implemented in ChickenVisuals.lua but had a bug in resetAccumulatedMoney() that referenced state.moneyLabel (non-existent field) instead of calling updateMoneyIndicator(). Fixed the function to properly call updateMoneyIndicator(state) and added a white-to-green flash animation (0.3s tween) when money is collected to provide visual feedback. The indicator uses: BillboardGui with yellow rate text ($/s) at top, green accumulated amount at bottom, dark background with rounded corners. Money accumulates client-side via Heartbeat for smooth updates. Uses MoneyScaling.formatCurrency() for K/M/B abbreviations."
     },
     {
       "id": 3,
