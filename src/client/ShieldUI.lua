@@ -32,7 +32,7 @@ export type ShieldUIState = {
 
 -- Configuration
 local SHIELD_BUTTON_SIZE = UDim2.new(0, 60, 0, 60)
-local SHIELD_BUTTON_POSITION = UDim2.new(1, -140, 0, 10) -- Next to inventory button
+local SHIELD_BUTTON_POSITION = UDim2.new(1, -140, 0, 50) -- Next to inventory button, lowered to make room for status above
 
 -- Colors
 local COLORS = {
@@ -114,11 +114,11 @@ local function createShieldButton(
   stroke.Transparency = 0.3
   stroke.Parent = button
 
-  -- Progress bar container (below button)
+  -- Progress bar container (above button)
   local progressBar = Instance.new("Frame")
   progressBar.Name = "ProgressBar"
   progressBar.Size = UDim2.new(1, 0, 0, 6)
-  progressBar.Position = UDim2.new(0, 0, 1, 2)
+  progressBar.Position = UDim2.new(0, 0, 0, -8)
   progressBar.BackgroundColor3 = COLORS.progressBg
   progressBar.BorderSizePixel = 0
   progressBar.Visible = false
@@ -141,12 +141,12 @@ local function createShieldButton(
   fillCorner.CornerRadius = UDim.new(0, 3)
   fillCorner.Parent = progressFill
 
-  -- Status label (shows "Active", "Cooldown", or "Ready")
+  -- Status label (shows "Active", "Cooldown", or "Ready") - positioned above button
   local statusLabel = Instance.new("TextLabel")
   statusLabel.Name = "StatusLabel"
   statusLabel.Size = UDim2.new(0, 80, 0, 16)
-  statusLabel.Position = UDim2.new(0.5, 0, 1, 12)
-  statusLabel.AnchorPoint = Vector2.new(0.5, 0)
+  statusLabel.Position = UDim2.new(0.5, 0, 0, -26)
+  statusLabel.AnchorPoint = Vector2.new(0.5, 1)
   statusLabel.BackgroundTransparency = 1
   statusLabel.TextColor3 = COLORS.text
   statusLabel.TextSize = 11
@@ -155,12 +155,12 @@ local function createShieldButton(
   statusLabel.Visible = false
   statusLabel.Parent = buttonFrame
 
-  -- Timer label (shows countdown)
+  -- Timer label (shows countdown) - positioned above status label
   local timerLabel = Instance.new("TextLabel")
   timerLabel.Name = "TimerLabel"
   timerLabel.Size = UDim2.new(0, 80, 0, 14)
-  timerLabel.Position = UDim2.new(0.5, 0, 1, 28)
-  timerLabel.AnchorPoint = Vector2.new(0.5, 0)
+  timerLabel.Position = UDim2.new(0.5, 0, 0, -40)
+  timerLabel.AnchorPoint = Vector2.new(0.5, 1)
   timerLabel.BackgroundTransparency = 1
   timerLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
   timerLabel.TextSize = 10
@@ -170,12 +170,12 @@ local function createShieldButton(
   timerLabel.Visible = false
   timerLabel.Parent = buttonFrame
 
-  -- Tooltip on hover
+  -- Tooltip on hover - positioned below button (moved from above since status is now above)
   local tooltip = Instance.new("TextLabel")
   tooltip.Name = "Tooltip"
   tooltip.Size = UDim2.new(0, 100, 0, 20)
-  tooltip.Position = UDim2.new(0.5, 0, 0, -24)
-  tooltip.AnchorPoint = Vector2.new(0.5, 1)
+  tooltip.Position = UDim2.new(0.5, 0, 1, 4)
+  tooltip.AnchorPoint = Vector2.new(0.5, 0)
   tooltip.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
   tooltip.BackgroundTransparency = 0.2
   tooltip.Text = "Area Shield"

@@ -831,3 +831,34 @@ The blue vertical bar was a neon cylinder created by the `createSpawnMarker` fun
 - ✅ Located the source of the blue vertical bar (createSpawnMarker in SectionVisuals.lua)
 - ✅ Removed the visual element
 - ✅ Spawn functionality remains intact (positioning logic unchanged)
+
+## 2026-01-15: Move Shield Indicator to Top (ui-fixes-prd.json Work Item - MEDIUM) - COMPLETED
+
+Moved the shield status indicator (timer, status label, progress bar) from below the shield button to above it for better visibility at the top of the screen.
+
+### Changes made:
+- Moved button position from `UDim2.new(1, -140, 0, 10)` to `UDim2.new(1, -140, 0, 50)` to make room for status indicators above
+- Moved progress bar from below button (`Position Y: 1, 2`) to above (`Position Y: 0, -8`)
+- Moved status label from below button (`Position Y: 1, 12`) to above (`Position Y: 0, -26`)
+- Moved timer label from below button (`Position Y: 1, 28`) to above (`Position Y: 0, -40`)
+- Changed status/timer label anchor from `(0.5, 0)` to `(0.5, 1)` for proper above-positioning
+- Moved tooltip from above button to below button (`Position Y: 1, 4` with anchor `(0.5, 0)`)
+
+### Files modified:
+- src/client/ShieldUI.lua (repositioned UI elements)
+- plans/ui-fixes-prd.json (marked as completed)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- UI layout:
+  - Timer label at top (-40px from button top)
+  - Status label below timer (-26px from button top)
+  - Progress bar just above button (-8px from button top)
+  - Button at 50px from screen top
+  - Tooltip appears below button on hover
+
+### Acceptance criteria met:
+- ✅ Updated shield indicator position to top of screen (status elements now above button)
+- ✅ Adjusted related UI elements for proper layout (moved tooltip to below)
+- ✅ Better visibility achieved (status/timer visible at very top of screen)
