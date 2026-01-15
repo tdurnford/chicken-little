@@ -121,3 +121,57 @@ Implemented a complete day/night cycle system with smooth lighting transitions a
   - Day (7-18): Bright clear lighting, minimal effects
   - Dusk (18-20): Warm orange/pink lighting, strongest bloom
   - Night (20-5): Dark blue tint, reduced brightness, subtle effects
+
+---
+
+## 2026-01-15: Predators Prefer Night Time Spawning (Work Item #5) - COMPLETED
+
+Implemented time-of-day based predator spawn multipliers, making nightfall more dangerous.
+
+### Changes made:
+- Modified `PredatorSpawning.lua` to accept optional `timeOfDayMultiplier` parameter:
+  - Updated `calculateSpawnInterval()` to apply time multiplier (interval / multiplier)
+  - Updated `getWaveInfo()` to pass multiplier to interval calculation
+  - Updated `shouldSpawn()` to accept time multiplier
+  - Updated `getNextSpawnTime()` to accept time multiplier
+  - Updated `spawn()` to accept time multiplier and pass through
+  - Updated `getTimeUntilNextSpawn()` to accept time multiplier
+  - Updated `getSummary()` to include timeOfDayMultiplier in return value
+- Modified `Main.server.lua`:
+  - Added `previousTimeOfDay` tracking variable
+  - Get spawn multiplier from `DayNightCycle.getPredatorSpawnMultiplier(dayNightState)`
+  - Pass multiplier to `PredatorSpawning.shouldSpawn()` and `PredatorSpawning.spawn()`
+  - Added time-of-day transition detection in game loop
+  - Fire `NightfallWarning` event when transitioning to dusk/night/dawn
+- Added `NightfallWarning` remote event to `RemoteSetup.lua`
+- Added client-side handler in `Main.client.lua`:
+  - Play appropriate alert sounds (urgent for night, standard for dusk, soft for dawn)
+  - Show notification via MainHUD.showNotification with color-coded messages
+- Added `MainHUD.showNotification()` function for general notifications:
+  - Slide-in animation from top
+  - Color-coded border and text
+  - Auto-dismiss with fade-out animation
+- Added 3 integration tests for time multiplier functionality
+
+### Spawn multipliers (from DayNightCycle.lua):
+- Day: 0.5x (spawns half as often)
+- Dawn: 0.75x (slightly fewer spawns)
+- Dusk: 1.25x (slightly more spawns)
+- Night: 2.0x (spawns twice as often)
+
+### Files modified:
+- src/shared/PredatorSpawning.lua
+- src/server/Main.server.lua
+- src/server/RemoteSetup.lua
+- src/client/Main.client.lua
+- src/client/MainHUD.lua
+- src/shared/IntegrationTests.lua
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Manual testing recommended: observe predator spawn rates during different times of day
+- Expected behavior:
+  - Dusk warning: "Night is falling! Predators are becoming more active."
+  - Night warning: "Night has fallen! Predator danger is at its peak!"
+  - Dawn notification: "Dawn is breaking. Predator activity is decreasing."

@@ -68,21 +68,30 @@ function PredatorSpawning.createSpawnState(): SpawnState
   }
 end
 
--- Calculate spawn interval based on wave number and difficulty
+-- Calculate spawn interval based on wave number, difficulty, and time of day
 function PredatorSpawning.calculateSpawnInterval(
   waveNumber: number,
-  difficultyMultiplier: number
+  difficultyMultiplier: number,
+  timeOfDayMultiplier: number?
 ): number
   -- Interval decreases as waves progress
   local waveReduction = math.min(waveNumber * 2, 30) -- Max 30 second reduction
   local interval = BASE_SPAWN_INTERVAL - waveReduction
   interval = interval / difficultyMultiplier
 
+  -- Apply time-of-day multiplier (higher multiplier = shorter interval = more spawns)
+  -- Night (2.0) = spawns twice as often, Day (0.5) = spawns half as often
+  local timeMultiplier = timeOfDayMultiplier or 1.0
+  interval = interval / timeMultiplier
+
   return math.max(interval, MIN_SPAWN_INTERVAL)
 end
 
 -- Get info about the current wave
-function PredatorSpawning.getWaveInfo(spawnState: SpawnState): WaveInfo
+function PredatorSpawning.getWaveInfo(
+  spawnState: SpawnState,
+  timeOfDayMultiplier: number?
+): WaveInfo
   local waveNumber = spawnState.waveNumber
   local predatorCount = math.floor(WAVE_SIZE_BASE + (waveNumber - 1) * WAVE_SIZE_INCREMENT)
   predatorCount = math.min(predatorCount, MAX_ACTIVE_PREDATORS)
@@ -98,7 +107,8 @@ function PredatorSpawning.getWaveInfo(spawnState: SpawnState): WaveInfo
     threatLevel = dominantThreat,
     spawnInterval = PredatorSpawning.calculateSpawnInterval(
       waveNumber,
-      spawnState.difficultyMultiplier
+      spawnState.difficultyMultiplier,
+      timeOfDayMultiplier
     ),
     difficultyMultiplier = spawnState.difficultyMultiplier,
   }
@@ -182,7 +192,11 @@ function PredatorSpawning.createPredator(
 end
 
 -- Check if a spawn should occur
-function PredatorSpawning.shouldSpawn(spawnState: SpawnState, currentTime: number): boolean
+function PredatorSpawning.shouldSpawn(
+  spawnState: SpawnState,
+  currentTime: number,
+  timeOfDayMultiplier: number?
+): boolean
   -- Check max active predators
   local activePredatorCount = PredatorSpawning.getActivePredatorCount(spawnState)
   if activePredatorCount >= MAX_ACTIVE_PREDATORS then
@@ -190,15 +204,18 @@ function PredatorSpawning.shouldSpawn(spawnState: SpawnState, currentTime: numbe
   end
 
   -- Check spawn interval
-  local waveInfo = PredatorSpawning.getWaveInfo(spawnState)
+  local waveInfo = PredatorSpawning.getWaveInfo(spawnState, timeOfDayMultiplier)
   local timeSinceLastSpawn = currentTime - spawnState.lastSpawnTime
 
   return timeSinceLastSpawn >= waveInfo.spawnInterval
 end
 
 -- Get next spawn time
-function PredatorSpawning.getNextSpawnTime(spawnState: SpawnState): number
-  local waveInfo = PredatorSpawning.getWaveInfo(spawnState)
+function PredatorSpawning.getNextSpawnTime(
+  spawnState: SpawnState,
+  timeOfDayMultiplier: number?
+): number
+  local waveInfo = PredatorSpawning.getWaveInfo(spawnState, timeOfDayMultiplier)
   return spawnState.lastSpawnTime + waveInfo.spawnInterval
 end
 
@@ -206,11 +223,12 @@ end
 function PredatorSpawning.spawn(
   spawnState: SpawnState,
   currentTime: number,
-  targetPlayerId: string?
+  targetPlayerId: string?,
+  timeOfDayMultiplier: number?
 ): SpawnResult
   -- Check if spawn should occur
-  if not PredatorSpawning.shouldSpawn(spawnState, currentTime) then
-    local nextSpawn = PredatorSpawning.getNextSpawnTime(spawnState)
+  if not PredatorSpawning.shouldSpawn(spawnState, currentTime, timeOfDayMultiplier) then
+    local nextSpawn = PredatorSpawning.getNextSpawnTime(spawnState, timeOfDayMultiplier)
     local reason = PredatorSpawning.getActivePredatorCount(spawnState) >= MAX_ACTIVE_PREDATORS
         and "Max active predators reached"
       or "Spawn interval not elapsed"
@@ -237,7 +255,7 @@ function PredatorSpawning.spawn(
       success = false,
       message = "Failed to create predator of type: " .. predatorType,
       predator = nil,
-      nextSpawnTime = PredatorSpawning.getNextSpawnTime(spawnState),
+      nextSpawnTime = PredatorSpawning.getNextSpawnTime(spawnState, timeOfDayMultiplier),
     }
   end
 
@@ -261,7 +279,7 @@ function PredatorSpawning.spawn(
     success = true,
     message = displayName .. " has appeared!",
     predator = predator,
-    nextSpawnTime = PredatorSpawning.getNextSpawnTime(spawnState),
+    nextSpawnTime = PredatorSpawning.getNextSpawnTime(spawnState, timeOfDayMultiplier),
   }
 end
 
@@ -485,15 +503,20 @@ function PredatorSpawning.cleanup(spawnState: SpawnState): number
 end
 
 -- Get time until next spawn
-function PredatorSpawning.getTimeUntilNextSpawn(spawnState: SpawnState, currentTime: number): number
-  local nextSpawn = PredatorSpawning.getNextSpawnTime(spawnState)
+function PredatorSpawning.getTimeUntilNextSpawn(
+  spawnState: SpawnState,
+  currentTime: number,
+  timeOfDayMultiplier: number?
+): number
+  local nextSpawn = PredatorSpawning.getNextSpawnTime(spawnState, timeOfDayMultiplier)
   return math.max(0, nextSpawn - currentTime)
 end
 
 -- Get spawn state summary for UI
 function PredatorSpawning.getSummary(
   spawnState: SpawnState,
-  currentTime: number
+  currentTime: number,
+  timeOfDayMultiplier: number?
 ): {
   waveNumber: number,
   activePredators: number,
@@ -502,17 +525,24 @@ function PredatorSpawning.getSummary(
   timeUntilNextSpawn: number,
   difficultyMultiplier: number,
   dominantThreat: PredatorConfig.ThreatLevel,
+  timeOfDayMultiplier: number,
 }
-  local waveInfo = PredatorSpawning.getWaveInfo(spawnState)
+  local waveInfo = PredatorSpawning.getWaveInfo(spawnState, timeOfDayMultiplier)
+  local timeMultiplier = timeOfDayMultiplier or 1.0
 
   return {
     waveNumber = spawnState.waveNumber,
     activePredators = PredatorSpawning.getActivePredatorCount(spawnState),
     maxPredators = MAX_ACTIVE_PREDATORS,
     predatorsSpawned = spawnState.predatorsSpawned,
-    timeUntilNextSpawn = PredatorSpawning.getTimeUntilNextSpawn(spawnState, currentTime),
+    timeUntilNextSpawn = PredatorSpawning.getTimeUntilNextSpawn(
+      spawnState,
+      currentTime,
+      timeOfDayMultiplier
+    ),
     difficultyMultiplier = spawnState.difficultyMultiplier,
     dominantThreat = waveInfo.threatLevel,
+    timeOfDayMultiplier = timeMultiplier,
   }
 end
 

@@ -2760,6 +2760,63 @@ test("DayNightCycle: getTimeInfo returns valid info", function()
   return assert_true(type(info.isNight) == "boolean", "isNight should be boolean")
 end)
 
+-- PredatorSpawning Time-of-Day Multiplier Tests
+-- ============================================================================
+
+test("PredatorSpawning: calculateSpawnInterval with time multiplier", function()
+  -- Test base interval without multiplier
+  local baseInterval = PredatorSpawning.calculateSpawnInterval(1, 1.0, nil)
+  assert_true(baseInterval > 0, "Base interval should be positive")
+
+  -- Test with night multiplier (2.0) - should reduce interval (more spawns)
+  local nightInterval = PredatorSpawning.calculateSpawnInterval(1, 1.0, 2.0)
+  assert_true(nightInterval < baseInterval, "Night interval should be less than base")
+  assert_true(
+    math.abs(nightInterval - baseInterval / 2) < 0.01,
+    "Night interval should be half of base"
+  )
+
+  -- Test with day multiplier (0.5) - should increase interval (fewer spawns)
+  local dayInterval = PredatorSpawning.calculateSpawnInterval(1, 1.0, 0.5)
+  assert_true(dayInterval > baseInterval, "Day interval should be greater than base")
+  assert_true(math.abs(dayInterval - baseInterval * 2) < 0.01, "Day interval should be double base")
+
+  return true, "calculateSpawnInterval correctly applies time multiplier"
+end)
+
+test("PredatorSpawning: getWaveInfo includes time multiplier", function()
+  local spawnState = PredatorSpawning.createSpawnState()
+  spawnState.waveNumber = 1
+
+  -- Get wave info without multiplier
+  local baseInfo = PredatorSpawning.getWaveInfo(spawnState, nil)
+  assert_true(baseInfo.spawnInterval > 0, "Base spawn interval should be positive")
+
+  -- Get wave info with night multiplier
+  local nightInfo = PredatorSpawning.getWaveInfo(spawnState, 2.0)
+  assert_true(
+    nightInfo.spawnInterval < baseInfo.spawnInterval,
+    "Night spawn interval should be shorter"
+  )
+
+  return true, "getWaveInfo correctly uses time multiplier"
+end)
+
+test("PredatorSpawning: getSummary includes timeOfDayMultiplier", function()
+  local spawnState = PredatorSpawning.createSpawnState()
+  local currentTime = os.time()
+
+  -- Get summary with time multiplier
+  local summary = PredatorSpawning.getSummary(spawnState, currentTime, 1.5)
+  assert_true(summary.timeOfDayMultiplier == 1.5, "Summary should include time multiplier")
+
+  -- Get summary without multiplier (should default to 1.0)
+  local defaultSummary = PredatorSpawning.getSummary(spawnState, currentTime, nil)
+  assert_true(defaultSummary.timeOfDayMultiplier == 1.0, "Summary should default to 1.0 multiplier")
+
+  return true, "getSummary includes timeOfDayMultiplier"
+end)
+
 -- ============================================================================
 -- Test Runner
 -- ============================================================================

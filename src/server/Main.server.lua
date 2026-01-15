@@ -162,6 +162,9 @@ local chickenAIState: ChickenAI.ChickenAIState
 -- Global day/night cycle state
 local dayNightState: DayNightCycle.DayNightState
 
+-- Track previous time of day for nightfall warnings
+local previousTimeOfDay: string = "day"
+
 -- Initialize all RemoteEvents and RemoteFunctions
 local remotes = RemoteSetup.initialize()
 
@@ -1943,6 +1946,52 @@ local function runGameLoop(deltaTime: number)
   -- Update day/night cycle lighting
   DayNightCycle.update(dayNightState)
 
+  -- Check for time-of-day transitions and warn players about nightfall
+  local currentTimeOfDay = DayNightCycle.getTimeOfDay(dayNightState)
+  if currentTimeOfDay ~= previousTimeOfDay then
+    -- Transitioning to dusk - warn about increased predator danger
+    if currentTimeOfDay == "dusk" then
+      local nightfallWarningEvent = RemoteSetup.getEvent("NightfallWarning")
+      if nightfallWarningEvent then
+        for _, player in ipairs(players) do
+          nightfallWarningEvent:FireClient(player, {
+            timeOfDay = "dusk",
+            message = "Night is falling! Predators are becoming more active.",
+            spawnMultiplier = 1.25,
+          })
+        end
+      end
+      print("[Main.server] Dusk warning sent to all players")
+    -- Transitioning to night - stronger warning
+    elseif currentTimeOfDay == "night" then
+      local nightfallWarningEvent = RemoteSetup.getEvent("NightfallWarning")
+      if nightfallWarningEvent then
+        for _, player in ipairs(players) do
+          nightfallWarningEvent:FireClient(player, {
+            timeOfDay = "night",
+            message = "Night has fallen! Predator danger is at its peak!",
+            spawnMultiplier = 2.0,
+          })
+        end
+      end
+      print("[Main.server] Night warning sent to all players")
+    -- Transitioning to dawn - safety returning
+    elseif currentTimeOfDay == "dawn" then
+      local nightfallWarningEvent = RemoteSetup.getEvent("NightfallWarning")
+      if nightfallWarningEvent then
+        for _, player in ipairs(players) do
+          nightfallWarningEvent:FireClient(player, {
+            timeOfDay = "dawn",
+            message = "Dawn is breaking. Predator activity is decreasing.",
+            spawnMultiplier = 0.75,
+          })
+        end
+      end
+      print("[Main.server] Dawn notification sent to all players")
+    end
+    previousTimeOfDay = currentTimeOfDay
+  end
+
   -- Update random chicken spawn events (global)
   local updateResult = RandomChickenSpawn.update(randomChickenSpawnState, currentTime)
 
@@ -2188,12 +2237,16 @@ local function runGameLoop(deltaTime: number)
     local hasShieldActive = playerData.shieldState
       and AreaShield.isActive(playerData.shieldState, currentTime)
 
+    -- Get time-of-day spawn multiplier for increased predator danger at night
+    local timeSpawnMultiplier = DayNightCycle.getPredatorSpawnMultiplier(dayNightState)
+
     if
       not isProtected
       and not hasShieldActive
-      and PredatorSpawning.shouldSpawn(gameState.spawnState, currentTime)
+      and PredatorSpawning.shouldSpawn(gameState.spawnState, currentTime, timeSpawnMultiplier)
     then
-      local result = PredatorSpawning.spawn(gameState.spawnState, currentTime, playerId)
+      local result =
+        PredatorSpawning.spawn(gameState.spawnState, currentTime, playerId, timeSpawnMultiplier)
       if result.success and result.predator then
         -- Notify player of predator spawn
         local predatorSpawnedEvent = RemoteSetup.getEvent("PredatorSpawned")

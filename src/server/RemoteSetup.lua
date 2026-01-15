@@ -58,6 +58,7 @@ local REMOTE_EVENTS = {
   "BankruptcyAssistance",
   "PowerUpActivated",
   "AdminWarning",
+  "NightfallWarning",
 }
 
 -- List of all RemoteFunctions to create

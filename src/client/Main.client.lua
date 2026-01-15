@@ -1049,6 +1049,38 @@ if playerIncapacitatedEvent then
   end)
 end
 
+-- NightfallWarning: Show warning when transitioning to dusk/night
+local nightfallWarningEvent = getEvent("NightfallWarning")
+if nightfallWarningEvent then
+  nightfallWarningEvent.OnClientEvent:Connect(function(data: any)
+    local timeOfDay = data.timeOfDay
+    local message = data.message
+    local spawnMultiplier = data.spawnMultiplier
+
+    -- Play appropriate sound based on danger level
+    if timeOfDay == "night" then
+      SoundEffects.playPredatorAlert(true) -- Urgent alert for night
+    elseif timeOfDay == "dusk" then
+      SoundEffects.playPredatorAlert(false) -- Standard alert for dusk
+    else
+      SoundEffects.play("uiNotification") -- Soft notification for dawn
+    end
+
+    -- Show notification via MainHUD
+    if MainHUD.showNotification then
+      local color = Color3.fromRGB(255, 200, 100) -- Default amber
+      if timeOfDay == "night" then
+        color = Color3.fromRGB(255, 80, 80) -- Red for night danger
+      elseif timeOfDay == "dawn" then
+        color = Color3.fromRGB(150, 200, 255) -- Blue for dawn safety
+      end
+      MainHUD.showNotification(message, color, 4)
+    end
+
+    print("[Client] Nightfall warning:", timeOfDay, message, "multiplier:", spawnMultiplier)
+  end)
+end
+
 --[[ Utility Functions for other modules ]]
 
 -- Expose player data cache getter

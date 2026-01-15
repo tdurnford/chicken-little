@@ -800,6 +800,86 @@ function MainHUD.setProtectionStatus(data: {
   end
 end
 
+-- Show a general notification message
+function MainHUD.showNotification(message: string, color: Color3?, duration: number?)
+  if not state.screenGui then
+    return
+  end
+
+  local notificationColor = color or Color3.fromRGB(255, 200, 100) -- Default amber
+  local showDuration = duration or 4
+
+  -- Create a notification frame
+  local notificationFrame = Instance.new("Frame")
+  notificationFrame.Name = "GeneralNotification"
+  notificationFrame.Size = UDim2.new(0, 400, 0, 50)
+  notificationFrame.Position = UDim2.new(0.5, 0, 0.15, 0)
+  notificationFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+  notificationFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+  notificationFrame.BackgroundTransparency = 0.15
+  notificationFrame.BorderSizePixel = 0
+  notificationFrame.Parent = state.screenGui
+
+  -- Corner rounding
+  local corner = Instance.new("UICorner")
+  corner.CornerRadius = UDim.new(0, 10)
+  corner.Parent = notificationFrame
+
+  -- Border stroke with notification color
+  local stroke = Instance.new("UIStroke")
+  stroke.Color = notificationColor
+  stroke.Thickness = 2
+  stroke.Parent = notificationFrame
+
+  -- Message label
+  local messageLabel = Instance.new("TextLabel")
+  messageLabel.Name = "MessageLabel"
+  messageLabel.Size = UDim2.new(1, -20, 1, -10)
+  messageLabel.Position = UDim2.new(0, 10, 0, 5)
+  messageLabel.BackgroundTransparency = 1
+  messageLabel.Text = message
+  messageLabel.TextColor3 = notificationColor
+  messageLabel.TextStrokeTransparency = 0.5
+  messageLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+  messageLabel.TextSize = 18
+  messageLabel.Font = Enum.Font.GothamBold
+  messageLabel.TextWrapped = true
+  messageLabel.TextXAlignment = Enum.TextXAlignment.Center
+  messageLabel.Parent = notificationFrame
+
+  -- Animate in (slide down from top)
+  notificationFrame.Position = UDim2.new(0.5, 0, 0, -60)
+  local slideIn = TweenService:Create(
+    notificationFrame,
+    TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+    { Position = UDim2.new(0.5, 0, 0.15, 0) }
+  )
+  slideIn:Play()
+
+  -- Auto-dismiss after duration
+  task.delay(showDuration, function()
+    if notificationFrame and notificationFrame.Parent then
+      local fadeOut = TweenService:Create(
+        notificationFrame,
+        TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        { BackgroundTransparency = 1 }
+      )
+      local labelFade = TweenService:Create(
+        messageLabel,
+        TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        { TextTransparency = 1, TextStrokeTransparency = 1 }
+      )
+      fadeOut:Play()
+      labelFade:Play()
+      fadeOut.Completed:Connect(function()
+        if notificationFrame and notificationFrame.Parent then
+          notificationFrame:Destroy()
+        end
+      end)
+    end
+  end)
+end
+
 -- Show bankruptcy assistance notification
 function MainHUD.showBankruptcyAssistance(data: {
   moneyAwarded: number,
