@@ -4179,3 +4179,59 @@
   - No exploit via client manipulation (server-side validation) ✓
 - Format check passes, build passes
 - Next: Work on remaining items (Item #5 Predator Targeting, Item #2 Money Display, etc.)
+
+[2026-01-15] Completed Gameplay & UI Fixes Work Item #5: Predators Target Individual Chickens
+- Root cause: Predators were walking to coop center (calculateTargetPosition) instead of 
+  targeting specific chickens, making gameplay less engaging and strategic.
+
+1. src/shared/PredatorSpawning.lua:
+   - Added targetChickenId: string? field to PredatorInstance type
+   - Updated createPredator() to accept and store targetChickenId
+   - Added updateTargetChicken() function for re-targeting
+   - Added getTargetChickenId() function to retrieve current target
+
+2. src/shared/PredatorAI.lua:
+   - Extended registerPredator() to accept optional targetChickenPosition parameter
+   - Predators now walk toward chicken position instead of coop center when target provided
+   - Added updateApproachTarget() function to update target position as chicken moves
+
+3. src/server/Main.server.lua:
+   - When spawning predator, selects random chicken from placedChickens as target
+   - Gets target chicken position from ChickenAI (free-roaming) or spot position (legacy)
+   - Passes target position to PredatorAI.registerPredator()
+   - Added section 4.5: Updates approaching predator targets each tick
+     * Checks if target chicken still exists, re-targets if not
+     * Updates target position as chicken moves (follows moving chickens)
+     * Fires PredatorTargetChanged event when re-targeting
+   - Sends targetChickenId to clients in PredatorSpawned event
+
+4. src/server/RemoteSetup.lua:
+   - Added "PredatorTargetChanged" event for client notifications
+
+5. src/client/Main.client.lua:
+   - Updated PredatorSpawned handler to receive targetChickenId
+   - Shows target indicator on targeted chicken when predator spawns
+   - Added PredatorTargetChanged handler to update target indicator
+   - Clears target indicators when predator defeated
+
+6. src/client/ChickenVisuals.lua:
+   - Added targetIndicators tracking table
+   - Added showTargetIndicator() - creates red pulsing cylinder indicator above chicken
+   - Added clearAllTargetIndicators() - removes all indicators
+   - Added updateTargetIndicator() - updates indicator position when chicken moves
+
+- Design decisions:
+  * Random target selection (not nearest) for unpredictability
+  * Target updates each tick so predators follow moving chickens
+  * Re-target when chicken dies/picked up to prevent stuck predators
+  * Red pulsing indicator for high visibility and urgency
+  * Clear indicators on predator defeat to reduce visual clutter
+
+- Acceptance criteria met:
+  - Predators select and move toward a specific chicken ✓
+  - Predators visually follow the chicken if it moves ✓
+  - Predators attack the targeted chicken when in range ✓ (unchanged - attack logic already worked)
+  - Predators re-target if their target is no longer available ✓
+  - Client receives target information for visual feedback ✓
+- Format check passes, build passes
+- Next: Work on remaining items (Item #2 Money Display, Item #6 Remove Unassigned, etc.)

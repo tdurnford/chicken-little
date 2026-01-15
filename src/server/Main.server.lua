@@ -2220,12 +2220,50 @@ local function runGameLoop(deltaTime: number)
           local sectionCenter = MapGeneration.getSectionPosition(playerData.sectionIndex or 1)
           local sectionCenterV3 = Vector3.new(sectionCenter.x, sectionCenter.y, sectionCenter.z)
 
-          -- Register predator with AI for walking behavior
+          -- Select a random target chicken if there are any placed
+          local targetChickenPosition: Vector3? = nil
+          local targetChickenId: string? = nil
+          if #playerData.placedChickens > 0 then
+            local targetChicken =
+              playerData.placedChickens[math.random(1, #playerData.placedChickens)]
+            if targetChicken then
+              targetChickenId = targetChicken.id
+              -- Get chicken position from AI (free-roaming) or fallback to spot
+              if gameState.playerChickenAIState then
+                local aiPos =
+                  ChickenAI.getPosition(gameState.playerChickenAIState, targetChicken.id)
+                if aiPos then
+                  targetChickenPosition = Vector3.new(
+                    aiPos.currentPosition.X,
+                    aiPos.currentPosition.Y + 1,
+                    aiPos.currentPosition.Z
+                  )
+                end
+              end
+              -- Fallback to spot position
+              if not targetChickenPosition and targetChicken.spotIndex then
+                local spotPos =
+                  PlayerSection.getSpotPosition(targetChicken.spotIndex, sectionCenter)
+                if spotPos then
+                  targetChickenPosition = Vector3.new(spotPos.x, spotPos.y + 1, spotPos.z)
+                end
+              end
+            end
+          end
+
+          -- Update predator's targetChickenId in spawn state
+          if targetChickenId then
+            PredatorSpawning.updateTargetChicken(gameState.spawnState, predator.id, targetChickenId)
+          end
+
+          -- Register predator with AI for walking behavior (with target chicken position)
           local predatorPosition = PredatorAI.registerPredator(
             gameState.predatorAIState,
             predator.id,
             predator.predatorType,
-            sectionCenterV3
+            sectionCenterV3,
+            nil, -- preferredEdge
+            targetChickenPosition -- target chicken position if available
           )
 
           -- Send predator data to ALL clients so all players can see predators
@@ -2234,13 +2272,96 @@ local function runGameLoop(deltaTime: number)
             predator.predatorType,
             threatLevel,
             predatorPosition.currentPosition,
-            playerData.sectionIndex or 1 -- Include section so clients know which coop is being targeted
+            playerData.sectionIndex or 1, -- Include section so clients know which coop is being targeted
+            targetChickenId -- Include target chicken ID so clients can show visual feedback
           )
         end
       end
     end
 
-    -- 4.5. Update predator AI positions (walking towards coop)
+    -- 4.5. Update approaching predator targets (follow target chicken or re-target if needed)
+    for _, predator in ipairs(PredatorSpawning.getActivePredators(gameState.spawnState)) do
+      if predator.state == "approaching" then
+        local targetChickenId =
+          PredatorSpawning.getTargetChickenId(gameState.spawnState, predator.id)
+
+        -- Check if target chicken still exists
+        local targetChickenExists = false
+        local targetChicken = nil
+        if targetChickenId then
+          for _, chicken in ipairs(playerData.placedChickens) do
+            if chicken.id == targetChickenId then
+              targetChickenExists = true
+              targetChicken = chicken
+              break
+            end
+          end
+        end
+
+        -- Re-target if target doesn't exist or is nil
+        if not targetChickenExists and #playerData.placedChickens > 0 then
+          local newTarget = playerData.placedChickens[math.random(1, #playerData.placedChickens)]
+          if newTarget then
+            PredatorSpawning.updateTargetChicken(gameState.spawnState, predator.id, newTarget.id)
+            targetChicken = newTarget
+
+            -- Get new target position
+            local newTargetPos: Vector3? = nil
+            if gameState.playerChickenAIState then
+              local aiPos = ChickenAI.getPosition(gameState.playerChickenAIState, newTarget.id)
+              if aiPos then
+                newTargetPos = Vector3.new(
+                  aiPos.currentPosition.X,
+                  aiPos.currentPosition.Y + 1,
+                  aiPos.currentPosition.Z
+                )
+              end
+            end
+            if not newTargetPos and newTarget.spotIndex then
+              local sectionCenter = MapGeneration.getSectionPosition(playerData.sectionIndex or 1)
+              local spotPos = PlayerSection.getSpotPosition(newTarget.spotIndex, sectionCenter)
+              if spotPos then
+                newTargetPos = Vector3.new(spotPos.x, spotPos.y + 1, spotPos.z)
+              end
+            end
+            if newTargetPos then
+              PredatorAI.updateApproachTarget(gameState.predatorAIState, predator.id, newTargetPos)
+            end
+
+            -- Notify clients of new target
+            local predatorTargetChangedEvent = RemoteSetup.getEvent("PredatorTargetChanged")
+            if predatorTargetChangedEvent then
+              predatorTargetChangedEvent:FireAllClients(predator.id, newTarget.id)
+            end
+          end
+        elseif targetChicken then
+          -- Update target position as chicken may have moved
+          local targetPos: Vector3? = nil
+          if gameState.playerChickenAIState then
+            local aiPos = ChickenAI.getPosition(gameState.playerChickenAIState, targetChicken.id)
+            if aiPos then
+              targetPos = Vector3.new(
+                aiPos.currentPosition.X,
+                aiPos.currentPosition.Y + 1,
+                aiPos.currentPosition.Z
+              )
+            end
+          end
+          if not targetPos and targetChicken.spotIndex then
+            local sectionCenter = MapGeneration.getSectionPosition(playerData.sectionIndex or 1)
+            local spotPos = PlayerSection.getSpotPosition(targetChicken.spotIndex, sectionCenter)
+            if spotPos then
+              targetPos = Vector3.new(spotPos.x, spotPos.y + 1, spotPos.z)
+            end
+          end
+          if targetPos then
+            PredatorAI.updateApproachTarget(gameState.predatorAIState, predator.id, targetPos)
+          end
+        end
+      end
+    end
+
+    -- 4.6. Update predator AI positions (walking towards target)
     local predatorPositionUpdatedEvent = RemoteSetup.getEvent("PredatorPositionUpdated")
     local updatedPositions = PredatorAI.updateAll(gameState.predatorAIState, deltaTime, currentTime)
     for predatorId, position in pairs(updatedPositions) do

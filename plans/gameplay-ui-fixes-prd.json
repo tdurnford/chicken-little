@@ -133,7 +133,7 @@
       "category": "Gameplay",
       "title": "Predators Target Individual Chickens Instead of Area Center",
       "description": "Predators currently target the center of the player's area. They should instead target and attack individual chickens for more engaging gameplay.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Modify predator spawning to select a target chicken (random or nearest)",
@@ -159,7 +159,7 @@
         "src/shared/PredatorSpawning.lua",
         "src/server/Main.server.lua"
       ],
-      "technicalNotes": "PredatorSpawning currently calculates target position as section center. Change to query placedChickens for a random target. Store targetChickenId in predator state. Update position logic to fetch chicken's current position each tick."
+      "technicalNotes": "Fixed: Added targetChickenId to PredatorInstance type. PredatorAI.registerPredator now accepts optional targetChickenPosition. Server selects random target chicken at spawn and passes position to AI. Added updateApproachTarget() to PredatorAI for following moving chickens. Added re-targeting logic in Main.server.lua section 4.5 - when target chicken dies/picked up, selects new random target. Added PredatorTargetChanged event for client notification. Client shows red pulsing target indicator above targeted chicken. Target indicator clears when predator defeated or re-targets."
     },
     {
       "id": 12,

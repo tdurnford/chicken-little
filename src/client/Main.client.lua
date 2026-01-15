@@ -597,7 +597,8 @@ if predatorSpawnedEvent then
       predatorType: string,
       threatLevel: string,
       position: Vector3,
-      sectionIndex: number?
+      sectionIndex: number?,
+      targetChickenId: string?
     )
       local visualState = PredatorVisuals.create(predatorId, predatorType, threatLevel, position)
       -- Create health bar if visual was created successfully
@@ -609,13 +610,19 @@ if predatorSpawnedEvent then
       -- Show predator warning with directional indicator and message
       PredatorWarning.show(predatorId, predatorType, threatLevel, position)
       SoundEffects.playPredatorAlert(threatLevel == "Deadly" or threatLevel == "Catastrophic")
+      -- Show target indicator on the targeted chicken
+      if targetChickenId then
+        ChickenVisuals.showTargetIndicator(targetChickenId, true)
+      end
       print(
         "[Client] Predator spawned:",
         predatorId,
         predatorType,
         threatLevel,
         "section:",
-        sectionIndex or "unknown"
+        sectionIndex or "unknown",
+        "targeting:",
+        targetChickenId or "none"
       )
     end
   )
@@ -664,11 +671,28 @@ if predatorDefeatedEvent then
     PredatorVisuals.playDefeatedAnimation(predatorId)
     -- Clear predator warning when defeated
     PredatorWarning.clear(predatorId)
+    -- Clear any target indicators
+    ChickenVisuals.clearAllTargetIndicators()
     if byPlayer then
       SoundEffects.playBatSwing("predator")
     end
     print("[Client] Predator defeated:", predatorId)
   end)
+end
+
+-- PredatorTargetChanged: Update target indicator when predator switches targets
+local predatorTargetChangedEvent = getEvent("PredatorTargetChanged")
+if predatorTargetChangedEvent then
+  predatorTargetChangedEvent.OnClientEvent:Connect(
+    function(predatorId: string, newTargetChickenId: string?)
+      -- Clear all existing target indicators and show new one
+      ChickenVisuals.clearAllTargetIndicators()
+      if newTargetChickenId then
+        ChickenVisuals.showTargetIndicator(newTargetChickenId, true)
+      end
+      print("[Client] Predator", predatorId, "now targeting:", newTargetChickenId or "none")
+    end
+  )
 end
 
 -- LockActivated: Visual/audio feedback for cage lock

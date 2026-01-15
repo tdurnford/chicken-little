@@ -15,6 +15,7 @@ export type PredatorInstance = {
   predatorType: string,
   spawnTime: number,
   targetPlayerId: string?,
+  targetChickenId: string?, -- The chicken this predator is targeting
   state: "spawning" | "approaching" | "attacking" | "caught" | "escaped" | "defeated",
   attacksRemaining: number,
   health: number, -- bat hits to defeat
@@ -160,7 +161,8 @@ end
 function PredatorSpawning.createPredator(
   predatorType: string,
   currentTime: number,
-  targetPlayerId: string?
+  targetPlayerId: string?,
+  targetChickenId: string?
 ): PredatorInstance?
   local config = PredatorConfig.get(predatorType)
   if not config then
@@ -172,6 +174,7 @@ function PredatorSpawning.createPredator(
     predatorType = predatorType,
     spawnTime = currentTime,
     targetPlayerId = targetPlayerId,
+    targetChickenId = targetChickenId,
     state = "spawning",
     attacksRemaining = config.chickensPerAttack,
     health = PredatorConfig.getBatHitsRequired(predatorType),
@@ -435,6 +438,29 @@ end
 -- Mark predator as escaped
 function PredatorSpawning.markEscaped(spawnState: SpawnState, predatorId: string): boolean
   return PredatorSpawning.updatePredatorState(spawnState, predatorId, "escaped")
+end
+
+-- Update target chicken for a predator (for re-targeting when chicken dies/picked up)
+function PredatorSpawning.updateTargetChicken(
+  spawnState: SpawnState,
+  predatorId: string,
+  newTargetChickenId: string?
+): boolean
+  local predator = PredatorSpawning.findPredator(spawnState, predatorId)
+  if not predator then
+    return false
+  end
+  predator.targetChickenId = newTargetChickenId
+  return true
+end
+
+-- Get target chicken ID for a predator
+function PredatorSpawning.getTargetChickenId(spawnState: SpawnState, predatorId: string): string?
+  local predator = PredatorSpawning.findPredator(spawnState, predatorId)
+  if not predator then
+    return nil
+  end
+  return predator.targetChickenId
 end
 
 -- Clean up inactive predators (removes caught, escaped, defeated)

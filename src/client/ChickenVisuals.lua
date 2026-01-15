@@ -105,6 +105,7 @@ local activeChickens: { [string]: ChickenVisualState } = {}
 local currentConfig: VisualConfig = DEFAULT_VISUAL_CONFIG
 local updateConnection: RBXScriptConnection? = nil
 local animationTime: number = 0
+local targetIndicators: { [string]: Part } = {} -- Track target indicators per chicken
 
 -- Helper: Get rarity color
 local function getRarityColor(rarity: string): Color3
@@ -776,6 +777,91 @@ function ChickenVisuals.getSummary(): { activeCount: number, animationTime: numb
     activeCount = ChickenVisuals.getActiveCount(),
     animationTime = animationTime,
   }
+end
+
+-- Show a target indicator on a chicken (used when predator is targeting it)
+function ChickenVisuals.showTargetIndicator(chickenId: string, show: boolean): boolean
+  local state = activeChickens[chickenId]
+  if not state or not state.model then
+    return false
+  end
+
+  -- Remove existing indicator if any
+  if targetIndicators[chickenId] then
+    targetIndicators[chickenId]:Destroy()
+    targetIndicators[chickenId] = nil
+  end
+
+  if not show then
+    return true
+  end
+
+  -- Create a red glowing ring/circle indicator above the chicken
+  local indicator = Instance.new("Part")
+  indicator.Name = "TargetIndicator"
+  indicator.Anchored = true
+  indicator.CanCollide = false
+  indicator.CanTouch = false
+  indicator.CastShadow = false
+  indicator.Material = Enum.Material.Neon
+  indicator.BrickColor = BrickColor.new("Really red")
+  indicator.Size = Vector3.new(4, 0.2, 4)
+  indicator.Shape = Enum.PartType.Cylinder
+  indicator.Transparency = 0.3
+
+  -- Get the chicken's root part for positioning
+  local rootPart = state.model:FindFirstChild("HumanoidRootPart")
+    or state.model:FindFirstChildWhichIsA("BasePart")
+  if rootPart then
+    indicator.CFrame = CFrame.new(rootPart.Position + Vector3.new(0, 3, 0))
+      * CFrame.Angles(0, 0, math.rad(90))
+  else
+    indicator.CFrame = CFrame.new(state.position + Vector3.new(0, 3, 0))
+      * CFrame.Angles(0, 0, math.rad(90))
+  end
+
+  indicator.Parent = workspace
+
+  -- Animate the indicator (pulsing and rotation)
+  local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+  local pulseTween = TweenService:Create(indicator, tweenInfo, {
+    Size = Vector3.new(5, 0.2, 5),
+    Transparency = 0.6,
+  })
+  pulseTween:Play()
+
+  targetIndicators[chickenId] = indicator
+  return true
+end
+
+-- Clear all target indicators
+function ChickenVisuals.clearAllTargetIndicators()
+  for chickenId, indicator in pairs(targetIndicators) do
+    if indicator then
+      indicator:Destroy()
+    end
+  end
+  targetIndicators = {}
+end
+
+-- Update target indicator position (call this when chicken moves)
+function ChickenVisuals.updateTargetIndicator(chickenId: string)
+  local indicator = targetIndicators[chickenId]
+  if not indicator then
+    return
+  end
+
+  local state = activeChickens[chickenId]
+  if not state or not state.model then
+    return
+  end
+
+  local rootPart = state.model:FindFirstChild("HumanoidRootPart")
+    or state.model:FindFirstChildWhichIsA("BasePart")
+  if rootPart then
+    indicator.CFrame = CFrame.new(rootPart.Position + Vector3.new(0, 3, 0))
+      * CFrame.Angles(0, 0, math.rad(90))
+  end
 end
 
 return ChickenVisuals

@@ -183,15 +183,18 @@ function PredatorAI.calculateTargetPosition(sectionCenter: Vector3): Vector3
 end
 
 -- Register a new predator for AI tracking (direct approach - spawns at section edge)
+-- If targetChickenPosition is provided, predator will walk toward that chicken instead of coop center
 function PredatorAI.registerPredator(
   aiState: PredatorAIState,
   predatorId: string,
   predatorType: string,
   sectionCenter: Vector3,
-  preferredEdge: string?
+  preferredEdge: string?,
+  targetChickenPosition: Vector3?
 ): PredatorPosition
   local spawnPos = PredatorAI.calculateSpawnPosition(sectionCenter, preferredEdge)
-  local targetPos = PredatorAI.calculateTargetPosition(sectionCenter)
+  -- Use target chicken position if provided, otherwise fall back to coop center
+  local targetPos = targetChickenPosition or PredatorAI.calculateTargetPosition(sectionCenter)
   local walkSpeed = PredatorAI.getWalkSpeed(predatorType)
 
   -- Calculate initial facing direction
@@ -1305,6 +1308,32 @@ function PredatorAI.getTargetChicken(aiState: PredatorAIState, predatorId: strin
     return nil
   end
   return position.targetChickenSpot
+end
+
+-- Update the approach target position for a predator (for re-targeting or following moving chickens)
+function PredatorAI.updateApproachTarget(
+  aiState: PredatorAIState,
+  predatorId: string,
+  newTargetPosition: Vector3
+): boolean
+  local position = aiState.positions[predatorId]
+  if not position then
+    return false
+  end
+
+  -- Only update if predator is still approaching (not yet at coop)
+  if position.hasReachedTarget then
+    return false
+  end
+
+  position.targetPosition = newTargetPosition
+  -- Update facing direction
+  local toTarget = newTargetPosition - position.currentPosition
+  if toTarget.Magnitude > 0 then
+    position.facingDirection = toTarget.Unit
+  end
+
+  return true
 end
 
 -- Update chicken presence for predator (call when attacking)

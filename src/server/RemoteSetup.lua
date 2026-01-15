@@ -21,6 +21,7 @@ local REMOTE_EVENTS = {
   "TrapCaught",
   "PredatorSpawned",
   "PredatorDefeated",
+  "PredatorTargetChanged",
   "LockActivated",
   "TradeRequested",
   "TradeUpdated",
