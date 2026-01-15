@@ -74,7 +74,7 @@
       "category": "Gameplay",
       "title": "Implement 15 Chicken Per Area Limit",
       "description": "Add a hard cap of 15 chickens per player area to prevent overcrowding and maintain performance.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Add MAX_CHICKENS_PER_AREA constant to ChickenConfig.lua (value: 15)",

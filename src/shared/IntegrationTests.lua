@@ -1369,6 +1369,85 @@ test("ChickenPlacement: placeChickenFreeRoaming places chicken without spot", fu
   )
 end)
 
+test("ChickenPlacement: isAtChickenLimit returns true at max capacity", function()
+  local data = PlayerData.createDefault()
+
+  -- Place 15 chickens (the max)
+  for i = 1, 15 do
+    table.insert(data.placedChickens, {
+      id = "test-limit-" .. i,
+      chickenType = "BasicChick",
+      rarity = "Common",
+      accumulatedMoney = 0,
+      lastEggTime = os.time(),
+      spotIndex = nil,
+    })
+  end
+
+  -- Should be at limit
+  local pass, msg =
+    assert_true(ChickenPlacement.isAtChickenLimit(data), "Should be at limit with 15 chickens")
+  if not pass then
+    return pass, msg
+  end
+
+  -- Check limit info
+  local info = ChickenPlacement.getChickenLimitInfo(data)
+  pass, msg = assert_eq(info.current, 15, "Current count should be 15")
+  if not pass then
+    return pass, msg
+  end
+
+  pass, msg = assert_eq(info.max, 15, "Max should be 15")
+  if not pass then
+    return pass, msg
+  end
+
+  pass, msg = assert_eq(info.remaining, 0, "Remaining should be 0")
+  if not pass then
+    return pass, msg
+  end
+
+  return assert_true(info.isAtLimit, "isAtLimit should be true")
+end)
+
+test("ChickenPlacement: isAtChickenLimit returns false under limit", function()
+  local data = PlayerData.createDefault()
+
+  -- Place 10 chickens (under limit)
+  for i = 1, 10 do
+    table.insert(data.placedChickens, {
+      id = "test-under-" .. i,
+      chickenType = "BasicChick",
+      rarity = "Common",
+      accumulatedMoney = 0,
+      lastEggTime = os.time(),
+      spotIndex = nil,
+    })
+  end
+
+  -- Should not be at limit
+  local pass, msg =
+    assert_false(ChickenPlacement.isAtChickenLimit(data), "Should not be at limit with 10 chickens")
+  if not pass then
+    return pass, msg
+  end
+
+  -- Check limit info
+  local info = ChickenPlacement.getChickenLimitInfo(data)
+  pass, msg = assert_eq(info.current, 10, "Current count should be 10")
+  if not pass then
+    return pass, msg
+  end
+
+  pass, msg = assert_eq(info.remaining, 5, "Remaining should be 5")
+  if not pass then
+    return pass, msg
+  end
+
+  return assert_false(info.isAtLimit, "isAtLimit should be false")
+end)
+
 -- ============================================================================
 -- CombatHealth Tests
 -- ============================================================================

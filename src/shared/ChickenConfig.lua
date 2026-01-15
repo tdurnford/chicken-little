@@ -66,6 +66,9 @@ local RARITY_HEALTH_REGEN: { [Rarity]: number } = {
 -- Time in seconds before health starts regenerating after taking damage
 local HEALTH_REGEN_DELAY = 3
 
+-- Maximum number of chickens allowed per player area
+local MAX_CHICKENS_PER_AREA = 15
+
 -- All chicken types in the game
 local CHICKEN_TYPES: { [string]: ChickenTypeConfig } = {
   -- Common Chickens
@@ -315,6 +318,11 @@ function ChickenConfig.getHealthRegenForType(chickenType: string): number
     return 5
   end
   return RARITY_HEALTH_REGEN[config.rarity] or 5
+end
+
+-- Get maximum chickens allowed per player area
+function ChickenConfig.getMaxChickensPerArea(): number
+  return MAX_CHICKENS_PER_AREA
 end
 
 return ChickenConfig

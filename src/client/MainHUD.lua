@@ -45,6 +45,11 @@ export type HUDState = {
   inventoryBadge: TextLabel?,
   inventoryItemCount: number,
   onInventoryClick: (() -> ())?,
+  -- Chicken count state
+  chickenCountFrame: Frame?,
+  chickenCountLabel: TextLabel?,
+  chickenCount: number,
+  chickenMax: number,
 }
 
 -- Default configuration
@@ -84,6 +89,11 @@ local state: HUDState = {
   inventoryBadge = nil,
   inventoryItemCount = 0,
   onInventoryClick = nil,
+  -- Chicken count state
+  chickenCountFrame = nil,
+  chickenCountLabel = nil,
+  chickenCount = 0,
+  chickenMax = 15,
 }
 
 -- Create the money icon
@@ -226,6 +236,56 @@ local function createInventoryButton(screenGui: ScreenGui): (ImageButton, TextLa
   end)
 
   return button, badge
+end
+
+-- Create chicken count display frame
+local function createChickenCountFrame(screenGui: ScreenGui): (Frame, TextLabel)
+  local frame = Instance.new("Frame")
+  frame.Name = "ChickenCountFrame"
+  frame.Size = UDim2.new(0, 120, 0, 32)
+  frame.Position = UDim2.new(0, 20, 0, 10) -- Top left corner
+  frame.AnchorPoint = Vector2.new(0, 0)
+  frame.BackgroundColor3 = Color3.fromRGB(40, 35, 25) -- Warm brown
+  frame.BackgroundTransparency = 0.3
+  frame.BorderSizePixel = 0
+  frame.Parent = screenGui
+
+  -- Corner rounding
+  local corner = Instance.new("UICorner")
+  corner.CornerRadius = UDim.new(0, 8)
+  corner.Parent = frame
+
+  -- Border stroke
+  local stroke = Instance.new("UIStroke")
+  stroke.Color = Color3.fromRGB(100, 80, 60)
+  stroke.Thickness = 2
+  stroke.Transparency = 0.3
+  stroke.Parent = frame
+
+  -- Chicken icon (emoji)
+  local icon = Instance.new("TextLabel")
+  icon.Name = "ChickenIcon"
+  icon.Size = UDim2.new(0, 28, 1, 0)
+  icon.Position = UDim2.new(0, 6, 0, 0)
+  icon.BackgroundTransparency = 1
+  icon.Text = "🐔"
+  icon.TextSize = 18
+  icon.Parent = frame
+
+  -- Count label
+  local label = Instance.new("TextLabel")
+  label.Name = "ChickenCountLabel"
+  label.Size = UDim2.new(1, -40, 1, 0)
+  label.Position = UDim2.new(0, 36, 0, 0)
+  label.BackgroundTransparency = 1
+  label.TextColor3 = Color3.fromRGB(255, 220, 150) -- Warm yellow
+  label.TextSize = 16
+  label.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
+  label.TextXAlignment = Enum.TextXAlignment.Left
+  label.Text = "0/15"
+  label.Parent = frame
+
+  return frame, label
 end
 
 -- Create the main HUD frame
@@ -379,6 +439,27 @@ local function updateMoneyPerSecDisplay()
   end
 end
 
+-- Update chicken count display
+local function updateChickenCountDisplay()
+  if not state.chickenCountLabel then
+    return
+  end
+
+  local count = state.chickenCount
+  local max = state.chickenMax
+
+  state.chickenCountLabel.Text = count .. "/" .. max
+
+  -- Change color when at limit
+  if count >= max then
+    state.chickenCountLabel.TextColor3 = Color3.fromRGB(255, 100, 100) -- Red when at limit
+  elseif count >= max - 2 then
+    state.chickenCountLabel.TextColor3 = Color3.fromRGB(255, 200, 100) -- Yellow when close to limit
+  else
+    state.chickenCountLabel.TextColor3 = Color3.fromRGB(255, 220, 150) -- Normal warm yellow
+  end
+end
+
 -- Initialize the HUD
 function MainHUD.create(config: HUDConfig?): boolean
   local player = Players.LocalPlayer
@@ -402,9 +483,13 @@ function MainHUD.create(config: HUDConfig?): boolean
   -- Create inventory button
   state.inventoryButton, state.inventoryBadge = createInventoryButton(state.screenGui)
 
+  -- Create chicken count display
+  state.chickenCountFrame, state.chickenCountLabel = createChickenCountFrame(state.screenGui)
+
   -- Initialize display
   updateMoneyDisplay(false)
   updateMoneyPerSecDisplay()
+  updateChickenCountDisplay()
 
   return true
 end
@@ -439,6 +524,10 @@ function MainHUD.destroy()
   state.inventoryButton = nil
   state.inventoryBadge = nil
   state.inventoryItemCount = 0
+  state.chickenCountFrame = nil
+  state.chickenCountLabel = nil
+  state.chickenCount = 0
+  state.chickenMax = 15
 end
 
 -- Set current money (with optional animation)
@@ -559,6 +648,30 @@ end
 -- Get inventory item count
 function MainHUD.getInventoryItemCount(): number
   return state.inventoryItemCount
+end
+
+-- Set chicken count for area display
+function MainHUD.setChickenCount(current: number, max: number?)
+  state.chickenCount = math.max(0, current)
+  if max then
+    state.chickenMax = math.max(1, max)
+  end
+  updateChickenCountDisplay()
+end
+
+-- Get current chicken count
+function MainHUD.getChickenCount(): number
+  return state.chickenCount
+end
+
+-- Get max chickens per area
+function MainHUD.getChickenMax(): number
+  return state.chickenMax
+end
+
+-- Check if at chicken limit
+function MainHUD.isAtChickenLimit(): boolean
+  return state.chickenCount >= state.chickenMax
 end
 
 -- Get configuration defaults

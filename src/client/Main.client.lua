@@ -297,6 +297,11 @@ if playerDataChangedEvent then
       MainHUD.setInventoryItemCount(eggCount + chickenCount)
     end
 
+    -- Update chicken count display on MainHUD
+    if data.placedChickens then
+      MainHUD.setChickenCount(#data.placedChickens, 15)
+    end
+
     -- Update StoreUI with active power-ups
     if data.activePowerUps then
       local activePowerUpsMap: { [string]: number } = {}
@@ -1416,6 +1421,13 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
     end
   elseif selectedItem.itemType == "chicken" then
     if actionType == "place" then
+      -- Check chicken limit before attempting to place
+      if MainHUD.isAtChickenLimit() then
+        SoundEffects.play("uiError")
+        warn("[Client] Cannot place chicken: Area is at maximum capacity (15 chickens)")
+        return
+      end
+
       -- Place chicken from inventory to coop
       local placeChickenFunc = getFunction("PlaceChicken")
       if placeChickenFunc then
@@ -1430,9 +1442,12 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
               if result and result.success then
                 SoundEffects.play("chickenPlace")
                 InventoryUI.clearSelection()
+              elseif result and result.atLimit then
+                SoundEffects.play("uiError")
+                warn("[Client] Cannot place chicken:", result.message)
               else
                 SoundEffects.play("uiError")
-                warn("[Client] Place failed:", result and result.error or "Unknown error")
+                warn("[Client] Place failed:", result and result.message or "Unknown error")
               end
             else
               SoundEffects.play("uiError")
@@ -1509,6 +1524,15 @@ HatchPreviewUI.onHatch(function(eggId: string, eggType: string)
     return
   end
 
+  -- Check chicken limit before attempting to hatch with placement
+  if MainHUD.isAtChickenLimit() then
+    SoundEffects.play("uiError")
+    warn("[Client] Cannot hatch egg: Area is at maximum capacity (15 chickens)")
+    HatchPreviewUI.hide()
+    placedEggData = nil
+    return
+  end
+
   -- Hatch egg via server with the spot index
   local hatchEggFunc = getFunction("HatchEgg")
   if hatchEggFunc then
@@ -1523,9 +1547,12 @@ HatchPreviewUI.onHatch(function(eggId: string, eggType: string)
 
       -- Show the result screen with what they got
       HatchPreviewUI.showResult(result.chickenType, result.rarity)
+    elseif result and result.atLimit then
+      SoundEffects.play("uiError")
+      warn("[Client] Cannot hatch egg:", result.message)
     else
       SoundEffects.play("uiError")
-      warn("[Client] Hatch failed:", result and result.error or "Unknown error")
+      warn("[Client] Hatch failed:", result and result.message or "Unknown error")
     end
   end
 

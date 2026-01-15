@@ -3873,3 +3873,50 @@
 - Note: Existing ChickenAI already had wandering behavior for neutral zone chickens;
   extended it to work per-player with section bounds
 - Next: Work on Item #3 (15 Chicken Per Area Limit) which depends on this item
+
+[2026-01-15] Completed UI & Gameplay Fixes Work Item #3: Implement 15 Chicken Per Area Limit
+- Added hard cap of 15 chickens per player area to prevent overcrowding
+- Changes applied across multiple files:
+
+1. src/shared/ChickenConfig.lua:
+   - Added MAX_CHICKENS_PER_AREA = 15 constant
+   - Added getMaxChickensPerArea() function to expose the constant
+
+2. src/shared/ChickenPlacement.lua:
+   - Added ChickenConfig import
+   - Added isAtChickenLimit() function to check if player is at capacity
+   - Added getChickenLimitInfo() function returning {current, max, remaining, isAtLimit}
+
+3. src/server/Main.server.lua:
+   - Updated PlaceChicken handler to check limit before placing
+   - Returns {success: false, message: "Area full!", atLimit: true} when at capacity
+   - Updated HatchEgg handler to check limit before placing hatched chicken
+   - Prevents hatching with placement when at limit
+
+4. src/client/MainHUD.lua:
+   - Added chickenCountFrame, chickenCountLabel state for UI display
+   - Added createChickenCountFrame() to render "🐔 X/15" display in top-left
+   - Added updateChickenCountDisplay() with color coding:
+     * Normal yellow when under limit
+     * Yellow/orange when 2 away from limit
+     * Red when at limit
+   - Added setChickenCount(), getChickenCount(), getChickenMax(), isAtChickenLimit() functions
+
+5. src/client/Main.client.lua:
+   - Updated PlayerDataChanged handler to sync chicken count to MainHUD
+   - Updated chicken place handler with early limit check and better error messages
+   - Updated egg hatch handler with early limit check and feedback
+
+6. src/shared/IntegrationTests.lua:
+   - Added test for isAtChickenLimit at max capacity (15 chickens)
+   - Added test for isAtChickenLimit under limit (10 chickens)
+   - Tests verify current count, max, remaining, and isAtLimit values
+
+- Acceptance criteria met:
+  - Maximum of 15 chickens can exist in a player's area ✓
+  - Player is notified when at capacity (red count display + error sound) ✓
+  - Egg hatching is blocked when at limit (with clear feedback) ✓
+  - Chicken count is visible to player (🐔 X/15 in top-left) ✓
+  - Existing chickens are not affected by the limit (no deletion) ✓
+- Format check passes, build passes
+- Next: Work on remaining items (Item #1 Bat Model, Item #4 Player Name Labels, Item #8 Trap Icon)

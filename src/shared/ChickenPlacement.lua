@@ -11,6 +11,7 @@ local ChickenPlacement = {}
 local PlayerData = require(script.Parent.PlayerData)
 local Chicken = require(script.Parent.Chicken)
 local PlayerSection = require(script.Parent.PlayerSection)
+local ChickenConfig = require(script.Parent.ChickenConfig)
 
 -- Constants
 local MAX_COOP_SPOTS = 12
@@ -432,6 +433,29 @@ function ChickenPlacement.getFreeRoamingChickens(
     end
   end
   return freeRoaming
+end
+
+-- Check if player is at the chicken limit for their area
+function ChickenPlacement.isAtChickenLimit(playerData: PlayerData.PlayerDataSchema): boolean
+  local maxChickens = ChickenConfig.getMaxChickensPerArea()
+  return #playerData.placedChickens >= maxChickens
+end
+
+-- Get chicken limit info for UI display
+function ChickenPlacement.getChickenLimitInfo(playerData: PlayerData.PlayerDataSchema): {
+  current: number,
+  max: number,
+  remaining: number,
+  isAtLimit: boolean,
+}
+  local maxChickens = ChickenConfig.getMaxChickensPerArea()
+  local currentCount = #playerData.placedChickens
+  return {
+    current = currentCount,
+    max = maxChickens,
+    remaining = math.max(0, maxChickens - currentCount),
+    isAtLimit = currentCount >= maxChickens,
+  }
 end
 
 return ChickenPlacement

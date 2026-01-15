@@ -449,6 +449,16 @@ if placeChickenFunc then
       return { success = false, message = "Player data not found" }
     end
 
+    -- Check chicken limit before placing
+    if ChickenPlacement.isAtChickenLimit(playerData) then
+      local limitInfo = ChickenPlacement.getChickenLimitInfo(playerData)
+      return {
+        success = false,
+        message = "Area full! Maximum " .. limitInfo.max .. " chickens per area.",
+        atLimit = true,
+      }
+    end
+
     -- Use free-roaming placement (spotIndex is now optional/ignored)
     local result = ChickenPlacement.placeChickenFreeRoaming(playerData, chickenId)
     if result.success then
@@ -641,6 +651,16 @@ if hatchEggFunc then
     local playerData = DataPersistence.getData(userId)
     if not playerData then
       return { success = false, message = "Player data not found" }
+    end
+
+    -- If placement hint provided, check chicken limit before hatching
+    if placementHint and ChickenPlacement.isAtChickenLimit(playerData) then
+      local limitInfo = ChickenPlacement.getChickenLimitInfo(playerData)
+      return {
+        success = false,
+        message = "Area full! Maximum " .. limitInfo.max .. " chickens per area.",
+        atLimit = true,
+      }
     end
 
     local result = EggHatching.hatch(playerData, eggId)
