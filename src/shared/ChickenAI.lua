@@ -24,6 +24,7 @@ export type ChickenPosition = {
   isIdle: boolean,
   idleEndTime: number,
   nextDirectionChangeTime: number,
+  stateChanged: boolean, -- True when target/idle state changed (needs client sync)
 }
 
 export type ChickenAIState = {
@@ -173,6 +174,7 @@ function ChickenAI.registerChicken(
     isIdle = false,
     idleEndTime = 0,
     nextDirectionChangeTime = currentTime + getRandomWalkDuration(),
+    stateChanged = true, -- New chicken needs initial sync
   }
 
   aiState.positions[chickenId] = position
@@ -203,6 +205,7 @@ function ChickenAI.updatePosition(
       if direction.Magnitude > 0 then
         position.facingDirection = direction.Unit
       end
+      position.stateChanged = true -- Notify clients to start walking to new target
     end
     return position
   end
@@ -214,6 +217,7 @@ function ChickenAI.updatePosition(
       -- Start idling
       position.isIdle = true
       position.idleEndTime = currentTime + getRandomIdleDuration()
+      position.stateChanged = true -- Notify clients to stop walking
       return position
     else
       -- Just change direction
@@ -224,6 +228,7 @@ function ChickenAI.updatePosition(
       if direction.Magnitude > 0 then
         position.facingDirection = direction.Unit
       end
+      position.stateChanged = true -- Notify clients of new target
     end
   end
 
@@ -236,6 +241,7 @@ function ChickenAI.updatePosition(
     -- Start idling at destination
     position.isIdle = true
     position.idleEndTime = currentTime + getRandomIdleDuration()
+    position.stateChanged = true -- Notify clients chicken stopped
     return position
   end
 
@@ -248,6 +254,7 @@ function ChickenAI.updatePosition(
     position.currentPosition = position.targetPosition
     position.isIdle = true
     position.idleEndTime = currentTime + getRandomIdleDuration()
+    position.stateChanged = true -- Notify clients chicken stopped
   else
     position.currentPosition = position.currentPosition + direction * moveDistance
     -- Ensure we stay in bounds
@@ -333,6 +340,7 @@ function ChickenAI.getAllPositions(aiState: ChickenAIState): { [string]: Vector3
 end
 
 -- Get position info for a single chicken (for client sync)
+-- Now includes walkSpeed for client-side movement interpolation
 function ChickenAI.getPositionInfo(
   aiState: ChickenAIState,
   chickenId: string
@@ -341,6 +349,7 @@ function ChickenAI.getPositionInfo(
   target: Vector3,
   facingDirection: Vector3,
   isIdle: boolean,
+  walkSpeed: number,
 }?
   local position = aiState.positions[chickenId]
   if not position then
@@ -352,7 +361,46 @@ function ChickenAI.getPositionInfo(
     target = position.targetPosition,
     facingDirection = position.facingDirection,
     isIdle = position.isIdle,
+    walkSpeed = position.walkSpeed,
   }
+end
+
+-- Get all chickens that have changed state since last sync
+-- Returns a list of chickens with their full state info and clears stateChanged flags
+function ChickenAI.getChangedChickens(aiState: ChickenAIState): {
+  {
+    id: string,
+    position: Vector3,
+    target: Vector3,
+    facingDirection: Vector3,
+    isIdle: boolean,
+    walkSpeed: number,
+  }
+}
+  local changed = {}
+
+  for id, position in pairs(aiState.positions) do
+    if position.stateChanged then
+      table.insert(changed, {
+        id = id,
+        position = position.currentPosition,
+        target = position.targetPosition,
+        facingDirection = position.facingDirection,
+        isIdle = position.isIdle,
+        walkSpeed = position.walkSpeed,
+      })
+      position.stateChanged = false -- Clear the flag after collecting
+    end
+  end
+
+  return changed
+end
+
+-- Clear stateChanged flags for all chickens (used after bulk sync)
+function ChickenAI.clearChangedFlags(aiState: ChickenAIState)
+  for _, position in pairs(aiState.positions) do
+    position.stateChanged = false
+  end
 end
 
 -- Update the spawn position of a chicken (for when RandomChickenSpawn spawns it)

@@ -797,6 +797,7 @@ if randomChickenDespawnedEvent then
 end
 
 -- RandomChickenPositionUpdated: Update random chicken position for walking animation
+-- Now receives target position and walk speed for smooth client-side movement
 local randomChickenPositionEvent = getEvent("RandomChickenPositionUpdated")
 if randomChickenPositionEvent then
   randomChickenPositionEvent.OnClientEvent:Connect(function(data: any)
@@ -804,13 +805,24 @@ if randomChickenPositionEvent then
       return
     end
     local position = Vector3.new(data.position.x, data.position.y, data.position.z)
+    local targetPosition = if data.targetPosition
+      then Vector3.new(data.targetPosition.x, data.targetPosition.y, data.targetPosition.z)
+      else nil
     local facingDirection =
       Vector3.new(data.facingDirection.x, data.facingDirection.y, data.facingDirection.z)
-    ChickenVisuals.updatePosition(data.id, position, facingDirection, data.isIdle)
+    ChickenVisuals.updatePosition(
+      data.id,
+      position,
+      targetPosition,
+      facingDirection,
+      data.walkSpeed,
+      data.isIdle
+    )
   end)
 end
 
 -- ChickenPositionUpdated: Update player-owned chicken positions for walking animation (batched)
+-- Now receives target position and walk speed for smooth client-side movement
 local chickenPositionEvent = getEvent("ChickenPositionUpdated")
 if chickenPositionEvent then
   chickenPositionEvent.OnClientEvent:Connect(function(data: any)
@@ -822,6 +834,13 @@ if chickenPositionEvent then
       if chickenData.chickenId and chickenData.position and chickenData.facingDirection then
         local position =
           Vector3.new(chickenData.position.X, chickenData.position.Y, chickenData.position.Z)
+        local targetPosition = if chickenData.targetPosition
+          then Vector3.new(
+            chickenData.targetPosition.X,
+            chickenData.targetPosition.Y,
+            chickenData.targetPosition.Z
+          )
+          else nil
         local facingDirection = Vector3.new(
           chickenData.facingDirection.X,
           chickenData.facingDirection.Y,
@@ -830,7 +849,9 @@ if chickenPositionEvent then
         ChickenVisuals.updatePosition(
           chickenData.chickenId,
           position,
+          targetPosition,
           facingDirection,
+          chickenData.walkSpeed,
           chickenData.isIdle
         )
       end

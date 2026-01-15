@@ -43,6 +43,7 @@ export type ChickenVisualState = {
   targetPosition: Vector3?,
   targetFacingDirection: Vector3?,
   currentFacingDirection: Vector3?,
+  walkSpeed: number, -- Walk speed from server for smooth client-side movement
   isPlaced: boolean,
   healthPercent: number,
   isDamaged: boolean,
@@ -316,15 +317,34 @@ local function applyIdleAnimation(state: ChickenVisualState, deltaTime: number)
 end
 
 -- Apply smooth walking animation with interpolation
+-- Uses walk speed from server for proper movement speed
 local function applyWalkingAnimation(state: ChickenVisualState, deltaTime: number)
   if not state.model or not state.model.PrimaryPart then
     return
   end
 
-  -- Lerp position toward target
+  -- Move toward target at walk speed (client-side movement)
   if state.targetPosition then
-    local lerpFactor = math.min(1, deltaTime * POSITION_LERP_SPEED)
-    state.position = state.position:Lerp(state.targetPosition, lerpFactor)
+    local toTarget = state.targetPosition - state.position
+    local distance = toTarget.Magnitude
+
+    if distance > 0.1 then
+      -- Move at walk speed
+      local moveDistance = state.walkSpeed * deltaTime
+      if moveDistance >= distance then
+        -- Reached target
+        state.position = state.targetPosition
+      else
+        -- Move toward target
+        local direction = toTarget.Unit
+        state.position = state.position + direction * moveDistance
+        -- Update facing direction to match movement
+        state.targetFacingDirection = direction
+      end
+    else
+      -- Close enough, snap to target
+      state.position = state.targetPosition
+    end
   end
 
   -- Lerp facing direction for smooth rotation
@@ -342,8 +362,9 @@ local function applyWalkingAnimation(state: ChickenVisualState, deltaTime: numbe
   local displayPosition = state.position + Vector3.new(0, bobOffset, 0)
 
   -- Apply position and rotation
+  -- Note: Chicken model faces +Z, but CFrame.lookAt faces -Z, so we negate the direction
   if state.currentFacingDirection and state.currentFacingDirection.Magnitude > 0.001 then
-    local lookAt = displayPosition + state.currentFacingDirection
+    local lookAt = displayPosition - state.currentFacingDirection
     state.model:SetPrimaryPartCFrame(CFrame.lookAt(displayPosition, lookAt))
   else
     state.model:SetPrimaryPartCFrame(CFrame.new(displayPosition))
@@ -534,6 +555,7 @@ function ChickenVisuals.create(
     targetPosition = nil,
     targetFacingDirection = nil,
     currentFacingDirection = nil,
+    walkSpeed = 4, -- Default walk speed, updated from server
     isPlaced = chickenIsPlaced,
     healthPercent = 1.0,
     isDamaged = false,
@@ -776,11 +798,14 @@ function ChickenVisuals.moveToPosition(chickenId: string, position: Vector3): bo
 end
 
 -- Update position with facing direction and animation state (for wandering chickens)
--- Uses smooth interpolation - stores target position and direction for lerping in update loop
+-- Now receives target position (where chicken is walking to) and walk speed for client-side movement
+-- The client handles smooth movement toward the target at the specified walk speed
 function ChickenVisuals.updatePosition(
   chickenId: string,
-  position: Vector3,
+  currentPosition: Vector3,
+  targetPosition: Vector3?,
   facingDirection: Vector3,
+  walkSpeed: number?,
   isIdle: boolean
 ): boolean
   local state = activeChickens[chickenId]
@@ -788,22 +813,29 @@ function ChickenVisuals.updatePosition(
     return false
   end
 
-  -- Store target position for smooth interpolation
-  state.targetPosition = position
+  -- Update walk speed from server
+  if walkSpeed then
+    state.walkSpeed = walkSpeed
+  end
+
+  -- Store target position for smooth client-side movement
+  -- When walking, client moves toward target at walk speed
+  -- When idle, snap to current position
+  if isIdle then
+    state.position = currentPosition
+    state.targetPosition = currentPosition
+    state.currentAnimation = "idle"
+  else
+    -- Use target position if provided, otherwise fall back to current position
+    state.targetPosition = targetPosition or currentPosition
+    state.currentAnimation = "walking"
+  end
+
   state.targetFacingDirection = facingDirection
 
   -- Initialize current facing direction if not set
   if not state.currentFacingDirection then
     state.currentFacingDirection = facingDirection
-  end
-
-  -- Update animation state based on movement
-  if isIdle then
-    -- When idle, snap position to target (no more walking lerp needed)
-    state.position = position
-    state.currentAnimation = "idle"
-  else
-    state.currentAnimation = "walking"
   end
 
   return true

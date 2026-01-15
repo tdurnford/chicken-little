@@ -96,10 +96,6 @@ local lastBankruptcyAssistanceTime: { [number]: number } = {} -- Tracks last ass
 local lastStoreReplenishCheck = 0
 local STORE_REPLENISH_CHECK_INTERVAL = 10 -- Check every 10 seconds if replenish needed
 
--- Chicken Position Sync Configuration (throttle to prevent event queue exhaustion)
-local CHICKEN_POSITION_SYNC_INTERVAL = 0.1 -- Send position updates every 0.1 seconds (10 Hz)
-local lastChickenPositionSyncTime: { [number]: number } = {} -- Tracks last sync time per player
-
 -- Robux Product Configuration
 -- Developer Product ID for instant store replenish (set this in Roblox Studio)
 local STORE_REPLENISH_PRODUCT_ID = 0 -- TODO: Replace with actual Developer Product ID from Roblox
@@ -2044,7 +2040,7 @@ local function runGameLoop(deltaTime: number)
     end
   end
 
-  -- Update random chicken AI positions (global) and sync to clients
+  -- Update random chicken AI positions (global) and sync state changes to clients
   local chickenPositions = ChickenAI.updateAll(chickenAIState, deltaTime, currentTime)
   local activeChicken = RandomChickenSpawn.getCurrentChicken(randomChickenSpawnState)
   if activeChicken and chickenPositions[activeChicken.id] then
@@ -2056,21 +2052,30 @@ local function runGameLoop(deltaTime: number)
       z = chickenPos.currentPosition.Z,
     }
 
-    -- Sync position to all clients
-    local positionUpdateEvent = RemoteSetup.getEvent("RandomChickenPositionUpdated")
-    if positionUpdateEvent then
-      for _, player in ipairs(players) do
-        positionUpdateEvent:FireClient(player, {
-          id = activeChicken.id,
-          position = activeChicken.position,
-          facingDirection = {
-            x = chickenPos.facingDirection.X,
-            y = chickenPos.facingDirection.Y,
-            z = chickenPos.facingDirection.Z,
-          },
-          isIdle = chickenPos.isIdle,
-        })
+    -- Only sync to clients when chicken state changes (new target, idle change)
+    if chickenPos.stateChanged then
+      local positionUpdateEvent = RemoteSetup.getEvent("RandomChickenPositionUpdated")
+      if positionUpdateEvent then
+        for _, player in ipairs(players) do
+          positionUpdateEvent:FireClient(player, {
+            id = activeChicken.id,
+            position = activeChicken.position,
+            targetPosition = {
+              x = chickenPos.targetPosition.X,
+              y = chickenPos.targetPosition.Y,
+              z = chickenPos.targetPosition.Z,
+            },
+            facingDirection = {
+              x = chickenPos.facingDirection.X,
+              y = chickenPos.facingDirection.Y,
+              z = chickenPos.facingDirection.Z,
+            },
+            walkSpeed = chickenPos.walkSpeed,
+            isIdle = chickenPos.isIdle,
+          })
+        end
       end
+      chickenPos.stateChanged = false -- Clear flag after sync
     end
   end
 
@@ -2097,29 +2102,31 @@ local function runGameLoop(deltaTime: number)
 
     -- 1.2. Update player's chicken AI (free-roaming chickens)
     if gameState.playerChickenAIState then
-      local chickenPositions =
-        ChickenAI.updateAll(gameState.playerChickenAIState, deltaTime, currentTime)
+      -- Update AI state (handles movement, idle timing, etc.)
+      ChickenAI.updateAll(gameState.playerChickenAIState, deltaTime, currentTime)
 
-      -- Sync chicken positions to all clients (throttled to prevent event queue exhaustion)
-      local lastPositionSync = lastChickenPositionSyncTime[userId] or 0
-      if (currentTime - lastPositionSync) >= CHICKEN_POSITION_SYNC_INTERVAL then
+      -- Only sync chickens that have changed state (new target, idle change)
+      -- This reduces network traffic and enables smooth client-side interpolation
+      local changedChickens = ChickenAI.getChangedChickens(gameState.playerChickenAIState)
+      if #changedChickens > 0 then
         local chickenPositionEvent = RemoteSetup.getEvent("ChickenPositionUpdated")
-        if chickenPositionEvent and next(chickenPositions) then
-          -- Batch all chicken positions into a single event
+        if chickenPositionEvent then
+          -- Batch all changed chicken positions into a single event
           local batchedPositions = {}
-          for chickenId, position in pairs(chickenPositions) do
+          for _, chicken in ipairs(changedChickens) do
             table.insert(batchedPositions, {
-              chickenId = chickenId,
-              position = position.currentPosition,
-              facingDirection = position.facingDirection,
-              isIdle = position.isIdle,
+              chickenId = chicken.id,
+              position = chicken.position,
+              targetPosition = chicken.target,
+              facingDirection = chicken.facingDirection,
+              walkSpeed = chicken.walkSpeed,
+              isIdle = chicken.isIdle,
             })
           end
           chickenPositionEvent:FireAllClients({
             ownerId = userId,
             chickens = batchedPositions,
           })
-          lastChickenPositionSyncTime[userId] = currentTime
         end
       end
     end
