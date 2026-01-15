@@ -18,6 +18,7 @@ local PredatorConfig = require(Shared:WaitForChild("PredatorConfig"))
 local CageLocking = require(Shared:WaitForChild("CageLocking"))
 local ChickenStealing = require(Shared:WaitForChild("ChickenStealing"))
 local RandomChickenSpawn = require(Shared:WaitForChild("RandomChickenSpawn"))
+local ChickenConfig = require(Shared:WaitForChild("ChickenConfig"))
 local BaseballBat = require(Shared:WaitForChild("BaseballBat"))
 local CombatHealth = require(Shared:WaitForChild("CombatHealth"))
 local ChickenHealth = require(Shared:WaitForChild("ChickenHealth"))
@@ -1953,8 +1954,28 @@ local function runGameLoop(deltaTime: number)
     previousTimeOfDay = currentTimeOfDay
   end
 
+  -- Calculate max allowed rarity based on minimum playtime of all active players
+  -- This prevents new players from encountering overpowered chickens they could claim
+  local maxAllowedRarity: ChickenConfig.Rarity? = nil
+  if #players > 0 then
+    local minPlayTime = math.huge
+    for _, player in ipairs(players) do
+      local playerData = DataPersistence.getData(player.UserId)
+      if playerData and playerData.totalPlayTime then
+        minPlayTime = math.min(minPlayTime, playerData.totalPlayTime)
+      else
+        -- If any player has no data yet, treat them as 0 playtime
+        minPlayTime = 0
+      end
+    end
+    if minPlayTime ~= math.huge then
+      maxAllowedRarity = RandomChickenSpawn.getMaxAllowedRarity(minPlayTime)
+    end
+  end
+
   -- Update random chicken spawn events (global)
-  local updateResult = RandomChickenSpawn.update(randomChickenSpawnState, currentTime)
+  local updateResult =
+    RandomChickenSpawn.update(randomChickenSpawnState, currentTime, maxAllowedRarity)
 
   -- Handle despawned chicken (timeout)
   if updateResult.despawned then

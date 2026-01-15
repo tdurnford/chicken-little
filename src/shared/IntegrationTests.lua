@@ -1083,6 +1083,88 @@ test("RandomChickenSpawn: consecutive spawns have different positions", function
   )
 end)
 
+test("RandomChickenSpawn: getMaxAllowedRarity returns Common for new players", function()
+  local maxRarity = RandomChickenSpawn.getMaxAllowedRarity(0)
+  return assert_eq(maxRarity, "Common", "New players (0 playtime) should only get Common rarity")
+end)
+
+test("RandomChickenSpawn: getMaxAllowedRarity unlocks Rare after 5 minutes", function()
+  local maxRarity = RandomChickenSpawn.getMaxAllowedRarity(300) -- 5 minutes
+  local pass, msg = assert_neq(maxRarity, "Common", "5 min playtime should unlock beyond Common")
+  if not pass then
+    return pass, msg
+  end
+  return assert_neq(maxRarity, "Uncommon", "5 min playtime should unlock Rare")
+end)
+
+test("RandomChickenSpawn: getMaxAllowedRarity unlocks Legendary after 30 minutes", function()
+  local maxRarity = RandomChickenSpawn.getMaxAllowedRarity(1800) -- 30 minutes
+  -- Should be at least Legendary (could be Legendary or Mythic depending on implementation)
+  local pass, msg = assert_neq(maxRarity, "Epic", "30 min playtime should unlock beyond Epic")
+  if not pass then
+    return pass, msg
+  end
+  return assert_eq(maxRarity, "Legendary", "30 min playtime should unlock Legendary")
+end)
+
+test("RandomChickenSpawn: getMaxAllowedRarity unlocks Mythic after 60 minutes", function()
+  local maxRarity = RandomChickenSpawn.getMaxAllowedRarity(3600) -- 60 minutes
+  return assert_eq(maxRarity, "Mythic", "60 min playtime should unlock Mythic")
+end)
+
+test("RandomChickenSpawn: getPlaytimeRequirement returns correct values", function()
+  local common = RandomChickenSpawn.getPlaytimeRequirement("Common")
+  local pass, msg = assert_eq(common, 0, "Common should require 0 playtime")
+  if not pass then
+    return pass, msg
+  end
+
+  local legendary = RandomChickenSpawn.getPlaytimeRequirement("Legendary")
+  pass, msg = assert_gt(legendary, 0, "Legendary should require positive playtime")
+  if not pass then
+    return pass, msg
+  end
+
+  return assert_gte(legendary, 1800, "Legendary should require at least 30 minutes")
+end)
+
+test("RandomChickenSpawn: selectRandomChickenType respects maxAllowedRarity", function()
+  -- Run multiple selections with Common max rarity
+  -- All should return nil since Common weight is 0 in spawn events
+  local nullCount = 0
+  for _ = 1, 10 do
+    local chickenType = RandomChickenSpawn.selectRandomChickenType("Common")
+    if chickenType == nil then
+      nullCount = nullCount + 1
+    else
+      -- If we get a chicken, verify it's Common rarity
+      local config = ChickenConfig.get(chickenType)
+      if config and config.rarity ~= "Common" then
+        return false, "Got non-Common chicken when max was Common: " .. tostring(chickenType)
+      end
+    end
+  end
+  -- Common weight is 0, so we expect nil results
+  return assert_eq(nullCount, 10, "Common rarity has 0 weight, should return nil")
+end)
+
+test("RandomChickenSpawn: selectRandomChickenType with Epic max returns valid rarity", function()
+  -- Run multiple selections with Epic max rarity
+  for _ = 1, 20 do
+    local chickenType = RandomChickenSpawn.selectRandomChickenType("Epic")
+    if chickenType then
+      local config = ChickenConfig.get(chickenType)
+      if config then
+        local rarity = config.rarity
+        if rarity == "Legendary" or rarity == "Mythic" then
+          return false, "Got " .. rarity .. " chicken when max was Epic"
+        end
+      end
+    end
+  end
+  return true, "All spawned chickens were within Epic or lower rarity"
+end)
+
 -- ============================================================================
 -- BalanceConfig Tests
 -- ============================================================================

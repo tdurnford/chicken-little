@@ -33,6 +33,50 @@ local SPAWN_RARITY_WEIGHTS: { [ChickenConfig.Rarity]: number } = {
   Mythic = 5,
 }
 
+-- Minimum total playtime (seconds) required to unlock each rarity tier in random spawns
+-- This prevents new players from getting overpowered chickens too early
+local RARITY_PLAYTIME_REQUIREMENTS: { [ChickenConfig.Rarity]: number } = {
+  Common = 0, -- Always available
+  Uncommon = 0, -- Always available
+  Rare = 300, -- 5 minutes of playtime
+  Epic = 900, -- 15 minutes of playtime
+  Legendary = 1800, -- 30 minutes of playtime
+  Mythic = 3600, -- 60 minutes of playtime
+}
+
+-- Ordered list of rarities from lowest to highest for comparison
+local RARITY_ORDER: { ChickenConfig.Rarity } =
+  { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic" }
+
+-- Get the numeric index for a rarity (higher = rarer)
+local function getRarityIndex(rarity: ChickenConfig.Rarity): number
+  for i, r in ipairs(RARITY_ORDER) do
+    if r == rarity then
+      return i
+    end
+  end
+  return 1
+end
+
+-- Determine the maximum rarity a player can receive based on their total playtime
+function RandomChickenSpawn.getMaxAllowedRarity(totalPlayTime: number): ChickenConfig.Rarity
+  local maxRarity: ChickenConfig.Rarity = "Common"
+  for _, rarity in ipairs(RARITY_ORDER) do
+    local requirement = RARITY_PLAYTIME_REQUIREMENTS[rarity] or 0
+    if totalPlayTime >= requirement then
+      maxRarity = rarity
+    else
+      break
+    end
+  end
+  return maxRarity
+end
+
+-- Get the minimum playtime required for a specific rarity
+function RandomChickenSpawn.getPlaytimeRequirement(rarity: ChickenConfig.Rarity): number
+  return RARITY_PLAYTIME_REQUIREMENTS[rarity] or 0
+end
+
 -- Type definitions
 export type Vector3 = {
   x: number,
@@ -162,11 +206,20 @@ function RandomChickenSpawn.getRandomSpawnPosition(
 end
 
 -- Select a random chicken type based on rarity weights
-function RandomChickenSpawn.selectRandomChickenType(): string?
-  -- Calculate total weight
+-- maxAllowedRarity: Optional parameter to cap the maximum rarity that can be selected
+-- (used to prevent new players from getting overpowered chickens)
+function RandomChickenSpawn.selectRandomChickenType(
+  maxAllowedRarity: ChickenConfig.Rarity?
+): string?
+  local maxRarityIndex = maxAllowedRarity and getRarityIndex(maxAllowedRarity) or #RARITY_ORDER
+
+  -- Calculate total weight, excluding rarities above maxAllowedRarity
   local totalWeight = 0
-  for _, weight in pairs(SPAWN_RARITY_WEIGHTS) do
-    totalWeight = totalWeight + weight
+  for rarity, weight in pairs(SPAWN_RARITY_WEIGHTS) do
+    local rarityIndex = getRarityIndex(rarity :: ChickenConfig.Rarity)
+    if rarityIndex <= maxRarityIndex then
+      totalWeight = totalWeight + weight
+    end
   end
 
   if totalWeight == 0 then
@@ -177,13 +230,16 @@ function RandomChickenSpawn.selectRandomChickenType(): string?
   local roll = math.random() * totalWeight
   local currentWeight = 0
 
-  -- Find which rarity was selected
+  -- Find which rarity was selected (only considering eligible rarities)
   local selectedRarity: ChickenConfig.Rarity?
   for rarity, weight in pairs(SPAWN_RARITY_WEIGHTS) do
-    currentWeight = currentWeight + weight
-    if roll <= currentWeight and weight > 0 then
-      selectedRarity = rarity :: ChickenConfig.Rarity
-      break
+    local rarityIndex = getRarityIndex(rarity :: ChickenConfig.Rarity)
+    if rarityIndex <= maxRarityIndex and weight > 0 then
+      currentWeight = currentWeight + weight
+      if roll <= currentWeight then
+        selectedRarity = rarity :: ChickenConfig.Rarity
+        break
+      end
     end
   end
 
@@ -221,7 +277,13 @@ function RandomChickenSpawn.createSpawnState(
 end
 
 -- Spawn a new chicken in the neutral zone
-function RandomChickenSpawn.spawnChicken(state: SpawnEventState, currentTime: number): SpawnResult
+-- maxAllowedRarity: Optional parameter to cap the maximum rarity that can spawn
+-- (used to prevent new players from getting overpowered chickens)
+function RandomChickenSpawn.spawnChicken(
+  state: SpawnEventState,
+  currentTime: number,
+  maxAllowedRarity: ChickenConfig.Rarity?
+): SpawnResult
   -- Check if there's already a chicken
   if state.currentChicken then
     return {
@@ -231,8 +293,8 @@ function RandomChickenSpawn.spawnChicken(state: SpawnEventState, currentTime: nu
     }
   end
 
-  -- Select chicken type
-  local chickenType = RandomChickenSpawn.selectRandomChickenType()
+  -- Select chicken type (respecting max rarity if provided)
+  local chickenType = RandomChickenSpawn.selectRandomChickenType(maxAllowedRarity)
   if not chickenType then
     return {
       success = false,
@@ -379,7 +441,13 @@ end
 
 -- Update spawn state (call each frame/tick)
 -- Returns UpdateResult with spawned/despawned chicken info
-function RandomChickenSpawn.update(state: SpawnEventState, currentTime: number): UpdateResult
+-- maxAllowedRarity: Optional parameter to cap the maximum rarity that can spawn
+-- (based on minimum playtime of active players)
+function RandomChickenSpawn.update(
+  state: SpawnEventState,
+  currentTime: number,
+  maxAllowedRarity: ChickenConfig.Rarity?
+): UpdateResult
   local result: UpdateResult = {
     spawned = nil,
     despawned = nil,
@@ -398,7 +466,7 @@ function RandomChickenSpawn.update(state: SpawnEventState, currentTime: number):
 
   -- Check for new spawn
   if RandomChickenSpawn.shouldSpawn(state, currentTime) then
-    local spawnResult = RandomChickenSpawn.spawnChicken(state, currentTime)
+    local spawnResult = RandomChickenSpawn.spawnChicken(state, currentTime, maxAllowedRarity)
     if spawnResult.success and spawnResult.chicken then
       result.spawned = spawnResult.chicken
     end

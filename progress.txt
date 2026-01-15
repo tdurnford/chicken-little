@@ -641,3 +641,54 @@ Fixed the trap placement system so traps are now visible in the world and proper
 - ✅ Trap visual models are created in the world
 - ✅ Existing placed traps are restored when player reconnects
 - ✅ Trap status indicator shows ready/cooldown/caught states
+
+## 2026-01-15: Fix Legendary Chicken Random Drop (ui-fixes-prd.json Work Item - CRITICAL) - COMPLETED
+
+Implemented playtime-based rarity gating for random chicken spawns to prevent new players from getting overpowered chickens early in the game.
+
+### Root cause:
+The random chicken spawn system allowed all rarities (Uncommon through Mythic) to spawn regardless of player progression. A new player could claim a Legendary chicken (earning $10,000/s) immediately, breaking the game economy.
+
+### Changes made:
+- Added `RARITY_PLAYTIME_REQUIREMENTS` table in RandomChickenSpawn.lua:
+  - Common/Uncommon: 0 seconds (always available)
+  - Rare: 300 seconds (5 minutes)
+  - Epic: 900 seconds (15 minutes)
+  - Legendary: 1800 seconds (30 minutes)
+  - Mythic: 3600 seconds (60 minutes)
+- Added `getMaxAllowedRarity(totalPlayTime)` function to determine the highest rarity a player can receive
+- Added `getPlaytimeRequirement(rarity)` function to query requirements
+- Added `getRarityIndex()` helper function for rarity comparison
+- Modified `selectRandomChickenType()` to accept optional `maxAllowedRarity` parameter
+- Modified `spawnChicken()` to accept and pass `maxAllowedRarity` to selection
+- Modified `update()` to accept and pass `maxAllowedRarity` to spawning
+- Updated Main.server.lua:
+  - Added ChickenConfig import
+  - Before spawning, calculates minimum playtime among all active players
+  - Passes the corresponding max allowed rarity to the spawn system
+  - This ensures spawned chickens are claimable by everyone (no player excluded)
+- Added 7 integration tests for the new rarity gating functionality
+
+### Files modified:
+- src/shared/RandomChickenSpawn.lua (new functions and modified spawning logic)
+- src/server/Main.server.lua (playtime calculation and rarity gating)
+- src/shared/IntegrationTests.lua (7 new tests)
+- plans/ui-fixes-prd.json (marked as completed)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Expected behavior:
+  - Server with all new players: Only Uncommon chickens spawn
+  - Server with 5+ min player: Rare chickens can spawn
+  - Server with 15+ min player: Epic chickens can spawn
+  - Server with 30+ min player: Legendary chickens can spawn
+  - Server with 60+ min player: Mythic chickens can spawn
+  - If ANY player is below a threshold, higher rarities won't spawn
+
+### Acceptance criteria met:
+- ✅ Reviewed random chicken spawn rarity weights
+- ✅ Implemented tier restrictions based on player progression (playtime)
+- ✅ Legendary chickens are gated behind 30 minutes of playtime
+- ✅ Added minimum requirement before legendary spawns are possible
+- ✅ Game balance preserved for new players
