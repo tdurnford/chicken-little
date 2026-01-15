@@ -1649,9 +1649,13 @@ local function checkAndApplyBankruptcyAssistance(player: Player)
     return
   end
 
-  -- Apply bankruptcy assistance
+  -- Apply bankruptcy assistance - only add the difference needed to reach $100
   local starterMoney = PlayerData.getBankruptcyStarterMoney()
-  playerData.money = playerData.money + starterMoney
+  local amountNeeded = math.max(0, starterMoney - playerData.money)
+  if amountNeeded <= 0 then
+    return -- Player already has enough money
+  end
+  playerData.money = playerData.money + amountNeeded
   lastBankruptcyAssistanceTime[userId] = currentTime
 
   -- Sync player data
@@ -1661,10 +1665,10 @@ local function checkAndApplyBankruptcyAssistance(player: Player)
   local bankruptcyEvent = RemoteSetup.getEvent("BankruptcyAssistance")
   if bankruptcyEvent then
     bankruptcyEvent:FireClient(player, {
-      moneyAwarded = starterMoney,
+      moneyAwarded = amountNeeded,
       message = string.format(
         "You've been given $%d to help you get back on your feet!",
-        starterMoney
+        amountNeeded
       ),
     })
   end
@@ -1672,7 +1676,7 @@ local function checkAndApplyBankruptcyAssistance(player: Player)
   print(
     string.format(
       "[Main.server] Awarded $%d bankruptcy assistance to %s",
-      starterMoney,
+      amountNeeded,
       player.Name
     )
   )

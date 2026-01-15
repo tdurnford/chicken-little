@@ -452,3 +452,37 @@ Night settings were too dark with Brightness at 1.0 and low ambient values, maki
 - ✅ Players can see their chickens, predators, and UI clearly at night
 - ✅ Transition to/from night is still smooth
 - ✅ Night still feels atmospheric and different from daytime
+
+## 2026-01-15: Fix Bankruptcy Protection Math (bugfix-prd.json Work Item #11) - COMPLETED
+
+Fixed bankruptcy assistance to only award the difference needed to reach $100, not a flat $100 on top.
+
+### Root cause:
+The `checkAndApplyBankruptcyAssistance` function in Main.server.lua was adding a flat `starterMoney` ($100) to the player's current money balance. This meant a player with $50 would receive $100, ending up with $150 instead of the intended $100.
+
+### Changes made:
+- Modified `checkAndApplyBankruptcyAssistance()` in Main.server.lua:
+  - Calculate `amountNeeded = math.max(0, starterMoney - playerData.money)`
+  - Only add `amountNeeded` to player's money instead of flat `starterMoney`
+  - Added early return if `amountNeeded <= 0` (player already has enough)
+  - Updated notification message to show actual amount awarded
+  - Updated log message to show actual amount awarded
+
+### Files modified:
+- src/server/Main.server.lua
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Expected behavior:
+  - Player with $0 receives $100 (unchanged)
+  - Player with $50 receives $50 (to reach $100)
+  - Player with $99 receives $1 (to reach $100)
+  - Player with $100+ won't trigger bankruptcy (isBankrupt returns false)
+
+### Acceptance criteria met:
+- ✅ Player with $0 receives $100 (unchanged)
+- ✅ Player with $50 receives $50 (to reach $100)
+- ✅ Player with $99 receives $1 (to reach $100)
+- ✅ Player with $100+ receives nothing (not bankrupt)
+- ✅ Notification shows correct amount awarded
