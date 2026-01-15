@@ -144,6 +144,7 @@ type PlayerGameState = {
   predatorAIState: PredatorAI.PredatorAIState,
   worldEggRegistry: WorldEgg.WorldEggRegistry,
   playerChickenAIState: ChickenAI.ChickenAIState?, -- For free-roaming owned chickens
+  lastCollectedChickenId: string?, -- Track last chicken collected from (prevent repeated collection)
 }
 local playerGameStates: { [number]: PlayerGameState } = {}
 
@@ -430,6 +431,7 @@ local function createPlayerGameState(): PlayerGameState
     predatorAIState = PredatorAI.createState(),
     worldEggRegistry = WorldEgg.createRegistry(),
     playerChickenAIState = nil, -- Initialized later when section is assigned
+    lastCollectedChickenId = nil, -- No chicken collected yet
   }
 end
 
@@ -816,13 +818,32 @@ if collectMoneyFunc then
       return { success = false, message = "Player data not found" }
     end
 
+    local gameState = getPlayerGameState(userId)
+
     local result
     if chickenId then
+      -- Prevent repeated collection from the same chicken
+      if chickenId == gameState.lastCollectedChickenId then
+        return {
+          success = false,
+          message = "Collect from a different chicken first",
+          blocked = true,
+        }
+      end
+
       -- Collect from a specific chicken
       result = MoneyCollection.collect(playerData, chickenId)
+
+      -- Track last collected chicken on successful collection
+      if result.success and result.amountCollected > 0 then
+        gameState.lastCollectedChickenId = chickenId
+      end
     else
-      -- Collect from all chickens
+      -- Collect from all chickens (reset lock since collecting from multiple)
       result = MoneyCollection.collectAll(playerData)
+      if result.success then
+        gameState.lastCollectedChickenId = nil
+      end
     end
 
     if result.success then
@@ -2107,6 +2128,11 @@ local function runGameLoop(deltaTime: number)
               WorldEgg.create(eggType, userId, chickenData.id, chickenData.spotIndex or 0, eggPos)
             if worldEgg then
               WorldEgg.add(gameState.worldEggRegistry, worldEgg)
+
+              -- Reset collection lock if this chicken laid an egg
+              if chickenData.id == gameState.lastCollectedChickenId then
+                gameState.lastCollectedChickenId = nil
+              end
 
               -- Update chicken's lastEggTime in player data
               chickenData.lastEggTime = chickenInstance.lastEggTime

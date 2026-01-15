@@ -456,6 +456,11 @@ if eggSpawnedEvent then
       ChickenVisuals.playLayingAnimation(chickenId)
     end
 
+    -- Reset collection lock if the locked chicken laid an egg
+    if chickenId and chickenId == lastCollectedChickenId then
+      lastCollectedChickenId = nil
+    end
+
     -- Create egg visual in world
     local eggPosition = Vector3.new(position.x, position.y, position.z)
     local eggVisualState = EggVisuals.create(eggId, eggType, eggPosition)
@@ -1068,6 +1073,7 @@ local isNearChicken = false
 local nearestChickenId: string? = nil
 local nearestChickenType: string? = nil
 local lastCollectedChickenTimes: { [string]: number } = {} -- Track when each chicken was last collected
+local lastCollectedChickenId: string? = nil -- Track last chicken collected from (for repeat prevention)
 
 -- Random chicken claiming state
 local RANDOM_CHICKEN_CLAIM_RANGE = 8 -- studs, same as server-side claim range
@@ -1792,8 +1798,11 @@ local function updateProximityPrompts()
       nearestChickenId = chickenId
       nearestChickenType = chickenType
 
+      -- Check if this is the same chicken we just collected from (prevent repeated collection)
+      local isRepeatCollection = chickenId == lastCollectedChickenId
+
       -- Auto-collect money when near a chicken with at least $1 accumulated
-      if accumulatedMoney and accumulatedMoney >= 1 then
+      if accumulatedMoney and accumulatedMoney >= 1 and not isRepeatCollection then
         local currentTime = os.clock()
         local lastCollectTime = lastCollectedChickenTimes[chickenId] or 0
 
@@ -1813,6 +1822,9 @@ local function updateProximityPrompts()
                 and result.amountCollected
                 and result.amountCollected > 0
               then
+                -- Lock this chicken to prevent repeated collection
+                lastCollectedChickenId = chickenId
+
                 -- Reset client-side accumulated money to the remainder
                 ChickenVisuals.resetAccumulatedMoney(chickenId, result.remainder or 0)
 

@@ -4143,3 +4143,39 @@
   - Small numbers ($0-$999) show full amount ✓
 - Format check passes
 - Next: Work on remaining Phase 2 items (Item #3 Repeated Collection, Item #5 Predator Targeting)
+
+[2026-01-15] Completed Gameplay & UI Fixes Work Item #3: Prevent Repeated Collection from Same Chicken
+- Root cause: Players could continuously collect money from the same chicken by staying near it,
+  which felt exploitative and reduced gameplay variety.
+
+1. src/client/Main.client.lua:
+   - Added lastCollectedChickenId tracking variable (line 1071)
+   - Modified updateProximityPrompts() to check if current chicken matches lastCollectedChickenId
+   - Added isRepeatCollection check before allowing auto-collection
+   - Set lastCollectedChickenId = chickenId on successful collection
+   - Added handler in EggSpawned event to reset lock when the locked chicken lays an egg
+
+2. src/server/Main.server.lua:
+   - Added lastCollectedChickenId to PlayerGameState type definition
+   - Added lastCollectedChickenId = nil to createPlayerGameState()
+   - Modified CollectMoney handler to:
+     * Check if chickenId == gameState.lastCollectedChickenId
+     * Return blocked=true if same chicken attempted
+     * Track lastCollectedChickenId on successful collection
+     * Reset lock when collecting from all chickens (collectAll)
+   - Added reset logic in game loop when locked chicken lays an egg
+
+- Design decisions:
+  * Dual-layer protection: client blocks UI spam, server prevents exploit
+  * Visual feedback: money continues accumulating visually, just can't collect
+  * Lock reset conditions: different chicken collected OR locked chicken lays egg
+  * Server returns blocked=true for client to handle if needed
+
+- Acceptance criteria met:
+  - Cannot collect money twice in a row from same chicken ✓
+  - Collection unlocks when player collects from different chicken ✓
+  - Collection unlocks when locked chicken lays an egg ✓
+  - Visual feedback: money keeps accumulating (implicit feedback) ✓
+  - No exploit via client manipulation (server-side validation) ✓
+- Format check passes, build passes
+- Next: Work on remaining items (Item #5 Predator Targeting, Item #2 Money Display, etc.)

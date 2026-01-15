@@ -1,0 +1,424 @@
+{
+  "project": {
+    "name": "Chicken Coop Tycoon - Gameplay & UI Fixes",
+    "description": "Collection of gameplay balance adjustments, bug fixes, and UI improvements to enhance the player experience. Includes egg laying balance, money collection visibility, trap placement fixes, predator targeting improvements, and store UI polish.",
+    "createdDate": "2026-01-15",
+    "priority": "high",
+    "category": "Bug Fixes & Polish"
+  },
+  "workItems": [
+    {
+      "id": 1,
+      "category": "Gameplay",
+      "title": "Reduce Egg Laying Frequency",
+      "description": "Chickens are currently laying eggs at a rate that feels too fast, potentially unbalancing the economy or overwhelming players with eggs to manage. Increase the base laying interval by 2-3x.",
+      "completed": true,
+      "priority": "high",
+      "steps": [
+        "Locate egg laying interval configuration in EggConfig.lua or ChickenConfig.lua",
+        "Identify the current BASE_LAY_INTERVAL or equivalent value",
+        "Increase the interval by 2-3x to slow down egg production",
+        "Consider making laying speed vary by chicken rarity if not already",
+        "Test with multiple chickens to verify new pacing feels balanced",
+        "Adjust money accumulation rates if needed to compensate"
+      ],
+      "acceptanceCriteria": [
+        "Egg laying interval is increased to a balanced rate",
+        "Players can comfortably manage egg collection without feeling rushed",
+        "Economy remains balanced with the new laying rate",
+        "Different chicken rarities may have different laying speeds"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/shared/EggConfig.lua",
+        "src/shared/ChickenConfig.lua"
+      ],
+      "technicalNotes": "Fixed: Increased RARITY_EGG_INTERVALS by 2.5x in ChickenConfig.lua. New intervals: Common 150s (was 60s), Uncommon 225s (was 90s), Rare 300s (was 120s), Epic 450s (was 180s), Legendary 750s (was 300s), Mythic 1500s (was 600s). Laying speed already varied by rarity - no additional changes needed. Money accumulation rates unchanged to maintain economy balance (slower egg production = more valuable eggs)."
+    },
+    {
+      "id": 2,
+      "category": "UI-World",
+      "title": "Show Accumulated Money on Placed Chickens",
+      "description": "Chickens in the player's area should display how much money they've accumulated since the last collection, giving players clear feedback on earnings.",
+      "completed": false,
+      "priority": "high",
+      "steps": [
+        "Create a BillboardGui with TextLabel for money display above each chicken",
+        "Add the money indicator to ChickenVisuals.create() function",
+        "Update the display in real-time as money accumulates (use Heartbeat)",
+        "Format currency using abbreviated format ($10k, $1M) for large amounts",
+        "Add color coding (green for money)",
+        "Animate or flash the display briefly when money is collected",
+        "Reset/update display when money is collected"
+      ],
+      "acceptanceCriteria": [
+        "Accumulated money is visible above each placed chicken",
+        "Amount updates in real-time as money accumulates",
+        "Display disappears or resets when money is collected",
+        "Uses formatted currency display for large amounts ($10k, $1M)"
+      ],
+      "dependencies": [7],
+      "codeLocations": [
+        "src/client/ChickenVisuals.lua",
+        "src/client/ChickenHealthBar.lua",
+        "src/client/Main.client.lua"
+      ],
+      "technicalNotes": "ChickenVisuals already tracks accumulatedMoney via getAccumulatedMoney(). Add BillboardGui below existing health bar or integrate into it."
+    },
+    {
+      "id": 3,
+      "category": "Gameplay",
+      "title": "Prevent Repeated Collection from Same Chicken",
+      "description": "Players should not be able to continuously collect money from the same chicken. Collection should only be allowed after the chicken lays an egg OR the player collects from a different chicken first.",
+      "completed": true,
+      "priority": "high",
+      "steps": [
+        "Add lastCollectedChickenId tracking variable in Main.client.lua",
+        "In updateProximityPrompts(), check if current chicken matches lastCollectedChickenId",
+        "Block collection if same chicken AND no egg has been laid since",
+        "Reset lastCollectedChickenId when collecting from a different chicken",
+        "Listen to EggSpawned event and reset if the locked chicken laid an egg",
+        "Add visual feedback (greyed out indicator or message) when collection is blocked",
+        "Consider server-side validation to prevent exploits"
+      ],
+      "acceptanceCriteria": [
+        "Cannot collect money twice in a row from the same chicken",
+        "Collection unlocks when player collects from a different chicken",
+        "Collection unlocks when the locked chicken lays an egg",
+        "Visual/audio feedback indicates when collection is blocked",
+        "No exploit possible via rapid clicking or client manipulation"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/client/Main.client.lua",
+        "src/server/Main.server.lua",
+        "src/shared/MoneyCollection.lua"
+      ],
+      "technicalNotes": "Fixed: Added lastCollectedChickenId tracking on both client and server. Client-side: Added tracking variable after line 1070, checks in updateProximityPrompts() to block collection if same chicken, and reset on EggSpawned event when the locked chicken lays an egg. Server-side: Added lastCollectedChickenId to PlayerGameState type and createPlayerGameState(), added validation in CollectMoney handler to reject repeated collections and return blocked=true, and reset the lock when the locked chicken lays an egg in the game loop. Visual feedback: Collection simply doesn't trigger when blocked (money continues accumulating visually). Server-side validation prevents exploit via client manipulation."
+    },
+    {
+      "id": 4,
+      "category": "Bug Fix",
+      "title": "Fix Trap Placement Not Working",
+      "description": "Players cannot place traps despite having them in inventory. The trap placement system appears to be broken.",
+      "completed": true,
+      "priority": "critical",
+      "steps": [
+        "Debug the PlaceTrap RemoteFunction flow end-to-end",
+        "Check if trap spots are being calculated correctly in PlayerSection.getTrapSpotPosition()",
+        "Verify inventory item selection for traps works in InventoryUI",
+        "Check if findNearbyAvailableTrapSpot() returns valid spots",
+        "Ensure server-side validation in PlaceTrap handler isn't rejecting valid placements",
+        "Add debug logging to trace where the placement fails",
+        "Fix the identified issue and test trap placement"
+      ],
+      "acceptanceCriteria": [
+        "Players can successfully place traps from inventory",
+        "Traps appear visually in the world at the designated spot",
+        "Traps function correctly to catch predators",
+        "Appropriate feedback is given on success/failure"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/shared/TrapPlacement.lua",
+        "src/server/Main.server.lua",
+        "src/client/Main.client.lua",
+        "src/client/InventoryUI.lua",
+        "src/shared/PlayerSection.lua"
+      ],
+      "technicalNotes": "Fixed: The 20-stud distance limit in findNearbyAvailableTrapSpot() was preventing trap placement. Changed to allow placement from anywhere by using math.huge as the max distance. Improved error message to indicate when all spots are occupied."
+    },
+    {
+      "id": 5,
+      "category": "Gameplay",
+      "title": "Predators Target Individual Chickens Instead of Area Center",
+      "description": "Predators currently target the center of the player's area. They should instead target and attack individual chickens for more engaging gameplay.",
+      "completed": false,
+      "priority": "high",
+      "steps": [
+        "Modify predator spawning to select a target chicken (random or nearest)",
+        "Update PredatorAI to track the target chicken's current position",
+        "Make predators walk toward the targeted chicken, not section center",
+        "Implement re-targeting if current target dies or is picked up",
+        "Update predator position updates to follow the moving chicken",
+        "Update attack logic to damage the targeted chicken specifically",
+        "Send target chicken info to client for visual feedback (e.g., target indicator)",
+        "Test with multiple predators and chickens"
+      ],
+      "acceptanceCriteria": [
+        "Predators select and move toward a specific chicken",
+        "Predators visually follow the chicken if it moves",
+        "Predators attack the targeted chicken when in range",
+        "Predators re-target if their target is no longer available",
+        "Client receives target information for visual feedback"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/shared/PredatorAI.lua",
+        "src/shared/PredatorAttack.lua",
+        "src/shared/PredatorSpawning.lua",
+        "src/server/Main.server.lua"
+      ],
+      "technicalNotes": "PredatorSpawning currently calculates target position as section center. Change to query placedChickens for a random target. Store targetChickenId in predator state. Update position logic to fetch chicken's current position each tick."
+    },
+    {
+      "id": 12,
+      "category": "Bug Fix",
+      "title": "Predators Die Instantly Instead of Taking Damage",
+      "description": "Predators are dying immediately when hit instead of taking damage and having their health reduced. The health system for predators is not working correctly.",
+      "completed": true,
+      "priority": "high",
+      "steps": [
+        "Debug the SwingBat RemoteFunction handler on the server",
+        "Check predator health initialization in PredatorSpawning or PredatorConfig",
+        "Verify predator health is being stored and tracked correctly",
+        "Check if damage calculation is subtracting from health or just killing",
+        "Ensure PredatorHealthBar receives correct health values",
+        "Fix the damage application logic to reduce health, not instant kill",
+        "Test with different predator types and threat levels",
+        "Verify health bar updates correctly as predator takes damage"
+      ],
+      "acceptanceCriteria": [
+        "Predators have health points based on their type/threat level",
+        "Each hit reduces predator health by the weapon's damage amount",
+        "Predator health bar updates to show remaining health",
+        "Predators only die when health reaches 0",
+        "Different predator types have different health pools"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/server/Main.server.lua",
+        "src/shared/PredatorConfig.lua",
+        "src/shared/PredatorSpawning.lua",
+        "src/shared/BaseballBat.lua",
+        "src/client/PredatorHealthBar.lua"
+      ],
+      "technicalNotes": "Fixed: Added PredatorHealthUpdated event to broadcast health changes to all clients. The server now fires this event when any player hits a predator, sending the remaining health, max health, and damage dealt. All clients receive this event and update their health bars accordingly. The core health tracking was already correct in PredatorSpawning.applyBatHit() - the issue was that only the hitting player saw health updates. Health calculation: math.ceil(catchDifficulty * 0.8) hits per predator, ranging from 1 hit (Rat) to 8 hits (Bear/Eagle)."
+    },
+    {
+      "id": 6,
+      "category": "UI-World",
+      "title": "Remove 'Unassigned' Text Above Empty Player Areas",
+      "description": "Unassigned player areas display 'Unassigned' text which clutters the game world. This should be removed or hidden.",
+      "completed": false,
+      "priority": "medium",
+      "steps": [
+        "Locate where 'Unassigned' label is created in SectionLabels.lua or SectionVisuals.lua",
+        "Modify logic to not create label for unassigned sections",
+        "Alternatively, set the label to invisible when section is unassigned",
+        "Ensure claimed areas still show player names correctly",
+        "Test with partial server (some sections claimed, some not)"
+      ],
+      "acceptanceCriteria": [
+        "No 'Unassigned' text visible above unclaimed areas",
+        "Claimed areas still show player names correctly",
+        "World looks cleaner without unnecessary labels"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/client/SectionVisuals.lua",
+        "src/server/SectionLabels.lua"
+      ],
+      "technicalNotes": "SectionLabels.lua likely has fallback text for unassigned sections. Simply remove the fallback or set Visible = false when no player is assigned."
+    },
+    {
+      "id": 7,
+      "category": "UI-World",
+      "title": "Add Padding Around Player Name Labels",
+      "description": "The name labels above player areas need padding to improve readability and visual appeal.",
+      "completed": false,
+      "priority": "low",
+      "steps": [
+        "Find the TextLabel or BillboardGui for player names in SectionLabels.lua",
+        "Add UIPadding to the TextLabel (8-12px on all sides)",
+        "Alternatively, adjust Size to include padding and center text",
+        "Ensure background frame extends to show padding",
+        "Test readability from various distances"
+      ],
+      "acceptanceCriteria": [
+        "Player names have visible padding around the text",
+        "Names are easily readable",
+        "Consistent styling across all player labels"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/client/SectionVisuals.lua",
+        "src/server/SectionLabels.lua"
+      ],
+      "technicalNotes": "UIPadding instance can be added as child of TextLabel. Set PaddingLeft, PaddingRight, PaddingTop, PaddingBottom to UDim.new(0, 8)."
+    },
+    {
+      "id": 8,
+      "category": "UI-Store",
+      "title": "Fix Store Button Colors - Make Solid Instead of Transparent",
+      "description": "Store buttons appear transparent when they should be solid colors for better visibility and tap targets.",
+      "completed": false,
+      "priority": "medium",
+      "steps": [
+        "Locate all button creation in StoreUI.create()",
+        "Set BackgroundTransparency = 0 for all purchase buttons",
+        "Use appropriate solid colors (green for buy buttons, etc.)",
+        "Ensure disabled state uses grey, not transparency",
+        "Add hover/press states if not already present",
+        "Test all tabs and button states"
+      ],
+      "acceptanceCriteria": [
+        "All store buttons are solid colors with no transparency",
+        "Buttons are clearly identifiable as interactive elements",
+        "Button colors are consistent and visually appealing",
+        "Disabled buttons are grey, not transparent"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/client/StoreUI.lua"
+      ],
+      "technicalNotes": "Search for BackgroundTransparency in StoreUI.lua and change values from > 0 to 0 for buttons. May need to update multiple button creation calls."
+    },
+    {
+      "id": 9,
+      "category": "UI-Store",
+      "title": "Increase Store Text Size for Readability",
+      "description": "Some text in the store UI is too small to read comfortably, especially on mobile devices.",
+      "completed": false,
+      "priority": "medium",
+      "steps": [
+        "Audit all TextLabel instances in StoreUI.lua",
+        "Identify any TextSize values below 14",
+        "Increase minimum TextSize to 14px for all text",
+        "Use 16-18px for important information (prices, item names)",
+        "Test text scaling on different screen sizes",
+        "Consider using TextScaled with MinTextSize constraints"
+      ],
+      "acceptanceCriteria": [
+        "All store text is easily readable",
+        "Minimum text size of 14px throughout",
+        "Text scales appropriately on different devices",
+        "Important text (prices, names) is prominently sized"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/client/StoreUI.lua"
+      ],
+      "technicalNotes": "Search for TextSize in StoreUI.lua. Common pattern is TextSize = 12 or 10 which is too small. Increase to 14-18 range."
+    },
+    {
+      "id": 10,
+      "category": "UI-General",
+      "title": "Format Large Currency Values (10k, 1M, etc.)",
+      "description": "Prices and money amounts become confusing with many zeros. Large numbers should use abbreviated formatting like $10k, $1M, $1B.",
+      "completed": true,
+      "priority": "high",
+      "steps": [
+        "Create formatCurrency(amount: number): string function in Util.lua",
+        "Implement formatting rules: <1000 = full, 1k-999k = Xk, 1M+ = XM, 1B+ = XB",
+        "Handle decimal places appropriately ($1.5M not $1.500000M)",
+        "Export function from Util module",
+        "Replace direct number displays with formatCurrency() in StoreUI.lua",
+        "Replace in MainHUD.lua for money display",
+        "Replace in ChickenVisuals.lua for money indicators",
+        "Replace in InventoryUI.lua for item values",
+        "Test with various amounts to verify formatting"
+      ],
+      "acceptanceCriteria": [
+        "Large numbers display with k/M/B suffixes",
+        "Formatting is consistent across all UI elements",
+        "Numbers remain accurate (no precision loss)",
+        "Small numbers ($0-$999) show full amount"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/shared/Util.lua",
+        "src/client/StoreUI.lua",
+        "src/client/MainHUD.lua",
+        "src/client/ChickenVisuals.lua",
+        "src/client/InventoryUI.lua"
+      ],
+      "technicalNotes": "Fixed: MoneyScaling.formatCurrency() already existed with full support for K/M/B/T/Qa/Qi suffixes. Updated StoreUI.lua to import MoneyScaling and use formatCurrency() for all price displays (eggs, supplies, weapons). Updated ChickenVisuals.lua to use MoneyScaling.formatCurrency() instead of duplicate local formatMoney function. MainHUD.lua and InventoryUI.lua already used MoneyScaling.formatCurrency(). ChickenSelling.lua and OfflineEarningsUI.lua already used MoneyScaling.formatCurrency(). All currency displays now consistently use the same formatting."
+    },
+    {
+      "id": 11,
+      "category": "UI-World",
+      "title": "Show Accumulation Rate on Placed Chickens",
+      "description": "Chickens on the ground should display their money accumulation rate so players can see earning potential (e.g., '$0.50/s' or '+$30/min').",
+      "completed": false,
+      "priority": "medium",
+      "steps": [
+        "Calculate accumulation rate based on chicken type from ChickenConfig",
+        "Add secondary TextLabel to chicken's BillboardGui showing rate",
+        "Format rate appropriately (per second for fast, per minute for slow)",
+        "Update rate display if multipliers/buffs are applied",
+        "Style to differentiate from accumulated amount (smaller, different color)",
+        "Test with different chicken types to verify accuracy"
+      ],
+      "acceptanceCriteria": [
+        "Accumulation rate is visible on each placed chicken",
+        "Rate reflects actual earning speed including any bonuses",
+        "Display uses appropriate time unit (per second or per minute)",
+        "Rate updates if bonuses/multipliers are applied"
+      ],
+      "dependencies": [2, 10],
+      "codeLocations": [
+        "src/client/ChickenVisuals.lua",
+        "src/shared/ChickenConfig.lua",
+        "src/shared/MoneyScaling.lua"
+      ],
+      "technicalNotes": "ChickenConfig should have moneyPerSecond or similar field per chicken type. Display as '+$X/s' in smaller text below the accumulated amount."
+    }
+  ],
+  "implementationOrder": [
+    {
+      "phase": 1,
+      "title": "Critical Fixes",
+      "workItemIds": [4, 12],
+      "description": "Fix broken core functionality first (trap placement, predator health)"
+    },
+    {
+      "phase": 2,
+      "title": "Gameplay Balance",
+      "workItemIds": [1, 3, 5],
+      "description": "Balance egg laying, money collection mechanics, and improve predator behavior"
+    },
+    {
+      "phase": 3,
+      "title": "Currency Formatting Foundation",
+      "workItemIds": [10],
+      "description": "Create currency formatting utility before other UI work"
+    },
+    {
+      "phase": 4,
+      "title": "Chicken Money Display",
+      "workItemIds": [2, 11],
+      "description": "Add money accumulation and rate display to chickens"
+    },
+    {
+      "phase": 5,
+      "title": "Store UI Fixes",
+      "workItemIds": [8, 9],
+      "description": "Fix store button visibility and text readability"
+    },
+    {
+      "phase": 6,
+      "title": "World UI Cleanup",
+      "workItemIds": [6, 7],
+      "description": "Clean up section labels and player name formatting"
+    }
+  ],
+  "testingRequirements": {
+    "gameplay": [
+      "Verify egg laying feels balanced over a 10-minute play session",
+      "Confirm money collection blocking works correctly between chickens",
+      "Confirm predators successfully chase and attack individual chickens",
+      "Test trap placement from inventory works in all scenarios"
+    ],
+    "ui": [
+      "Verify all currency displays format correctly at various amounts",
+      "Test store readability on both desktop and mobile",
+      "Confirm chicken money displays are visible and don't overlap",
+      "Check section labels appear correctly for claimed/unclaimed areas"
+    ],
+    "performance": [
+      "Ensure real-time money updates don't impact frame rate",
+      "Verify predator targeting doesn't cause lag with many chickens"
+    ]
+  }
+}
