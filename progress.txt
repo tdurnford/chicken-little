@@ -3920,3 +3920,41 @@
   - Existing chickens are not affected by the limit (no deletion) ✓
 - Format check passes, build passes
 - Next: Work on remaining items (Item #1 Bat Model, Item #4 Player Name Labels, Item #8 Trap Icon)
+
+[2026-01-15] Completed UI & Gameplay Fixes Work Item #8: Fix Trap Icon in Store
+- Fixed trap icons displaying as squares by adding proper emoji icons
+- Changed from ImageLabel (hardcoded asset) to TextLabel (emoji-based) matching other store cards
+- Changes applied across multiple files:
+
+1. src/shared/TrapConfig.lua:
+   - Added `icon: string` field to TrapTypeConfig type definition
+   - Added unique emoji icons for each trap type:
+     * WoodenSnare: 🪵 (wood)
+     * RopeTrap: 🪢 (knot)
+     * MetalCage: 🗑️ (wastebasket - cage-like)
+     * SpringTrap: 🔩 (nut and bolt)
+     * ElectricFence: ⚡ (lightning)
+     * BearTrap: 🐻 (bear)
+     * LaserGrid: 🔴 (red circle)
+     * SonicEmitter: 📢 (loudspeaker)
+     * GravityWell: 🌀 (cyclone)
+     * CryoTrap: ❄️ (snowflake)
+     * QuantumContainment: 🔮 (crystal ball)
+     * VoidPrison: 🕳️ (hole)
+
+2. src/shared/Store.lua:
+   - Added `icon: string` field to SupplyItem type
+   - Updated getAvailableTraps() to include icon from TrapConfig
+
+3. src/client/StoreUI.lua:
+   - Changed createSupplyCard() icon from ImageLabel to TextLabel
+   - Now uses supplyItem.icon instead of hardcoded rbxassetid
+   - Matches styling of weapon and egg cards (TextLabel with emoji)
+
+- Acceptance criteria met:
+  - Trap icon displays correctly (not a square) ✓
+  - Icon clearly represents a trap (themed per trap type) ✓
+  - Icon matches style of other store icons (TextLabel like weapons/eggs) ✓
+  - Icon renders correctly on all platforms (using well-supported emoji) ✓
+- Format check passes, build passes
+- Next: Work on remaining items (Item #1 Bat Model, Item #4 Player Name Labels)

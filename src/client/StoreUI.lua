@@ -827,28 +827,28 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   tierBarCorner.Parent = tierBar
 
   -- Icon shadow for depth
-  local iconShadow = Instance.new("ImageLabel")
+  local iconShadow = Instance.new("TextLabel")
   iconShadow.Name = "IconShadow"
   iconShadow.Size = UDim2.new(0, 60, 0, 60)
   iconShadow.Position = UDim2.new(0, -7, 0.5, -27)
   iconShadow.BackgroundTransparency = 1
-  iconShadow.Image = "rbxassetid://6022668885"
-  iconShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-  iconShadow.ImageTransparency = 0.6
-  iconShadow.ScaleType = Enum.ScaleType.Fit
+  iconShadow.Text = supplyItem.icon
+  iconShadow.TextSize = 48
+  iconShadow.TextColor3 = Color3.fromRGB(0, 0, 0)
+  iconShadow.TextTransparency = 0.6
   iconShadow.ZIndex = 2
   iconShadow.Parent = card
 
   -- Icon (enlarged with pop-out effect)
-  local iconImage = Instance.new("ImageLabel")
-  iconImage.Name = "Icon"
-  iconImage.Size = UDim2.new(0, 60, 0, 60)
-  iconImage.Position = UDim2.new(0, -10, 0.5, -30)
-  iconImage.BackgroundTransparency = 1
-  iconImage.Image = "rbxassetid://6022668885"
-  iconImage.ScaleType = Enum.ScaleType.Fit
-  iconImage.ZIndex = 3
-  iconImage.Parent = card
+  local iconLabel = Instance.new("TextLabel")
+  iconLabel.Name = "Icon"
+  iconLabel.Size = UDim2.new(0, 60, 0, 60)
+  iconLabel.Position = UDim2.new(0, -10, 0.5, -30)
+  iconLabel.BackgroundTransparency = 1
+  iconLabel.Text = supplyItem.icon
+  iconLabel.TextSize = 48
+  iconLabel.ZIndex = 3
+  iconLabel.Parent = card
 
   -- Name label (white with dark stroke)
   local nameLabel = Instance.new("TextLabel")
