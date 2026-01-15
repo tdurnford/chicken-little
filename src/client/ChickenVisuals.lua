@@ -40,7 +40,7 @@ export type ChickenVisualState = {
   accumulatedMoney: number,
   moneyPerSecond: number,
   position: Vector3,
-  spotIndex: number?,
+  isPlaced: boolean,
   healthPercent: number,
   isDamaged: boolean,
 }
@@ -122,9 +122,9 @@ local function getScaleMultiplier(rarity: string): number
   return RARITY_SCALE_MULTIPLIER[rarity] or 1.0
 end
 
--- Helper: Format money for display (uses MoneyScaling for consistency)
+-- Helper: Format money for display (floored to remove decimals)
 local function formatMoney(amount: number): string
-  return MoneyScaling.formatCurrency(amount)
+  return MoneyScaling.formatCurrency(math.floor(amount))
 end
 
 -- Create a placeholder chicken model (to be replaced with actual assets)
@@ -201,30 +201,13 @@ local function createPlaceholderModel(chickenType: string, rarity: string): Mode
   return model
 end
 
--- Helper: Format money rate for display (uses per-minute for slow rates, per-second for fast)
+-- Helper: Format money rate for display (always per-second, no decimals)
 local function formatMoneyRate(rate: number): string
-  if rate >= 1000 then
-    return string.format("$%.1fK/s", rate / 1000)
-  elseif rate >= 100 then
-    return string.format("$%.0f/s", rate)
-  elseif rate >= 10 then
-    return string.format("$%.1f/s", rate)
-  elseif rate >= 1 then
-    -- For slow rates ($1-$9.99/s), show per-minute for better readability
-    local perMinute = rate * 60
-    if perMinute >= 100 then
-      return string.format("$%.0f/m", perMinute)
-    else
-      return string.format("$%.1f/m", perMinute)
-    end
+  local flooredRate = math.floor(rate)
+  if flooredRate >= 1000 then
+    return string.format("$%dK/s", math.floor(flooredRate / 1000))
   else
-    -- For very slow rates (<$1/s), show per-minute with decimals
-    local perMinute = rate * 60
-    if perMinute >= 1 then
-      return string.format("$%.1f/m", perMinute)
-    else
-      return string.format("$%.2f/m", perMinute)
-    end
+    return string.format("$%d/s", flooredRate)
   end
 end
 
@@ -455,7 +438,7 @@ function ChickenVisuals.create(
   chickenId: string,
   chickenType: string,
   position: Vector3,
-  spotIndex: number?
+  isPlaced: boolean?
 ): ChickenVisualState?
   -- Get chicken config for rarity
   local config = ChickenConfig.get(chickenType)
@@ -473,10 +456,11 @@ function ChickenVisuals.create(
   model:SetPrimaryPartCFrame(CFrame.new(position))
   model.Parent = workspace
 
-  -- Create money indicator only for placed chickens (arena chickens have no spotIndex)
+  -- Create money indicator only for placed chickens (random/wandering chickens are not placed)
   local moneyIndicator: BillboardGui? = nil
   local chickenMoneyPerSecond = config.moneyPerSecond or 1
-  if spotIndex ~= nil then
+  local chickenIsPlaced = isPlaced == true
+  if chickenIsPlaced then
     moneyIndicator = createMoneyIndicator(model.PrimaryPart, chickenMoneyPerSecond)
   end
 
@@ -491,7 +475,7 @@ function ChickenVisuals.create(
     accumulatedMoney = 0,
     moneyPerSecond = config.moneyPerSecond or 1,
     position = position,
-    spotIndex = spotIndex,
+    isPlaced = chickenIsPlaced,
     healthPercent = 1.0,
     isDamaged = false,
   }
@@ -508,7 +492,7 @@ function ChickenVisuals.create(
         end
         -- Client-side money accumulation for smooth counter (only for placed chickens)
         -- Apply health multiplier to money generation rate
-        if chickenState.moneyPerSecond > 0 and chickenState.spotIndex ~= nil then
+        if chickenState.moneyPerSecond > 0 and chickenState.isPlaced then
           local effectiveMoneyPerSecond = chickenState.moneyPerSecond * chickenState.healthPercent
           chickenState.accumulatedMoney = chickenState.accumulatedMoney
             + (effectiveMoneyPerSecond * deltaTime)
@@ -718,11 +702,10 @@ function ChickenVisuals.setPosition(chickenId: string, position: Vector3): boole
   return true
 end
 
--- Move chicken to a new spot (updates position and spotIndex)
-function ChickenVisuals.moveToSpot(
+-- Move chicken to a new position (for placed chickens)
+function ChickenVisuals.moveToPosition(
   chickenId: string,
-  position: Vector3,
-  newSpotIndex: number
+  position: Vector3
 ): boolean
   local state = activeChickens[chickenId]
   if not state or not state.model then
@@ -730,7 +713,6 @@ function ChickenVisuals.moveToSpot(
   end
 
   state.position = position
-  state.spotIndex = newSpotIndex
   state.model:SetPrimaryPartCFrame(CFrame.new(position))
   return true
 end

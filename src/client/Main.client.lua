@@ -329,7 +329,7 @@ if chickenPlacedEvent then
       position = sectionCenter or Vector3.new(0, 5, 0)
     end
 
-    local visualState = ChickenVisuals.create(chicken.id, chicken.chickenType, position, nil)
+    local visualState = ChickenVisuals.create(chicken.id, chicken.chickenType, position, true)
     SoundEffects.play("chickenPlace")
 
     -- Create health bar for the chicken
@@ -447,18 +447,13 @@ if eggSpawnedEvent then
   eggSpawnedEvent.OnClientEvent:Connect(function(eggData: { [string]: any })
     local eggId = eggData.id
     local eggType = eggData.eggType
-    local eggRarity = eggData.rarity
+    local _eggRarity = eggData.rarity
     local chickenId = eggData.chickenId
     local position = eggData.position
 
     -- Play laying animation on the chicken
     if chickenId then
       ChickenVisuals.playLayingAnimation(chickenId)
-    end
-
-    -- Reset collection lock if the locked chicken laid an egg
-    if chickenId and chickenId == lastCollectedChickenId then
-      lastCollectedChickenId = nil
     end
 
     -- Create egg visual in world
@@ -747,7 +742,7 @@ if randomChickenSpawnedEvent then
     SoundEffects.play("uiNotification")
     local pos = chicken.position
     local position = Vector3.new(pos.x, pos.y, pos.z)
-    ChickenVisuals.create(chicken.id, chicken.chickenType, position, nil)
+    ChickenVisuals.create(chicken.id, chicken.chickenType, position, false)
     print("[Client] Random chicken spawned:", chicken.id, chicken.chickenType, chicken.rarity)
   end)
 end
@@ -1094,22 +1089,16 @@ local MONEY_COLLECTION_COOLDOWN = 0.5 -- Cooldown between collections from same 
 local lastProximityCheckTime = 0
 local lastLockTimerUpdateTime = 0
 local isNearChicken = false
-local nearestChickenId: string? = nil
-local nearestChickenType: string? = nil
 local lastCollectedChickenTimes: { [string]: number } = {} -- Track when each chicken was last collected
-local lastCollectedChickenId: string? = nil -- Track last chicken collected from (for repeat prevention)
 
 -- Random chicken claiming state
 local RANDOM_CHICKEN_CLAIM_RANGE = 8 -- studs, same as server-side claim range
 local isNearRandomChicken = false
 local nearestRandomChickenId: string? = nil
-local nearestRandomChickenType: string? = nil
-local randomChickenClaimPrompt: TextLabel? = nil
 
 -- Store interaction state
 local STORE_INTERACTION_RANGE = 12 -- studs, matches ProximityPrompt MaxActivationDistance
 local isNearStore = false
-local storePromptConnected = false
 
 --[[
 	Helper function to find the nearest random chicken within claim range.
@@ -1822,11 +1811,8 @@ local function updateProximityPrompts()
       nearestChickenId = chickenId
       nearestChickenType = chickenType
 
-      -- Check if this is the same chicken we just collected from (prevent repeated collection)
-      local isRepeatCollection = chickenId == lastCollectedChickenId
-
       -- Auto-collect money when near a chicken with at least $1 accumulated
-      if accumulatedMoney and accumulatedMoney >= 1 and not isRepeatCollection then
+      if accumulatedMoney and accumulatedMoney >= 1 then
         local currentTime = os.clock()
         local lastCollectTime = lastCollectedChickenTimes[chickenId] or 0
 
@@ -1846,9 +1832,6 @@ local function updateProximityPrompts()
                 and result.amountCollected
                 and result.amountCollected > 0
               then
-                -- Lock this chicken to prevent repeated collection
-                lastCollectedChickenId = chickenId
-
                 -- Reset client-side accumulated money to the remainder
                 ChickenVisuals.resetAccumulatedMoney(chickenId, result.remainder or 0)
 
