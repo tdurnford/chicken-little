@@ -40,6 +40,9 @@ export type ChickenVisualState = {
   accumulatedMoney: number,
   moneyPerSecond: number,
   position: Vector3,
+  targetPosition: Vector3?,
+  targetFacingDirection: Vector3?,
+  currentFacingDirection: Vector3?,
   isPlaced: boolean,
   healthPercent: number,
   isDamaged: boolean,
@@ -99,6 +102,10 @@ local LAYING_HOLD_DURATION = 0.5
 local CELEBRATION_SPIN_SPEED = 3.0
 local MONEY_POP_RISE_HEIGHT = 2.0
 local MONEY_POP_FADE_DURATION = 1.0
+
+-- Smooth movement interpolation
+local POSITION_LERP_SPEED = 10 -- Higher = faster interpolation
+local ROTATION_LERP_SPEED = 8 -- Angular interpolation speed
 
 -- Module state
 local activeChickens: { [string]: ChickenVisualState } = {}
@@ -294,6 +301,39 @@ local function applyIdleAnimation(state: ChickenVisualState, deltaTime: number)
   state.model:SetPrimaryPartCFrame(CFrame.new(targetPosition))
 end
 
+-- Apply smooth walking animation with interpolation
+local function applyWalkingAnimation(state: ChickenVisualState, deltaTime: number)
+  if not state.model or not state.model.PrimaryPart then
+    return
+  end
+
+  -- Lerp position toward target
+  if state.targetPosition then
+    local lerpFactor = math.min(1, deltaTime * POSITION_LERP_SPEED)
+    state.position = state.position:Lerp(state.targetPosition, lerpFactor)
+  end
+
+  -- Lerp facing direction for smooth rotation
+  if state.targetFacingDirection and state.currentFacingDirection then
+    local rotLerpFactor = math.min(1, deltaTime * ROTATION_LERP_SPEED)
+    state.currentFacingDirection = state.currentFacingDirection:Lerp(state.targetFacingDirection, rotLerpFactor)
+  elseif state.targetFacingDirection then
+    state.currentFacingDirection = state.targetFacingDirection
+  end
+
+  -- Add subtle bob while walking
+  local bobOffset = math.sin(animationTime * IDLE_BOB_SPEED * 1.5) * (currentConfig.idleBobAmount * 0.5)
+  local displayPosition = state.position + Vector3.new(0, bobOffset, 0)
+
+  -- Apply position and rotation
+  if state.currentFacingDirection and state.currentFacingDirection.Magnitude > 0.001 then
+    local lookAt = displayPosition + state.currentFacingDirection
+    state.model:SetPrimaryPartCFrame(CFrame.lookAt(displayPosition, lookAt))
+  else
+    state.model:SetPrimaryPartCFrame(CFrame.new(displayPosition))
+  end
+end
+
 -- Play egg laying animation
 function ChickenVisuals.playLayingAnimation(chickenId: string): boolean
   local state = activeChickens[chickenId]
@@ -475,6 +515,9 @@ function ChickenVisuals.create(
     accumulatedMoney = 0,
     moneyPerSecond = config.moneyPerSecond or 1,
     position = position,
+    targetPosition = nil,
+    targetFacingDirection = nil,
+    currentFacingDirection = nil,
     isPlaced = chickenIsPlaced,
     healthPercent = 1.0,
     isDamaged = false,
@@ -489,6 +532,8 @@ function ChickenVisuals.create(
       for _, chickenState in pairs(activeChickens) do
         if chickenState.currentAnimation == "idle" then
           applyIdleAnimation(chickenState, deltaTime)
+        elseif chickenState.currentAnimation == "walking" then
+          applyWalkingAnimation(chickenState, deltaTime)
         end
         -- Client-side money accumulation for smooth counter (only for placed chickens)
         -- Apply health multiplier to money generation rate
@@ -718,6 +763,7 @@ function ChickenVisuals.moveToPosition(
 end
 
 -- Update position with facing direction and animation state (for wandering chickens)
+-- Uses smooth interpolation - stores target position and direction for lerping in update loop
 function ChickenVisuals.updatePosition(
   chickenId: string,
   position: Vector3,
@@ -729,21 +775,23 @@ function ChickenVisuals.updatePosition(
     return false
   end
 
-  state.position = position
+  -- Store target position for smooth interpolation
+  state.targetPosition = position
+  state.targetFacingDirection = facingDirection
+
+  -- Initialize current facing direction if not set
+  if not state.currentFacingDirection then
+    state.currentFacingDirection = facingDirection
+  end
 
   -- Update animation state based on movement
   if isIdle then
+    -- When idle, snap position to target (no more walking lerp needed)
+    state.position = position
     state.currentAnimation = "idle"
   else
     state.currentAnimation = "walking"
   end
-
-  -- Create CFrame with rotation toward facing direction
-  local lookAt = position + facingDirection
-  local cframe = CFrame.lookAt(position, lookAt)
-
-  -- Apply position and rotation
-  state.model:SetPrimaryPartCFrame(cframe)
 
   return true
 end

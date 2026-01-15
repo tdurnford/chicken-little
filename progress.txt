@@ -1,0 +1,22 @@
+## 2026-01-15: Smooth Chicken Movement (Work Item #1) - COMPLETED
+
+Implemented smooth position and rotation interpolation for wandering chickens in ChickenVisuals.lua.
+
+### Changes made:
+- Added `targetPosition`, `targetFacingDirection`, and `currentFacingDirection` fields to ChickenVisualState type
+- Added interpolation constants: `POSITION_LERP_SPEED = 10` and `ROTATION_LERP_SPEED = 8`
+- Created new `applyWalkingAnimation()` function that:
+  - Lerps position toward target using deltaTime-based factor
+  - Smoothly interpolates facing direction for gradual rotation
+  - Adds subtle bob while walking
+- Updated `updatePosition()` to store target positions instead of applying directly
+- Modified Heartbeat loop to call `applyWalkingAnimation()` for walking chickens
+- Idle bobbing animation preserved and unchanged
+
+### Files modified:
+- src/client/ChickenVisuals.lua
+
+### Testing notes:
+- Build passes (`make build`)
+- Linter unavailable (architecture mismatch for selene binary)
+- Manual testing recommended: spawn chickens and observe smooth movement transitions
