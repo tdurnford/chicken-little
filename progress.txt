@@ -773,3 +773,36 @@ Simplified the money indicator in the HUD by removing the icon, removing the $/s
 - ✅ Removed the $/s (money per second) display
 - ✅ Changed text color to darker green (ForestGreen RGB(34, 139, 34))
 - ✅ Money amount display remains functional
+
+## 2026-01-15: Remove Predator Target Red Bar (ui-fixes-prd.json Work Item - HIGH) - COMPLETED
+
+Removed the red target indicator that appears above chickens when a predator is targeting them. This visual element cluttered the UI and was unnecessary since players already have the PredatorWarning system (screen flash, edge indicators, direction arrow, warning message).
+
+### Root cause:
+The target indicator was a pulsing red cylinder (not actually a "bar") created above the chicken model when a predator selected it as a target. It was implemented in ChickenVisuals.lua but wasn't mentioned in the file list of the PRD.
+
+### Changes made:
+- Removed `targetIndicators` table from ChickenVisuals.lua module state
+- Removed `ChickenVisuals.showTargetIndicator()` function (created the red indicator)
+- Removed `ChickenVisuals.clearAllTargetIndicators()` function (cleanup)
+- Removed `ChickenVisuals.updateTargetIndicator()` function (position sync)
+- Updated Main.client.lua PredatorSpawned handler: removed showTargetIndicator call
+- Updated Main.client.lua PredatorDefeated handler: removed clearAllTargetIndicators call
+- Updated Main.client.lua PredatorTargetChanged handler: removed all target indicator calls
+
+### Files modified:
+- src/client/ChickenVisuals.lua (removed ~85 lines of target indicator code)
+- src/client/Main.client.lua (simplified 3 event handlers)
+- plans/ui-fixes-prd.json (marked as completed)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Predator attacks still function - only the visual indicator above the chicken is removed
+- PredatorWarning system remains intact (screen flash, edge glow, direction arrow, warning message)
+
+### Acceptance criteria met:
+- ✅ Identified the red bar UI element (was actually a red cylinder in ChickenVisuals)
+- ✅ Removed the red bar rendering logic (3 functions deleted)
+- ✅ Cleaned up related event connections (3 handlers simplified)
+- ✅ UI is now cleaner without the target indicator clutter

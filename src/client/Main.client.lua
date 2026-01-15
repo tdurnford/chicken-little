@@ -633,10 +633,7 @@ if predatorSpawnedEvent then
       -- Show predator warning with directional indicator and message
       PredatorWarning.show(predatorId, predatorType, threatLevel, position)
       SoundEffects.playPredatorAlert(threatLevel == "Deadly" or threatLevel == "Catastrophic")
-      -- Show target indicator on the targeted chicken
-      if targetChickenId then
-        ChickenVisuals.showTargetIndicator(targetChickenId, true)
-      end
+      -- Target indicator removed per UI cleanup (remove-predator-target-bar)
       print(
         "[Client] Predator spawned:",
         predatorId,
@@ -694,8 +691,7 @@ if predatorDefeatedEvent then
     PredatorVisuals.playDefeatedAnimation(predatorId)
     -- Clear predator warning when defeated
     PredatorWarning.clear(predatorId)
-    -- Clear any target indicators
-    ChickenVisuals.clearAllTargetIndicators()
+    -- Target indicator removed per UI cleanup (remove-predator-target-bar)
     if byPlayer then
       SoundEffects.playBatSwing("predator")
     end
@@ -708,11 +704,7 @@ local predatorTargetChangedEvent = getEvent("PredatorTargetChanged")
 if predatorTargetChangedEvent then
   predatorTargetChangedEvent.OnClientEvent:Connect(
     function(predatorId: string, newTargetChickenId: string?)
-      -- Clear all existing target indicators and show new one
-      ChickenVisuals.clearAllTargetIndicators()
-      if newTargetChickenId then
-        ChickenVisuals.showTargetIndicator(newTargetChickenId, true)
-      end
+      -- Target indicator removed per UI cleanup (remove-predator-target-bar)
       print("[Client] Predator", predatorId, "now targeting:", newTargetChickenId or "none")
     end
   )
