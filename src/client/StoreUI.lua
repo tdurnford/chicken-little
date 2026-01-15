@@ -1,6 +1,6 @@
 --[[
 	StoreUI Module
-	Implements the store UI where players can browse and purchase eggs and chickens.
+	Implements the store UI where players can browse and purchase eggs and supplies.
 	Opens when player interacts with the central store.
 ]]
 
@@ -68,7 +68,7 @@ local confirmationFrame: Frame? = nil
 local restockTimerLabel: TextLabel? = nil
 local timerConnection: RBXScriptConnection? = nil
 local isOpen = false
-local currentTab: "eggs" | "chickens" | "supplies" | "powerups" | "weapons" = "eggs"
+local currentTab: "eggs" | "supplies" | "powerups" | "weapons" = "eggs"
 
 -- Cached player money for UI updates
 local cachedPlayerMoney = 0
@@ -102,7 +102,6 @@ local isTabSwitching = false
 
 -- Callbacks
 local onEggPurchaseCallback: ((eggType: string, quantity: number) -> any)? = nil
-local onChickenPurchaseCallback: ((chickenType: string, quantity: number) -> any)? = nil
 local onReplenishCallback: (() -> any)? = nil
 local onRobuxPurchaseCallback: ((itemType: string, itemId: string) -> any)? = nil
 local onPowerUpPurchaseCallback: ((powerUpId: string) -> any)? = nil
@@ -170,26 +169,8 @@ local function getEggDescription(eggType: string): string
 end
 
 --[[
-	Generates a description for a chicken based on its config.
-	@param chickenType string - The chicken type identifier
-	@return string - Description text for the chicken
-]]
-local function getChickenDescription(chickenType: string): string
-  local chickenConfig = ChickenConfig.get(chickenType)
-  if not chickenConfig then
-    return "A fine feathered friend"
-  end
-
-  return "Earns $"
-    .. chickenConfig.moneyPerSecond
-    .. "/sec • Lays eggs every "
-    .. math.floor(chickenConfig.eggLayIntervalSeconds / 60)
-    .. "m"
-end
-
---[[
-	Creates a single item card for the store (works for both eggs and chickens).
-	@param itemType "egg" | "chicken" - The type of item
+	Creates a single item card for the store (eggs only).
+	@param itemType "egg" - The type of item
 	@param itemId string - The item type identifier
 	@param displayName string - Display name for the item
 	@param rarity string - Rarity tier
@@ -201,7 +182,7 @@ end
 	@param description string? - Optional description text (generated if not provided)
 ]]
 local function createItemCard(
-  itemType: "egg" | "chicken",
+  itemType: "egg",
   itemId: string,
   displayName: string,
   rarity: string,
@@ -298,8 +279,7 @@ local function createItemCard(
   -- Subtext description (italicized style, describes egg contents)
   local subtextContent = description
   if not subtextContent then
-    subtextContent = itemType == "egg" and getEggDescription(itemId)
-      or getChickenDescription(itemId)
+    subtextContent = getEggDescription(itemId)
   end
   local subtextLabel = Instance.new("TextLabel")
   subtextLabel.Name = "Subtext"
@@ -509,8 +489,6 @@ local function createItemCard(
     buyButton.MouseButton1Click:Connect(function()
       if itemType == "egg" and onEggPurchaseCallback then
         onEggPurchaseCallback(itemId, 1)
-      elseif itemType == "chicken" and onChickenPurchaseCallback then
-        onChickenPurchaseCallback(itemId, 1)
       end
     end)
   end
@@ -1457,23 +1435,6 @@ local function populateItems()
     end
     scrollFrame.CanvasSize =
       UDim2.new(0, 0, 0, #availableEggs * 104 + math.max(0, #availableEggs - 1) * 8 + 20)
-  elseif currentTab == "chickens" then
-    local availableChickens = Store.getAvailableChickensWithStock()
-    for index, item in ipairs(availableChickens) do
-      createItemCard(
-        "chicken",
-        item.id,
-        item.displayName,
-        item.rarity,
-        item.price,
-        item.robuxPrice or 5,
-        item.stock,
-        scrollFrame,
-        index
-      )
-    end
-    scrollFrame.CanvasSize =
-      UDim2.new(0, 0, 0, #availableChickens * 104 + math.max(0, #availableChickens - 1) * 8 + 20)
   elseif currentTab == "supplies" then
     local availableTraps = Store.getAvailableTraps()
     for index, item in ipairs(availableTraps) do
@@ -1511,7 +1472,6 @@ local function updateTabAppearance(animate: boolean?)
   -- Tab configuration: tabName -> { activeColor, zIndex when active }
   local tabConfigs: { [string]: { activeColor: Color3, tabKey: string } } = {
     EggsTab = { activeColor = Color3.fromRGB(255, 220, 150), tabKey = "eggs" },
-    ChickensTab = { activeColor = Color3.fromRGB(255, 220, 150), tabKey = "chickens" },
     SuppliesTab = { activeColor = Color3.fromRGB(255, 200, 130), tabKey = "supplies" },
     PowerupsTab = { activeColor = Color3.fromRGB(200, 230, 255), tabKey = "powerups" },
     WeaponsTab = { activeColor = Color3.fromRGB(255, 180, 180), tabKey = "weapons" },
@@ -1519,11 +1479,11 @@ local function updateTabAppearance(animate: boolean?)
 
   -- Inactive tab styling
   local inactiveColor = Color3.fromRGB(180, 140, 90) -- Muted brown
-  local inactiveSize = UDim2.new(0.2, -4, 0, 38)
+  local inactiveSize = UDim2.new(0.25, -4, 0, 38)
   local inactivePosition = 4 -- Y offset from top
 
   -- Active tab styling (larger, connected to content)
-  local activeSize = UDim2.new(0.2, -4, 0, 44) -- 6px taller
+  local activeSize = UDim2.new(0.25, -4, 0, 44) -- 6px taller
   local activePosition = 0 -- Flush with content area
 
   for tabName, config in pairs(tabConfigs) do
@@ -1703,9 +1663,9 @@ end
 
 --[[
 	Switches to the specified tab.
-	@param tab "eggs" | "chickens" | "supplies" | "powerups" | "weapons" - The tab to switch to
+	@param tab "eggs" | "supplies" | "powerups" | "weapons" - The tab to switch to
 ]]
-local function switchTab(tab: "eggs" | "chickens" | "supplies" | "powerups" | "weapons")
+local function switchTab(tab: "eggs" | "supplies" | "powerups" | "weapons")
   -- Guard against switching to same tab or during animation
   if currentTab == tab or isTabSwitching then
     return
@@ -1883,7 +1843,7 @@ function StoreUI.create()
   -- Initialize timer display
   updateRestockTimer()
 
-  -- Tab frame for Eggs/Chickens/Supplies/Power-ups/Weapons tabs (hanging folder tabs)
+  -- Tab frame for Eggs/Supplies/Power-ups/Weapons tabs (hanging folder tabs)
   tabFrame = Instance.new("Frame")
   tabFrame.Name = "TabFrame"
   tabFrame.Size = UDim2.new(1, -20, 0, 42) -- Slightly taller for folder tab effect
@@ -1897,12 +1857,12 @@ function StoreUI.create()
     name: string,
     icon: string,
     positionX: number,
-    tabName: "eggs" | "chickens" | "supplies" | "powerups" | "weapons",
+    tabName: "eggs" | "supplies" | "powerups" | "weapons",
     rotation: number
   ): TextButton
     local tab = Instance.new("TextButton")
     tab.Name = name
-    tab.Size = UDim2.new(0.2, -4, 0, 38) -- Default inactive size
+    tab.Size = UDim2.new(0.25, -4, 0, 38) -- Default inactive size (4 tabs now)
     tab.Position = UDim2.new(positionX, 2, 0, 4) -- Slightly raised inactive position
     tab.BackgroundColor3 = Color3.fromRGB(180, 140, 90) -- Inactive: muted brown
     tab.Text = ""
@@ -1965,10 +1925,9 @@ function StoreUI.create()
 
   -- Create folder tabs with slight icon rotations for dynamic feel
   createFolderTab("EggsTab", "🥚", 0, "eggs", -2)
-  createFolderTab("ChickensTab", "🐔", 0.2, "chickens", 2)
-  createFolderTab("SuppliesTab", "🪤", 0.4, "supplies", -1)
-  createFolderTab("PowerupsTab", "⚡", 0.6, "powerups", 2)
-  createFolderTab("WeaponsTab", "⚔️", 0.8, "weapons", -2)
+  createFolderTab("SuppliesTab", "🪤", 0.25, "supplies", -1)
+  createFolderTab("PowerupsTab", "⚡", 0.5, "powerups", 2)
+  createFolderTab("WeaponsTab", "⚔️", 0.75, "weapons", -2)
 
   -- Set initial tab appearance (eggs is active by default, no animation)
   updateTabAppearance(false)
@@ -2296,14 +2255,6 @@ function StoreUI.onPurchase(callback: (eggType: string, quantity: number) -> any
 end
 
 --[[
-	Sets the callback for when a chicken purchase is attempted.
-	@param callback function - Function to call with (chickenType, quantity)
-]]
-function StoreUI.onChickenPurchase(callback: (chickenType: string, quantity: number) -> any)
-  onChickenPurchaseCallback = callback
-end
-
---[[
 	Sets the callback for when Robux replenish is attempted.
 	@param callback function - Function to call when replenish is confirmed
 ]]
@@ -2345,7 +2296,7 @@ end
 
 --[[
 	Returns the current tab.
-	@return "eggs" | "chickens" | "supplies" | "powerups" | "weapons"
+	@return "eggs" | "supplies" | "powerups" | "weapons"
 ]]
 function StoreUI.getCurrentTab(): string
   return currentTab
@@ -2392,7 +2343,7 @@ end
 
 --[[
 	Updates the stock display for a specific item.
-	@param itemType "egg" | "chicken" - The type of item
+	@param itemType "egg" - The type of item
 	@param itemId string - The item identifier
 	@param newStock number - The new stock count
 ]]
@@ -2401,11 +2352,8 @@ function StoreUI.updateItemStock(itemType: string, itemId: string, newStock: num
     return
   end
 
-  -- Only update if we're on the matching tab
-  if
-    (itemType == "egg" and currentTab ~= "eggs")
-    or (itemType == "chicken" and currentTab ~= "chickens")
-  then
+  -- Only update if we're on the eggs tab
+  if itemType == "egg" and currentTab ~= "eggs" then
     return
   end
 

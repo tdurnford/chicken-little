@@ -3793,3 +3793,28 @@
 - Format check passes, build passes
 - Note: Selene linting has CPU architecture issue (not related to this change)
 - Next: Work on remaining high priority items (Item #7 Remove Chickens from Store, Item #2 Free-Roaming Chickens)
+
+[2026-01-15] Completed UI & Gameplay Fixes Work Item #7: Remove Chickens from Store
+- Removed the "Chickens" tab and all chicken purchasing functionality from StoreUI
+- Changes applied in src/client/StoreUI.lua:
+  1. Removed ChickensTab from tab creation (was at position 0.2, now tabs redistributed)
+  2. Updated currentTab type from "eggs"|"chickens"|"supplies"|"powerups"|"weapons" to "eggs"|"supplies"|"powerups"|"weapons"
+  3. Removed chickens case from populateItems() function
+  4. Removed ChickensTab from tabConfigs in updateTabAppearance()
+  5. Removed onChickenPurchaseCallback variable and onChickenPurchase() function
+  6. Removed chicken handling from createItemCard's buy button click handler
+  7. Simplified updateItemStock() to only handle eggs
+  8. Removed unused getChickenDescription() helper function
+  9. Updated tab sizes from 0.2 (20% for 5 tabs) to 0.25 (25% for 4 tabs)
+  10. Updated module comment and function documentation to reflect eggs-only functionality
+- Remaining tabs: Eggs, Supplies, Powerups, Weapons (4 tabs, evenly distributed)
+- ChickenConfig is still used for egg descriptions (showing what chickens eggs can hatch into)
+- Acceptance criteria met:
+  - Chickens cannot be purchased directly ✓
+  - Chicken tab is removed ✓
+  - Eggs are the only way to acquire chickens ✓
+  - No errors when opening store (build passes) ✓
+  - Store navigation works correctly with changed tabs ✓
+- Format check passes, build passes
+- Note: Selene linting has CPU architecture issue (not related to this change)
+- Next: Work on remaining high priority items (Item #2 Free-Roaming Chickens, Item #3 Chicken Limit, Item #8 Trap Icon)
