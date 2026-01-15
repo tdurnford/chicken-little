@@ -88,8 +88,17 @@ local CLOSE_TWEEN_INFO =
 local TARGET_SIZE = UDim2.new(0, 420, 0, 550)
 local CLOSED_SIZE = UDim2.new(0, 0, 0, 0)
 
+-- Tab switching animation constants
+local TAB_ANIMATION_DURATION = 0.2
+local TAB_TWEEN_INFO =
+  TweenInfo.new(TAB_ANIMATION_DURATION, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local CONTENT_FADE_DURATION = 0.15
+local CONTENT_FADE_INFO =
+  TweenInfo.new(CONTENT_FADE_DURATION, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
 -- Animation state
 local isAnimating = false
+local isTabSwitching = false
 
 -- Callbacks
 local onEggPurchaseCallback: ((eggType: string, quantity: number) -> any)? = nil
@@ -1473,7 +1482,7 @@ end
 	Active tabs appear brighter, larger, and connected to content area.
 	Inactive tabs are muted and smaller.
 ]]
-local function updateTabAppearance()
+local function updateTabAppearance(animate: boolean?)
   if not tabFrame then
     return
   end
@@ -1503,37 +1512,73 @@ local function updateTabAppearance()
       local iconLabel = tab:FindFirstChild("IconLabel")
       local tabStroke = tab:FindFirstChild("TabStroke")
 
-      if isActive then
-        -- Active tab: brighter, larger, connected to content
-        tab.BackgroundColor3 = config.activeColor
-        tab.Size = activeSize
-        tab.Position = UDim2.new(tab.Position.X.Scale, tab.Position.X.Offset, 0, activePosition)
-        tab.ZIndex = 5 -- Above other tabs
+      -- Target properties based on active state
+      local targetColor = if isActive then config.activeColor else inactiveColor
+      local targetSize = if isActive then activeSize else inactiveSize
+      local targetPosY = if isActive then activePosition else inactivePosition
+      local targetPosition = UDim2.new(tab.Position.X.Scale, tab.Position.X.Offset, 0, targetPosY)
+      local targetZIndex = if isActive then 5 else 3
+      local targetIconTransparency = if isActive then 0 else 0.2
+      local targetIconZIndex = if isActive then 6 else 4
+      local targetStrokeColor = if isActive
+        then Color3.fromRGB(80, 50, 25)
+        else Color3.fromRGB(101, 67, 33)
+      local targetStrokeThickness = if isActive then 3 else 2
+
+      if animate then
+        -- Animate tab properties with tweens
+        local tabTween = TweenService:Create(tab, TAB_TWEEN_INFO, {
+          BackgroundColor3 = targetColor,
+          Size = targetSize,
+          Position = targetPosition,
+        })
+        tabTween:Play()
+
+        -- ZIndex doesn't tween, set immediately for active, delay for inactive
+        if isActive then
+          tab.ZIndex = targetZIndex
+        else
+          task.delay(TAB_ANIMATION_DURATION, function()
+            tab.ZIndex = targetZIndex
+          end)
+        end
 
         if iconLabel and iconLabel:IsA("TextLabel") then
-          iconLabel.TextTransparency = 0
-          iconLabel.ZIndex = 6
+          local iconTween = TweenService:Create(iconLabel, TAB_TWEEN_INFO, {
+            TextTransparency = targetIconTransparency,
+          })
+          iconTween:Play()
+          if isActive then
+            iconLabel.ZIndex = targetIconZIndex
+          else
+            task.delay(TAB_ANIMATION_DURATION, function()
+              iconLabel.ZIndex = targetIconZIndex
+            end)
+          end
         end
 
         if tabStroke and tabStroke:IsA("UIStroke") then
-          tabStroke.Color = Color3.fromRGB(80, 50, 25) -- Darker border for active
-          tabStroke.Thickness = 3
+          local strokeTween = TweenService:Create(tabStroke, TAB_TWEEN_INFO, {
+            Color = targetStrokeColor,
+            Thickness = targetStrokeThickness,
+          })
+          strokeTween:Play()
         end
       else
-        -- Inactive tab: muted, smaller, raised
-        tab.BackgroundColor3 = inactiveColor
-        tab.Size = inactiveSize
-        tab.Position = UDim2.new(tab.Position.X.Scale, tab.Position.X.Offset, 0, inactivePosition)
-        tab.ZIndex = 3
+        -- Instant property changes (no animation)
+        tab.BackgroundColor3 = targetColor
+        tab.Size = targetSize
+        tab.Position = targetPosition
+        tab.ZIndex = targetZIndex
 
         if iconLabel and iconLabel:IsA("TextLabel") then
-          iconLabel.TextTransparency = 0.2
-          iconLabel.ZIndex = 4
+          iconLabel.TextTransparency = targetIconTransparency
+          iconLabel.ZIndex = targetIconZIndex
         end
 
         if tabStroke and tabStroke:IsA("UIStroke") then
-          tabStroke.Color = Color3.fromRGB(101, 67, 33) -- Standard wood border
-          tabStroke.Thickness = 2
+          tabStroke.Color = targetStrokeColor
+          tabStroke.Thickness = targetStrokeThickness
         end
       end
     end
@@ -1541,13 +1586,118 @@ local function updateTabAppearance()
 end
 
 --[[
+	Fades scroll content out, populates new items, then fades back in.
+	Used for animated tab switching.
+]]
+local function animateContentTransition()
+  if not scrollFrame then
+    return
+  end
+
+  -- Fade out all current item cards
+  local fadeOutTweens = {}
+  for _, child in ipairs(scrollFrame:GetChildren()) do
+    if child:IsA("Frame") then
+      local tween = TweenService:Create(child, CONTENT_FADE_INFO, {
+        BackgroundTransparency = 1,
+      })
+      tween:Play()
+      table.insert(fadeOutTweens, tween)
+
+      -- Also fade out all descendant elements
+      for _, descendant in ipairs(child:GetDescendants()) do
+        if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
+          local descTween = TweenService:Create(descendant, CONTENT_FADE_INFO, {
+            TextTransparency = 1,
+            BackgroundTransparency = 1,
+          })
+          descTween:Play()
+        elseif descendant:IsA("Frame") or descendant:IsA("ImageLabel") then
+          local descTween = TweenService:Create(descendant, CONTENT_FADE_INFO, {
+            BackgroundTransparency = 1,
+          })
+          descTween:Play()
+        end
+      end
+    end
+  end
+
+  -- Wait for fade out to complete, then populate new items
+  task.delay(CONTENT_FADE_DURATION, function()
+    populateItems()
+
+    -- Fade in new content
+    if scrollFrame then
+      for _, child in ipairs(scrollFrame:GetChildren()) do
+        if child:IsA("Frame") then
+          -- Start transparent
+          child.BackgroundTransparency = 1
+          for _, descendant in ipairs(child:GetDescendants()) do
+            if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
+              descendant.TextTransparency = 1
+              descendant.BackgroundTransparency = 1
+            elseif descendant:IsA("Frame") or descendant:IsA("ImageLabel") then
+              descendant.BackgroundTransparency = 1
+            end
+          end
+
+          -- Tween to visible
+          local tween = TweenService:Create(child, CONTENT_FADE_INFO, {
+            BackgroundTransparency = 0,
+          })
+          tween:Play()
+
+          for _, descendant in ipairs(child:GetDescendants()) do
+            if descendant:IsA("TextLabel") then
+              local descTween = TweenService:Create(descendant, CONTENT_FADE_INFO, {
+                TextTransparency = 0,
+                BackgroundTransparency = 1, -- Labels typically have transparent background
+              })
+              descTween:Play()
+            elseif descendant:IsA("TextButton") then
+              local descTween = TweenService:Create(descendant, CONTENT_FADE_INFO, {
+                TextTransparency = 0,
+                BackgroundTransparency = 0,
+              })
+              descTween:Play()
+            elseif descendant:IsA("Frame") then
+              local descTween = TweenService:Create(descendant, CONTENT_FADE_INFO, {
+                BackgroundTransparency = 0,
+              })
+              descTween:Play()
+            elseif descendant:IsA("ImageLabel") then
+              local descTween = TweenService:Create(descendant, CONTENT_FADE_INFO, {
+                BackgroundTransparency = 1, -- ImageLabels often have transparent background
+              })
+              descTween:Play()
+            end
+          end
+        end
+      end
+    end
+
+    isTabSwitching = false
+  end)
+end
+
+--[[
 	Switches to the specified tab.
 	@param tab "eggs" | "chickens" | "supplies" | "powerups" | "weapons" - The tab to switch to
 ]]
 local function switchTab(tab: "eggs" | "chickens" | "supplies" | "powerups" | "weapons")
+  -- Guard against switching to same tab or during animation
+  if currentTab == tab or isTabSwitching then
+    return
+  end
+
+  isTabSwitching = true
   currentTab = tab
-  updateTabAppearance()
-  populateItems()
+
+  -- Animate tab appearance change
+  updateTabAppearance(true)
+
+  -- Animate content transition (fade out, repopulate, fade in)
+  animateContentTransition()
 end
 
 --[[
@@ -1799,8 +1949,8 @@ function StoreUI.create()
   createFolderTab("PowerupsTab", "⚡", 0.6, "powerups", 2)
   createFolderTab("WeaponsTab", "⚔️", 0.8, "weapons", -2)
 
-  -- Set initial tab appearance (eggs is active by default)
-  updateTabAppearance()
+  -- Set initial tab appearance (eggs is active by default, no animation)
+  updateTabAppearance(false)
 
   -- Scroll frame for items
   scrollFrame = Instance.new("ScrollingFrame")

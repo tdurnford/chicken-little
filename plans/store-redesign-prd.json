@@ -492,7 +492,7 @@
       "category": "UI-Polish",
       "title": "Add Tab Switching Animation",
       "description": "Animate the transition between tabs to make the store feel more dynamic and responsive.",
-      "completed": false,
+      "completed": true,
       "priority": "low",
       "steps": [
         "When switching tabs, fade out current content (Transparency tween)",

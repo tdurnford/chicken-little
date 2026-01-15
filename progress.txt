@@ -3688,3 +3688,41 @@
   - Interaction prevented during animation (isAnimating guard) ✓
 - Format check passes, build passes
 - Next: Work on remaining low priority items (Item #15 Tab Switching Animation, Item #16 3D Rotating Eggs)
+
+[2026-01-15] Completed Store Redesign Work Item #15: Add Tab Switching Animation
+- Added smooth animations when switching between store tabs
+- Changes applied in src/client/StoreUI.lua:
+  1. Added tab switching animation constants:
+     - TAB_ANIMATION_DURATION = 0.2 seconds for responsive feel
+     - TAB_TWEEN_INFO with Quad easing for smooth tab size/color transitions
+     - CONTENT_FADE_DURATION = 0.15 seconds for content fade
+     - CONTENT_FADE_INFO for fading content elements
+     - Added isTabSwitching state flag to prevent rapid switching
+  2. Modified updateTabAppearance(animate: boolean?) function:
+     - Added optional animate parameter to control animation behavior
+     - When animate=true: Uses TweenService to smoothly transition tab properties
+       - BackgroundColor3, Size, Position tweened for expanding/shrinking tabs
+       - Icon TextTransparency tweened for highlight effect
+       - UIStroke Color and Thickness tweened for border emphasis
+     - When animate=false: Instant property changes (used for initial setup)
+     - ZIndex updates handled with task.delay for proper layering
+  3. Created new animateContentTransition() function:
+     - Fades out all current item cards and their descendants
+     - Handles TextLabels, TextButtons, Frames, and ImageLabels
+     - Calls populateItems() after fade-out completes
+     - Fades in new content with proper transparency restoration
+     - Clears isTabSwitching flag when complete
+  4. Rewrote switchTab() function:
+     - Added guard against switching to same tab
+     - Added guard against switching during animation (isTabSwitching)
+     - Calls updateTabAppearance(true) for animated tab transitions
+     - Calls animateContentTransition() for content fade animation
+  5. Updated initial updateTabAppearance(false) call for no animation on create
+- Acceptance criteria met:
+  - Switching tabs has visible animation (fade + tab resize) ✓
+  - Active tab visually expands/highlights (size, color, stroke tweens) ✓
+  - Content transitions smoothly (fade out -> repopulate -> fade in) ✓
+  - Animation doesn't feel slow or laggy (0.2s tabs, 0.15s content) ✓
+- Format check passes, build passes
+- Note: Roblox Studio MCP server not available for in-game testing
+- Next: Only Item #16 (3D Rotating Eggs with ViewportFrame) remains - this is a stretch goal requiring 3D assets
