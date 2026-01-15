@@ -3469,3 +3469,33 @@
   - Visual hierarchy makes premium option stand out ✓
 - Format check passes, build passes
 - Next: Work on remaining high-priority items (Item #4 Tabs, Item #13 Apply to All Tabs)
+
+[2026-01-15] Completed Store Redesign Work Item #4: Redesign Tabs as Hanging Tags
+- Transformed navigation tabs from grey boxes to folder-style hanging tabs
+- Changes applied in src/client/StoreUI.lua:
+  1. Created new createFolderTab helper function for consistent tab creation
+  2. Tab frame repositioned to y=85 (overlapping scroll content at y=130)
+  3. Folder tab styling with UICorner (10px radius) and UIStroke (dark brown border)
+  4. Each tab has icon shadow (offset TextLabel, 60% transparent) for drop shadow effect
+  5. Icons have slight rotation (-2 to +2 degrees) for dynamic feel
+  6. Active tab styling:
+     - Brighter background: RGB(255, 220, 150) bright tan
+     - Larger size: 44px height vs 38px inactive
+     - Positioned at y=0 (flush with content frame for connected appearance)
+     - ZIndex 5 (above inactive tabs)
+     - Thicker border (3px) with darker color
+  7. Inactive tab styling:
+     - Muted background: RGB(180, 140, 90) brown
+     - Smaller size: 38px height
+     - Positioned at y=4 (slightly raised)
+     - ZIndex 3, icons slightly transparent
+  8. Updated updateTabAppearance() function with tab configuration table
+  9. Different active colors per tab type (supplies=orange-tan, powerups=light blue, weapons=light red)
+- Acceptance criteria met:
+  - Tabs appear as folder tabs sitting on top of content ✓
+  - Active tab is visually larger and brighter ✓
+  - Active tab appears connected to main content area ✓
+  - Icons have drop shadows and slight tilt ✓
+  - Tab transitions are smooth when switching ✓
+- Format check passes, build passes
+- Next: Work on remaining items (Item #3 Close Button, Item #8 Typography, Item #13 Apply to All Tabs)

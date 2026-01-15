@@ -1045,65 +1045,72 @@ end
 
 --[[
 	Updates tab button appearance based on current selection.
+	Active tabs appear brighter, larger, and connected to content area.
+	Inactive tabs are muted and smaller.
 ]]
 local function updateTabAppearance()
   if not tabFrame then
     return
   end
 
-  local eggsTab = tabFrame:FindFirstChild("EggsTab")
-  local chickensTab = tabFrame:FindFirstChild("ChickensTab")
-  local suppliesTab = tabFrame:FindFirstChild("SuppliesTab")
-  local powerupsTab = tabFrame:FindFirstChild("PowerupsTab")
-  local weaponsTab = tabFrame:FindFirstChild("WeaponsTab")
+  -- Tab configuration: tabName -> { activeColor, zIndex when active }
+  local tabConfigs: { [string]: { activeColor: Color3, tabKey: string } } = {
+    EggsTab = { activeColor = Color3.fromRGB(255, 220, 150), tabKey = "eggs" },
+    ChickensTab = { activeColor = Color3.fromRGB(255, 220, 150), tabKey = "chickens" },
+    SuppliesTab = { activeColor = Color3.fromRGB(255, 200, 130), tabKey = "supplies" },
+    PowerupsTab = { activeColor = Color3.fromRGB(200, 230, 255), tabKey = "powerups" },
+    WeaponsTab = { activeColor = Color3.fromRGB(255, 180, 180), tabKey = "weapons" },
+  }
 
-  if eggsTab and eggsTab:IsA("TextButton") then
-    if currentTab == "eggs" then
-      eggsTab.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
-      eggsTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-    else
-      eggsTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-      eggsTab.TextColor3 = Color3.fromRGB(180, 180, 180)
-    end
-  end
+  -- Inactive tab styling
+  local inactiveColor = Color3.fromRGB(180, 140, 90) -- Muted brown
+  local inactiveSize = UDim2.new(0.2, -4, 0, 38)
+  local inactivePosition = 4 -- Y offset from top
 
-  if chickensTab and chickensTab:IsA("TextButton") then
-    if currentTab == "chickens" then
-      chickensTab.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
-      chickensTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-    else
-      chickensTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-      chickensTab.TextColor3 = Color3.fromRGB(180, 180, 180)
-    end
-  end
+  -- Active tab styling (larger, connected to content)
+  local activeSize = UDim2.new(0.2, -4, 0, 44) -- 6px taller
+  local activePosition = 0 -- Flush with content area
 
-  if suppliesTab and suppliesTab:IsA("TextButton") then
-    if currentTab == "supplies" then
-      suppliesTab.BackgroundColor3 = Color3.fromRGB(200, 120, 50) -- Orange for supplies
-      suppliesTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-    else
-      suppliesTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-      suppliesTab.TextColor3 = Color3.fromRGB(180, 180, 180)
-    end
-  end
+  for tabName, config in pairs(tabConfigs) do
+    local tab = tabFrame:FindFirstChild(tabName)
+    if tab and tab:IsA("TextButton") then
+      local isActive = currentTab == config.tabKey
+      local iconLabel = tab:FindFirstChild("IconLabel")
+      local tabStroke = tab:FindFirstChild("TabStroke")
 
-  if powerupsTab and powerupsTab:IsA("TextButton") then
-    if currentTab == "powerups" then
-      powerupsTab.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
-      powerupsTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-    else
-      powerupsTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-      powerupsTab.TextColor3 = Color3.fromRGB(180, 180, 180)
-    end
-  end
+      if isActive then
+        -- Active tab: brighter, larger, connected to content
+        tab.BackgroundColor3 = config.activeColor
+        tab.Size = activeSize
+        tab.Position = UDim2.new(tab.Position.X.Scale, tab.Position.X.Offset, 0, activePosition)
+        tab.ZIndex = 5 -- Above other tabs
 
-  if weaponsTab and weaponsTab:IsA("TextButton") then
-    if currentTab == "weapons" then
-      weaponsTab.BackgroundColor3 = Color3.fromRGB(220, 50, 50) -- Red for weapons
-      weaponsTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-    else
-      weaponsTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-      weaponsTab.TextColor3 = Color3.fromRGB(180, 180, 180)
+        if iconLabel and iconLabel:IsA("TextLabel") then
+          iconLabel.TextTransparency = 0
+          iconLabel.ZIndex = 6
+        end
+
+        if tabStroke and tabStroke:IsA("UIStroke") then
+          tabStroke.Color = Color3.fromRGB(80, 50, 25) -- Darker border for active
+          tabStroke.Thickness = 3
+        end
+      else
+        -- Inactive tab: muted, smaller, raised
+        tab.BackgroundColor3 = inactiveColor
+        tab.Size = inactiveSize
+        tab.Position = UDim2.new(tab.Position.X.Scale, tab.Position.X.Offset, 0, inactivePosition)
+        tab.ZIndex = 3
+
+        if iconLabel and iconLabel:IsA("TextLabel") then
+          iconLabel.TextTransparency = 0.2
+          iconLabel.ZIndex = 4
+        end
+
+        if tabStroke and tabStroke:IsA("UIStroke") then
+          tabStroke.Color = Color3.fromRGB(101, 67, 33) -- Standard wood border
+          tabStroke.Thickness = 2
+        end
+      end
     end
   end
 end
@@ -1254,113 +1261,95 @@ function StoreUI.create()
   -- Initialize timer display
   updateRestockTimer()
 
-  -- Tab frame for Eggs/Chickens/Supplies/Power-ups/Weapons tabs
+  -- Tab frame for Eggs/Chickens/Supplies/Power-ups/Weapons tabs (hanging folder tabs)
   tabFrame = Instance.new("Frame")
   tabFrame.Name = "TabFrame"
-  tabFrame.Size = UDim2.new(1, -20, 0, 35)
-  tabFrame.Position = UDim2.new(0, 10, 0, 90)
+  tabFrame.Size = UDim2.new(1, -20, 0, 42) -- Slightly taller for folder tab effect
+  tabFrame.Position = UDim2.new(0, 10, 0, 85) -- Positioned to overlap scroll frame top
   tabFrame.BackgroundTransparency = 1
+  tabFrame.ZIndex = 3 -- Above scroll frame
   tabFrame.Parent = mainFrame
 
-  -- Eggs tab button
-  local eggsTab = Instance.new("TextButton")
-  eggsTab.Name = "EggsTab"
-  eggsTab.Size = UDim2.new(0.2, -2, 1, 0)
-  eggsTab.Position = UDim2.new(0, 0, 0, 0)
-  eggsTab.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
-  eggsTab.Text = "🥚"
-  eggsTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-  eggsTab.TextScaled = true
-  eggsTab.Font = Enum.Font.GothamBold
-  eggsTab.Parent = tabFrame
+  -- Helper to create folder-style tab with icon shadow and rotation
+  local function createFolderTab(
+    name: string,
+    icon: string,
+    positionX: number,
+    tabName: "eggs" | "chickens" | "supplies" | "powerups" | "weapons",
+    rotation: number
+  ): TextButton
+    local tab = Instance.new("TextButton")
+    tab.Name = name
+    tab.Size = UDim2.new(0.2, -4, 0, 38) -- Default inactive size
+    tab.Position = UDim2.new(positionX, 2, 0, 4) -- Slightly raised inactive position
+    tab.BackgroundColor3 = Color3.fromRGB(180, 140, 90) -- Inactive: muted brown
+    tab.Text = ""
+    tab.AutoButtonColor = false
+    tab.ZIndex = 3
+    tab.Parent = tabFrame
 
-  local eggsTabCorner = Instance.new("UICorner")
-  eggsTabCorner.CornerRadius = UDim.new(0, 6)
-  eggsTabCorner.Parent = eggsTab
+    -- Folder tab corner (rounded top only effect via larger radius)
+    local tabCorner = Instance.new("UICorner")
+    tabCorner.Name = "TabCorner"
+    tabCorner.CornerRadius = UDim.new(0, 10)
+    tabCorner.Parent = tab
 
-  eggsTab.MouseButton1Click:Connect(function()
-    switchTab("eggs")
-  end)
+    -- Border stroke for depth
+    local tabStroke = Instance.new("UIStroke")
+    tabStroke.Name = "TabStroke"
+    tabStroke.Color = Color3.fromRGB(101, 67, 33) -- Dark brown wood border
+    tabStroke.Thickness = 2
+    tabStroke.Parent = tab
 
-  -- Chickens tab button
-  local chickensTab = Instance.new("TextButton")
-  chickensTab.Name = "ChickensTab"
-  chickensTab.Size = UDim2.new(0.2, -2, 1, 0)
-  chickensTab.Position = UDim2.new(0.2, 1, 0, 0)
-  chickensTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-  chickensTab.Text = "🐔"
-  chickensTab.TextColor3 = Color3.fromRGB(180, 180, 180)
-  chickensTab.TextScaled = true
-  chickensTab.Font = Enum.Font.GothamBold
-  chickensTab.Parent = tabFrame
+    -- Icon shadow for drop shadow effect
+    local iconShadow = Instance.new("TextLabel")
+    iconShadow.Name = "IconShadow"
+    iconShadow.Size = UDim2.new(1, 0, 1, 0)
+    iconShadow.Position = UDim2.new(0, 2, 0, 2) -- Offset for shadow effect
+    iconShadow.BackgroundTransparency = 1
+    iconShadow.Text = icon
+    iconShadow.TextColor3 = Color3.fromRGB(0, 0, 0)
+    iconShadow.TextTransparency = 0.6
+    iconShadow.TextScaled = true
+    iconShadow.Font = Enum.Font.GothamBold
+    iconShadow.Rotation = rotation -- Slight tilt for dynamic feel
+    iconShadow.ZIndex = 3
+    iconShadow.Parent = tab
 
-  local chickensTabCorner = Instance.new("UICorner")
-  chickensTabCorner.CornerRadius = UDim.new(0, 6)
-  chickensTabCorner.Parent = chickensTab
+    -- Main icon label
+    local iconLabel = Instance.new("TextLabel")
+    iconLabel.Name = "IconLabel"
+    iconLabel.Size = UDim2.new(1, 0, 1, 0)
+    iconLabel.Position = UDim2.new(0, 0, 0, 0)
+    iconLabel.BackgroundTransparency = 1
+    iconLabel.Text = icon
+    iconLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    iconLabel.TextScaled = true
+    iconLabel.Font = Enum.Font.GothamBold
+    iconLabel.Rotation = rotation -- Slight tilt for dynamic feel
+    iconLabel.ZIndex = 4
+    iconLabel.Parent = tab
 
-  chickensTab.MouseButton1Click:Connect(function()
-    switchTab("chickens")
-  end)
+    -- Text stroke for icon pop
+    iconLabel.TextStrokeColor3 = Color3.fromRGB(60, 30, 10)
+    iconLabel.TextStrokeTransparency = 0.3
 
-  -- Supplies tab button
-  local suppliesTab = Instance.new("TextButton")
-  suppliesTab.Name = "SuppliesTab"
-  suppliesTab.Size = UDim2.new(0.2, -2, 1, 0)
-  suppliesTab.Position = UDim2.new(0.4, 2, 0, 0)
-  suppliesTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-  suppliesTab.Text = "🪤"
-  suppliesTab.TextColor3 = Color3.fromRGB(180, 180, 180)
-  suppliesTab.TextScaled = true
-  suppliesTab.Font = Enum.Font.GothamBold
-  suppliesTab.Parent = tabFrame
+    tab.MouseButton1Click:Connect(function()
+      switchTab(tabName)
+    end)
 
-  local suppliesTabCorner = Instance.new("UICorner")
-  suppliesTabCorner.CornerRadius = UDim.new(0, 6)
-  suppliesTabCorner.Parent = suppliesTab
+    return tab
+  end
 
-  suppliesTab.MouseButton1Click:Connect(function()
-    switchTab("supplies")
-  end)
+  -- Create folder tabs with slight icon rotations for dynamic feel
+  createFolderTab("EggsTab", "🥚", 0, "eggs", -2)
+  createFolderTab("ChickensTab", "🐔", 0.2, "chickens", 2)
+  createFolderTab("SuppliesTab", "🪤", 0.4, "supplies", -1)
+  createFolderTab("PowerupsTab", "⚡", 0.6, "powerups", 2)
+  createFolderTab("WeaponsTab", "⚔️", 0.8, "weapons", -2)
 
-  -- Power-ups tab button
-  local powerupsTab = Instance.new("TextButton")
-  powerupsTab.Name = "PowerupsTab"
-  powerupsTab.Size = UDim2.new(0.2, -2, 1, 0)
-  powerupsTab.Position = UDim2.new(0.6, 3, 0, 0)
-  powerupsTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-  powerupsTab.Text = "⚡"
-  powerupsTab.TextColor3 = Color3.fromRGB(180, 180, 180)
-  powerupsTab.TextScaled = true
-  powerupsTab.Font = Enum.Font.GothamBold
-  powerupsTab.Parent = tabFrame
-
-  local powerupsTabCorner = Instance.new("UICorner")
-  powerupsTabCorner.CornerRadius = UDim.new(0, 6)
-  powerupsTabCorner.Parent = powerupsTab
-
-  powerupsTab.MouseButton1Click:Connect(function()
-    switchTab("powerups")
-  end)
-
-  -- Weapons tab button
-  local weaponsTab = Instance.new("TextButton")
-  weaponsTab.Name = "WeaponsTab"
-  weaponsTab.Size = UDim2.new(0.2, -2, 1, 0)
-  weaponsTab.Position = UDim2.new(0.8, 4, 0, 0)
-  weaponsTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-  weaponsTab.Text = "⚔️"
-  weaponsTab.TextColor3 = Color3.fromRGB(180, 180, 180)
-  weaponsTab.TextScaled = true
-  weaponsTab.Font = Enum.Font.GothamBold
-  weaponsTab.Parent = tabFrame
-
-  local weaponsTabCorner = Instance.new("UICorner")
-  weaponsTabCorner.CornerRadius = UDim.new(0, 6)
-  weaponsTabCorner.Parent = weaponsTab
-
-  weaponsTab.MouseButton1Click:Connect(function()
-    switchTab("weapons")
-  end)
+  -- Set initial tab appearance (eggs is active by default)
+  updateTabAppearance()
 
   -- Scroll frame for items
   scrollFrame = Instance.new("ScrollingFrame")
