@@ -175,3 +175,36 @@ Implemented time-of-day based predator spawn multipliers, making nightfall more 
   - Dusk warning: "Night is falling! Predators are becoming more active."
   - Night warning: "Night has fallen! Predator danger is at its peak!"
   - Dawn notification: "Dawn is breaking. Predator activity is decreasing."
+
+---
+
+## 2026-01-15: Soften Store Restock Timer Background Color (Work Item #6) - COMPLETED
+
+Updated the restock timer background in StoreUI.lua from aggressive red/orange to subtle slate blue.
+
+### Changes made:
+- Changed `BackgroundColor3` from bright orange-red `RGB(255, 100, 50)` to muted slate blue `RGB(71, 85, 105)`
+- Updated `UIGradient` from red-to-orange `RGB(220, 60, 60) → RGB(255, 140, 50)` to subtle slate gradient `RGB(71, 85, 105) → RGB(100, 116, 139)`
+- Changed `TextStrokeColor3` from dark red `RGB(80, 20, 10)` to dark slate `RGB(30, 41, 59)`
+- White text remains for good contrast against the new background
+
+### Files modified:
+- src/client/StoreUI.lua
+
+### Testing notes:
+- Build passes (`make build`)
+- Timer is now subtle and blends with store UI
+- Text remains readable with dark slate stroke
+- No longer jarring or attention-grabbing
+
+---
+
+## PRD COMPLETE
+
+All 6 work items in polish-prd.json have been completed:
+1. ✅ Smooth Chicken Movement with Interpolation
+2. ✅ Remove Unnecessary Decimal Places from Store Prices  
+3. ✅ Fix Brown Hen Money Rate Display Mismatch
+4. ✅ Implement Day/Night Cycle System
+5. ✅ Predators Prefer Night Time Spawning
+6. ✅ Soften Store Restock Timer Background Color

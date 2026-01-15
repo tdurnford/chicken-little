@@ -1821,7 +1821,7 @@ function StoreUI.create()
   restockFrame.Name = "RestockFrame"
   restockFrame.Size = UDim2.new(1, -20, 0, 35)
   restockFrame.Position = UDim2.new(0, 10, 0, 50)
-  restockFrame.BackgroundColor3 = Color3.fromRGB(255, 100, 50) -- Orange-red base for urgency
+  restockFrame.BackgroundColor3 = Color3.fromRGB(71, 85, 105) -- Muted slate blue for subtle appearance
   restockFrame.BorderSizePixel = 0
   restockFrame.Parent = mainFrame
 
@@ -1829,11 +1829,11 @@ function StoreUI.create()
   restockCorner.CornerRadius = UDim.new(0, 8)
   restockCorner.Parent = restockFrame
 
-  -- Urgency gradient (Red to Orange) for restock timer
+  -- Subtle gradient (slate blue) for restock timer
   local restockGradient = Instance.new("UIGradient")
   restockGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(220, 60, 60)), -- Red on left
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 140, 50)), -- Orange on right
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(71, 85, 105)), -- Slate blue on left
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 116, 139)), -- Lighter slate on right
   })
   restockGradient.Rotation = 0 -- Horizontal gradient
   restockGradient.Parent = restockFrame
@@ -1849,7 +1849,7 @@ function StoreUI.create()
   restockTimerLabel.TextScaled = true
   restockTimerLabel.Font = Enum.Font.GothamBold
   restockTimerLabel.TextXAlignment = Enum.TextXAlignment.Center
-  restockTimerLabel.TextStrokeColor3 = Color3.fromRGB(80, 20, 10) -- Dark red stroke
+  restockTimerLabel.TextStrokeColor3 = Color3.fromRGB(30, 41, 59) -- Dark slate stroke
   restockTimerLabel.TextStrokeTransparency = 0.3 -- Visible stroke for readability
   restockTimerLabel.Parent = restockFrame
   addTextSizeConstraint(restockTimerLabel, 16, 24)
