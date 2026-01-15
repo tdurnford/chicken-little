@@ -513,3 +513,43 @@ The server was firing NightfallWarning events to all clients whenever the time o
 - ✅ No notification messages appear during day/night transitions
 - ✅ Predator spawn rate changes still work correctly
 - ✅ UI is cleaner without unnecessary notifications
+
+## 2026-01-15: Predator Stun Should Incapacitate Player and Steal Money (bugfix-prd.json Work Item #10) - COMPLETED
+
+Implemented money loss when a predator knocks back (stuns) a player.
+
+### Root cause:
+When predators depleted a player's combat health and triggered knockback, there were no economic consequences. The player would be stunned but lose nothing, reducing the incentive to avoid predator attacks.
+
+### Changes made:
+- Added `MoneyLost` remote event to RemoteSetup.lua for server-to-client money loss notification
+- Modified Main.server.lua (after PlayerKnockback event):
+  - Calculate 15% money loss: `math.floor(playerData.money * 0.15)`
+  - Deduct money from player's balance
+  - Fire MoneyLost event with amount and source
+  - Sync player data to update money display
+- Added `showMoneyLoss()` function to DamageUI.lua:
+  - Creates gold/orange floating text showing money lost (e.g., "-$150")
+  - Uses similar animation to damage numbers but positioned lower
+  - Text rises and fades out over ~1.8 seconds
+- Added `onMoneyLost()` handler function in DamageUI.lua
+- Connected MoneyLost event handler in Main.client.lua
+
+### Files modified:
+- src/server/RemoteSetup.lua (added MoneyLost event)
+- src/server/Main.server.lua (added money loss on knockback)
+- src/client/DamageUI.lua (added showMoneyLoss function)
+- src/client/Main.client.lua (added MoneyLost event handler)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Movement is already blocked during knockback via CombatHealth.canMove()
+- Immunity frames exist via knockback duration check (cannot be knocked back again while already knocked back)
+
+### Acceptance criteria met:
+- ✅ Player is immobilized when stunned by predator (existing knockback behavior)
+- ✅ Player loses 15% of their money when stunned (within 10-20% range)
+- ✅ Money loss is shown visually to player (gold floating "-$X" text)
+- ✅ Player recovers after incapacitation duration (1.5 seconds knockback)
+- ✅ Cannot be stunned again during recovery period (knockback prevents further damage)

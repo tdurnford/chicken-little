@@ -918,6 +918,15 @@ if playerKnockbackEvent then
   end)
 end
 
+-- MoneyLost: Show money loss visual when predator knocks back player
+local moneyLostEvent = getEvent("MoneyLost")
+if moneyLostEvent then
+  moneyLostEvent.OnClientEvent:Connect(function(data: any)
+    DamageUI.onMoneyLost(data)
+    print("[Client] Lost $" .. data.amount .. " from predator attack")
+  end)
+end
+
 -- PlayerHealthChanged: Update health bar during regeneration
 local playerHealthChangedEvent = getEvent("PlayerHealthChanged")
 if playerHealthChangedEvent then

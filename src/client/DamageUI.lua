@@ -162,6 +162,66 @@ function DamageUI.showDamageNumber(damage: number, source: string?)
   end)
 end
 
+-- Show money loss number floating up (displayed when predator knocks back player)
+function DamageUI.showMoneyLoss(amount: number, source: string?)
+  if not damageContainer then
+    return
+  end
+
+  -- Don't show for 0 or negative values
+  if amount <= 0 then
+    return
+  end
+
+  -- Create money loss label
+  local moneyLabel = Instance.new("TextLabel")
+  moneyLabel.Name = "MoneyLoss"
+  moneyLabel.Size = UDim2.new(0, 150, 0, 35)
+  -- Position below the damage numbers with random horizontal offset
+  local xOffset = math.random(-30, 30)
+  moneyLabel.Position = UDim2.new(0.5, xOffset - 75, 0.48, 0)
+  moneyLabel.BackgroundTransparency = 1
+  moneyLabel.Text = string.format("-$%d", amount)
+  moneyLabel.TextColor3 = Color3.fromRGB(255, 180, 50) -- Gold/orange for money
+  moneyLabel.TextStrokeTransparency = 0
+  moneyLabel.TextStrokeColor3 = Color3.fromRGB(100, 50, 0)
+  moneyLabel.Font = Enum.Font.GothamBold
+  moneyLabel.TextSize = 28
+  moneyLabel.TextScaled = false
+  moneyLabel.Parent = damageContainer
+
+  -- Animate floating up and fading out
+  local startPos = moneyLabel.Position
+  local endPos = UDim2.new(
+    startPos.X.Scale,
+    startPos.X.Offset,
+    startPos.Y.Scale,
+    startPos.Y.Offset - DAMAGE_NUMBER_RISE * 1.2 -- Rise slightly more than damage numbers
+  )
+
+  local tweenInfo = TweenInfo.new(
+    DAMAGE_NUMBER_LIFETIME * 1.2, -- Last slightly longer
+    Enum.EasingStyle.Quad,
+    Enum.EasingDirection.Out
+  )
+
+  local moveTween = TweenService:Create(moneyLabel, tweenInfo, {
+    Position = endPos,
+    TextTransparency = 1,
+    TextStrokeTransparency = 1,
+  })
+
+  moveTween:Play()
+  moveTween.Completed:Connect(function()
+    moneyLabel:Destroy()
+  end)
+end
+
+-- Handle MoneyLost event from server
+function DamageUI.onMoneyLost(data: { amount: number, source: string? })
+  DamageUI.showMoneyLoss(data.amount, data.source)
+end
+
 -- Show knockback effect
 function DamageUI.showKnockback(duration: number, source: string?)
   if not damageContainer then

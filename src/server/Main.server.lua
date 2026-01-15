@@ -2509,6 +2509,23 @@ local function runGameLoop(deltaTime: number)
                   source = damagingPredator,
                 })
               end
+
+              -- Steal money from player when knocked back by predator (15% of current money)
+              local moneyLossPercent = 0.15
+              local moneyLost = math.floor(playerData.money * moneyLossPercent)
+              if moneyLost > 0 then
+                playerData.money = playerData.money - moneyLost
+                -- Fire MoneyLost event to show visual feedback
+                local moneyLostEvent = RemoteSetup.getEvent("MoneyLost")
+                if moneyLostEvent then
+                  moneyLostEvent:FireClient(player, {
+                    amount = moneyLost,
+                    source = damagingPredator,
+                  })
+                end
+                -- Sync player data to update money display
+                syncPlayerData(player, playerData, true)
+              end
             end
           end
         end
