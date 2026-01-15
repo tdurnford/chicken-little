@@ -1,7 +1,8 @@
 --[[
 	ChickenPlacement Module
-	Handles placing and picking up chickens in coop spots.
-	Manages validation of spots and updates to player data.
+	Handles placing and managing chickens in player sections.
+	Supports both legacy coop spots and free-roaming behavior.
+	Manages validation and updates to player data.
 ]]
 
 local ChickenPlacement = {}
@@ -9,6 +10,7 @@ local ChickenPlacement = {}
 -- Import dependencies
 local PlayerData = require(script.Parent.PlayerData)
 local Chicken = require(script.Parent.Chicken)
+local PlayerSection = require(script.Parent.PlayerSection)
 
 -- Constants
 local MAX_COOP_SPOTS = 12
@@ -199,6 +201,53 @@ function ChickenPlacement.placeChicken(
   }
 end
 
+-- Place a chicken from inventory as free-roaming (no specific spot)
+-- This is the new preferred method for placing chickens
+function ChickenPlacement.placeChickenFreeRoaming(
+  playerData: PlayerData.PlayerDataSchema,
+  chickenId: string
+): PlacementResult
+  -- Find chicken in inventory
+  local chicken, inventoryIndex = ChickenPlacement.findChickenInInventory(playerData, chickenId)
+  if not chicken or not inventoryIndex then
+    return {
+      success = false,
+      message = "Chicken not found in inventory",
+      chicken = nil,
+    }
+  end
+
+  -- Validate the chicken data
+  if not PlayerData.validateChicken(chicken) then
+    return {
+      success = false,
+      message = "Invalid chicken data",
+      chicken = nil,
+    }
+  end
+
+  -- Remove chicken from inventory
+  table.remove(playerData.inventory.chickens, inventoryIndex)
+
+  -- Add to placed chickens without a spotIndex (free-roaming)
+  local placedChicken: PlayerData.ChickenData = {
+    id = chicken.id,
+    chickenType = chicken.chickenType,
+    rarity = chicken.rarity,
+    accumulatedMoney = chicken.accumulatedMoney,
+    lastEggTime = chicken.lastEggTime,
+    spotIndex = nil, -- Free-roaming: no specific spot
+    placedTime = os.time(),
+  }
+  table.insert(playerData.placedChickens, placedChicken)
+
+  return {
+    success = true,
+    message = "Chicken placed as free-roaming",
+    chicken = placedChicken,
+  }
+end
+
 -- Pick up a chicken from a coop spot and return to inventory
 function ChickenPlacement.pickupChicken(
   playerData: PlayerData.PlayerDataSchema,
@@ -209,7 +258,7 @@ function ChickenPlacement.pickupChicken(
   if not chicken or not placedIndex then
     return {
       success = false,
-      message = "Chicken not found in coop",
+      message = "Chicken not found in area",
       chicken = nil,
     }
   end
@@ -332,8 +381,9 @@ function ChickenPlacement.getFirstAvailableSpot(playerData: PlayerData.PlayerDat
 end
 
 -- Validate placement state consistency
+-- Supports both spot-based and free-roaming chickens
 function ChickenPlacement.validatePlacementState(playerData: PlayerData.PlayerDataSchema): boolean
-  -- Check that no two chickens share the same spot
+  -- Check that no two chickens share the same spot (for spot-based chickens)
   local usedSpots: { [number]: boolean } = {}
   for _, chicken in ipairs(playerData.placedChickens) do
     if chicken.spotIndex then
@@ -346,9 +396,8 @@ function ChickenPlacement.validatePlacementState(playerData: PlayerData.PlayerDa
       if not ChickenPlacement.isValidSpot(chicken.spotIndex) then
         return false
       end
-    else
-      return false -- Placed chicken must have a spot
     end
+    -- Free-roaming chickens (spotIndex = nil) are valid
   end
 
   -- Check that inventory chickens don't have spots
@@ -359,6 +408,30 @@ function ChickenPlacement.validatePlacementState(playerData: PlayerData.PlayerDa
   end
 
   return true
+end
+
+-- Get the count of free-roaming chickens (no spot assigned)
+function ChickenPlacement.getFreeRoamingCount(playerData: PlayerData.PlayerDataSchema): number
+  local count = 0
+  for _, chicken in ipairs(playerData.placedChickens) do
+    if chicken.spotIndex == nil then
+      count = count + 1
+    end
+  end
+  return count
+end
+
+-- Get all free-roaming chickens
+function ChickenPlacement.getFreeRoamingChickens(
+  playerData: PlayerData.PlayerDataSchema
+): { PlayerData.ChickenData }
+  local freeRoaming = {}
+  for _, chicken in ipairs(playerData.placedChickens) do
+    if chicken.spotIndex == nil then
+      table.insert(freeRoaming, chicken)
+    end
+  end
+  return freeRoaming
 end
 
 return ChickenPlacement

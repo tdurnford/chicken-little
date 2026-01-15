@@ -3818,3 +3818,58 @@
 - Format check passes, build passes
 - Note: Selene linting has CPU architecture issue (not related to this change)
 - Next: Work on remaining high priority items (Item #2 Free-Roaming Chickens, Item #3 Chicken Limit, Item #8 Trap Icon)
+
+[2026-01-15] Completed UI & Gameplay Fixes Work Item #2: Implement Free-Roaming Chickens
+- Changed chicken behavior from static placement spots to free-roaming within player's section
+- Chickens now wander naturally using the ChickenAI module (IDLE -> WALKING -> IDLE state machine)
+- Changes applied across multiple files:
+
+1. src/shared/ChickenAI.lua:
+   - Added PlayerSection import
+   - Extended ChickenAIState type with sectionCenter and isPlayerSection fields
+   - Added createSectionState() function for player-owned chickens using section bounds
+   - Existing wandering AI (idle, walking, direction changes) now works for player chickens
+
+2. src/shared/PlayerSection.lua:
+   - Added getRandomPositionInSection() for random spawn positions within section
+   - Added getRandomPositionWithSpread() for spawning with minimum distance between chickens
+   - Both functions use 4-stud margin from boundaries to keep chickens inside
+
+3. src/shared/ChickenPlacement.lua:
+   - Added placeChickenFreeRoaming() function for placing without spotIndex
+   - Updated validatePlacementState() to allow chickens with nil spotIndex
+   - Added getFreeRoamingCount() and getFreeRoamingChickens() helper functions
+   - Legacy spot-based placement still available for backwards compatibility
+
+4. src/server/Main.server.lua:
+   - Added playerChickenAIState to PlayerGameState type
+   - Initialize playerChickenAIState when player joins with their section bounds
+   - Register existing placed chickens with AI on player join
+   - Updated PlaceChicken handler to use free-roaming placement and register with AI
+   - Updated PickupChicken handler to unregister from AI
+   - Updated HatchEgg handler to support free-roaming placement
+   - Added chicken AI update loop that syncs positions to all clients
+   - Updated egg laying to use AI positions for world egg spawning
+   - Updated predator targeting to use chicken AI positions
+
+5. src/server/RemoteSetup.lua:
+   - Added ChickenPositionUpdated RemoteEvent for syncing chicken positions
+
+6. src/client/SectionVisuals.lua:
+   - Removed static coop spot visuals (no longer needed with free-roaming)
+   - Updated buildSection to skip spot creation
+   - Legacy updateSpotOccupancy() kept for backwards compatibility
+
+7. src/shared/IntegrationTests.lua:
+   - Added test for placeChickenFreeRoaming() function
+
+- Acceptance criteria met:
+  - Chickens wander freely within player's area (64x64 stud section) ✓
+  - Chickens stay within area boundaries (4-stud margin, clamped to bounds) ✓
+  - Movement looks natural with idle behaviors (IDLE <-> WALKING state machine) ✓
+  - No static placement spots visible or used (removed from SectionVisuals) ✓
+  - Chickens do not get stuck (boundary clamping, obstacle avoidance via raycasting) ✓
+- Format check passes, build passes
+- Note: Existing ChickenAI already had wandering behavior for neutral zone chickens;
+  extended it to work per-player with section bounds
+- Next: Work on Item #3 (15 Chicken Per Area Limit) which depends on this item

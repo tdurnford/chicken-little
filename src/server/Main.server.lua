@@ -136,6 +136,7 @@ type PlayerGameState = {
   chickenHealthRegistry: ChickenHealth.ChickenHealthRegistry,
   predatorAIState: PredatorAI.PredatorAIState,
   worldEggRegistry: WorldEgg.WorldEggRegistry,
+  playerChickenAIState: ChickenAI.ChickenAIState?, -- For free-roaming owned chickens
 }
 local playerGameStates: { [number]: PlayerGameState } = {}
 
@@ -419,6 +420,7 @@ local function createPlayerGameState(): PlayerGameState
     chickenHealthRegistry = ChickenHealth.createRegistry(),
     predatorAIState = PredatorAI.createState(),
     worldEggRegistry = WorldEgg.createRegistry(),
+    playerChickenAIState = nil, -- Initialized later when section is assigned
   }
 end
 
@@ -437,19 +439,22 @@ end
 ]]
 
 -- PlaceChicken RemoteFunction handler
+-- Now uses free-roaming placement instead of spot-based
 local placeChickenFunc = RemoteSetup.getFunction("PlaceChicken")
 if placeChickenFunc then
-  placeChickenFunc.OnServerInvoke = function(player: Player, chickenId: string, spotIndex: number)
+  placeChickenFunc.OnServerInvoke = function(player: Player, chickenId: string, _spotIndex: number?)
     local userId = player.UserId
     local playerData = DataPersistence.getData(userId)
     if not playerData then
       return { success = false, message = "Player data not found" }
     end
 
-    local result = ChickenPlacement.placeChicken(playerData, chickenId, spotIndex)
+    -- Use free-roaming placement (spotIndex is now optional/ignored)
+    local result = ChickenPlacement.placeChickenFreeRoaming(playerData, chickenId)
     if result.success then
-      -- Register chicken with health system
       local gameState = getPlayerGameState(userId)
+
+      -- Register chicken with health system
       if result.chicken and result.chicken.chickenType then
         ChickenHealth.register(
           gameState.chickenHealthRegistry,
@@ -458,13 +463,39 @@ if placeChickenFunc then
         )
       end
 
+      -- Register chicken with AI for free-roaming behavior
+      if gameState.playerChickenAIState and result.chicken then
+        local sectionCenter = MapGeneration.getSectionPosition(playerData.sectionIndex or 1)
+        if sectionCenter then
+          local spawnPos = PlayerSection.getRandomPositionInSection(sectionCenter)
+          local spawnPosV3 = Vector3.new(spawnPos.x, spawnPos.y, spawnPos.z)
+          ChickenAI.registerChicken(
+            gameState.playerChickenAIState,
+            chickenId,
+            result.chicken.chickenType,
+            spawnPosV3,
+            os.clock()
+          )
+        end
+      end
+
       -- Fire ChickenPlaced event to all clients so they can update visuals
       local chickenPlacedEvent = RemoteSetup.getEvent("ChickenPlaced")
       if chickenPlacedEvent then
+        -- Get initial position from AI
+        local initialPosition = nil
+        if gameState.playerChickenAIState then
+          local aiPos = ChickenAI.getPosition(gameState.playerChickenAIState, chickenId)
+          if aiPos then
+            initialPosition = aiPos.currentPosition
+          end
+        end
+
         chickenPlacedEvent:FireAllClients({
           playerId = userId,
           chicken = result.chicken,
-          spotIndex = spotIndex,
+          spotIndex = nil, -- No longer using spots
+          position = initialPosition,
         })
       end
       syncPlayerData(player, playerData, true)
@@ -483,15 +514,21 @@ if pickupChickenFunc then
       return { success = false, message = "Player data not found" }
     end
 
-    -- Get the spot index before pickup for the event
+    -- Get the spot index before pickup for the event (legacy)
     local chicken, _ = ChickenPlacement.findPlacedChicken(playerData, chickenId)
     local spotIndex = chicken and chicken.spotIndex or nil
 
     local result = ChickenPlacement.pickupChicken(playerData, chickenId)
     if result.success then
-      -- Unregister chicken from health system
       local gameState = getPlayerGameState(userId)
+
+      -- Unregister chicken from health system
       ChickenHealth.unregister(gameState.chickenHealthRegistry, chickenId)
+
+      -- Unregister chicken from AI (free-roaming)
+      if gameState.playerChickenAIState then
+        ChickenAI.unregisterChicken(gameState.playerChickenAIState, chickenId)
+      end
 
       -- Fire ChickenPickedUp event to all clients so they can update visuals
       local chickenPickedUpEvent = RemoteSetup.getEvent("ChickenPickedUp")
@@ -591,14 +628,15 @@ end
 --[[
   Egg Hatching Server Handlers
   Handles HatchEgg RemoteFunction.
-  Validates egg ownership, performs hatch, adds chicken to inventory.
+  Validates egg ownership, performs hatch, adds chicken to inventory or area.
 ]]
 
 -- HatchEgg RemoteFunction handler
--- Parameters: eggId, spotIndex (optional) - if spotIndex provided, place chicken there directly
+-- Parameters: eggId, spotIndex (optional, legacy - ignored for free-roaming)
+-- If any placement hint is provided, chicken is placed as free-roaming
 local hatchEggFunc = RemoteSetup.getFunction("HatchEgg")
 if hatchEggFunc then
-  hatchEggFunc.OnServerInvoke = function(player: Player, eggId: string, spotIndex: number?)
+  hatchEggFunc.OnServerInvoke = function(player: Player, eggId: string, placementHint: number?)
     local userId = player.UserId
     local playerData = DataPersistence.getData(userId)
     if not playerData then
@@ -607,37 +645,66 @@ if hatchEggFunc then
 
     local result = EggHatching.hatch(playerData, eggId)
     if result.success then
-      -- If spotIndex provided, move the chicken from inventory to placed
-      if spotIndex and result.chickenId then
+      -- If placement hint provided, move the chicken from inventory to placed (free-roaming)
+      if placementHint and result.chickenId then
         -- Find the chicken in inventory
         local chickenIndex = nil
+        local chickenData = nil
         for i, chicken in ipairs(playerData.inventory.chickens) do
           if chicken.id == result.chickenId then
             chickenIndex = i
+            chickenData = chicken
             break
           end
         end
 
-        if chickenIndex then
-          -- Remove from inventory and add to placed chickens
+        if chickenIndex and chickenData then
+          -- Remove from inventory and add to placed chickens (free-roaming)
           local chicken = table.remove(playerData.inventory.chickens, chickenIndex)
-          chicken.spotIndex = spotIndex
+          chicken.spotIndex = nil -- Free-roaming: no specific spot
           table.insert(playerData.placedChickens, chicken)
 
-          -- Register chicken with health system
           local gameState = getPlayerGameState(userId)
+
+          -- Register chicken with health system
           ChickenHealth.register(
             gameState.chickenHealthRegistry,
             result.chickenId,
             chicken.chickenType
           )
 
+          -- Register chicken with AI for free-roaming behavior
+          if gameState.playerChickenAIState then
+            local sectionCenter = MapGeneration.getSectionPosition(playerData.sectionIndex or 1)
+            if sectionCenter then
+              local spawnPos = PlayerSection.getRandomPositionInSection(sectionCenter)
+              local spawnPosV3 = Vector3.new(spawnPos.x, spawnPos.y, spawnPos.z)
+              ChickenAI.registerChicken(
+                gameState.playerChickenAIState,
+                result.chickenId,
+                chicken.chickenType,
+                spawnPosV3,
+                os.clock()
+              )
+            end
+          end
+
           -- Fire ChickenPlaced event
           local chickenPlacedEvent = RemoteSetup.getEvent("ChickenPlaced")
           if chickenPlacedEvent then
+            -- Get initial position from AI
+            local initialPosition = nil
+            if gameState.playerChickenAIState then
+              local aiPos = ChickenAI.getPosition(gameState.playerChickenAIState, result.chickenId)
+              if aiPos then
+                initialPosition = aiPos.currentPosition
+              end
+            end
+
             chickenPlacedEvent:FireClient(player, {
               chicken = chicken,
-              spotIndex = spotIndex,
+              spotIndex = nil, -- Free-roaming
+              position = initialPosition,
             })
           end
         end
@@ -1674,6 +1741,31 @@ Players.PlayerAdded:Connect(function(player)
         end
       end
 
+      -- Initialize player chicken AI for free-roaming chickens in their section
+      if sectionIndex then
+        local sectionCenter = MapGeneration.getSectionPosition(sectionIndex)
+        if sectionCenter then
+          gameState.playerChickenAIState = ChickenAI.createSectionState(sectionCenter)
+
+          -- Register existing placed chickens with the AI for roaming
+          local currentTime = os.clock()
+          if data.placedChickens then
+            for _, chicken in ipairs(data.placedChickens) do
+              -- Generate random spawn position within section
+              local spawnPos = PlayerSection.getRandomPositionInSection(sectionCenter)
+              local spawnPosV3 = Vector3.new(spawnPos.x, spawnPos.y, spawnPos.z)
+              ChickenAI.registerChicken(
+                gameState.playerChickenAIState,
+                chicken.id,
+                chicken.chickenType,
+                spawnPosV3,
+                currentTime
+              )
+            end
+          end
+        end
+      end
+
       -- Calculate and apply offline earnings before syncing
       local joinTime = os.time()
       if OfflineEarnings.hasEarnings(data, joinTime) then
@@ -1879,6 +1971,26 @@ local function runGameLoop(deltaTime: number)
     -- Damaged chickens generate less money proportional to their health
     MoneyCollection.updateAllChickenMoney(playerData, deltaTime, gameState.chickenHealthRegistry)
 
+    -- 1.2. Update player's chicken AI (free-roaming chickens)
+    if gameState.playerChickenAIState then
+      local chickenPositions =
+        ChickenAI.updateAll(gameState.playerChickenAIState, deltaTime, currentTime)
+
+      -- Sync chicken positions to all clients (for this player's chickens)
+      local chickenPositionEvent = RemoteSetup.getEvent("ChickenPositionUpdated")
+      if chickenPositionEvent and next(chickenPositions) then
+        for chickenId, position in pairs(chickenPositions) do
+          chickenPositionEvent:FireAllClients({
+            ownerId = userId,
+            chickenId = chickenId,
+            position = position.currentPosition,
+            facingDirection = position.facingDirection,
+            isIdle = position.isIdle,
+          })
+        end
+      end
+    end
+
     -- 1.5. Update egg laying for all placed chickens
     local currentTimeSeconds = os.time()
     local eggSpawnedEvent = RemoteSetup.getEvent("EggSpawned")
@@ -1892,25 +2004,46 @@ local function runGameLoop(deltaTime: number)
             eggType = Chicken.getUpgradedEggType(eggType)
           end
 
-          -- Get section center to calculate egg spawn position
+          -- Get egg spawn position - use chicken AI position for free-roaming chickens
           local sectionCenter = MapGeneration.getSectionPosition(playerData.sectionIndex or 1)
-          if sectionCenter and chickenData.spotIndex then
-            local spotPos = PlayerSection.getSpotPosition(chickenData.spotIndex, sectionCenter)
-            if spotPos then
-              -- Create world egg instead of adding to inventory
-              local worldEgg =
-                WorldEgg.create(eggType, userId, chickenData.id, chickenData.spotIndex, spotPos)
-              if worldEgg then
-                WorldEgg.add(gameState.worldEggRegistry, worldEgg)
+          local eggPos: PlayerSection.Vector3? = nil
 
-                -- Update chicken's lastEggTime in player data
-                chickenData.lastEggTime = chickenInstance.lastEggTime
-                dataChanged = true
+          if gameState.playerChickenAIState then
+            -- Get position from AI (free-roaming)
+            local aiPos = ChickenAI.getPosition(gameState.playerChickenAIState, chickenData.id)
+            if aiPos then
+              eggPos = {
+                x = aiPos.currentPosition.X,
+                y = aiPos.currentPosition.Y,
+                z = aiPos.currentPosition.Z,
+              }
+            end
+          end
 
-                -- Notify player of egg spawned in world
-                if eggSpawnedEvent then
-                  eggSpawnedEvent:FireClient(player, WorldEgg.toNetworkData(worldEgg))
-                end
+          -- Fallback to spot position if AI position not available
+          if not eggPos and sectionCenter and chickenData.spotIndex then
+            eggPos = PlayerSection.getSpotPosition(chickenData.spotIndex, sectionCenter)
+          end
+
+          -- Final fallback: random position in section
+          if not eggPos and sectionCenter then
+            eggPos = PlayerSection.getRandomPositionInSection(sectionCenter)
+          end
+
+          if eggPos then
+            -- Create world egg at the chicken's current position
+            local worldEgg =
+              WorldEgg.create(eggType, userId, chickenData.id, chickenData.spotIndex or 0, eggPos)
+            if worldEgg then
+              WorldEgg.add(gameState.worldEggRegistry, worldEgg)
+
+              -- Update chicken's lastEggTime in player data
+              chickenData.lastEggTime = chickenInstance.lastEggTime
+              dataChanged = true
+
+              -- Notify player of egg spawned in world
+              if eggSpawnedEvent then
+                eggSpawnedEvent:FireClient(player, WorldEgg.toNetworkData(worldEgg))
               end
             end
           end
@@ -2285,20 +2418,41 @@ local function runGameLoop(deltaTime: number)
             -- Pick a random chicken to approach
             local targetChicken =
               playerData.placedChickens[math.random(1, #playerData.placedChickens)]
-            if targetChicken and targetChicken.spotIndex then
-              local sectionCenter = MapGeneration.getSectionPosition(playerData.sectionIndex or 1)
-              if sectionCenter then
-                local spotPos =
-                  PlayerSection.getSpotPosition(targetChicken.spotIndex, sectionCenter)
-                if spotPos then
-                  local spotPosV3 = Vector3.new(spotPos.x, spotPos.y + 1, spotPos.z)
-                  PredatorAI.setTargetChicken(
-                    gameState.predatorAIState,
-                    predator.id,
-                    targetChicken.spotIndex,
-                    spotPosV3
+            if targetChicken then
+              -- Get chicken position from AI (free-roaming) or fallback to spot
+              local targetPosV3: Vector3? = nil
+
+              if gameState.playerChickenAIState then
+                local aiPos =
+                  ChickenAI.getPosition(gameState.playerChickenAIState, targetChicken.id)
+                if aiPos then
+                  targetPosV3 = Vector3.new(
+                    aiPos.currentPosition.X,
+                    aiPos.currentPosition.Y + 1,
+                    aiPos.currentPosition.Z
                   )
                 end
+              end
+
+              -- Fallback to spot position (legacy)
+              if not targetPosV3 and targetChicken.spotIndex then
+                local sectionCenter = MapGeneration.getSectionPosition(playerData.sectionIndex or 1)
+                if sectionCenter then
+                  local spotPos =
+                    PlayerSection.getSpotPosition(targetChicken.spotIndex, sectionCenter)
+                  if spotPos then
+                    targetPosV3 = Vector3.new(spotPos.x, spotPos.y + 1, spotPos.z)
+                  end
+                end
+              end
+
+              if targetPosV3 then
+                PredatorAI.setTargetChicken(
+                  gameState.predatorAIState,
+                  predator.id,
+                  targetChicken.id, -- Use chicken ID instead of spotIndex
+                  targetPosV3
+                )
               end
             end
           end

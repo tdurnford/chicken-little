@@ -1,14 +1,17 @@
 --[[
 	ChickenAI Module
-	Handles random chicken wandering behavior in the neutral zone.
+	Handles chicken wandering behavior for both:
+	- Wild chickens in the neutral zone
+	- Player-owned chickens free-roaming in their owner's section
 	Chickens wander randomly, changing direction periodically,
-	and staying within the neutral zone boundaries.
+	and staying within their designated boundaries.
 ]]
 
 local ChickenAI = {}
 
 -- Import dependencies
 local ChickenConfig = require(script.Parent.ChickenConfig)
+local PlayerSection = require(script.Parent.PlayerSection)
 
 -- Type definitions
 export type ChickenPosition = {
@@ -27,6 +30,9 @@ export type ChickenAIState = {
   positions: { [string]: ChickenPosition },
   neutralZoneCenter: Vector3,
   neutralZoneSize: number,
+  -- Section-based bounds (for player-owned chickens)
+  sectionCenter: PlayerSection.Vector3?,
+  isPlayerSection: boolean,
 }
 
 -- Constants
@@ -57,6 +63,21 @@ function ChickenAI.createState(
     positions = {},
     neutralZoneCenter = neutralZoneCenter or Vector3.new(0, 0, 0),
     neutralZoneSize = neutralZoneSize or 32,
+    sectionCenter = nil,
+    isPlayerSection = false,
+  }
+end
+
+-- Create AI state for a player's section (for owned chickens)
+function ChickenAI.createSectionState(sectionCenter: PlayerSection.Vector3): ChickenAIState
+  local sectionSize = PlayerSection.getSectionSize()
+  return {
+    positions = {},
+    -- Use section bounds instead of neutral zone
+    neutralZoneCenter = Vector3.new(sectionCenter.x, sectionCenter.y, sectionCenter.z),
+    neutralZoneSize = math.min(sectionSize.x, sectionSize.z) - 4, -- Slight margin from walls
+    sectionCenter = sectionCenter,
+    isPlayerSection = true,
   }
 end
 

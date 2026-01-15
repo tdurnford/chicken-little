@@ -202,7 +202,8 @@ local function createSpawnMarker(sectionCenter: PlayerSection.Vector3, parent: I
 end
 
 -- Build the complete section visuals
-function SectionVisuals.buildSection(sectionIndex: number, occupiedSpots: { [number]: boolean }?)
+-- Note: Static coop spots are no longer created since chickens now roam freely
+function SectionVisuals.buildSection(sectionIndex: number, _occupiedSpots: { [number]: boolean }?)
   -- Clear existing visuals
   SectionVisuals.clear()
 
@@ -223,14 +224,16 @@ function SectionVisuals.buildSection(sectionIndex: number, occupiedSpots: { [num
   -- Create all visual elements
   createGround(sectionCenter, sectionFolder)
   createCoopFloor(sectionCenter, sectionFolder)
-  createAllSpots(sectionCenter, sectionFolder, occupiedSpots)
+  -- Note: Coop spots no longer created - chickens roam freely within section
   createBoundaries(sectionCenter, sectionFolder)
   createSpawnMarker(sectionCenter, sectionFolder)
 
-  print(string.format("[SectionVisuals] Built section %d visuals", sectionIndex))
+  print(
+    string.format("[SectionVisuals] Built section %d visuals (free-roaming mode)", sectionIndex)
+  )
 end
 
--- Update spot occupancy visual
+-- Update spot occupancy visual (legacy - no longer used with free-roaming)
 function SectionVisuals.updateSpotOccupancy(spotIndex: number, occupied: boolean)
   local spotPart = spotParts[spotIndex]
   if spotPart then

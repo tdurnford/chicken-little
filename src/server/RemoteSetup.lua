@@ -51,6 +51,7 @@ local REMOTE_EVENTS = {
   "ChickenDied",
   "PredatorPositionUpdated",
   "RandomChickenPositionUpdated",
+  "ChickenPositionUpdated",
   "ProtectionStatusChanged",
   "BankruptcyAssistance",
   "PowerUpActivated",

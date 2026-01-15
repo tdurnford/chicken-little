@@ -1,0 +1,314 @@
+{
+  "project": {
+    "name": "Chicken Coop Tycoon - UI & Gameplay Fixes",
+    "description": "Collection of bug fixes and improvements addressing visual clarity issues in the Store UI, gameplay changes for chicken behavior, and general polish items.",
+    "createdDate": "2026-01-14",
+    "priority": "high",
+    "category": "Bug Fixes & Polish"
+  },
+  "workItems": [
+    {
+      "id": 1,
+      "category": "Assets",
+      "title": "Replace Programmatic Bat with 3D Model",
+      "description": "Find and implement a proper 3D bat model from the Roblox marketplace to replace the current programmatically-built bat weapon.",
+      "completed": false,
+      "priority": "medium",
+      "steps": [
+        "Search Roblox marketplace for 'baseball bat' models",
+        "Evaluate options for quality, style fit, and licensing",
+        "Insert chosen model into workspace using MCP insert_model",
+        "Update WeaponTool.lua to use the model instead of building programmatically",
+        "Ensure bat model is properly welded to player's hand",
+        "Test bat animations and swing mechanics with new model",
+        "Adjust scale and position if needed for proper gameplay feel"
+      ],
+      "acceptanceCriteria": [
+        "Bat is a proper 3D model, not built from parts",
+        "Bat looks appropriate for the game's art style",
+        "Bat functions identically to the old implementation",
+        "No visual glitches when equipping/swinging"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/shared/WeaponTool.lua",
+        "src/shared/BaseballBat.lua"
+      ],
+      "technicalNotes": "Current bat is likely built using Part instances with welds. The new model should be a MeshPart or Model that can be cloned and attached to the player's character."
+    },
+    {
+      "id": 2,
+      "category": "Gameplay",
+      "title": "Implement Free-Roaming Chickens",
+      "description": "Change chicken behavior from static placement spots to free-roaming within the player's area. Chickens should wander naturally around the base.",
+      "completed": true,
+      "priority": "high",
+      "steps": [
+        "Review current ChickenPlacement.lua and ChickenAI.lua",
+        "Remove static placement spot system",
+        "Implement wandering AI behavior for chickens",
+        "Define valid roaming bounds based on player's area/section",
+        "Add idle behaviors: pecking, scratching, random direction changes",
+        "Ensure chickens stay within their owner's area boundaries",
+        "Add pathfinding or simple obstacle avoidance",
+        "Update chicken spawning to place chickens at random valid positions",
+        "Test with multiple chickens to ensure no clumping or stuck behavior"
+      ],
+      "acceptanceCriteria": [
+        "Chickens wander freely within player's area",
+        "Chickens do not get stuck on obstacles",
+        "Chickens stay within area boundaries",
+        "Movement looks natural with idle behaviors",
+        "No static placement spots visible or used"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/shared/ChickenPlacement.lua",
+        "src/shared/ChickenAI.lua",
+        "src/shared/PlayerSection.lua"
+      ],
+      "technicalNotes": "Consider using a simple state machine: IDLE -> WALKING -> IDLE. Use random wait times between state changes. PathfindingService may be overkill; simple raycasting for obstacle detection should suffice."
+    },
+    {
+      "id": 3,
+      "category": "Gameplay",
+      "title": "Implement 15 Chicken Per Area Limit",
+      "description": "Add a hard cap of 15 chickens per player area to prevent overcrowding and maintain performance.",
+      "completed": false,
+      "priority": "high",
+      "steps": [
+        "Add MAX_CHICKENS_PER_AREA constant to ChickenConfig.lua (value: 15)",
+        "Update chicken spawning logic to check current count before spawning",
+        "Update egg hatching logic to respect the limit",
+        "Add UI feedback when player tries to hatch egg at capacity",
+        "Show current chicken count somewhere visible (e.g., 'Chickens: 12/15')",
+        "Prevent chicken purchase/hatching when at limit",
+        "Add tooltip or message explaining the limit"
+      ],
+      "acceptanceCriteria": [
+        "Maximum of 15 chickens can exist in a player's area",
+        "Player is notified when at capacity",
+        "Egg hatching is blocked when at limit (with clear feedback)",
+        "Chicken count is visible to player",
+        "Existing chickens are not affected by the limit"
+      ],
+      "dependencies": [2],
+      "codeLocations": [
+        "src/shared/ChickenConfig.lua",
+        "src/shared/ChickenPlacement.lua",
+        "src/shared/EggHatching.lua",
+        "src/client/MainHUD.lua"
+      ],
+      "technicalNotes": "Consider what happens if a player somehow has more than 15 chickens (data migration). Don't delete existing chickens, just prevent new ones until under limit."
+    },
+    {
+      "id": 4,
+      "category": "UI-World",
+      "title": "Add Player Name Label Above Base",
+      "description": "Display '<PlayerName>'s Base' text above each player's base area, visible to all players in the server.",
+      "completed": false,
+      "priority": "medium",
+      "steps": [
+        "Create BillboardGui or SurfaceGui for base label",
+        "Position label above the player's base/section",
+        "Set text to '{PlayerName}'s Base' using player's DisplayName",
+        "Style text to be readable from distance (large font, stroke)",
+        "Ensure label is visible to all players (not just owner)",
+        "Update label if player leaves (remove or show 'Unclaimed')",
+        "Handle edge cases: long names, special characters",
+        "Use consistent styling with game's theme"
+      ],
+      "acceptanceCriteria": [
+        "Player name appears above their base",
+        "Text format is '<PlayerName>'s Base'",
+        "Label is visible to all players in server",
+        "Label is readable from reasonable distance",
+        "Label is removed/updated when player leaves"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/shared/PlayerSection.lua",
+        "src/client/SectionVisuals.lua",
+        "src/server/Main.server.lua"
+      ],
+      "technicalNotes": "Use BillboardGui parented to the section's central part. Set AlwaysOnTop = false so it doesn't render through objects. MaxDistance can be set to limit visibility range."
+    },
+    {
+      "id": 5,
+      "category": "UI-Store",
+      "title": "Fix Store Button Transparency",
+      "description": "Remove transparency from store buttons to improve visibility and make it clear which buttons are enabled vs disabled.",
+      "completed": true,
+      "priority": "high",
+      "steps": [
+        "Locate button creation in StoreUI.lua",
+        "Set BackgroundTransparency to 0 for all purchase buttons",
+        "Ensure disabled state uses a distinct color (grey) not transparency",
+        "Update hover states to not use transparency",
+        "Test all button states: enabled, disabled, hovered, pressed",
+        "Apply fix to all tabs (eggs, supplies, powerups, weapons, traps)"
+      ],
+      "acceptanceCriteria": [
+        "All store buttons have BackgroundTransparency = 0",
+        "Enabled buttons are clearly distinguishable from disabled",
+        "Disabled buttons use grey color, not transparency",
+        "Buttons are easy to see on all card backgrounds"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/client/StoreUI.lua (createItemCard function, button creation)"
+      ],
+      "technicalNotes": "Current buttons likely have BackgroundTransparency > 0. Set to 0 and use BackgroundColor3 changes for disabled state instead."
+    },
+    {
+      "id": 6,
+      "category": "UI-Store",
+      "title": "Fix Store Button Text Visibility",
+      "description": "Change white button text to a more visible color or add text stroke to ensure readability on button backgrounds.",
+      "completed": true,
+      "priority": "high",
+      "steps": [
+        "Identify all button text in StoreUI.lua",
+        "Add TextStroke to button text (TextStrokeTransparency = 0, TextStrokeColor3 = dark)",
+        "Consider changing text color to dark color for light buttons",
+        "Ensure currency icons (emoji) are also visible",
+        "Test readability on all button colors (green cash, blue premium, grey disabled)",
+        "Apply consistent styling across all tabs"
+      ],
+      "acceptanceCriteria": [
+        "All button text is easily readable",
+        "Text has visible stroke or contrasting color",
+        "Price and currency icons are clear",
+        "Text is readable on all button states"
+      ],
+      "dependencies": [5],
+      "codeLocations": [
+        "src/client/StoreUI.lua (button text styling)"
+      ],
+      "technicalNotes": "For green/blue backgrounds, white text with black stroke works well. For disabled grey buttons, darker text may be needed."
+    },
+    {
+      "id": 7,
+      "category": "UI-Store",
+      "title": "Remove Chickens from Store",
+      "description": "Remove the ability to directly purchase chickens from the store. Players must acquire chickens by purchasing and hatching eggs only.",
+      "completed": true,
+      "priority": "high",
+      "steps": [
+        "Locate chicken tab/section in StoreUI.lua",
+        "Remove chicken items from store inventory",
+        "Remove or repurpose the chickens tab (could show chicken info instead)",
+        "Update any references to chicken purchasing",
+        "Ensure egg purchasing and hatching is the only way to get chickens",
+        "Add tooltip or info explaining chickens come from eggs",
+        "Test that store functions correctly without chicken sales"
+      ],
+      "acceptanceCriteria": [
+        "Chickens cannot be purchased directly",
+        "Chicken tab is removed or repurposed",
+        "Eggs are the only way to acquire chickens",
+        "No errors when opening store",
+        "Store navigation works correctly with changed tabs"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/client/StoreUI.lua",
+        "src/shared/Store.lua",
+        "src/shared/ChickenConfig.lua"
+      ],
+      "technicalNotes": "May need to update tab configuration and ensure tab indices are correct after removal. Consider showing a 'Chickens' info tab that displays chicken types and how to get them."
+    },
+    {
+      "id": 8,
+      "category": "UI-Store",
+      "title": "Fix Trap Icon in Store",
+      "description": "Replace the square placeholder for trap icons in the store with a proper trap icon or image.",
+      "completed": false,
+      "priority": "medium",
+      "steps": [
+        "Locate trap card creation in StoreUI.lua",
+        "Identify why trap icon is showing as square (missing emoji, font issue)",
+        "Option 1: Find working emoji that renders correctly",
+        "Option 2: Use ImageLabel with trap image asset",
+        "Option 3: Create simple geometric trap representation",
+        "Test icon rendering across different devices/platforms",
+        "Ensure icon matches the visual style of other store icons"
+      ],
+      "acceptanceCriteria": [
+        "Trap icon displays correctly (not a square)",
+        "Icon clearly represents a trap",
+        "Icon matches style of other store icons",
+        "Icon renders correctly on all platforms"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/client/StoreUI.lua (trap card creation)",
+        "src/shared/TrapConfig.lua"
+      ],
+      "technicalNotes": "The square likely appears because the trap emoji doesn't render on all platforms. Consider using 🪤 (mouse trap), 🕸️ (spider web), or a custom ImageLabel with an uploaded asset."
+    },
+    {
+      "id": 9,
+      "category": "UI-HUD",
+      "title": "Fix Health Bar Covering Money Display",
+      "description": "Reposition the health bar so it does not overlap or cover the money/currency display in the HUD.",
+      "completed": true,
+      "priority": "high",
+      "steps": [
+        "Identify health bar location in ChickenHealthBar.lua or PredatorHealthBar.lua",
+        "Identify money display location in MainHUD.lua",
+        "Determine current overlap situation",
+        "Option 1: Move health bar to different screen position",
+        "Option 2: Move money display to avoid conflict",
+        "Option 3: Add offset when health bar is visible",
+        "Ensure neither element blocks the other in any state",
+        "Test with various screen sizes and aspect ratios"
+      ],
+      "acceptanceCriteria": [
+        "Health bar does not cover money display",
+        "Both elements are fully visible when present",
+        "Layout works on different screen sizes",
+        "No flickering or layout jumps"
+      ],
+      "dependencies": [],
+      "codeLocations": [
+        "src/client/ChickenHealthBar.lua",
+        "src/client/PredatorHealthBar.lua",
+        "src/client/MainHUD.lua"
+      ],
+      "technicalNotes": "Consider standard HUD layouts: money usually top-right or top-left, health bars typically below or centered. May need to use AnchorPoint and Position adjustments."
+    }
+  ],
+  "implementationOrder": [
+    "Phase 1 - Critical UI Fixes: Items 5, 6, 9 (Button visibility, health bar overlap)",
+    "Phase 2 - Store Cleanup: Items 7, 8 (Remove chickens, fix trap icon)",
+    "Phase 3 - Gameplay Changes: Items 2, 3 (Free-roaming chickens, limit)",
+    "Phase 4 - Polish: Items 1, 4 (Bat model, player name labels)"
+  ],
+  "testingChecklist": [
+    "Verify all store buttons are opaque and readable",
+    "Test disabled vs enabled button states are distinguishable",
+    "Confirm chickens cannot be purchased from store",
+    "Verify trap icon displays correctly",
+    "Test health bar and money display don't overlap",
+    "Verify chickens roam freely within area",
+    "Test chicken limit prevents spawning past 15",
+    "Confirm player name appears above base for all players",
+    "Test bat model equips and swings correctly",
+    "Test on mobile and desktop for UI scaling"
+  ],
+  "priorityRationale": {
+    "high": [
+      "Button transparency/visibility (Items 5, 6) - Core UX issue affecting purchases",
+      "Remove chickens from store (Item 7) - Game design decision",
+      "Health bar overlap (Item 9) - Blocks important information",
+      "Free-roaming chickens (Item 2) - Core gameplay change",
+      "Chicken limit (Item 3) - Performance and balance"
+    ],
+    "medium": [
+      "Trap icon (Item 8) - Visual polish",
+      "Bat model (Item 1) - Visual quality improvement",
+      "Player name labels (Item 4) - Social feature enhancement"
+    ]
+  }
+}

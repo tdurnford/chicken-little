@@ -484,4 +484,65 @@ function PlayerSection.getSpotsInRange(
   return inRange
 end
 
+-- Get a random position within the section's roaming area
+-- Uses a margin from the boundaries to keep chickens inside
+function PlayerSection.getRandomPositionInSection(sectionCenter: Vector3): Vector3
+  local margin = 4 -- Keep chickens away from walls
+  local halfWidth = SECTION_WIDTH / 2 - margin
+  local halfDepth = SECTION_DEPTH / 2 - margin
+
+  return {
+    x = sectionCenter.x + (math.random() - 0.5) * halfWidth * 2,
+    y = sectionCenter.y,
+    z = sectionCenter.z + (math.random() - 0.5) * halfDepth * 2,
+  }
+end
+
+-- Get a random position that's at least minDistance from a given position
+-- Useful for spawning chickens with some spread
+function PlayerSection.getRandomPositionWithSpread(
+  sectionCenter: Vector3,
+  avoidPositions: { Vector3 }?,
+  minDistance: number?
+): Vector3
+  local minDist = minDistance or 5
+  local margin = 4
+  local halfWidth = SECTION_WIDTH / 2 - margin
+  local halfDepth = SECTION_DEPTH / 2 - margin
+  local maxAttempts = 10
+
+  for _ = 1, maxAttempts do
+    local position = {
+      x = sectionCenter.x + (math.random() - 0.5) * halfWidth * 2,
+      y = sectionCenter.y,
+      z = sectionCenter.z + (math.random() - 0.5) * halfDepth * 2,
+    }
+
+    -- Check distance from all avoid positions
+    local isFarEnough = true
+    if avoidPositions then
+      for _, avoidPos in ipairs(avoidPositions) do
+        local dx = position.x - avoidPos.x
+        local dz = position.z - avoidPos.z
+        local dist = math.sqrt(dx * dx + dz * dz)
+        if dist < minDist then
+          isFarEnough = false
+          break
+        end
+      end
+    end
+
+    if isFarEnough then
+      return position
+    end
+  end
+
+  -- Fallback: just return a random position
+  return {
+    x = sectionCenter.x + (math.random() - 0.5) * halfWidth * 2,
+    y = sectionCenter.y,
+    z = sectionCenter.z + (math.random() - 0.5) * halfDepth * 2,
+  }
+end
+
 return PlayerSection

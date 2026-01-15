@@ -1330,6 +1330,45 @@ test("ChickenPlacement: moveChicken fails for occupied spot", function()
   return assert_false(moveResult.success, "Should not be able to move to occupied spot")
 end)
 
+test("ChickenPlacement: placeChickenFreeRoaming places chicken without spot", function()
+  local data = PlayerData.createDefault()
+  local chickenId = "test-freeroam-" .. tostring(os.clock())
+
+  -- Add chicken to inventory
+  table.insert(data.inventory.chickens, {
+    id = chickenId,
+    chickenType = "BasicChick",
+    rarity = "Common",
+    accumulatedMoney = 0,
+    lastEggTime = os.time(),
+    spotIndex = nil,
+  })
+
+  -- Place chicken as free-roaming
+  local placeResult = ChickenPlacement.placeChickenFreeRoaming(data, chickenId)
+  local pass, msg = assert_true(placeResult.success, "Place should succeed")
+  if not pass then
+    return pass, msg
+  end
+
+  -- Verify chicken is placed without spotIndex
+  pass, msg = assert_eq(#data.placedChickens, 1, "Should have 1 placed chicken")
+  if not pass then
+    return pass, msg
+  end
+
+  pass, msg = assert_eq(#data.inventory.chickens, 0, "Inventory should be empty")
+  if not pass then
+    return pass, msg
+  end
+
+  return assert_eq(
+    data.placedChickens[1].spotIndex,
+    nil,
+    "Free-roaming chicken should have nil spotIndex"
+  )
+end)
+
 -- ============================================================================
 -- CombatHealth Tests
 -- ============================================================================
