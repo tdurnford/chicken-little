@@ -380,7 +380,7 @@ local function createItemCard(
   cashPriceLabel.Size = UDim2.new(1, -32, 1, 0)
   cashPriceLabel.Position = UDim2.new(0, 28, 0, 0)
   cashPriceLabel.BackgroundTransparency = 1
-  cashPriceLabel.Text = isSoldOut and "SOLD" or MoneyScaling.formatCurrency(price)
+  cashPriceLabel.Text = isSoldOut and "SOLD" or MoneyScaling.formatCleanCurrency(price)
   cashPriceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
   cashPriceLabel.TextStrokeTransparency = 0
   cashPriceLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -521,7 +521,7 @@ local function createItemCard(
     local cardStock = card:GetAttribute("Stock") or stock
     local canAfford = cachedPlayerMoney >= cardPrice
     local soldOut = cardStock <= 0
-    local priceText = MoneyScaling.formatCurrency(cardPrice)
+    local priceText = MoneyScaling.formatCleanCurrency(cardPrice)
     if soldOut then
       buyButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
       cashPriceLabel.Text = "SOLD"
@@ -961,7 +961,7 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   cashPriceLabel.Size = UDim2.new(1, -32, 1, 0)
   cashPriceLabel.Position = UDim2.new(0, 28, 0, 0)
   cashPriceLabel.BackgroundTransparency = 1
-  cashPriceLabel.Text = MoneyScaling.formatCurrency(supplyItem.price)
+  cashPriceLabel.Text = MoneyScaling.formatCleanCurrency(supplyItem.price)
   cashPriceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
   cashPriceLabel.TextStrokeTransparency = 0
   cashPriceLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -1295,7 +1295,7 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
     cashPriceLabel.Size = UDim2.new(1, -32, 1, 0)
     cashPriceLabel.Position = UDim2.new(0, 28, 0, 0)
     cashPriceLabel.BackgroundTransparency = 1
-    cashPriceLabel.Text = MoneyScaling.formatCurrency(weaponItem.price)
+    cashPriceLabel.Text = MoneyScaling.formatCleanCurrency(weaponItem.price)
     cashPriceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     cashPriceLabel.TextStrokeTransparency = 0
     cashPriceLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)

@@ -100,6 +100,49 @@ function MoneyScaling.formatCurrency(amount: number, decimalPlaces: number?): st
   return "$" .. result.formatted
 end
 
+-- Helper to strip trailing zeros from a formatted number string
+local function stripTrailingZeros(str: string): string
+  -- Match number portion and suffix (if any)
+  local numPart, suffix = str:match("^([%d%.%-]+)(.*)$")
+  if not numPart then
+    return str
+  end
+  -- Only strip if there's a decimal point
+  if numPart:find("%.") then
+    -- Remove trailing zeros after decimal
+    numPart = numPart:gsub("%.?0+$", "")
+  end
+  return numPart .. suffix
+end
+
+-- Format currency cleanly, removing unnecessary decimal places
+-- Use this for store prices where "$100" is preferred over "$100.00"
+function MoneyScaling.formatCleanCurrency(amount: number): string
+  local sign = amount < 0 and "-" or ""
+  amount = math.abs(amount)
+
+  -- Find appropriate suffix
+  for _, data in ipairs(SUFFIXES) do
+    if amount >= data.threshold then
+      local value = amount / data.threshold
+      -- Format with 2 decimal places, then strip trailing zeros
+      local formatted = string.format("%.2f", value)
+      formatted = stripTrailingZeros(formatted)
+      return "$" .. sign .. formatted .. data.suffix
+    end
+  end
+
+  -- No suffix needed for small numbers
+  if amount == math.floor(amount) then
+    return "$" .. sign .. tostring(math.floor(amount))
+  else
+    -- Format with 2 decimal places and strip trailing zeros
+    local formatted = string.format("%.2f", amount)
+    formatted = stripTrailingZeros(formatted)
+    return "$" .. sign .. formatted
+  end
+end
+
 -- Compact format for UI (1 decimal place, always abbreviated if possible)
 function MoneyScaling.formatCompact(amount: number): string
   return MoneyScaling.format(amount, 1).formatted
