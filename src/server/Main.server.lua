@@ -93,6 +93,10 @@ local lastBankruptcyAssistanceTime: { [number]: number } = {} -- Tracks last ass
 local lastStoreReplenishCheck = 0
 local STORE_REPLENISH_CHECK_INTERVAL = 10 -- Check every 10 seconds if replenish needed
 
+-- Chicken Position Sync Configuration (throttle to prevent event queue exhaustion)
+local CHICKEN_POSITION_SYNC_INTERVAL = 0.1 -- Send position updates every 0.1 seconds (10 Hz)
+local lastChickenPositionSyncTime: { [number]: number } = {} -- Tracks last sync time per player
+
 -- Robux Product Configuration
 -- Developer Product ID for instant store replenish (set this in Roblox Studio)
 local STORE_REPLENISH_PRODUCT_ID = 0 -- TODO: Replace with actual Developer Product ID from Roblox
@@ -305,6 +309,7 @@ end
 local buyTrapFunc = RemoteSetup.getFunction("BuyTrap")
 if buyTrapFunc then
   buyTrapFunc.OnServerInvoke = function(player: Player, trapType: string)
+    print("[Server] BuyTrap invoked by", player.Name, "for trapType:", trapType)
     local userId = player.UserId
     local playerData = DataPersistence.getData(userId)
     if not playerData then
@@ -312,6 +317,7 @@ if buyTrapFunc then
     end
 
     local result = Store.buyTrap(playerData, trapType)
+    print("[Server] BuyTrap result:", result.success, result.message)
     if result.success then
       syncPlayerData(player, playerData, true)
     end
@@ -2016,17 +2022,26 @@ local function runGameLoop(deltaTime: number)
       local chickenPositions =
         ChickenAI.updateAll(gameState.playerChickenAIState, deltaTime, currentTime)
 
-      -- Sync chicken positions to all clients (for this player's chickens)
-      local chickenPositionEvent = RemoteSetup.getEvent("ChickenPositionUpdated")
-      if chickenPositionEvent and next(chickenPositions) then
-        for chickenId, position in pairs(chickenPositions) do
+      -- Sync chicken positions to all clients (throttled to prevent event queue exhaustion)
+      local lastPositionSync = lastChickenPositionSyncTime[userId] or 0
+      if (currentTime - lastPositionSync) >= CHICKEN_POSITION_SYNC_INTERVAL then
+        local chickenPositionEvent = RemoteSetup.getEvent("ChickenPositionUpdated")
+        if chickenPositionEvent and next(chickenPositions) then
+          -- Batch all chicken positions into a single event
+          local batchedPositions = {}
+          for chickenId, position in pairs(chickenPositions) do
+            table.insert(batchedPositions, {
+              chickenId = chickenId,
+              position = position.currentPosition,
+              facingDirection = position.facingDirection,
+              isIdle = position.isIdle,
+            })
+          end
           chickenPositionEvent:FireAllClients({
             ownerId = userId,
-            chickenId = chickenId,
-            position = position.currentPosition,
-            facingDirection = position.facingDirection,
-            isIdle = position.isIdle,
+            chickens = batchedPositions,
           })
+          lastChickenPositionSyncTime[userId] = currentTime
         end
       end
     end

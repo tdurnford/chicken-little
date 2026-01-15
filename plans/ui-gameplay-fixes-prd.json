@@ -183,9 +183,7 @@
         "Text is readable on all button states"
       ],
       "dependencies": [5],
-      "codeLocations": [
-        "src/client/StoreUI.lua (button text styling)"
-      ],
+      "codeLocations": ["src/client/StoreUI.lua (button text styling)"],
       "technicalNotes": "For green/blue backgrounds, white text with black stroke works well. For disabled grey buttons, darker text may be needed."
     },
     {

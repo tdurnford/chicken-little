@@ -76,26 +76,6 @@ local function getFunction(name: string): RemoteFunction?
   return nil
 end
 
--- Helper to calculate chicken position from spotIndex using player's section
-local function getChickenPosition(spotIndex: number): Vector3?
-  local sectionIndex = playerDataCache.sectionIndex
-  if not sectionIndex then
-    return nil
-  end
-
-  local sectionCenter = MapGeneration.getSectionPosition(sectionIndex)
-  if not sectionCenter then
-    return nil
-  end
-
-  local spotPos = PlayerSection.getSpotPosition(spotIndex, sectionCenter)
-  if not spotPos then
-    return nil
-  end
-
-  return Vector3.new(spotPos.x, spotPos.y, spotPos.z)
-end
-
 -- Initialize client systems
 SoundEffects.initialize()
 print("[Client] SoundEffects initialized")
@@ -206,7 +186,7 @@ end
 task.delay(0.1, createRandomChickenPromptUI)
 
 -- Track placed egg for hatching flow
-local placedEggData: { id: string, eggType: string, spotIndex: number }? = nil
+local placedEggData: { id: string, eggType: string }? = nil
 
 -- Request initial player data from server
 local getPlayerDataFunc = getFunction("GetPlayerData")
@@ -227,16 +207,7 @@ if getPlayerDataFunc then
 
     -- Build section visuals for player's assigned section
     if initialData.sectionIndex then
-      -- Get occupied spots from placed chickens
-      local occupiedSpots: { [number]: boolean } = {}
-      if initialData.placedChickens then
-        for _, chicken in ipairs(initialData.placedChickens) do
-          if chicken.spotIndex then
-            occupiedSpots[chicken.spotIndex] = true
-          end
-        end
-      end
-      SectionVisuals.buildSection(initialData.sectionIndex, occupiedSpots)
+      SectionVisuals.buildSection(initialData.sectionIndex, {})
       print("[Client] Section visuals built for section", initialData.sectionIndex)
 
       -- Build the central store (shared by all players)
@@ -245,24 +216,8 @@ if getPlayerDataFunc then
       warn("[Client] No sectionIndex in player data - cannot build section visuals")
     end
 
-    -- Create initial chicken visuals for placed chickens
-    if initialData.placedChickens then
-      for _, chicken in ipairs(initialData.placedChickens) do
-        if chicken.spotIndex then
-          local position = getChickenPosition(chicken.spotIndex)
-          if position then
-            local visualState =
-              ChickenVisuals.create(chicken.id, chicken.chickenType, position, chicken.spotIndex)
-            ChickenVisuals.updateMoney(chicken.id, chicken.accumulatedMoney or 0)
-
-            -- Create health bar for the chicken
-            if visualState and visualState.model then
-              ChickenHealthBar.create(chicken.id, chicken.chickenType, visualState.model)
-            end
-          end
-        end
-      end
-    end
+    -- Note: Initial chicken visuals are created when ChickenPositionUpdated events arrive
+    -- from the server with position data from the ChickenAI system
 
     print("[Client] Initial player data loaded")
 
@@ -336,22 +291,11 @@ if playerDataChangedEvent then
 
     -- Build section visuals if we have a section index but haven't built yet
     if data.sectionIndex and not SectionVisuals.getCurrentSection() then
-      local occupiedSpots: { [number]: boolean } = {}
-      if data.placedChickens then
-        for _, chicken in ipairs(data.placedChickens) do
-          if chicken.spotIndex then
-            occupiedSpots[chicken.spotIndex] = true
-          end
-        end
-      end
-      SectionVisuals.buildSection(data.sectionIndex, occupiedSpots)
+      SectionVisuals.buildSection(data.sectionIndex, {})
       print("[Client] Section visuals built from PlayerDataChanged for section", data.sectionIndex)
 
       -- Build the central store (shared by all players)
       SectionVisuals.buildCentralStore()
-    else
-      -- Update section spot visuals based on placed chickens
-      SectionVisuals.updateAllSpots(data.placedChickens)
     end
 
     -- Update chicken money indicators from placed chickens
@@ -363,30 +307,37 @@ if playerDataChangedEvent then
   end)
 end
 
--- ChickenPlaced: Create chicken visual at position
+-- ChickenPlaced: Create chicken visual at position (free-roaming)
 local chickenPlacedEvent = getEvent("ChickenPlaced")
 if chickenPlacedEvent then
   chickenPlacedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
     local chicken = eventData.chicken
-    local spotIndex = eventData.spotIndex
-    if not chicken or not spotIndex then
-      warn("[Client] ChickenPlaced: Invalid event data")
+    if not chicken then
+      warn("[Client] ChickenPlaced: Invalid event data - missing chicken")
       return
     end
 
-    local position = getChickenPosition(spotIndex)
-    if position then
-      local visualState =
-        ChickenVisuals.create(chicken.id, chicken.chickenType, position, spotIndex)
-      SoundEffects.play("chickenPlace")
-
-      -- Create health bar for the chicken
-      if visualState and visualState.model then
-        ChickenHealthBar.create(chicken.id, chicken.chickenType, visualState.model)
-      end
-
-      print("[Client] Chicken placed:", chicken.id)
+    -- Get position from event data or use section center as fallback
+    local position: Vector3
+    if eventData.position then
+      local pos = eventData.position
+      position = Vector3.new(pos.X or pos.x or 0, pos.Y or pos.y or 0, pos.Z or pos.z or 0)
+    else
+      -- Use section center as fallback
+      local sectionIndex = playerDataCache.sectionIndex or 1
+      local sectionCenter = MapGeneration.getSectionPosition(sectionIndex)
+      position = sectionCenter or Vector3.new(0, 5, 0)
     end
+
+    local visualState = ChickenVisuals.create(chicken.id, chicken.chickenType, position, nil)
+    SoundEffects.play("chickenPlace")
+
+    -- Create health bar for the chicken
+    if visualState and visualState.model then
+      ChickenHealthBar.create(chicken.id, chicken.chickenType, visualState.model)
+    end
+
+    print("[Client] Chicken placed:", chicken.id)
   end)
 end
 
@@ -394,15 +345,13 @@ end
 local chickenPickedUpEvent = getEvent("ChickenPickedUp")
 if chickenPickedUpEvent then
   chickenPickedUpEvent.OnClientEvent:Connect(function(data: any)
-    -- Handle both formats: string (chickenId) or table ({ chickenId, playerId, spotIndex })
+    -- Handle both formats: string (chickenId) or table ({ chickenId, ... })
     local chickenId: string
-    local spotIndex: number?
 
     if type(data) == "string" then
       chickenId = data
     elseif type(data) == "table" then
       chickenId = data.chickenId
-      spotIndex = data.spotIndex
     else
       warn("[Client] ChickenPickedUp: Invalid data format")
       return
@@ -411,43 +360,7 @@ if chickenPickedUpEvent then
     ChickenVisuals.destroy(chickenId)
     ChickenHealthBar.destroy(chickenId)
     SoundEffects.play("chickenPickup")
-
-    -- Update the spot to show as available
-    if spotIndex then
-      SectionVisuals.updateSpotOccupancy(spotIndex, false)
-    end
-
     print("[Client] Chicken picked up:", chickenId)
-  end)
-end
-
--- ChickenMoved: Update chicken visual position when moved to a new spot
-local chickenMovedEvent = getEvent("ChickenMoved")
-if chickenMovedEvent then
-  chickenMovedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
-    local chickenId = eventData.chickenId
-    local oldSpotIndex = eventData.oldSpotIndex
-    local newSpotIndex = eventData.newSpotIndex
-
-    if not chickenId or not newSpotIndex then
-      warn("[Client] ChickenMoved: Invalid event data")
-      return
-    end
-
-    -- Get new position for the chicken
-    local newPosition = getChickenPosition(newSpotIndex)
-    if newPosition then
-      -- Update the chicken visual position and spotIndex
-      ChickenVisuals.moveToSpot(chickenId, newPosition, newSpotIndex)
-
-      -- Update spot occupancy visuals
-      if oldSpotIndex then
-        SectionVisuals.updateSpotOccupancy(oldSpotIndex, false)
-      end
-      SectionVisuals.updateSpotOccupancy(newSpotIndex, true)
-
-      print("[Client] Chicken moved:", chickenId, "from", oldSpotIndex, "to", newSpotIndex)
-    end
   end)
 end
 
@@ -507,18 +420,12 @@ local chickenDiedEvent = getEvent("ChickenDied")
 if chickenDiedEvent then
   chickenDiedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
     local chickenId = eventData.chickenId
-    local spotIndex = eventData.spotIndex
     local killedBy = eventData.killedBy
 
     if chickenId then
       ChickenVisuals.destroy(chickenId)
       ChickenHealthBar.destroy(chickenId)
       SoundEffects.play("chickenPickup") -- Use pickup sound for death too
-
-      if spotIndex then
-        SectionVisuals.updateSpotOccupancy(spotIndex, false)
-      end
-
       print("[Client] Chicken killed by", killedBy or "predator", ":", chickenId)
     end
   end)
@@ -863,6 +770,37 @@ if randomChickenPositionEvent then
   end)
 end
 
+-- ChickenPositionUpdated: Update player-owned chicken positions for walking animation (batched)
+local chickenPositionEvent = getEvent("ChickenPositionUpdated")
+if chickenPositionEvent then
+  chickenPositionEvent.OnClientEvent:Connect(function(data: any)
+    if not data or not data.chickens then
+      return
+    end
+    -- Process batched chicken position updates
+    for _, chickenData in ipairs(data.chickens) do
+      if chickenData.chickenId and chickenData.position and chickenData.facingDirection then
+        local position = Vector3.new(
+          chickenData.position.X,
+          chickenData.position.Y,
+          chickenData.position.Z
+        )
+        local facingDirection = Vector3.new(
+          chickenData.facingDirection.X,
+          chickenData.facingDirection.Y,
+          chickenData.facingDirection.Z
+        )
+        ChickenVisuals.updatePosition(
+          chickenData.chickenId,
+          position,
+          facingDirection,
+          chickenData.isIdle
+        )
+      end
+    end
+  end)
+end
+
 -- AlertTriggered: Play alert sound
 local alertTriggeredEvent = getEvent("AlertTriggered")
 if alertTriggeredEvent then
@@ -1132,7 +1070,7 @@ local storePromptConnected = false
 
 --[[
 	Helper function to find the nearest random chicken within claim range.
-	Random chickens have spotIndex = nil in ChickenVisuals.
+	Random chickens are not in the player's placedChickens list.
 	Returns chickenId, chickenType, position or nil.
 ]]
 local function findNearbyRandomChicken(playerPosition: Vector3): (string?, string?, Vector3?)
@@ -1143,8 +1081,19 @@ local function findNearbyRandomChicken(playerPosition: Vector3): (string?, strin
   local nearestPos: Vector3? = nil
 
   for chickenId, state in pairs(allChickens) do
-    -- Random chickens have spotIndex = nil
-    if state.spotIndex == nil and state.position then
+    -- All chickens are now free-roaming, check if they're owned by checking playerDataCache
+    local isOwnedChicken = false
+    if playerDataCache and playerDataCache.placedChickens then
+      for _, placed in ipairs(playerDataCache.placedChickens) do
+        if placed.id == chickenId then
+          isOwnedChicken = true
+          break
+        end
+      end
+    end
+    
+    -- Random chickens are not in the player's placedChickens list
+    if not isOwnedChicken and state.position then
       local distance = (playerPosition - state.position).Magnitude
       if distance < nearestDistance then
         nearestDistance = distance
@@ -1160,37 +1109,27 @@ end
 
 --[[
 	Helper function to find the nearest placed chicken within pickup range.
-	Returns chickenId, spotIndex, chickenType, rarity, accumulatedMoney or nil.
+	Returns chickenId, chickenType, rarity, accumulatedMoney or nil.
 ]]
 local function findNearbyPlacedChicken(
   playerPosition: Vector3
-): (string?, number?, string?, string?, number?)
+): (string?, string?, string?, number?)
   if not playerDataCache or not playerDataCache.placedChickens then
-    return nil, nil, nil, nil, nil
+    return nil, nil, nil, nil
   end
 
   local pickupRange = ChickenPickup.getPickupRange()
   local nearestDistance = pickupRange
   local nearestChicken = nil
-  local nearestSpot = nil
 
   for _, chicken in ipairs(playerDataCache.placedChickens) do
-    if chicken.spotIndex then
-      -- Verify the chicken visual exists before considering it for pickup
-      -- This prevents inconsistent pickup behavior when visuals are out of sync
-      local visualState = ChickenVisuals.get(chicken.id)
-      if not visualState then
-        continue
-      end
-
-      local chickenPos = getChickenPosition(chicken.spotIndex)
-      if chickenPos then
-        local distance = (playerPosition - chickenPos).Magnitude
-        if distance < nearestDistance then
-          nearestDistance = distance
-          nearestChicken = chicken
-          nearestSpot = chicken.spotIndex
-        end
+    -- Get position from the visual state (updated by ChickenPositionUpdated events)
+    local visualState = ChickenVisuals.get(chicken.id)
+    if visualState and visualState.position then
+      local distance = (playerPosition - visualState.position).Magnitude
+      if distance < nearestDistance then
+        nearestDistance = distance
+        nearestChicken = chicken
       end
     end
   end
@@ -1199,65 +1138,12 @@ local function findNearbyPlacedChicken(
     -- Get real-time accumulated money from ChickenVisuals, not stale cache
     local realTimeAccumulatedMoney = ChickenVisuals.getAccumulatedMoney(nearestChicken.id)
     return nearestChicken.id,
-      nearestSpot,
       nearestChicken.chickenType,
       nearestChicken.rarity,
       realTimeAccumulatedMoney
   end
 
-  return nil, nil, nil, nil, nil
-end
-
---[[
-	Helper function to find an available coop spot near the player.
-	Returns spotIndex or nil.
-]]
-local function findNearbyAvailableSpot(playerPosition: Vector3): number?
-  if not playerDataCache then
-    return nil
-  end
-
-  local sectionIndex = playerDataCache.sectionIndex
-  if not sectionIndex then
-    return nil
-  end
-
-  local sectionCenter = MapGeneration.getSectionPosition(sectionIndex)
-  if not sectionCenter then
-    return nil
-  end
-
-  -- Check which spots are occupied
-  local occupiedSpots: { [number]: boolean } = {}
-  if playerDataCache.placedChickens then
-    for _, chicken in ipairs(playerDataCache.placedChickens) do
-      if chicken.spotIndex then
-        occupiedSpots[chicken.spotIndex] = true
-      end
-    end
-  end
-
-  -- Find closest unoccupied spot
-  local placeRange = ChickenPickup.getPickupRange() -- Use same range for placing
-  local nearestDistance = placeRange
-  local nearestSpot = nil
-
-  local totalSpots = PlayerSection.getMaxSpots()
-  for spotIndex = 1, totalSpots do
-    if not occupiedSpots[spotIndex] then
-      local spotPos = PlayerSection.getSpotPosition(spotIndex, sectionCenter)
-      if spotPos then
-        local spotVec = Vector3.new(spotPos.x, spotPos.y, spotPos.z)
-        local distance = (playerPosition - spotVec).Magnitude
-        if distance < nearestDistance then
-          nearestDistance = distance
-          nearestSpot = spotIndex
-        end
-      end
-    end
-  end
-
-  return nearestSpot
+  return nil, nil, nil, nil
 end
 
 --[[
@@ -1307,56 +1193,50 @@ end
 -- Wire up ChickenPickup callbacks for proximity checking
 ChickenPickup.create()
 ChickenPickup.setGetNearbyChicken(function(position: Vector3): (string?, number?)
-  local chickenId, spotIndex = findNearbyPlacedChicken(position)
-  return chickenId, spotIndex
+  local chickenId = findNearbyPlacedChicken(position)
+  return chickenId, nil -- spotIndex no longer used
 end)
-ChickenPickup.setGetAvailableSpot(function(position: Vector3): number?
-  return findNearbyAvailableSpot(position)
+ChickenPickup.setGetAvailableSpot(function(_position: Vector3): number?
+  return nil -- No longer using spots for free-roaming chickens
 end)
 ChickenPickup.setGetPlayerData(function()
   return playerDataCache
 end)
 
--- Wire up pickup callback - just visual feedback, chicken stays in coop until placed
--- Server call happens when player places the chicken at a new location
-ChickenPickup.setOnPickup(function(chickenId: string, spotIndex: number)
-  -- Play pickup sound for visual feedback
-  SoundEffects.play("chickenPickup")
-  print("[Client] Holding chicken:", chickenId, "from spot:", spotIndex)
-  -- Don't call server yet - chicken stays in original spot until placed elsewhere
-end)
-
--- Wire up place callback - call server to move chicken to new spot
-ChickenPickup.setOnPlace(function(chickenId: string, newSpotIndex: number)
-  local moveChickenFunc = getFunction("MoveChicken")
-  if moveChickenFunc then
-    task.spawn(function()
-      local result = moveChickenFunc:InvokeServer(chickenId, newSpotIndex)
-      if result and result.success then
-        SoundEffects.play("chickenPlace")
-        print("[Client] Chicken moved to spot:", newSpotIndex)
-      else
-        -- Failed to move - server rejected the operation
-        SoundEffects.play("uiError")
-        warn("[Client] Failed to move chicken:", result and result.message or "Unknown error")
-      end
-    end)
-  else
-    warn("[Client] MoveChicken function not found")
+-- Wire up pickup callback - pickup chicken to inventory
+ChickenPickup.setOnPickup(function(chickenId: string, _spotIndex: number)
+  -- Call server to pick up chicken into inventory
+  local pickupChickenFunc = getFunction("PickupChicken")
+  if pickupChickenFunc then
+    local result = pickupChickenFunc:InvokeServer(chickenId)
+    if result and result.success then
+      SoundEffects.play("chickenPickup")
+      print("[Client] Chicken picked up to inventory:", chickenId)
+    else
+      SoundEffects.play("uiError")
+      warn("[Client] Failed to pick up chicken:", result and result.message or "Unknown error")
+    end
   end
 end)
 
--- Wire up cancel callback - chicken stays where it was, no server call needed
+-- Wire up place callback - no longer used for free-roaming
+ChickenPickup.setOnPlace(function(_chickenId: string, _newSpotIndex: number)
+  -- Free-roaming chickens are placed directly via PlaceChicken, not moved
+  warn("[Client] ChickenPickup.setOnPlace called but no longer used for free-roaming chickens")
+end)
+
+-- Wire up cancel callback
 ChickenPickup.setOnCancel(function()
   SoundEffects.play("uiCancel")
-  print("[Client] Pickup cancelled, chicken returned to original spot")
+  print("[Client] Pickup cancelled")
 end)
 print("[Client] ChickenPickup system initialized")
 
 -- Wire up ChickenSelling callbacks for proximity checking
 ChickenSelling.create()
 ChickenSelling.setGetNearbyChicken(function(position: Vector3)
-  return findNearbyPlacedChicken(position)
+  local chickenId, chickenType, rarity, accumulatedMoney = findNearbyPlacedChicken(position)
+  return chickenId, nil, chickenType, rarity, accumulatedMoney -- nil for spotIndex (deprecated)
 end)
 ChickenSelling.setGetPlayerData(function()
   return playerDataCache
@@ -1377,34 +1257,20 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
 
   if selectedItem.itemType == "egg" then
     if actionType == "place" then
-      -- Place egg in coop spot and show hatch preview
-      local character = localPlayer.Character
-      if character then
-        local rootPart = character:FindFirstChild("HumanoidRootPart") :: BasePart?
-        if rootPart then
-          local spotIndex = findNearbyAvailableSpot(rootPart.Position)
-          if spotIndex then
-            -- Store the egg data for when user confirms hatch
-            placedEggData = {
-              id = selectedItem.itemId,
-              eggType = selectedItem.itemData.eggType,
-              spotIndex = spotIndex,
-            }
-            -- Show hatch preview UI
-            HatchPreviewUI.show(selectedItem.itemId, selectedItem.itemData.eggType)
-            SoundEffects.play("eggPlace")
-            InventoryUI.clearSelection()
-            -- Complete tutorial step if active
-            if Tutorial.isActive() then
-              Tutorial.completeStep("place_egg")
-            end
-            print("[Client] Egg placed, showing hatch preview")
-          else
-            SoundEffects.play("uiError")
-            warn("[Client] No available spot nearby")
-          end
-        end
+      -- Show hatch preview for the egg (free-roaming, no spot needed)
+      placedEggData = {
+        id = selectedItem.itemId,
+        eggType = selectedItem.itemData.eggType,
+      }
+      -- Show hatch preview UI
+      HatchPreviewUI.show(selectedItem.itemId, selectedItem.itemData.eggType)
+      SoundEffects.play("eggPlace")
+      InventoryUI.clearSelection()
+      -- Complete tutorial step if active
+      if Tutorial.isActive() then
+        Tutorial.completeStep("place_egg")
       end
+      print("[Client] Egg placed, showing hatch preview")
     elseif actionType == "sell" then
       -- Sell egg via server
       local sellEggFunc = getFunction("SellEgg")
@@ -1428,32 +1294,19 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
         return
       end
 
-      -- Place chicken from inventory to coop
+      -- Place chicken from inventory (free-roaming, no spot needed)
       local placeChickenFunc = getFunction("PlaceChicken")
       if placeChickenFunc then
-        -- Find available spot near player
-        local character = localPlayer.Character
-        if character then
-          local rootPart = character:FindFirstChild("HumanoidRootPart") :: BasePart?
-          if rootPart then
-            local spotIndex = findNearbyAvailableSpot(rootPart.Position)
-            if spotIndex then
-              local result = placeChickenFunc:InvokeServer(selectedItem.itemId, spotIndex)
-              if result and result.success then
-                SoundEffects.play("chickenPlace")
-                InventoryUI.clearSelection()
-              elseif result and result.atLimit then
-                SoundEffects.play("uiError")
-                warn("[Client] Cannot place chicken:", result.message)
-              else
-                SoundEffects.play("uiError")
-                warn("[Client] Place failed:", result and result.message or "Unknown error")
-              end
-            else
-              SoundEffects.play("uiError")
-              warn("[Client] No available spot nearby")
-            end
-          end
+        local result = placeChickenFunc:InvokeServer(selectedItem.itemId, nil) -- nil spotIndex = free-roaming
+        if result and result.success then
+          SoundEffects.play("chickenPlace")
+          InventoryUI.clearSelection()
+        elseif result and result.atLimit then
+          SoundEffects.play("uiError")
+          warn("[Client] Cannot place chicken:", result.message)
+        else
+          SoundEffects.play("uiError")
+          warn("[Client] Place failed:", result and result.message or "Unknown error")
         end
       end
     elseif actionType == "sell" then
@@ -1533,10 +1386,10 @@ HatchPreviewUI.onHatch(function(eggId: string, eggType: string)
     return
   end
 
-  -- Hatch egg via server with the spot index
+  -- Hatch egg via server (pass placement hint to place chicken in area)
   local hatchEggFunc = getFunction("HatchEgg")
   if hatchEggFunc then
-    local result = hatchEggFunc:InvokeServer(eggId, placedEggData.spotIndex)
+    local result = hatchEggFunc:InvokeServer(eggId, 1) -- Pass 1 as placement hint to place in area
     if result and result.success then
       SoundEffects.playEggHatch(result.rarity or "Common")
       -- Complete tutorial step if active (place_egg completes tutorial)
@@ -1911,19 +1764,14 @@ local function updateProximityPrompts()
   local isHoldingChicken = ChickenPickup.isHolding()
 
   if isHoldingChicken then
-    -- When holding, check for available spots to place
-    local availableSpot = findNearbyAvailableSpot(playerPosition)
-    if availableSpot then
-      ChickenPickup.showPlacePrompt()
-    else
-      ChickenPickup.hidePrompt()
-    end
+    -- Free-roaming chickens don't need spot placement
+    ChickenPickup.hidePrompt()
     ChickenSelling.hidePrompt()
     hideRandomChickenPrompt()
     isNearRandomChicken = false
   else
     -- When not holding, check for nearby chickens
-    local chickenId, spotIndex, chickenType, _, accumulatedMoney =
+    local chickenId, chickenType, _, accumulatedMoney =
       findNearbyPlacedChicken(playerPosition)
 
     if chickenId then
@@ -1957,11 +1805,12 @@ local function updateProximityPrompts()
 
                 -- Play collection sound and show visual effect
                 SoundEffects.playMoneyCollect(result.amountCollected)
-                local chickenPos = getChickenPosition(spotIndex)
-                if chickenPos then
+                -- Get position from visual state
+                local visualState = ChickenVisuals.get(chickenId)
+                if visualState and visualState.position then
                   ChickenVisuals.createMoneyPopEffect({
                     amount = result.amountCollected,
-                    position = chickenPos + Vector3.new(0, 2, 0),
+                    position = visualState.position + Vector3.new(0, 2, 0),
                     isLarge = result.amountCollected >= 1000,
                   })
                 end
@@ -2025,7 +1874,7 @@ end
 	Client game loop - runs every frame via Heartbeat.
 	Handles periodic updates that need to be smooth or responsive.
 ]]
-local gameLoopConnection = RunService.Heartbeat:Connect(function(deltaTime: number)
+RunService.Heartbeat:Connect(function(deltaTime: number)
   local currentTime = os.clock()
 
   -- Proximity check for prompts (throttled for performance)
@@ -2115,26 +1964,6 @@ StoreUI.onPurchase(function(eggType: string, quantity: number)
   end
 end)
 
--- Wire up store chicken purchase callback
-StoreUI.onChickenPurchase(function(chickenType: string, quantity: number)
-  local buyChickenFunc = getFunction("BuyChicken")
-  if not buyChickenFunc then
-    warn("[Client] BuyChicken RemoteFunction not found")
-    return
-  end
-
-  local result = buyChickenFunc:InvokeServer(chickenType, quantity)
-  if result then
-    if result.success then
-      SoundEffects.play("purchase")
-      print("[Client] Purchased", quantity, "x", chickenType, ":", result.message)
-    else
-      SoundEffects.play("uiError")
-      warn("[Client] Chicken purchase failed:", result.message)
-    end
-  end
-end)
-
 -- Wire up store Robux replenish callback
 StoreUI.onReplenish(function()
   local replenishFunc = getFunction("ReplenishStoreWithRobux")
@@ -2201,12 +2030,14 @@ end)
 
 -- Wire up store trap/supply purchase callback
 StoreUI.onTrapPurchase(function(trapType: string)
+  print("[Client] onTrapPurchase callback invoked with trapType:", trapType)
   local buyTrapFunc = getFunction("BuyTrap")
   if not buyTrapFunc then
     warn("[Client] BuyTrap RemoteFunction not found")
     return
   end
 
+  print("[Client] Invoking BuyTrap RemoteFunction")
   local result = buyTrapFunc:InvokeServer(trapType)
   if result then
     if result.success then

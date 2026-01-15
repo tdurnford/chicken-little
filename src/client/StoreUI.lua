@@ -985,8 +985,12 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
 
   -- Connect cash buy button
   buyButton.MouseButton1Click:Connect(function()
+    print("[StoreUI] Trap buy button clicked for:", supplyItem.id)
     if onTrapPurchaseCallback then
+      print("[StoreUI] Calling onTrapPurchaseCallback")
       onTrapPurchaseCallback(supplyItem.id)
+    else
+      warn("[StoreUI] onTrapPurchaseCallback is nil!")
     end
   end)
 
