@@ -4109,3 +4109,37 @@
   - Different chicken rarities have different laying speeds (already implemented) ✓
 - Format check passes
 - Next: Work on remaining Phase 2 items (Item #3 Repeated Collection, Item #5 Predator Targeting)
+
+[2026-01-15] Completed Gameplay & UI Fixes Work Item #10: Format Large Currency Values
+- Root cause: StoreUI and ChickenVisuals were using direct string concatenation ("$" .. tostring(price))
+  instead of MoneyScaling.formatCurrency(), causing large numbers to display without abbreviation.
+
+1. src/client/StoreUI.lua:
+   - Added import for MoneyScaling module
+   - Updated createItemCard() to use MoneyScaling.formatCurrency(price) for initial price display
+   - Updated updateAffordability() to use MoneyScaling.formatCurrency(cardPrice) for dynamic updates
+   - Updated createSupplyCard() to use MoneyScaling.formatCurrency(supplyItem.price)
+   - Updated createWeaponCard() to use MoneyScaling.formatCurrency(weaponItem.price)
+
+2. src/client/ChickenVisuals.lua:
+   - Added import for MoneyScaling module
+   - Replaced local formatMoney() function (which had its own K/M/B/T formatting logic)
+     with a simple wrapper that calls MoneyScaling.formatCurrency()
+   - This ensures consistent formatting across all money displays
+
+- Analysis of other files:
+  * MainHUD.lua - Already uses MoneyScaling.formatCurrency() ✓
+  * InventoryUI.lua - Already uses MoneyScaling.formatCurrency() ✓  
+  * ChickenSelling.lua - Already uses MoneyScaling.formatCurrency() ✓
+  * OfflineEarningsUI.lua - Already uses MoneyScaling.formatCurrency() ✓
+  * TradeUI.lua - Already imports and uses MoneyScaling ✓
+
+- MoneyScaling.formatCurrency() supports: K (1e3), M (1e6), B (1e9), T (1e12), Qa (1e15), Qi (1e18)
+
+- Acceptance criteria met:
+  - Large numbers display with K/M/B/T/Qa/Qi suffixes ✓
+  - Formatting is consistent across all UI elements ✓
+  - Numbers remain accurate (no precision loss - uses 2 decimal places) ✓
+  - Small numbers ($0-$999) show full amount ✓
+- Format check passes
+- Next: Work on remaining Phase 2 items (Item #3 Repeated Collection, Item #5 Predator Targeting)

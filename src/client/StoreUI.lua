@@ -20,6 +20,7 @@ local Store = require(Shared:WaitForChild("Store"))
 local PowerUpConfig = require(Shared:WaitForChild("PowerUpConfig"))
 local TrapConfig = require(Shared:WaitForChild("TrapConfig"))
 local WeaponConfig = require(Shared:WaitForChild("WeaponConfig"))
+local MoneyScaling = require(Shared:WaitForChild("MoneyScaling"))
 
 -- Rarity colors for visual distinction
 local RARITY_COLORS: { [string]: Color3 } = {
@@ -363,7 +364,7 @@ local function createItemCard(
   cashPriceLabel.Size = UDim2.new(1, -32, 1, 0)
   cashPriceLabel.Position = UDim2.new(0, 28, 0, 0)
   cashPriceLabel.BackgroundTransparency = 1
-  cashPriceLabel.Text = isSoldOut and "SOLD" or ("$" .. tostring(price))
+  cashPriceLabel.Text = isSoldOut and "SOLD" or MoneyScaling.formatCurrency(price)
   cashPriceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
   cashPriceLabel.TextStrokeTransparency = 0
   cashPriceLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -510,7 +511,7 @@ local function createItemCard(
     local cardStock = card:GetAttribute("Stock") or stock
     local canAfford = cachedPlayerMoney >= cardPrice
     local soldOut = cardStock <= 0
-    local priceText = "$" .. tostring(cardPrice)
+    local priceText = MoneyScaling.formatCurrency(cardPrice)
     if soldOut then
       buyButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
       cashPriceLabel.Text = "SOLD"
@@ -946,7 +947,7 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   cashPriceLabel.Size = UDim2.new(1, -32, 1, 0)
   cashPriceLabel.Position = UDim2.new(0, 28, 0, 0)
   cashPriceLabel.BackgroundTransparency = 1
-  cashPriceLabel.Text = "$" .. tostring(supplyItem.price)
+  cashPriceLabel.Text = MoneyScaling.formatCurrency(supplyItem.price)
   cashPriceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
   cashPriceLabel.TextStrokeTransparency = 0
   cashPriceLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -1282,7 +1283,7 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
     cashPriceLabel.Size = UDim2.new(1, -32, 1, 0)
     cashPriceLabel.Position = UDim2.new(0, 28, 0, 0)
     cashPriceLabel.BackgroundTransparency = 1
-    cashPriceLabel.Text = "$" .. tostring(weaponItem.price)
+    cashPriceLabel.Text = MoneyScaling.formatCurrency(weaponItem.price)
     cashPriceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     cashPriceLabel.TextStrokeTransparency = 0
     cashPriceLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)

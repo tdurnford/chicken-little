@@ -15,6 +15,7 @@ local RunService = game:GetService("RunService")
 -- Get shared modules path
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ChickenConfig = require(Shared:WaitForChild("ChickenConfig"))
+local MoneyScaling = require(Shared:WaitForChild("MoneyScaling"))
 
 -- Type definitions
 export type AnimationState = "idle" | "laying" | "celebrating" | "walking"
@@ -120,19 +121,9 @@ local function getScaleMultiplier(rarity: string): number
   return RARITY_SCALE_MULTIPLIER[rarity] or 1.0
 end
 
--- Helper: Format money for display
+-- Helper: Format money for display (uses MoneyScaling for consistency)
 local function formatMoney(amount: number): string
-  if amount >= 1e12 then
-    return string.format("%.1fT", amount / 1e12)
-  elseif amount >= 1e9 then
-    return string.format("%.1fB", amount / 1e9)
-  elseif amount >= 1e6 then
-    return string.format("%.1fM", amount / 1e6)
-  elseif amount >= 1e3 then
-    return string.format("%.1fK", amount / 1e3)
-  else
-    return string.format("$%d", math.floor(amount))
-  end
+  return MoneyScaling.formatCurrency(amount)
 end
 
 -- Create a placeholder chicken model (to be replaced with actual assets)
