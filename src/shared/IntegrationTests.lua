@@ -2415,6 +2415,28 @@ test("PredatorAI: getSummary includes fleeing and cautious counts", function()
   return assert_eq(summary.cautious, 1, "Should have 1 cautious")
 end)
 
+test("PredatorAI: hasEnteredSection returns true when predator is inside section", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  -- Move predator towards target (after a few updates it should be in section)
+  for _ = 1, 15 do
+    PredatorAI.updatePosition(state, "pred1", 1, os.clock())
+  end
+  -- After moving, predator should be within the section boundary
+  local inSection = PredatorAI.hasEnteredSection(state, "pred1")
+  return assert_true(inSection, "Predator should be inside section after moving")
+end)
+
+test("PredatorAI: hasEnteredSection returns false when predator is outside section", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  -- Don't update - predator should still be at spawn position (far from section)
+  local inSection = PredatorAI.hasEnteredSection(state, "pred1")
+  return assert_false(inSection, "Predator should be outside section at spawn")
+end)
+
 -- ============================================================================
 -- ChickenAI Tests
 -- ============================================================================

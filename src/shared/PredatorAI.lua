@@ -12,6 +12,7 @@ local PredatorAI = {}
 -- Import dependencies
 local PredatorConfig = require(script.Parent.PredatorConfig)
 local PlayerSection = require(script.Parent.PlayerSection)
+local MapGeneration = require(script.Parent.MapGeneration)
 
 -- Predator behavior states
 export type PredatorBehaviorState =
@@ -1069,6 +1070,41 @@ function PredatorAI.hasReachedCoop(aiState: PredatorAIState, predatorId: string)
     return false
   end
   return position.hasReachedTarget
+end
+
+-- Check if a predator has entered the target section boundary
+-- This triggers attacking state earlier than reaching the coop center
+function PredatorAI.hasEnteredSection(aiState: PredatorAIState, predatorId: string): boolean
+  local position = aiState.positions[predatorId]
+  if not position then
+    return false
+  end
+
+  -- If already reached coop, definitely in section
+  if position.hasReachedTarget then
+    return true
+  end
+
+  -- Need target section index to check bounds
+  local sectionIndex = position.targetSectionIndex
+  if not sectionIndex then
+    return false
+  end
+
+  -- Get section center position
+  local sectionCenter = MapGeneration.getSectionPosition(sectionIndex)
+  if not sectionCenter then
+    return false
+  end
+
+  -- Convert to Vector3 table format for PlayerSection.isPositionInSection
+  local predatorPos = {
+    x = position.currentPosition.X,
+    y = position.currentPosition.Y,
+    z = position.currentPosition.Z,
+  }
+
+  return PlayerSection.isPositionInSection(predatorPos, sectionCenter)
 end
 
 -- Get distance to coop

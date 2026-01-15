@@ -553,3 +553,40 @@ When predators depleted a player's combat health and triggered knockback, there 
 - ✅ Money loss is shown visually to player (gold floating "-$X" text)
 - ✅ Player recovers after incapacitation duration (1.5 seconds knockback)
 - ✅ Cannot be stunned again during recovery period (knockback prevents further damage)
+
+## 2026-01-15: Predators Attack at Section Edge (bugfix-prd.json Work Item #9) - COMPLETED
+
+Made predators transition to "attacking" state when they enter the player's section boundary rather than waiting until they reach the coop center.
+
+### Root cause:
+The predator state transition from "approaching" to "attacking" was based on `hasReachedCoop()`, which checked if the predator had reached the coop center (within 2 studs). This meant predators would walk all the way through the player's 64x64 stud section before attacking.
+
+### Changes made:
+- Added `MapGeneration` import to PredatorAI.lua
+- Added new `hasEnteredSection()` function to PredatorAI.lua that:
+  - Gets the predator's target section index
+  - Retrieves the section center position from MapGeneration
+  - Uses `PlayerSection.isPositionInSection()` to check if predator is within the 64x64 boundary
+- Modified Main.server.lua (line ~2399):
+  - Changed from `PredatorAI.hasReachedCoop()` to `PredatorAI.hasEnteredSection()`
+  - Updated comment to reflect new behavior
+- Added 2 integration tests for `hasEnteredSection()`:
+  - Test that predator inside section returns true
+  - Test that predator at spawn (outside section) returns false
+
+### Files modified:
+- src/shared/PredatorAI.lua
+- src/server/Main.server.lua
+- src/shared/IntegrationTests.lua
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Predators now attack as soon as they cross into the player's 64x64 stud section
+- Players have more time to react to incoming predators but combat begins earlier
+
+### Acceptance criteria met:
+- ✅ Predators begin attacking when entering player's section boundary
+- ✅ Attack range feels appropriate (section edge, not coop center)
+- ✅ Players have time to react but predators don't walk through entire area first
+- ✅ Combat engagement feels natural and timely

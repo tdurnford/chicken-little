@@ -2390,13 +2390,13 @@ local function runGameLoop(deltaTime: number)
       end
     end
 
-    -- 5. Update predator states based on AI reaching coop (not time-based)
-    -- Predators only attack when they physically reach the coop
+    -- 5. Update predator states based on AI entering section (not reaching coop center)
+    -- Predators attack when they enter the player's section boundary
     local nowAttacking = {}
     for _, predator in ipairs(PredatorSpawning.getActivePredators(gameState.spawnState)) do
       if predator.state == "spawning" or predator.state == "approaching" then
-        -- Check if predator has reached coop via AI
-        if PredatorAI.hasReachedCoop(gameState.predatorAIState, predator.id) then
+        -- Check if predator has entered the target section boundary
+        if PredatorAI.hasEnteredSection(gameState.predatorAIState, predator.id) then
           PredatorSpawning.updatePredatorState(gameState.spawnState, predator.id, "attacking")
           table.insert(nowAttacking, predator.id)
         elseif predator.state == "spawning" then
