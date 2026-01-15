@@ -385,6 +385,8 @@ local function createItemCard(
   cashPriceLabel.BackgroundTransparency = 1
   cashPriceLabel.Text = isSoldOut and "SOLD" or ("$" .. tostring(price))
   cashPriceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+  cashPriceLabel.TextStrokeTransparency = 0
+  cashPriceLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
   cashPriceLabel.TextScaled = true
   cashPriceLabel.Font = Enum.Font.GothamBold
   cashPriceLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -469,6 +471,8 @@ local function createItemCard(
   robuxPriceLabel.BackgroundTransparency = 1
   robuxPriceLabel.Text = tostring(robuxPrice)
   robuxPriceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+  robuxPriceLabel.TextStrokeTransparency = 0
+  robuxPriceLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
   robuxPriceLabel.TextScaled = true
   robuxPriceLabel.Font = Enum.Font.GothamBold
   robuxPriceLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -740,6 +744,8 @@ local function createPowerUpCard(
   priceLabel.BackgroundTransparency = 1
   priceLabel.Text = tostring(config.robuxPrice)
   priceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+  priceLabel.TextStrokeTransparency = 0
+  priceLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
   priceLabel.TextScaled = true
   priceLabel.Font = Enum.Font.GothamBold
   priceLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -964,6 +970,8 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   cashPriceLabel.BackgroundTransparency = 1
   cashPriceLabel.Text = "$" .. tostring(supplyItem.price)
   cashPriceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+  cashPriceLabel.TextStrokeTransparency = 0
+  cashPriceLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
   cashPriceLabel.TextScaled = true
   cashPriceLabel.Font = Enum.Font.GothamBold
   cashPriceLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -1043,6 +1051,8 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   robuxPriceLabel.BackgroundTransparency = 1
   robuxPriceLabel.Text = tostring(supplyItem.robuxPrice)
   robuxPriceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+  robuxPriceLabel.TextStrokeTransparency = 0
+  robuxPriceLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
   robuxPriceLabel.TextScaled = true
   robuxPriceLabel.Font = Enum.Font.GothamBold
   robuxPriceLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -1292,6 +1302,8 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
     cashPriceLabel.BackgroundTransparency = 1
     cashPriceLabel.Text = "$" .. tostring(weaponItem.price)
     cashPriceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    cashPriceLabel.TextStrokeTransparency = 0
+    cashPriceLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     cashPriceLabel.TextScaled = true
     cashPriceLabel.Font = Enum.Font.GothamBold
     cashPriceLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -1370,6 +1382,8 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
     robuxPriceLabel.BackgroundTransparency = 1
     robuxPriceLabel.Text = tostring(weaponItem.robuxPrice)
     robuxPriceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    robuxPriceLabel.TextStrokeTransparency = 0
+    robuxPriceLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     robuxPriceLabel.TextScaled = true
     robuxPriceLabel.Font = Enum.Font.GothamBold
     robuxPriceLabel.TextXAlignment = Enum.TextXAlignment.Left

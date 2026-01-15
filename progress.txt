@@ -3746,3 +3746,28 @@
   - Buttons are easy to see on all card backgrounds ✓
 - Format check passes, build passes
 - Next: Work on Item #6 (Fix Store Button Text Visibility) which depends on this item
+
+[2026-01-15] Completed UI & Gameplay Fixes Work Item #6: Fix Store Button Text Visibility
+- Added TextStroke to all store button price labels for improved readability
+- Changes applied in src/client/StoreUI.lua across 7 price label instances:
+  1. createItemCard() - cashPriceLabel (cash button for eggs/chickens)
+  2. createItemCard() - robuxPriceLabel (premium button for eggs/chickens)
+  3. createChickenCard() - priceLabel (Robux-only premium button)
+  4. createSupplyCard() - cashPriceLabel (cash button for supplies/traps)
+  5. createSupplyCard() - robuxPriceLabel (premium button for supplies/traps)
+  6. createWeaponCard() - cashPriceLabel (cash button for weapons)
+  7. createWeaponCard() - robuxPriceLabel (premium button for weapons)
+- Added to each price label:
+  - TextStrokeTransparency = 0 (fully opaque stroke)
+  - TextStrokeColor3 = Color3.fromRGB(0, 0, 0) (black stroke)
+- White text with black stroke is readable on all button colors:
+  - Green cash buttons (RGB 50,180,50)
+  - Blue premium buttons (RGB 0,120,215)
+  - Grey disabled buttons (RGB 80,80,80)
+- Acceptance criteria met:
+  - All button text is easily readable ✓
+  - Text has visible stroke (black) ✓
+  - Price and currency icons are clear ✓
+  - Text is readable on all button states ✓
+- Format check passes, build passes
+- Next: Work on remaining high priority items (Item #7 Remove Chickens, Item #9 Health Bar Overlap)
