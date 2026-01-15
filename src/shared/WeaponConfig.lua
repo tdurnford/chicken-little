@@ -25,6 +25,7 @@ export type WeaponTypeConfig = {
   knockbackDuration: number, -- Duration of knockback effect
   description: string,
   icon: string, -- Emoji icon for UI
+  modelAssetId: number?, -- Roblox asset ID for 3D model (nil = use programmatic)
 }
 
 -- Tier level mapping for calculations
@@ -52,6 +53,7 @@ local WEAPONS: { [string]: WeaponTypeConfig } = {
     knockbackDuration = 0.5,
     description = "Basic bat for warding off predators. Every player starts with one.",
     icon = "🏏",
+    modelAssetId = 12550781805, -- Metal Bat 3D model from Roblox marketplace
   },
 
   -- Sword: Medium damage, faster swing

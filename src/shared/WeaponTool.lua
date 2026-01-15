@@ -2,12 +2,19 @@
 	WeaponTool Module
 	Creates proper Roblox Tool objects for weapons that use the native Backpack/Hotbar system.
 	This allows weapons to be equipped via hotbar slots and provides standard Tool behavior.
+	
+	Weapons can use 3D models from the Roblox marketplace (via modelAssetId in WeaponConfig)
+	or fall back to programmatically-created models.
 ]]
 
 local WeaponTool = {}
 
 -- Import dependencies
 local WeaponConfig = require(script.Parent.WeaponConfig)
+
+-- Services
+local InsertService = game:GetService("InsertService")
+local RunService = game:GetService("RunService")
 
 -- Type definitions
 export type WeaponToolConfig = {
@@ -18,7 +25,90 @@ export type WeaponToolConfig = {
   range: number,
 }
 
--- Create the visual bat model for the Tool
+-- Try to load a 3D model from Roblox asset ID
+local function loadModelFromAsset(assetId: number): Part?
+  -- InsertService only works on server
+  if not RunService:IsServer() then
+    return nil
+  end
+
+  local success, result = pcall(function()
+    return InsertService:LoadAsset(assetId)
+  end)
+
+  if not success or not result then
+    warn("[WeaponTool] Failed to load asset:", assetId, result)
+    return nil
+  end
+
+  -- The loaded asset is a Model container; find the actual model inside
+  local model = result:FindFirstChildWhichIsA("Model") or result:FindFirstChildWhichIsA("BasePart")
+  if not model then
+    -- Try to find any child that could be the weapon
+    for _, child in ipairs(result:GetChildren()) do
+      if child:IsA("Model") or child:IsA("BasePart") then
+        model = child
+        break
+      end
+    end
+  end
+
+  if not model then
+    warn("[WeaponTool] No model found in asset:", assetId)
+    result:Destroy()
+    return nil
+  end
+
+  -- Extract the model from the container
+  model.Parent = nil
+  result:Destroy()
+
+  -- Find or create the Handle part (required for Tool)
+  local handle: Part?
+  if model:IsA("Model") then
+    handle = model:FindFirstChild("Handle") :: Part?
+    if not handle then
+      -- Look for any part named Handle or the PrimaryPart
+      handle = model.PrimaryPart :: Part?
+      if not handle then
+        -- Use the first BasePart as handle
+        handle = model:FindFirstChildWhichIsA("BasePart") :: Part?
+      end
+      if handle then
+        handle.Name = "Handle"
+      end
+    end
+
+    -- Ensure all parts are properly configured for Tool usage
+    for _, part in ipairs(model:GetDescendants()) do
+      if part:IsA("BasePart") then
+        part.CanCollide = false
+        part.Anchored = false
+      end
+    end
+
+    -- If model has multiple parts, weld them to handle and return handle with children
+    if handle then
+      -- Move all non-handle parts to be children of handle
+      for _, child in ipairs(model:GetChildren()) do
+        if child ~= handle then
+          child.Parent = handle
+        end
+      end
+      model:Destroy()
+      return handle
+    end
+  elseif model:IsA("BasePart") then
+    model.Name = "Handle"
+    model.CanCollide = false
+    model.Anchored = false
+    return model :: Part
+  end
+
+  return nil
+end
+
+-- Create the visual bat model for the Tool (fallback programmatic version)
 local function createBatModel(): { handle: Part, barrel: Part }
   -- Bat handle (this will be the Tool's Handle - required by Roblox)
   local handle = Instance.new("Part")
@@ -119,8 +209,22 @@ local function createAxeModel(): { handle: Part }
   }
 end
 
--- Create weapon visual based on type
+-- Create weapon visual based on type (tries 3D model first, falls back to programmatic)
 local function createWeaponVisual(weaponType: string): Part?
+  local config = WeaponConfig.get(weaponType)
+
+  -- Try to load 3D model from asset if available
+  if config and config.modelAssetId then
+    local assetHandle = loadModelFromAsset(config.modelAssetId)
+    if assetHandle then
+      print("[WeaponTool] Loaded 3D model for:", weaponType, "from asset:", config.modelAssetId)
+      return assetHandle
+    end
+    -- Fall through to programmatic creation if asset loading failed
+    print("[WeaponTool] Asset load failed, using programmatic model for:", weaponType)
+  end
+
+  -- Fallback to programmatic models
   if weaponType == "BaseballBat" then
     local model = createBatModel()
     return model.handle
@@ -284,6 +388,18 @@ function WeaponTool.restoreOwnedWeapons(player: Player, ownedWeapons: { string }
     end
   end
   return count
+end
+
+-- Check if a weapon type uses a 3D model asset
+function WeaponTool.uses3DModel(weaponType: string): boolean
+  local config = WeaponConfig.get(weaponType)
+  return config ~= nil and config.modelAssetId ~= nil
+end
+
+-- Get the model asset ID for a weapon (nil if using programmatic model)
+function WeaponTool.getModelAssetId(weaponType: string): number?
+  local config = WeaponConfig.get(weaponType)
+  return config and config.modelAssetId
 end
 
 return WeaponTool

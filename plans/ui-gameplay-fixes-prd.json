@@ -12,7 +12,7 @@
       "category": "Assets",
       "title": "Replace Programmatic Bat with 3D Model",
       "description": "Find and implement a proper 3D bat model from the Roblox marketplace to replace the current programmatically-built bat weapon.",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Search Roblox marketplace for 'baseball bat' models",
@@ -32,9 +32,9 @@
       "dependencies": [],
       "codeLocations": [
         "src/shared/WeaponTool.lua",
-        "src/shared/BaseballBat.lua"
+        "src/shared/WeaponConfig.lua"
       ],
-      "technicalNotes": "Current bat is likely built using Part instances with welds. The new model should be a MeshPart or Model that can be cloned and attached to the player's character."
+      "technicalNotes": "Uses InsertService:LoadAsset() to load Metal Bat model (asset ID 12550781805) from Roblox marketplace. Falls back to programmatic model if asset loading fails. Added modelAssetId field to WeaponTypeConfig for future weapon model assets."
     },
     {
       "id": 2,
