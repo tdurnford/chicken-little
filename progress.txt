@@ -745,3 +745,31 @@ The RandomChickenSpawn module used a single "neutral zone" centered at (0,0,0) w
 - ✅ Random positions generated across the entire map (12 zones)
 - ✅ Per-chicken boundaries prevent chickens from leaving their zone
 - ✅ Integration tests verify spawn distribution across zones
+
+## 2026-01-15: Simplify Money Indicator (ui-fixes-prd.json Work Item - HIGH) - COMPLETED
+
+Simplified the money indicator in the HUD by removing the icon, removing the $/s display, and changing the text color to a darker green.
+
+### Changes made:
+- Changed `DEFAULT_CONFIG.textColor` from LimeGreen `RGB(50, 205, 50)` to ForestGreen `RGB(34, 139, 34)`
+- Removed call to `createMoneyIcon()` in `MainHUD.create()`
+- Removed call to `createMoneyPerSecLabel()` in `MainHUD.create()`
+- Adjusted money label position from `UDim2.new(0, 50, 0, 4)` to `UDim2.new(0, 6, 0, 4)` to use freed space
+- Adjusted money label size from `UDim2.new(1, -55, 0, 36)` to `UDim2.new(1, -10, 0, 36)`
+- Updated `setMoneyPerSecond()` to be a no-op (kept for API backward compatibility)
+- Removed `updateMoneyPerSecDisplay()` call from initialization
+
+### Files modified:
+- src/client/MainHUD.lua (simplified UI elements)
+- plans/ui-fixes-prd.json (marked as completed)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- API backward compatibility maintained: `setMoneyPerSecond()` and `getMoneyPerSecond()` still work
+
+### Acceptance criteria met:
+- ✅ Removed the money icon from the indicator
+- ✅ Removed the $/s (money per second) display
+- ✅ Changed text color to darker green (ForestGreen RGB(34, 139, 34))
+- ✅ Money amount display remains functional

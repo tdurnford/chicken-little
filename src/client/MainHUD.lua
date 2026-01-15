@@ -58,7 +58,7 @@ local DEFAULT_CONFIG: HUDConfig = {
   position = UDim2.new(0, 20, 1, -20), -- Bottom-left corner
   size = UDim2.new(0, 280, 0, 70),
   backgroundColor = Color3.fromRGB(30, 30, 40),
-  textColor = Color3.fromRGB(50, 205, 50), -- Green (LimeGreen)
+  textColor = Color3.fromRGB(34, 139, 34), -- Green (ForestGreen - darker)
   fontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold),
 }
 
@@ -114,8 +114,8 @@ end
 local function createMoneyLabel(parent: Frame, config: HUDConfig): TextLabel
   local label = Instance.new("TextLabel")
   label.Name = "MoneyLabel"
-  label.Size = UDim2.new(1, -55, 0, 36)
-  label.Position = UDim2.new(0, 50, 0, 4)
+  label.Size = UDim2.new(1, -10, 0, 36)
+  label.Position = UDim2.new(0, 6, 0, 4)
   label.BackgroundTransparency = 1
   label.Text = "$0"
   label.TextColor3 = config.textColor or DEFAULT_CONFIG.textColor
@@ -457,9 +457,9 @@ function MainHUD.create(config: HUDConfig?): boolean
   -- Create UI elements
   state.screenGui = createScreenGui(player)
   state.mainFrame = createMainFrame(state.screenGui, hudConfig)
-  createMoneyIcon(state.mainFrame)
+  -- Note: Money icon removed for cleaner UI
   state.moneyLabel = createMoneyLabel(state.mainFrame, hudConfig)
-  state.moneyPerSecLabel = createMoneyPerSecLabel(state.mainFrame, hudConfig)
+  -- Note: Money per second label removed for cleaner UI
 
   -- Create inventory button
   state.inventoryButton, state.inventoryBadge = createInventoryButton(state.screenGui)
@@ -469,7 +469,6 @@ function MainHUD.create(config: HUDConfig?): boolean
 
   -- Initialize display
   updateMoneyDisplay(false)
-  updateMoneyPerSecDisplay()
   updateChickenCountDisplay()
 
   return true
@@ -528,10 +527,10 @@ function MainHUD.subtractMoney(amount: number)
   MainHUD.setMoney(state.currentMoney - amount, true)
 end
 
--- Set money per second display
+-- Set money per second display (deprecated - display removed for cleaner UI)
 function MainHUD.setMoneyPerSecond(amount: number)
   state.moneyPerSecond = math.max(0, amount)
-  updateMoneyPerSecDisplay()
+  -- Display removed - function kept for API compatibility
 end
 
 -- Get current displayed money
