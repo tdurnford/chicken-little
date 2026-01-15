@@ -236,3 +236,50 @@ The `showDamageNumber()` function in DamageUI.lua did not filter out 0 or negati
 - ✅ No '-0' damage numbers appear when predator attacks
 - ✅ Valid damage numbers (> 0) still display correctly
 - ✅ Damage UI remains responsive and accurate
+
+---
+
+## 2026-01-15: Move Money Display to Bottom Left with Green Text (bugfix-prd.json Work Item #2) - COMPLETED
+
+Moved the money display from top-center to bottom-left corner with green text and black outline, no background.
+
+### Changes made:
+- Updated `DEFAULT_CONFIG` in MainHUD.lua:
+  - Changed `anchorPoint` to `Vector2.new(0, 1)` (bottom-left anchor)
+  - Changed `position` to `UDim2.new(0, 20, 1, -20)` (bottom-left corner)
+  - Changed `textColor` from gold `RGB(255, 215, 0)` to green `RGB(50, 205, 50)`
+- Updated `createMoneyLabel()` function:
+  - Increased `TextSize` from 28 to 34 for better visibility in corner
+  - Added `TextStrokeColor3 = Color3.fromRGB(0, 0, 0)` (black outline)
+  - Added `TextStrokeTransparency = 0` (solid outline)
+- Updated `createMoneyPerSecLabel()` function:
+  - Changed text color to lighter green `RGB(100, 220, 100)`
+  - Increased `TextSize` from 14 to 16
+  - Added black text stroke with `TextStrokeTransparency = 0.3`
+  - Removed text transparency (was 0.2)
+- Updated `createMainFrame()` function:
+  - Set `BackgroundTransparency = 1` (fully transparent)
+  - Removed UICorner and UIStroke elements (no visible background)
+- Updated `createMoneyIcon()` function:
+  - Changed `ImageColor3` from gold to green `RGB(50, 205, 50)`
+  - Adjusted position and size to match new layout
+- Updated `scaleMoneyLabel()` function:
+  - Changed base text size from 28 to 34 to match new styling
+
+### Files modified:
+- src/client/MainHUD.lua
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Money display now appears in bottom-left corner
+- Green text with solid black outline for visibility
+- No visible background frame around display
+- Money per second indicator follows same green styling
+
+### Acceptance criteria met:
+- ✅ Money displays in bottom-left corner of screen
+- ✅ Text is green with solid black outline
+- ✅ No visible background/frame around the money display
+- ✅ Money per second indicator also follows same styling
+- ✅ Readable on all common screen resolutions

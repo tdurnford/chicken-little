@@ -54,11 +54,11 @@ export type HUDState = {
 
 -- Default configuration
 local DEFAULT_CONFIG: HUDConfig = {
-  anchorPoint = Vector2.new(0.5, 0),
-  position = UDim2.new(0.5, 0, 0, 10),
+  anchorPoint = Vector2.new(0, 1), -- Bottom-left anchor
+  position = UDim2.new(0, 20, 1, -20), -- Bottom-left corner
   size = UDim2.new(0, 280, 0, 70),
   backgroundColor = Color3.fromRGB(30, 30, 40),
-  textColor = Color3.fromRGB(255, 215, 0), -- Gold
+  textColor = Color3.fromRGB(50, 205, 50), -- Green (LimeGreen)
   fontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold),
 }
 
@@ -100,11 +100,11 @@ local state: HUDState = {
 local function createMoneyIcon(parent: Frame): ImageLabel
   local icon = Instance.new("ImageLabel")
   icon.Name = "MoneyIcon"
-  icon.Size = UDim2.new(0, 32, 0, 32)
-  icon.Position = UDim2.new(0, 10, 0.5, -16)
+  icon.Size = UDim2.new(0, 36, 0, 36)
+  icon.Position = UDim2.new(0, 6, 0, 10)
   icon.BackgroundTransparency = 1
   icon.Image = "rbxassetid://6034973115" -- Coin icon
-  icon.ImageColor3 = Color3.fromRGB(255, 215, 0)
+  icon.ImageColor3 = Color3.fromRGB(50, 205, 50) -- Green to match text
   icon.ScaleType = Enum.ScaleType.Fit
   icon.Parent = parent
   return icon
@@ -114,15 +114,17 @@ end
 local function createMoneyLabel(parent: Frame, config: HUDConfig): TextLabel
   local label = Instance.new("TextLabel")
   label.Name = "MoneyLabel"
-  label.Size = UDim2.new(1, -55, 0, 30)
-  label.Position = UDim2.new(0, 50, 0, 8)
+  label.Size = UDim2.new(1, -55, 0, 36)
+  label.Position = UDim2.new(0, 50, 0, 4)
   label.BackgroundTransparency = 1
   label.Text = "$0"
   label.TextColor3 = config.textColor or DEFAULT_CONFIG.textColor
-  label.TextSize = 28
+  label.TextSize = 34 -- Increased from 28 for visibility in corner
   label.FontFace = config.fontFace or DEFAULT_CONFIG.fontFace
   label.TextXAlignment = Enum.TextXAlignment.Left
   label.TextScaled = false
+  label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0) -- Black outline
+  label.TextStrokeTransparency = 0 -- Solid outline
   label.Parent = parent
   return label
 end
@@ -131,15 +133,17 @@ end
 local function createMoneyPerSecLabel(parent: Frame, config: HUDConfig): TextLabel
   local label = Instance.new("TextLabel")
   label.Name = "MoneyPerSecLabel"
-  label.Size = UDim2.new(1, -55, 0, 18)
-  label.Position = UDim2.new(0, 50, 0, 40)
+  label.Size = UDim2.new(1, -55, 0, 20)
+  label.Position = UDim2.new(0, 50, 0, 42)
   label.BackgroundTransparency = 1
   label.Text = "+$0/s"
-  label.TextColor3 = Color3.fromRGB(150, 200, 150) -- Lighter green
-  label.TextSize = 14
+  label.TextColor3 = Color3.fromRGB(100, 220, 100) -- Lighter green
+  label.TextSize = 16 -- Slightly larger for visibility
   label.FontFace = config.fontFace or DEFAULT_CONFIG.fontFace
   label.TextXAlignment = Enum.TextXAlignment.Left
-  label.TextTransparency = 0.2
+  label.TextTransparency = 0
+  label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0) -- Black outline
+  label.TextStrokeTransparency = 0.3 -- Slightly transparent outline
   label.Parent = parent
   return label
 end
@@ -295,22 +299,9 @@ local function createMainFrame(screenGui: ScreenGui, config: HUDConfig): Frame
   frame.AnchorPoint = config.anchorPoint or DEFAULT_CONFIG.anchorPoint
   frame.Position = config.position or DEFAULT_CONFIG.position
   frame.Size = config.size or DEFAULT_CONFIG.size
-  frame.BackgroundColor3 = config.backgroundColor or DEFAULT_CONFIG.backgroundColor
-  frame.BackgroundTransparency = 0.3
+  frame.BackgroundTransparency = 1 -- No visible background
   frame.BorderSizePixel = 0
   frame.Parent = screenGui
-
-  -- Add rounded corners
-  local corner = Instance.new("UICorner")
-  corner.CornerRadius = UDim.new(0, 12)
-  corner.Parent = frame
-
-  -- Add subtle stroke
-  local stroke = Instance.new("UIStroke")
-  stroke.Color = Color3.fromRGB(80, 80, 100)
-  stroke.Thickness = 2
-  stroke.Transparency = 0.5
-  stroke.Parent = frame
 
   return frame
 end
@@ -351,12 +342,13 @@ local function scaleMoneyLabel(isGain: boolean)
     return
   end
 
+  local baseTextSize = 34 -- Updated base text size
   local targetScale = isGain and 1.15 or 0.95
 
   -- Scale up
   local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
   local scaleTween = TweenService:Create(state.moneyLabel, tweenInfo, {
-    TextSize = 28 * targetScale,
+    TextSize = baseTextSize * targetScale,
   })
   scaleTween:Play()
 
@@ -365,7 +357,7 @@ local function scaleMoneyLabel(isGain: boolean)
     local returnTween = TweenService:Create(
       state.moneyLabel,
       TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-      { TextSize = 28 }
+      { TextSize = baseTextSize }
     )
     returnTween:Play()
   end)
