@@ -140,8 +140,8 @@ local function createItemCard(
 ): Frame
   local card = Instance.new("Frame")
   card.Name = itemId
-  card.Size = UDim2.new(1, -20, 0, 104)
-  card.Position = UDim2.new(0, 10, 0, (index - 1) * 112 + 10)
+  card.Size = UDim2.new(1, 0, 0, 104) -- Full width, UIListLayout handles spacing
+  card.LayoutOrder = index
   card.BackgroundColor3 = Color3.fromRGB(255, 255, 255) -- Base color for gradient
   card.BorderSizePixel = 0
   card.Parent = parent
@@ -477,8 +477,8 @@ local function createPowerUpCard(
 ): Frame
   local card = Instance.new("Frame")
   card.Name = powerUpId
-  card.Size = UDim2.new(1, -20, 0, 104)
-  card.Position = UDim2.new(0, 10, 0, (index - 1) * 112 + 10)
+  card.Size = UDim2.new(1, 0, 0, 104) -- Full width, UIListLayout handles spacing
+  card.LayoutOrder = index
   card.BackgroundColor3 = Color3.fromRGB(255, 255, 255) -- Base for gradient
   card.BorderSizePixel = 0
   card.Parent = parent
@@ -702,8 +702,8 @@ local TIER_COLORS: { [string]: Color3 } = {
 local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, index: number): Frame
   local card = Instance.new("Frame")
   card.Name = supplyItem.id
-  card.Size = UDim2.new(1, -20, 0, 104)
-  card.Position = UDim2.new(0, 10, 0, (index - 1) * 112 + 10)
+  card.Size = UDim2.new(1, 0, 0, 104) -- Full width, UIListLayout handles spacing
+  card.LayoutOrder = index
   card.BackgroundColor3 = Color3.fromRGB(255, 255, 255) -- Base for gradient
   card.BorderSizePixel = 0
   card.Parent = parent
@@ -999,8 +999,8 @@ local WEAPON_TIER_COLORS: { [string]: Color3 } = {
 local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, index: number): Frame
   local card = Instance.new("Frame")
   card.Name = weaponItem.id
-  card.Size = UDim2.new(1, -20, 0, 104)
-  card.Position = UDim2.new(0, 10, 0, (index - 1) * 112 + 10)
+  card.Size = UDim2.new(1, 0, 0, 104) -- Full width, UIListLayout handles spacing
+  card.LayoutOrder = index
   card.BackgroundColor3 = Color3.fromRGB(255, 255, 255) -- Base for gradient
   card.BorderSizePixel = 0
   card.Parent = parent
@@ -1306,7 +1306,8 @@ local function populateItems()
         index
       )
     end
-    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableEggs * 112 + 20)
+    scrollFrame.CanvasSize =
+      UDim2.new(0, 0, 0, #availableEggs * 104 + math.max(0, #availableEggs - 1) * 8 + 20)
   elseif currentTab == "chickens" then
     local availableChickens = Store.getAvailableChickensWithStock()
     for index, item in ipairs(availableChickens) do
@@ -1322,25 +1323,29 @@ local function populateItems()
         index
       )
     end
-    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableChickens * 112 + 20)
+    scrollFrame.CanvasSize =
+      UDim2.new(0, 0, 0, #availableChickens * 104 + math.max(0, #availableChickens - 1) * 8 + 20)
   elseif currentTab == "supplies" then
     local availableTraps = Store.getAvailableTraps()
     for index, item in ipairs(availableTraps) do
       createSupplyCard(item, scrollFrame, index)
     end
-    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableTraps * 112 + 20)
+    scrollFrame.CanvasSize =
+      UDim2.new(0, 0, 0, #availableTraps * 104 + math.max(0, #availableTraps - 1) * 8 + 20)
   elseif currentTab == "powerups" then
     local powerUps = PowerUpConfig.getAllSorted()
     for index, config in ipairs(powerUps) do
       createPowerUpCard(config.id, config, scrollFrame, index)
     end
-    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #powerUps * 112 + 20)
+    scrollFrame.CanvasSize =
+      UDim2.new(0, 0, 0, #powerUps * 104 + math.max(0, #powerUps - 1) * 8 + 20)
   elseif currentTab == "weapons" then
     local availableWeapons = Store.getAvailableWeapons()
     for index, item in ipairs(availableWeapons) do
       createWeaponCard(item, scrollFrame, index)
     end
-    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableWeapons * 112 + 20)
+    scrollFrame.CanvasSize =
+      UDim2.new(0, 0, 0, #availableWeapons * 104 + math.max(0, #availableWeapons - 1) * 8 + 20)
   end
 end
 
@@ -1686,6 +1691,22 @@ function StoreUI.create()
   scrollFrame.ScrollBarThickness = 6
   scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(139, 90, 43) -- Brown to match theme
   scrollFrame.Parent = mainFrame
+
+  -- Add UIPadding for consistent spacing from edges
+  local scrollPadding = Instance.new("UIPadding")
+  scrollPadding.PaddingLeft = UDim.new(0, 10)
+  scrollPadding.PaddingRight = UDim.new(0, 10)
+  scrollPadding.PaddingTop = UDim.new(0, 10)
+  scrollPadding.PaddingBottom = UDim.new(0, 10)
+  scrollPadding.Parent = scrollFrame
+
+  -- Add UIListLayout for consistent spacing between cards
+  local scrollListLayout = Instance.new("UIListLayout")
+  scrollListLayout.Padding = UDim.new(0, 8)
+  scrollListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+  scrollListLayout.FillDirection = Enum.FillDirection.Vertical
+  scrollListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+  scrollListLayout.Parent = scrollFrame
 
   -- Replenish Now button (Robux purchase) - Gold "Restock Now" themed button
   replenishButton = Instance.new("TextButton")

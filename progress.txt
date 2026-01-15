@@ -3597,3 +3597,30 @@
   - Button attracts attention with gold coloring and hover effects ✓
 - Format check passes, build passes
 - Next: Work on remaining medium priority items (Item #9 Subtext, Item #12 Scroll Padding) or low priority animations (Items #14, #15)
+
+[2026-01-15] Completed Store Redesign Work Item #12: Add Padding and Spacing to Scroll Content
+- Added UIPadding and UIListLayout to scrollFrame for consistent spacing and layout
+- Changes applied in src/client/StoreUI.lua:
+  1. Added UIPadding to scrollFrame with 10px padding on all sides (PaddingLeft, PaddingRight, PaddingTop, PaddingBottom)
+  2. Added UIListLayout with:
+     - Padding = UDim.new(0, 8) for 8px spacing between cards
+     - SortOrder = Enum.SortOrder.LayoutOrder for proper ordering
+     - FillDirection = Enum.FillDirection.Vertical
+     - HorizontalAlignment = Enum.HorizontalAlignment.Center
+  3. Updated all card creation functions to use UIListLayout:
+     - createItemCard: Changed Size to UDim2.new(1, 0, 0, 104), removed Position, added LayoutOrder = index
+     - createPowerUpCard: Same changes
+     - createSupplyCard: Same changes
+     - createWeaponCard: Same changes
+  4. Updated CanvasSize calculations for all tabs:
+     - New formula: #items * 104 + math.max(0, #items - 1) * 8 + 20
+     - Accounts for card height (104px), spacing (8px between cards), and padding (20px total)
+  5. ScrollBarThickness already set to 6 with brown color matching theme
+- Acceptance criteria met:
+  - 10px padding on all sides of scroll content ✓
+  - 8px consistent spacing between item cards ✓
+  - Items don't touch scroll frame edges ✓
+  - Scrolling works correctly with UIListLayout ✓
+  - Scrollbar is visible but not obtrusive (thickness 6, brown color) ✓
+- Format check passes, build passes
+- Next: Work on remaining medium priority item (Item #9 Subtext) or low priority animations (Items #14, #15, #16)
