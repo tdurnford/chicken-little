@@ -1,0 +1,240 @@
+{
+  "title": "UI Fixes and Game Balance Update",
+  "description": "A collection of UI improvements, visual cleanup, and game balance fixes to improve the overall player experience.",
+  "version": "1.0.0",
+  "created": "2025-01-15",
+  "status": "planned",
+  "features": [
+    {
+      "id": "remove-predator-target-bar",
+      "title": "Remove Predator Target Red Bar",
+      "description": "Remove the red bar indicator that appears when a predator targets a chicken. This visual element is unnecessary and clutters the UI.",
+      "priority": "high",
+      "status": "completed",
+      "completedDate": "2026-01-15",
+      "files": [
+        "src/client/ChickenVisuals.lua",
+        "src/client/Main.client.lua"
+      ],
+      "tasks": [
+        "Identify the red bar UI element in the predator targeting system",
+        "Remove or disable the red bar rendering logic",
+        "Clean up any related event connections"
+      ],
+      "resolution": "Removed the red target indicator (pulsing red cylinder) that appeared above chickens when a predator was targeting them. Removed showTargetIndicator, clearAllTargetIndicators, and updateTargetIndicator functions from ChickenVisuals.lua. Removed corresponding calls from Main.client.lua in PredatorSpawned, PredatorDefeated, and PredatorTargetChanged event handlers."
+    },
+    {
+      "id": "remove-spawn-blue-bar",
+      "title": "Remove Blue Vertical Bar at Spawn",
+      "description": "Remove the blue vertical bar that appears where the player spawns. This is likely a debug element or placeholder that should not be visible in the final game.",
+      "priority": "high",
+      "status": "completed",
+      "completedDate": "2026-01-15",
+      "files": [
+        "src/shared/PlayerSection.lua",
+        "src/shared/MapGeneration.lua",
+        "src/client/SectionVisuals.lua"
+      ],
+      "tasks": [
+        "Locate the source of the blue vertical bar at spawn",
+        "Remove the visual element",
+        "Ensure spawn functionality remains intact"
+      ],
+      "resolution": "Removed the createSpawnMarker function from SectionVisuals.lua that created a blue neon cylinder (Color3.fromRGB(100, 150, 255)) at the spawn point. Removed the function call from buildSection. Spawn functionality (player positioning) remains intact as it's handled separately by the spawn point coordinates in PlayerSection."
+    },
+    {
+      "id": "simplify-money-indicator",
+      "title": "Simplify Money Indicator",
+      "description": "Update the money indicator in the bottom left: remove the icon, remove the $/s rate indicator, and change the color to a darker green.",
+      "priority": "high",
+      "status": "completed",
+      "completedDate": "2026-01-15",
+      "files": ["src/client/MainHUD.lua"],
+      "tasks": [
+        "Remove the money icon from the indicator",
+        "Remove the $/s (money per second) display",
+        "Change the text color to a darker green (e.g., RGB(34, 139, 34) or similar)",
+        "Ensure the money amount display remains functional"
+      ],
+      "resolution": "Removed money icon creation call, removed money-per-second label creation call, changed text color from LimeGreen RGB(50,205,50) to ForestGreen RGB(34,139,34). Adjusted money label position to use freed space from removed icon. Kept setMoneyPerSecond API for backward compatibility."
+    },
+    {
+      "id": "remove-center-platform",
+      "title": "Remove Center Platform",
+      "description": "Remove the platform in the middle of the player's area. This platform is not needed and takes up space.",
+      "priority": "medium",
+      "status": "completed",
+      "completedDate": "2026-01-15",
+      "files": ["src/client/SectionVisuals.lua"],
+      "tasks": [
+        "Identify the center platform creation code",
+        "Remove or disable platform generation",
+        "Ensure no dependencies break from removal"
+      ],
+      "resolution": "Removed the createCoopFloor function from SectionVisuals.lua that created a brown wood platform (Color3.fromRGB(139, 90, 43)) with a selection box border in the center of each player section. Removed the function call from buildSection and cleaned up unused COLORS.coopFloor, COLORS.coopBorder, and TRANSPARENCY.coopFloor constants."
+    },
+    {
+      "id": "remove-grass",
+      "title": "Remove Grass",
+      "description": "Remove grass elements from the game world for a cleaner visual appearance.",
+      "priority": "medium",
+      "files": ["src/shared/MapGeneration.lua", "src/shared/PlayerSection.lua"],
+      "tasks": [
+        "Locate grass generation code",
+        "Remove grass creation logic",
+        "Clean up any grass-related assets or references"
+      ]
+    },
+    {
+      "id": "move-shield-indicator-top",
+      "title": "Move Shield Indicator to Top",
+      "description": "Relocate the shield indicator from its current position to the top of the screen for better visibility.",
+      "priority": "medium",
+      "status": "completed",
+      "completedDate": "2026-01-15",
+      "files": ["src/client/ShieldUI.lua"],
+      "tasks": [
+        "Update shield indicator position to top of screen",
+        "Adjust any related UI elements for proper layout",
+        "Test visibility and usability"
+      ],
+      "resolution": "Moved status label, timer label, and progress bar from below the shield button to above it. Adjusted button position from 10px to 50px from top to make room for status indicators above. Timer shows at -40px offset, status at -26px, and progress bar at -8px above the button. Tooltip moved to below the button (Position Y 1,4 with anchor 0.5,0)."
+    },
+    {
+      "id": "move-tutorial-carousel-up",
+      "title": "Move Tutorial Carousel Up",
+      "description": "Adjust the tutorial carousel position to be higher on the screen for better visibility and less obstruction of gameplay.",
+      "priority": "low",
+      "files": ["src/client/Tutorial.lua"],
+      "tasks": [
+        "Adjust the Y position of the tutorial carousel",
+        "Ensure carousel remains fully visible on screen",
+        "Test on different screen sizes if possible"
+      ]
+    },
+    {
+      "id": "fix-legendary-chicken-drop",
+      "title": "Fix Legendary Chicken Random Drop",
+      "description": "A random drop gave a player a legendary chicken early in the game, breaking game balance by providing too much money. Review and fix the random chicken spawn system to prevent overpowered early-game drops.",
+      "priority": "critical",
+      "status": "completed",
+      "completedDate": "2026-01-15",
+      "files": [
+        "src/shared/RandomChickenSpawn.lua",
+        "src/shared/ChickenConfig.lua",
+        "src/server/Main.server.lua"
+      ],
+      "tasks": [
+        "Review the random chicken spawn rarity weights",
+        "Implement tier restrictions based on player progression or time played",
+        "Ensure legendary chickens are appropriately rare and/or gated",
+        "Consider adding a minimum requirement before legendary spawns are possible"
+      ],
+      "resolution": "Added playtime-based rarity gating system. New players (0 min) can only get Uncommon. Rare unlocks at 5 min, Epic at 15 min, Legendary at 30 min, Mythic at 60 min. The server calculates the minimum playtime among all active players and uses that to determine the max rarity that can spawn, ensuring spawned chickens are claimable by everyone."
+    },
+    {
+      "id": "random-chickens-spawn-everywhere",
+      "title": "Random Chickens Spawn Across Entire Map",
+      "description": "Random chickens currently only spawn in one location. Update the spawning system so random chickens can appear anywhere on the map.",
+      "priority": "high",
+      "status": "completed",
+      "completedDate": "2026-01-15",
+      "files": [
+        "src/shared/RandomChickenSpawn.lua",
+        "src/shared/ChickenAI.lua",
+        "src/server/Main.server.lua",
+        "src/shared/IntegrationTests.lua"
+      ],
+      "tasks": [
+        "Modify spawn location selection to use multiple areas",
+        "Generate random positions across the entire map",
+        "Ensure spawned chickens don't overlap with existing objects",
+        "Test spawn distribution across the map"
+      ],
+      "resolution": "Added multi-zone spawning system. New SpawnZone type and createSpawnZonesFromMap() function creates spawn zones for each of the 12 player sections in the 4x3 map grid. The spawn system randomly selects a zone, then spawns within that zone. Per-chicken boundary tracking ensures chickens stay within their spawn zone when AI-roaming. Server initializes with map-wide spawn zones on startup. Added 4 integration tests for zone creation and distribution."
+    },
+    {
+      "id": "fix-trap-store-icon",
+      "title": "Fix Trap Icon in Store",
+      "description": "The traps icon in the store is displaying as a generic box instead of a proper trap icon. Update to use the correct icon asset.",
+      "priority": "medium",
+      "status": "completed",
+      "completedDate": "2026-01-15",
+      "files": ["src/client/StoreUI.lua", "src/shared/TrapConfig.lua"],
+      "tasks": [
+        "Identify the correct trap icon asset",
+        "Update the store UI to use the proper trap icon",
+        "Verify icon displays correctly in all store views"
+      ],
+      "resolution": "Replaced unsupported Unicode emojis with widely-supported alternatives in TrapConfig.lua. Changed: WoodenSnare 🪵→🪤, RopeTrap 🪢→🎣, MetalCage 🗑️→🔒, SpringTrap 🔩→💥, BearTrap 🐻→🦷, LaserGrid 🔴→🎯, SonicEmitter 📢→📣, VoidPrison 🕳️→⬛. These emojis are from older Unicode versions that render correctly in Roblox's font system."
+    },
+    {
+      "id": "fix-trap-placement",
+      "title": "Fix Trap Placement System",
+      "description": "Placing traps for predators is broken - traps are not visible on the map and don't leave the player's inventory. Fix the trap placement system to work correctly.",
+      "priority": "critical",
+      "status": "completed",
+      "completedDate": "2026-01-15",
+      "files": [
+        "src/shared/TrapPlacement.lua",
+        "src/shared/TrapCatching.lua",
+        "src/client/InventoryUI.lua",
+        "src/client/TrapVisuals.lua",
+        "src/client/Main.client.lua",
+        "src/server/Main.server.lua"
+      ],
+      "tasks": [
+        "Debug trap placement logic to find why traps don't appear",
+        "Fix inventory deduction when placing traps",
+        "Ensure trap visual models are created in the world",
+        "Verify trap functionality after placement",
+        "Test trap catching predators after fix"
+      ],
+      "resolution": "Fixed TrapPlacement.getOccupiedSpots/getAvailableSpots to only consider spotIndex 1-8 (not -1 for unplaced traps). Created new TrapVisuals.lua module to render 3D trap models in the world. Updated Main.client.lua TrapPlaced event handler to create trap visuals. Added logic to restore existing trap visuals on player join."
+    },
+    {
+      "id": "rename-eggs-place-to-hatch",
+      "title": "Rename Eggs 'Place' Button to 'Hatch'",
+      "description": "Change the button text on the eggs tab in the inventory from 'Place' to 'Hatch' for clearer user understanding.",
+      "priority": "low",
+      "files": ["src/client/InventoryUI.lua"],
+      "tasks": [
+        "Locate the eggs tab button text",
+        "Change 'Place' to 'Hatch'",
+        "Verify button functionality remains the same"
+      ]
+    },
+    {
+      "id": "unify-button-styles",
+      "title": "Unify Shield and Inventory Button Styles",
+      "description": "The shield button and inventory button are positioned next to each other but have different visual styles. Update them to have consistent styling.",
+      "priority": "medium",
+      "files": [
+        "src/client/ShieldUI.lua",
+        "src/client/InventoryUI.lua",
+        "src/client/MainHUD.lua"
+      ],
+      "tasks": [
+        "Identify the styling differences between the two buttons",
+        "Choose a unified button style",
+        "Apply consistent styling to both buttons",
+        "Ensure hover/click states are also consistent"
+      ]
+    }
+  ],
+  "testingNotes": [
+    "Test predator attacks to ensure targeting still works without the red bar",
+    "Verify player spawn works correctly without the blue bar",
+    "Check money display updates correctly with new styling",
+    "Confirm no gameplay issues from removed platform and grass",
+    "Test shield indicator visibility at top of screen",
+    "Play through tutorial to verify carousel position",
+    "Test random chicken spawns across multiple play sessions to verify distribution and rarity",
+    "Test trap placement and verify traps catch predators",
+    "Verify eggs hatch correctly with renamed button",
+    "Check button consistency across different screen sizes"
+  ],
+  "dependencies": [],
+  "estimatedEffort": "medium",
+  "breakingChanges": false
+}

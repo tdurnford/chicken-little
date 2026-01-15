@@ -894,3 +894,32 @@ Several trap icons used newer Unicode emojis (🪵, 🪢, 🕳️, etc.) that ar
 - ✅ Identified the correct trap icon asset (replaced unsupported emojis)
 - ✅ Updated the store UI to use the proper trap icon (via TrapConfig)
 - ✅ Icons display correctly in store views (using supported Unicode)
+
+## 2026-01-15: Remove Center Platform (ui-fixes-prd.json Work Item - MEDIUM) - COMPLETED
+
+Removed the center platform (coop floor) from each player section. This brown wood platform was unnecessary and took up visual space in the game world.
+
+### Root cause:
+The center platform was created by the `createCoopFloor` function in SectionVisuals.lua. It rendered a brown wood platform (Material.Wood) with a SelectionBox border at the center of each player section where chickens previously had fixed spots.
+
+### Changes made:
+- Removed `createCoopFloor` function from SectionVisuals.lua (~25 lines)
+- Removed `createCoopFloor(sectionCenter, sectionFolder)` call from `buildSection` function
+- Removed unused color constants: `COLORS.coopFloor`, `COLORS.coopBorder`
+- Removed unused transparency constant: `TRANSPARENCY.coopFloor`
+
+### Files modified:
+- src/client/SectionVisuals.lua (removed ~30 lines total)
+- plans/ui-fixes-prd.json (marked as completed with resolution)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Ground and boundary walls remain intact
+- Chickens now roam on the grass without the elevated platform
+- No gameplay impact since chickens already use free-roaming mode (coop spots were commented out)
+
+### Acceptance criteria met:
+- ✅ Identified the center platform creation code (createCoopFloor in SectionVisuals.lua)
+- ✅ Removed platform generation
+- ✅ No dependencies broken from removal (function was only called in buildSection)

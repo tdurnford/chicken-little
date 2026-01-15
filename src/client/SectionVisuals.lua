@@ -18,17 +18,14 @@ local SectionVisuals = {}
 -- Visual configuration
 local COLORS = {
   ground = Color3.fromRGB(76, 153, 76), -- Grass green
-  coopFloor = Color3.fromRGB(139, 90, 43), -- Brown wood
   spotAvailable = Color3.fromRGB(100, 200, 100), -- Light green (available)
   spotOccupied = Color3.fromRGB(200, 100, 100), -- Light red (occupied)
   spotHighlight = Color3.fromRGB(255, 255, 150), -- Yellow highlight
   boundary = Color3.fromRGB(120, 80, 40), -- Fence brown
-  coopBorder = Color3.fromRGB(80, 60, 30), -- Dark brown border
 }
 
 local TRANSPARENCY = {
   ground = 0,
-  coopFloor = 0,
   spot = 0.3,
   spotBorder = 0,
   boundary = 0.3,
@@ -77,32 +74,6 @@ local function createGround(sectionCenter: PlayerSection.Vector3, parent: Instan
   ground.Parent = parent
 
   return ground
-end
-
--- Create the coop floor area
-local function createCoopFloor(sectionCenter: PlayerSection.Vector3, parent: Instance)
-  local coopSize = PlayerSection.getCoopSize()
-  local coopCenter = PlayerSection.getCoopCenter(sectionCenter)
-
-  local coopFloor = createPart(
-    "CoopFloor",
-    Vector3.new(coopSize.x + 4, 0.2, coopSize.z + 4),
-    Vector3.new(coopCenter.x, sectionCenter.y + 0.1, coopCenter.z),
-    COLORS.coopFloor,
-    TRANSPARENCY.coopFloor
-  )
-  coopFloor.Material = Enum.Material.Wood
-  coopFloor.Parent = parent
-
-  -- Add border/outline
-  local border = Instance.new("SelectionBox")
-  border.Name = "CoopBorder"
-  border.Adornee = coopFloor
-  border.Color3 = COLORS.coopBorder
-  border.LineThickness = 0.05
-  border.Parent = coopFloor
-
-  return coopFloor
 end
 
 -- Create a single coop spot visual
@@ -203,7 +174,6 @@ function SectionVisuals.buildSection(sectionIndex: number, _occupiedSpots: { [nu
 
   -- Create all visual elements
   createGround(sectionCenter, sectionFolder)
-  createCoopFloor(sectionCenter, sectionFolder)
   -- Note: Coop spots no longer created - chickens roam freely within section
   createBoundaries(sectionCenter, sectionFolder)
 
