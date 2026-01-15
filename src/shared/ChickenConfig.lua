@@ -34,13 +34,14 @@ local RARITY_MONEY_MULTIPLIERS: { [Rarity]: number } = {
 local BASE_MONEY_PER_SECOND = 1
 
 -- Egg laying intervals (rarer chickens lay less frequently but lay rarer eggs)
+-- Intervals increased 2.5x from original values to balance economy
 local RARITY_EGG_INTERVALS: { [Rarity]: number } = {
-  Common = 60, -- 1 minute
-  Uncommon = 90, -- 1.5 minutes
-  Rare = 120, -- 2 minutes
-  Epic = 180, -- 3 minutes
-  Legendary = 300, -- 5 minutes
-  Mythic = 600, -- 10 minutes
+  Common = 150, -- 2.5 minutes (was 1 minute)
+  Uncommon = 225, -- 3.75 minutes (was 1.5 minutes)
+  Rare = 300, -- 5 minutes (was 2 minutes)
+  Epic = 450, -- 7.5 minutes (was 3 minutes)
+  Legendary = 750, -- 12.5 minutes (was 5 minutes)
+  Mythic = 1500, -- 25 minutes (was 10 minutes)
 }
 
 -- Chicken health by rarity (rarer chickens have more health)

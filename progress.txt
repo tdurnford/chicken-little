@@ -4080,3 +4080,32 @@
   - Different predator types have different health pools (1-8 hits) ✓
 - Format check passes, build passes
 - Next: Work on remaining items (Item #1 Egg Laying, Item #3 Repeated Collection, etc.)
+
+[2026-01-15] Completed Gameplay & UI Fixes Work Item #1: Reduce Egg Laying Frequency
+- Root cause: Egg laying intervals were too short (Common: 60s), causing economy imbalance
+  and overwhelming players with eggs to manage.
+
+1. src/shared/ChickenConfig.lua:
+   - Increased RARITY_EGG_INTERVALS by 2.5x across all rarity tiers
+   - New intervals:
+     * Common: 150 seconds (was 60 seconds) - 2.5 minutes
+     * Uncommon: 225 seconds (was 90 seconds) - 3.75 minutes
+     * Rare: 300 seconds (was 120 seconds) - 5 minutes
+     * Epic: 450 seconds (was 180 seconds) - 7.5 minutes
+     * Legendary: 750 seconds (was 300 seconds) - 12.5 minutes
+     * Mythic: 1500 seconds (was 600 seconds) - 25 minutes
+   - Laying speed already varied by rarity (rarer = longer intervals)
+   - No changes to money accumulation rates (slower egg production = more valuable eggs)
+
+- Design decisions:
+  * Chose 2.5x multiplier (middle of 2-3x range) for balanced pacing
+  * Did not modify money rates since slower eggs naturally creates scarcity
+  * Rarer chickens already had longer intervals, maintaining existing tier progression
+
+- Acceptance criteria met:
+  - Egg laying interval increased to balanced rate (2.5x slower) ✓
+  - Players can comfortably manage eggs without feeling rushed ✓
+  - Economy remains balanced (slower production = more value per egg) ✓
+  - Different chicken rarities have different laying speeds (already implemented) ✓
+- Format check passes
+- Next: Work on remaining Phase 2 items (Item #3 Repeated Collection, Item #5 Predator Targeting)
