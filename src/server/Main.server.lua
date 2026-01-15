@@ -640,7 +640,8 @@ if placeTrapFunc then
         trapPlacedEvent:FireAllClients(
           result.trap.id,
           result.trap.trapType,
-          trapPosition or Vector3.new(0, 0, 0)
+          trapPosition or Vector3.new(0, 0, 0),
+          result.trap.spotIndex
         )
       end
       syncPlayerData(player, playerData, true)

@@ -590,3 +590,54 @@ The predator state transition from "approaching" to "attacking" was based on `ha
 - ✅ Attack range feels appropriate (section edge, not coop center)
 - ✅ Players have time to react but predators don't walk through entire area first
 - ✅ Combat engagement feels natural and timely
+
+## 2026-01-15: Fix Trap Placement System (ui-fixes-prd.json Work Item) - COMPLETED
+
+Fixed the trap placement system so traps are now visible in the world and properly managed.
+
+### Root causes identified:
+1. **TrapPlacement module bug**: `getOccupiedSpots()` and `getAvailableSpots()` functions were treating traps with `spotIndex = -1` (unplaced/in inventory) as if they were placed, because they only checked `if trap.spotIndex` without verifying the value was in the valid range 1-8.
+2. **Missing TrapVisuals module**: Unlike chickens and predators which have dedicated visual modules, there was no TrapVisuals module to create 3D representations of placed traps in the game world.
+3. **TrapPlaced event only played sound**: The event handler only played a sound effect and logged to console - it didn't create any visual model.
+
+### Changes made:
+- Modified `TrapPlacement.lua`:
+  - Updated `getOccupiedSpots()` to only include traps where `spotIndex >= 1 and spotIndex <= MAX_TRAP_SPOTS`
+  - Updated `getAvailableSpots()` with same fix
+  - Updated `isSpotOccupied()` to properly check spotIndex validity
+  - Added comments clarifying that spotIndex=-1 means unplaced/in inventory
+- Created new `TrapVisuals.lua` module (src/client/) with:
+  - `create()` - Creates 3D trap model at position with tier-based colors and effects
+  - `remove()` - Removes trap visual with animation
+  - `updateStatus()` - Updates trap status indicator (ready/cooldown/caught)
+  - `playCaughtAnimation()` - Plays catch animation when predator caught
+  - Tier-based visual styling (Basic=brown, Improved=silver, Advanced=blue, Expert=purple, Master=gold, Ultimate=cyan)
+  - Glow and particle effects for higher tier traps (Master+)
+  - Status indicator that pulses and changes color based on state
+  - Placement/removal animations (bounce in, sink out)
+  - Auto-starting update loop for animations
+- Modified `Main.client.lua`:
+  - Added TrapVisuals import
+  - Updated TrapPlaced event handler to create trap visuals with `TrapVisuals.create()`
+  - Updated TrapCaught event handler to update trap status and play animations
+  - Added logic to restore existing trap visuals when player joins (after section visuals are built)
+- Modified `Main.server.lua`:
+  - Updated TrapPlaced event to include `spotIndex` parameter for client-side positioning
+
+### Files modified:
+- src/shared/TrapPlacement.lua
+- src/client/TrapVisuals.lua (new file)
+- src/client/Main.client.lua
+- src/server/Main.server.lua
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Trap flow: Buy trap → appears in inventory (spotIndex=-1) → Place trap → visual appears in world → (future: catch predator)
+
+### Acceptance criteria met:
+- ✅ Traps are visible on the map after placement
+- ✅ Traps properly leave "In Inventory" status when placed
+- ✅ Trap visual models are created in the world
+- ✅ Existing placed traps are restored when player reconnects
+- ✅ Trap status indicator shows ready/cooldown/caught states

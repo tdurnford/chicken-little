@@ -30,6 +30,7 @@ local DamageUI = require(ClientModules:WaitForChild("DamageUI"))
 local ChickenHealthBar = require(ClientModules:WaitForChild("ChickenHealthBar"))
 local PredatorWarning = require(ClientModules:WaitForChild("PredatorWarning"))
 local ShieldUI = require(ClientModules:WaitForChild("ShieldUI"))
+local TrapVisuals = require(ClientModules:WaitForChild("TrapVisuals"))
 
 -- Get shared modules for position calculations
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -212,6 +213,24 @@ if getPlayerDataFunc then
 
       -- Build the central store (shared by all players)
       SectionVisuals.buildCentralStore()
+
+      -- Create visuals for already-placed traps
+      if initialData.traps then
+        local sectionCenter = MapGeneration.getSectionPosition(initialData.sectionIndex)
+        if sectionCenter then
+          for _, trap in ipairs(initialData.traps) do
+            -- Only create visuals for placed traps (spotIndex 1-8)
+            if trap.spotIndex and trap.spotIndex >= 1 and trap.spotIndex <= 8 then
+              local spotPos = PlayerSection.getTrapSpotPosition(trap.spotIndex, sectionCenter)
+              if spotPos then
+                local position = Vector3.new(spotPos.x, spotPos.y, spotPos.z)
+                TrapVisuals.create(trap.id, trap.trapType, position, trap.spotIndex)
+                print("[Client] Restored trap visual:", trap.id, "at spot", trap.spotIndex)
+              end
+            end
+          end
+        end
+      end
     else
       warn("[Client] No sectionIndex in player data - cannot build section visuals")
     end
@@ -565,9 +584,15 @@ end
 local trapPlacedEvent = getEvent("TrapPlaced")
 if trapPlacedEvent then
   trapPlacedEvent.OnClientEvent:Connect(
-    function(trapId: string, trapType: string, position: Vector3)
-      SoundEffects.play("trapPlace")
-      print("[Client] Trap placed:", trapId, trapType, "at", position)
+    function(trapId: string, trapType: string, position: Vector3, spotIndex: number?)
+      -- Create trap visual in the world
+      local trapState = TrapVisuals.create(trapId, trapType, position, spotIndex or 1)
+      if trapState then
+        SoundEffects.play("trapPlace")
+        print("[Client] Trap placed:", trapId, trapType, "at", position)
+      else
+        warn("[Client] Failed to create trap visual for:", trapId)
+      end
     end
   )
 end
@@ -576,6 +601,9 @@ end
 local trapCaughtEvent = getEvent("TrapCaught")
 if trapCaughtEvent then
   trapCaughtEvent.OnClientEvent:Connect(function(trapId: string, predatorId: string)
+    -- Update trap visual to show caught state
+    TrapVisuals.updateStatus(trapId, false, true)
+    TrapVisuals.playCaughtAnimation(trapId)
     PredatorVisuals.playTrappedAnimation(predatorId)
     SoundEffects.play("trapCatch")
     print("[Client] Trap caught predator:", trapId, predatorId)

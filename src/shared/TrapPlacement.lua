@@ -41,10 +41,11 @@ function TrapPlacement.isValidSpot(spotIndex: number): boolean
 end
 
 -- Get all occupied trap spot indices from player data
+-- Only considers spots 1-8 as valid placements (spotIndex=-1 means unplaced/in inventory)
 function TrapPlacement.getOccupiedSpots(playerData: PlayerData.PlayerDataSchema): { number }
   local occupied = {}
   for _, trap in ipairs(playerData.traps) do
-    if trap.spotIndex then
+    if trap.spotIndex and trap.spotIndex >= 1 and trap.spotIndex <= MAX_TRAP_SPOTS then
       table.insert(occupied, trap.spotIndex)
     end
   end
@@ -52,10 +53,11 @@ function TrapPlacement.getOccupiedSpots(playerData: PlayerData.PlayerDataSchema)
 end
 
 -- Get all available (empty) trap spot indices from player data
+-- Only considers spots 1-8 as valid placements (spotIndex=-1 means unplaced/in inventory)
 function TrapPlacement.getAvailableSpots(playerData: PlayerData.PlayerDataSchema): { number }
   local occupiedSet: { [number]: boolean } = {}
   for _, trap in ipairs(playerData.traps) do
-    if trap.spotIndex then
+    if trap.spotIndex and trap.spotIndex >= 1 and trap.spotIndex <= MAX_TRAP_SPOTS then
       occupiedSet[trap.spotIndex] = true
     end
   end
@@ -70,6 +72,7 @@ function TrapPlacement.getAvailableSpots(playerData: PlayerData.PlayerDataSchema
 end
 
 -- Check if a specific spot is occupied
+-- Only considers spots 1-8 as valid placements
 function TrapPlacement.isSpotOccupied(
   playerData: PlayerData.PlayerDataSchema,
   spotIndex: number
@@ -79,7 +82,7 @@ function TrapPlacement.isSpotOccupied(
   end
 
   for _, trap in ipairs(playerData.traps) do
-    if trap.spotIndex == spotIndex then
+    if trap.spotIndex and trap.spotIndex == spotIndex then
       return true
     end
   end
