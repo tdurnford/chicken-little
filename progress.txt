@@ -378,3 +378,38 @@ The `place_egg` tutorial step had a comment stating `targetPosition` should be "
 - ✅ After buying egg, arrow appears pointing toward player's coop area
 - ✅ Arrow updates position as player moves (always pointing to coop)
 - ✅ Tutorial flows smoothly from buy -> return to coop -> place egg
+
+## 2026-01-15: Prevent Predators from Disappearing While Attacking Player (bugfix-prd.json Work Item #7) - COMPLETED
+
+Fixed predators despawning while actively attacking a player.
+
+### Root cause:
+The `updateChickenPresence` function in PredatorAI.lua only considered whether chickens were present when deciding whether to despawn a predator. If a player had no chickens but was actively being attacked by a predator, the predator would still despawn after 8 seconds (`NO_CHICKENS_DESPAWN_TIME`).
+
+### Changes made:
+- Modified `PredatorAI.updateChickenPresence()` in PredatorAI.lua:
+  - Added optional `isEngagingPlayer` parameter to the function signature
+  - If `isEngagingPlayer` is true, the despawn timer is reset (same behavior as having chickens)
+  - Predators now stay as long as they are actively engaging a player
+- Modified Main.server.lua (section 6.75):
+  - Before calling `updateChickenPresence`, calculate if the predator is engaging the player
+  - Check if predator is within `combatRangeStuds` of the player's position
+  - Pass `isEngagingPlayer` boolean to the despawn check
+- Added integration test for the new behavior:
+  - Verifies that `isEngagingPlayer = true` resets the `noChickensTime` timer
+  - Verifies that predators don't despawn while engaging a player
+
+### Files modified:
+- src/shared/PredatorAI.lua
+- src/server/Main.server.lua
+- src/shared/IntegrationTests.lua
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- New integration test added for player engagement preventing despawn
+
+### Acceptance criteria met:
+- ✅ Predators never despawn while actively attacking a player
+- ✅ Predators can still despawn when no chickens present (after delay) if not engaging player
+- ✅ Combat feels complete - predator stays until defeated or player escapes

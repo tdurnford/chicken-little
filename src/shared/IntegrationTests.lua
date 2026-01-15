@@ -2241,6 +2241,37 @@ test("PredatorAI: shouldDespawn returns true after enough time without chickens"
   return assert_eq(shouldDespawn, true, "Should despawn after 10 seconds without chickens")
 end)
 
+test("PredatorAI: updateChickenPresence prevents despawn when engaging player", function()
+  local state = PredatorAI.createState()
+  local sectionCenter = Vector3.new(0, 0, 0)
+  PredatorAI.registerPredator(state, "pred1", "Rat", sectionCenter)
+  -- Move predator to reach coop (to get into attacking state)
+  for _ = 1, 100 do
+    PredatorAI.updatePosition(state, "pred1", 1, os.clock())
+  end
+  local startTime = os.time()
+  -- First update with no chickens but NOT engaging player
+  PredatorAI.updateChickenPresence(state, "pred1", false, startTime, false)
+  -- Check that noChickensTime was set
+  local position = PredatorAI.getPosition(state, "pred1")
+  local pass, msg = assert_not_nil(position.noChickensTime, "Should have noChickensTime set")
+  if not pass then
+    return pass, msg
+  end
+  -- Now update with no chickens but IS engaging player - should reset timer
+  PredatorAI.updateChickenPresence(state, "pred1", false, startTime + 5, true)
+  position = PredatorAI.getPosition(state, "pred1")
+  pass, msg =
+    assert_eq(position.noChickensTime, nil, "noChickensTime should be nil when engaging player")
+  if not pass then
+    return pass, msg
+  end
+  -- Even after despawn time elapsed, should not despawn if engaging player
+  local shouldDespawn =
+    PredatorAI.updateChickenPresence(state, "pred1", false, startTime + 15, true)
+  return assert_eq(shouldDespawn, false, "Should not despawn while engaging player")
+end)
+
 test("PredatorAI: setTargetChicken stores target spot", function()
   local state = PredatorAI.createState()
   local sectionCenter = Vector3.new(0, 0, 0)

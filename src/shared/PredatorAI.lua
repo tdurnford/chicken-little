@@ -1338,11 +1338,13 @@ end
 
 -- Update chicken presence for predator (call when attacking)
 -- Returns true if predator should despawn due to no chickens for too long
+-- isEngagingPlayer: if true, predator is actively attacking a player and should not despawn
 function PredatorAI.updateChickenPresence(
   aiState: PredatorAIState,
   predatorId: string,
   hasChickens: boolean,
-  currentTime: number
+  currentTime: number,
+  isEngagingPlayer: boolean?
 ): boolean
   local position = aiState.positions[predatorId]
   if not position then
@@ -1355,12 +1357,14 @@ function PredatorAI.updateChickenPresence(
     return false
   end
 
-  if hasChickens then
+  -- If predator is engaging a player, don't despawn (treat same as having chickens)
+  local engagingPlayer = isEngagingPlayer or false
+  if hasChickens or engagingPlayer then
     -- Reset the no-chickens timer
     position.noChickensTime = nil
     return false
   else
-    -- No chickens present
+    -- No chickens present and not engaging player
     if not position.noChickensTime then
       -- First time noticing no chickens
       position.noChickensTime = currentTime

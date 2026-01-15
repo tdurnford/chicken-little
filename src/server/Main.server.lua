@@ -2660,12 +2660,31 @@ local function runGameLoop(deltaTime: number)
       if predator.state == "attacking" then
         local hasChickens = #playerData.placedChickens > 0
 
+        -- Check if predator is actively engaging the player (within combat range)
+        local isEngagingPlayer = false
+        local character = player.Character
+        if character then
+          local humanoidRootPart = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+          if humanoidRootPart then
+            local playerPosition = humanoidRootPart.Position
+            local predatorPos = PredatorAI.getPosition(gameState.predatorAIState, predator.id)
+            if predatorPos then
+              local combatConstants = CombatHealth.getConstants()
+              local distance = (predatorPos.currentPosition - playerPosition).Magnitude
+              -- Predator is engaging if within combat range
+              isEngagingPlayer = distance <= combatConstants.combatRangeStuds
+            end
+          end
+        end
+
         -- Update chicken presence and check if predator should despawn
+        -- Predators don't despawn while actively attacking a player
         local shouldDespawn = PredatorAI.updateChickenPresence(
           gameState.predatorAIState,
           predator.id,
           hasChickens,
-          currentTime
+          currentTime,
+          isEngagingPlayer
         )
 
         if shouldDespawn then
