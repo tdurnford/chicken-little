@@ -780,11 +780,8 @@ if chickenPositionEvent then
     -- Process batched chicken position updates
     for _, chickenData in ipairs(data.chickens) do
       if chickenData.chickenId and chickenData.position and chickenData.facingDirection then
-        local position = Vector3.new(
-          chickenData.position.X,
-          chickenData.position.Y,
-          chickenData.position.Z
-        )
+        local position =
+          Vector3.new(chickenData.position.X, chickenData.position.Y, chickenData.position.Z)
         local facingDirection = Vector3.new(
           chickenData.facingDirection.X,
           chickenData.facingDirection.Y,
@@ -1091,7 +1088,7 @@ local function findNearbyRandomChicken(playerPosition: Vector3): (string?, strin
         end
       end
     end
-    
+
     -- Random chickens are not in the player's placedChickens list
     if not isOwnedChicken and state.position then
       local distance = (playerPosition - state.position).Magnitude
@@ -1147,8 +1144,9 @@ local function findNearbyPlacedChicken(
 end
 
 --[[
-	Helper function to find an available trap spot near the player.
-	Returns spotIndex or nil.
+	Helper function to find an available trap spot for the player.
+	Returns the nearest available spot index, or nil if all spots are occupied.
+	Traps can be placed from anywhere - we just pick the nearest available spot.
 ]]
 local function findNearbyAvailableTrapSpot(playerPosition: Vector3): number?
   if not playerDataCache then
@@ -1171,9 +1169,9 @@ local function findNearbyAvailableTrapSpot(playerPosition: Vector3): number?
     return nil
   end
 
-  -- Find the nearest available spot
+  -- Find the nearest available spot (no distance limit - player can place from anywhere)
   local nearestSpot: number? = nil
-  local nearestDistance = 20 -- Max distance to detect a spot (studs)
+  local nearestDistance = math.huge
 
   for _, spotIndex in ipairs(availableSpots) do
     local spotPos = PlayerSection.getTrapSpotPosition(spotIndex, sectionCenter)
@@ -1353,7 +1351,7 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
               end
             else
               SoundEffects.play("uiError")
-              warn("[Client] No available trap spot nearby")
+              warn("[Client] All trap spots are occupied (max 8 traps)")
             end
           end
         end
@@ -1771,8 +1769,7 @@ local function updateProximityPrompts()
     isNearRandomChicken = false
   else
     -- When not holding, check for nearby chickens
-    local chickenId, chickenType, _, accumulatedMoney =
-      findNearbyPlacedChicken(playerPosition)
+    local chickenId, chickenType, _, accumulatedMoney = findNearbyPlacedChicken(playerPosition)
 
     if chickenId then
       isNearChicken = true
