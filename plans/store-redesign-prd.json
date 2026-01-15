@@ -466,7 +466,7 @@
       "category": "UI-Animation",
       "title": "Add Opening/Closing Animations",
       "description": "Add smooth animations when opening and closing the store to make the UI feel more polished and alive.",
-      "completed": false,
+      "completed": true,
       "priority": "low",
       "steps": [
         "Import TweenService at top of StoreUI.lua",

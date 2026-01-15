@@ -7,6 +7,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local StoreUI = {}
@@ -77,6 +78,18 @@ local cachedActivePowerUps: { [string]: number }? = nil -- powerUpType -> expire
 
 -- Robux price for instant replenish (configurable)
 local ROBUX_REPLENISH_PRICE = 50
+
+-- Animation constants
+local ANIMATION_DURATION = 0.35
+local OPEN_TWEEN_INFO =
+  TweenInfo.new(ANIMATION_DURATION, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+local CLOSE_TWEEN_INFO =
+  TweenInfo.new(ANIMATION_DURATION, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+local TARGET_SIZE = UDim2.new(0, 420, 0, 550)
+local CLOSED_SIZE = UDim2.new(0, 0, 0, 0)
+
+-- Animation state
+local isAnimating = false
 
 -- Callbacks
 local onEggPurchaseCallback: ((eggType: string, quantity: number) -> any)? = nil
@@ -1555,8 +1568,9 @@ function StoreUI.create()
   -- Main frame (centered panel) - "The Supply Shack" wooden theme
   mainFrame = Instance.new("Frame")
   mainFrame.Name = "MainFrame"
+  mainFrame.AnchorPoint = Vector2.new(0.5, 0.5) -- Center anchor for scale animation
   mainFrame.Size = UDim2.new(0, 420, 0, 550)
-  mainFrame.Position = UDim2.new(0.5, -210, 0.5, -275)
+  mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0) -- Centered with anchor point
   mainFrame.BackgroundColor3 = Color3.fromRGB(255, 248, 220) -- Warm off-white/cream
   mainFrame.BorderSizePixel = 0
   mainFrame.Parent = screenGui
@@ -1983,14 +1997,31 @@ function StoreUI.create()
 end
 
 --[[
-	Opens the store UI.
+	Opens the store UI with animation.
 ]]
 function StoreUI.open()
-  if not screenGui then
+  if not screenGui or not mainFrame then
     return
   end
-  screenGui.Enabled = true
+  if isAnimating or isOpen then
+    return
+  end
+
+  isAnimating = true
   isOpen = true
+
+  -- Set initial state for animation
+  mainFrame.Size = CLOSED_SIZE
+  screenGui.Enabled = true
+
+  -- Animate scale in with Back easing for bouncy feel
+  local tween = TweenService:Create(mainFrame, OPEN_TWEEN_INFO, {
+    Size = TARGET_SIZE,
+  })
+  tween:Play()
+  tween.Completed:Connect(function()
+    isAnimating = false
+  end)
 
   -- Start timer update loop (updates every second, not every frame)
   updateRestockTimer()
@@ -2010,13 +2041,17 @@ function StoreUI.open()
 end
 
 --[[
-	Closes the store UI.
+	Closes the store UI with animation.
 ]]
 function StoreUI.close()
-  if not screenGui then
+  if not screenGui or not mainFrame then
     return
   end
-  screenGui.Enabled = false
+  if isAnimating or not isOpen then
+    return
+  end
+
+  isAnimating = true
   isOpen = false
 
   -- Stop timer update loop
@@ -2025,6 +2060,16 @@ function StoreUI.close()
     timerConnection = nil
   end
 
+  -- Animate scale out with Back easing
+  local tween = TweenService:Create(mainFrame, CLOSE_TWEEN_INFO, {
+    Size = CLOSED_SIZE,
+  })
+  tween:Play()
+  tween.Completed:Connect(function()
+    screenGui.Enabled = false
+    isAnimating = false
+  end)
+
   print("[StoreUI] Closed")
 end
 
@@ -2032,6 +2077,9 @@ end
 	Toggles the store UI open/closed.
 ]]
 function StoreUI.toggle()
+  if isAnimating then
+    return
+  end
   if isOpen then
     StoreUI.close()
   else

@@ -3655,3 +3655,36 @@
 - Format check passes, build passes
 - Lint skipped (selene CPU architecture issue)
 - Next: Work on remaining low priority items (Item #14, #15, #16) - animations and stretch goals
+
+[2026-01-15] Completed Store Redesign Work Item #14: Add Opening/Closing Animations
+- Added smooth scale animations when opening and closing the store UI
+- Changes applied in src/client/StoreUI.lua:
+  1. Imported TweenService at top of file
+  2. Added animation constants:
+     - ANIMATION_DURATION = 0.35 seconds for snappy feel
+     - OPEN_TWEEN_INFO with EasingStyle.Back, EasingDirection.Out for bouncy open
+     - CLOSE_TWEEN_INFO with EasingStyle.Back, EasingDirection.In for smooth close
+     - TARGET_SIZE = UDim2.new(0, 420, 0, 550) and CLOSED_SIZE = UDim2.new(0, 0, 0, 0)
+  3. Added isAnimating state flag to prevent interaction during animations
+  4. Updated mainFrame creation:
+     - Added AnchorPoint = Vector2.new(0.5, 0.5) for center-based scaling
+     - Changed Position to UDim2.new(0.5, 0, 0.5, 0) to work with anchor point
+  5. Rewrote StoreUI.open() function:
+     - Guards against animating or already open state
+     - Sets initial size to CLOSED_SIZE before enabling
+     - Creates and plays scale-in tween to TARGET_SIZE
+     - Sets isAnimating = false on tween completion
+  6. Rewrote StoreUI.close() function:
+     - Guards against animating or already closed state
+     - Stops timer and sets isOpen = false immediately
+     - Creates and plays scale-out tween to CLOSED_SIZE
+     - Disables screenGui and clears isAnimating on tween completion
+  7. Updated StoreUI.toggle() to guard against animation state
+- Acceptance criteria met:
+  - Store opens with smooth scale animation (Back easing, bouncy) ✓
+  - Store closes with smooth scale animation (Back easing, snappy) ✓
+  - Animations feel snappy and polished (0.35s duration) ✓
+  - No flickering during animation (proper state management) ✓
+  - Interaction prevented during animation (isAnimating guard) ✓
+- Format check passes, build passes
+- Next: Work on remaining low priority items (Item #15 Tab Switching Animation, Item #16 3D Rotating Eggs)
