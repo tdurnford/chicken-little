@@ -3499,3 +3499,40 @@
   - Tab transitions are smooth when switching ✓
 - Format check passes, build passes
 - Next: Work on remaining items (Item #3 Close Button, Item #8 Typography, Item #13 Apply to All Tabs)
+
+[2026-01-15] Completed Store Redesign Work Item #13: Apply Theme to All Store Tabs
+- Applied consistent visual theme across all store tabs (supplies, powerups, weapons)
+- Changes applied in src/client/StoreUI.lua:
+  1. Added TIER_GRADIENTS table with gradients for all tier types (Basic, Improved, Advanced, Expert, Master, Ultimate, Standard, Premium)
+  2. Updated createSupplyCard function (trap cards):
+     - Card height increased from 90px to 104px
+     - Added tier-based gradient background
+     - Added UIStroke for card definition
+     - Enlarged icons from 40x40 to 60x60 with pop-out effect and shadow
+     - Stacked buttons vertically with currency icons (💵, ��)
+     - Added UIGradient shine effects on buttons
+     - Added hover effects for both cash and premium buttons
+  3. Updated createPowerUpCard function:
+     - Card height increased from 90px to 104px
+     - Added power-up type gradient (green for luck, gold for money boosts)
+     - Added UIStroke for card definition
+     - Enlarged icons with pop-out effect and shadow
+     - Enhanced buy button with UIStroke, shine effect, and hover states
+     - Combined duration and active status into single status label
+  4. Updated createWeaponCard function:
+     - Card height increased from 90px to 104px
+     - Added tier-based gradient background
+     - Added UIStroke for card definition
+     - Enlarged icons with pop-out effect and shadow
+     - Stacked buttons vertically with currency icons
+     - Added shine effects and hover states
+  5. Updated CanvasSize calculations for all tabs to use 112px per card (104 + 8 spacing)
+- Acceptance criteria met:
+  - All tabs use the same visual language ✓
+  - Gradient backgrounds applied where tier/type exists ✓
+  - Fonts are consistent across tabs ✓
+  - Buttons follow same design pattern (stacked, icons, shine, hover) ✓
+  - No visual inconsistencies between tabs ✓
+- Format check passes, build passes
+- Next: Work on remaining medium priority items (Item #3 Close Button, Item #8 Typography, Item #9 Subtext, Item #11 Replenish Button, Item #12 Scroll Padding)
+

@@ -40,6 +40,20 @@ local RARITY_GRADIENTS: { [string]: { start: Color3, endColor: Color3 } } = {
   Mythic = { start = Color3.fromRGB(255, 150, 180), endColor = Color3.fromRGB(255, 0, 100) },
 }
 
+-- Tier gradients for supplies/traps and weapons (consistent with rarity gradients)
+local TIER_GRADIENTS: { [string]: { start: Color3, endColor: Color3 } } = {
+  -- Supplies/Traps tiers
+  Basic = { start = Color3.fromRGB(200, 200, 200), endColor = Color3.fromRGB(140, 140, 140) },
+  Improved = { start = Color3.fromRGB(160, 255, 160), endColor = Color3.fromRGB(50, 180, 50) },
+  Advanced = { start = Color3.fromRGB(140, 200, 255), endColor = Color3.fromRGB(30, 120, 220) },
+  Expert = { start = Color3.fromRGB(200, 160, 255), endColor = Color3.fromRGB(140, 40, 200) },
+  Master = { start = Color3.fromRGB(255, 220, 150), endColor = Color3.fromRGB(255, 140, 0) },
+  Ultimate = { start = Color3.fromRGB(255, 180, 200), endColor = Color3.fromRGB(255, 50, 100) },
+  -- Weapons tiers
+  Standard = { start = Color3.fromRGB(140, 200, 255), endColor = Color3.fromRGB(40, 130, 220) },
+  Premium = { start = Color3.fromRGB(255, 220, 150), endColor = Color3.fromRGB(255, 150, 50) },
+}
+
 -- Local player reference
 local localPlayer = Players.LocalPlayer
 
@@ -463,9 +477,9 @@ local function createPowerUpCard(
 ): Frame
   local card = Instance.new("Frame")
   card.Name = powerUpId
-  card.Size = UDim2.new(1, -10, 0, 90)
-  card.Position = UDim2.new(0, 5, 0, (index - 1) * 95 + 5)
-  card.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+  card.Size = UDim2.new(1, -20, 0, 104)
+  card.Position = UDim2.new(0, 10, 0, (index - 1) * 112 + 10)
+  card.BackgroundColor3 = Color3.fromRGB(255, 255, 255) -- Base for gradient
   card.BorderSizePixel = 0
   card.Parent = parent
 
@@ -473,10 +487,31 @@ local function createPowerUpCard(
   cardCorner.CornerRadius = UDim.new(0, 8)
   cardCorner.Parent = card
 
-  -- Power-up type indicator bar
+  -- Power-up type colors and gradient
   local isLuck = string.find(powerUpId, "HatchLuck") ~= nil
   local barColor = isLuck and Color3.fromRGB(50, 205, 50) or Color3.fromRGB(255, 215, 0)
+  local gradientStart = isLuck and Color3.fromRGB(160, 255, 160) or Color3.fromRGB(255, 240, 180)
+  local gradientEnd = isLuck and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(255, 180, 50)
 
+  -- Gradient background
+  local cardGradient = Instance.new("UIGradient")
+  cardGradient.Name = "PowerUpGradient"
+  cardGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, gradientStart),
+    ColorSequenceKeypoint.new(1, gradientEnd),
+  })
+  cardGradient.Rotation = 90
+  cardGradient.Parent = card
+
+  -- Card stroke for definition
+  local cardStroke = Instance.new("UIStroke")
+  cardStroke.Name = "CardStroke"
+  cardStroke.Color = Color3.fromRGB(60, 40, 20)
+  cardStroke.Thickness = 2
+  cardStroke.Transparency = 0.3
+  cardStroke.Parent = card
+
+  -- Type bar (accent)
   local typeBar = Instance.new("Frame")
   typeBar.Name = "TypeBar"
   typeBar.Size = UDim2.new(0, 4, 1, 0)
@@ -489,115 +524,154 @@ local function createPowerUpCard(
   typeBarCorner.CornerRadius = UDim.new(0, 4)
   typeBarCorner.Parent = typeBar
 
-  -- Icon
+  -- Icon shadow for depth
+  local iconShadow = Instance.new("TextLabel")
+  iconShadow.Name = "IconShadow"
+  iconShadow.Size = UDim2.new(0, 60, 0, 60)
+  iconShadow.Position = UDim2.new(0, -7, 0.5, -27)
+  iconShadow.BackgroundTransparency = 1
+  iconShadow.Text = config.icon
+  iconShadow.TextSize = 48
+  iconShadow.TextColor3 = Color3.fromRGB(0, 0, 0)
+  iconShadow.TextTransparency = 0.6
+  iconShadow.ZIndex = 2
+  iconShadow.Parent = card
+
+  -- Icon (enlarged with pop-out)
   local iconLabel = Instance.new("TextLabel")
   iconLabel.Name = "Icon"
-  iconLabel.Size = UDim2.new(0, 30, 0, 30)
-  iconLabel.Position = UDim2.new(0, 12, 0, 10)
+  iconLabel.Size = UDim2.new(0, 60, 0, 60)
+  iconLabel.Position = UDim2.new(0, -10, 0.5, -30)
   iconLabel.BackgroundTransparency = 1
   iconLabel.Text = config.icon
-  iconLabel.TextSize = 24
+  iconLabel.TextSize = 48
+  iconLabel.ZIndex = 3
   iconLabel.Parent = card
 
-  -- Power-up name
+  -- Power-up name (white with dark stroke)
   local nameLabel = Instance.new("TextLabel")
   nameLabel.Name = "Name"
-  nameLabel.Size = UDim2.new(0.5, -20, 0, 22)
-  nameLabel.Position = UDim2.new(0, 45, 0, 8)
+  nameLabel.Size = UDim2.new(0.35, -20, 0, 28)
+  nameLabel.Position = UDim2.new(0, 55, 0, 12)
   nameLabel.BackgroundTransparency = 1
   nameLabel.Text = config.displayName
-  nameLabel.TextColor3 = barColor
+  nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
   nameLabel.TextScaled = true
   nameLabel.Font = Enum.Font.GothamBold
   nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+  nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+  nameLabel.TextStrokeTransparency = 0.3
   nameLabel.Parent = card
 
   -- Description
   local descLabel = Instance.new("TextLabel")
   descLabel.Name = "Description"
-  descLabel.Size = UDim2.new(0.6, -20, 0, 18)
-  descLabel.Position = UDim2.new(0, 45, 0, 30)
+  descLabel.Size = UDim2.new(0.4, 0, 0, 20)
+  descLabel.Position = UDim2.new(0, 55, 0, 42)
   descLabel.BackgroundTransparency = 1
   descLabel.Text = config.description
-  descLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+  descLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
   descLabel.TextScaled = true
   descLabel.Font = Enum.Font.Gotham
   descLabel.TextXAlignment = Enum.TextXAlignment.Left
+  descLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+  descLabel.TextStrokeTransparency = 0.7
   descLabel.Parent = card
 
-  -- Duration info
+  -- Duration and status info
   local durationText = PowerUpConfig.formatRemainingTime(config.durationSeconds)
-  local durationLabel = Instance.new("TextLabel")
-  durationLabel.Name = "Duration"
-  durationLabel.Size = UDim2.new(0.5, -20, 0, 16)
-  durationLabel.Position = UDim2.new(0, 45, 0, 50)
-  durationLabel.BackgroundTransparency = 1
-  durationLabel.Text = "Duration: " .. durationText
-  durationLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-  durationLabel.TextScaled = true
-  durationLabel.Font = Enum.Font.Gotham
-  durationLabel.TextXAlignment = Enum.TextXAlignment.Left
-  durationLabel.Parent = card
-
-  -- Active status (if power-up is currently active)
   local powerUpType = PowerUpConfig.getPowerUpType(powerUpId)
   local activeExpiresAt = cachedActivePowerUps and powerUpType and cachedActivePowerUps[powerUpType]
   local isActive = activeExpiresAt and os.time() < activeExpiresAt
 
   local statusLabel = Instance.new("TextLabel")
   statusLabel.Name = "Status"
-  statusLabel.Size = UDim2.new(0.5, -20, 0, 16)
-  statusLabel.Position = UDim2.new(0, 45, 0, 68)
+  statusLabel.Size = UDim2.new(0.4, 0, 0, 20)
+  statusLabel.Position = UDim2.new(0, 55, 0, 70)
   statusLabel.BackgroundTransparency = 1
   if isActive then
     local remaining = activeExpiresAt - os.time()
     statusLabel.Text = "✓ ACTIVE (" .. PowerUpConfig.formatRemainingTime(remaining) .. " left)"
-    statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    statusLabel.TextColor3 = Color3.fromRGB(20, 120, 20)
   else
-    statusLabel.Text = ""
+    statusLabel.Text = "Duration: " .. durationText
+    statusLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
   end
   statusLabel.TextScaled = true
   statusLabel.Font = Enum.Font.GothamBold
   statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+  statusLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+  statusLabel.TextStrokeTransparency = 0.7
   statusLabel.Parent = card
 
-  -- Buy button (Robux only)
+  -- Buy button (Robux only, centered vertically)
   local buyButton = Instance.new("TextButton")
   buyButton.Name = "BuyButton"
-  buyButton.Size = UDim2.new(0, 80, 0, 35)
-  buyButton.Position = UDim2.new(1, -90, 0.5, -17)
-  buyButton.BackgroundColor3 = Color3.fromRGB(0, 162, 255) -- Robux blue
+  buyButton.Size = UDim2.new(0, 85, 0, 42)
+  buyButton.Position = UDim2.new(1, -95, 0.5, -21)
+  buyButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
   buyButton.Text = ""
-  buyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-  buyButton.TextScaled = true
-  buyButton.Font = Enum.Font.GothamBold
+  buyButton.ZIndex = 2
   buyButton.Parent = card
 
   local buyButtonCorner = Instance.new("UICorner")
-  buyButtonCorner.CornerRadius = UDim.new(0, 6)
+  buyButtonCorner.CornerRadius = UDim.new(0, 8)
   buyButtonCorner.Parent = buyButton
 
-  -- Robux icon
-  local robuxIcon = Instance.new("ImageLabel")
-  robuxIcon.Name = "RobuxIcon"
-  robuxIcon.Size = UDim2.new(0, 16, 0, 16)
-  robuxIcon.Position = UDim2.new(0, 8, 0.5, -8)
-  robuxIcon.BackgroundTransparency = 1
-  robuxIcon.Image = "rbxassetid://4915439044"
-  robuxIcon.Parent = buyButton
+  -- UIStroke for premium button
+  local buyStroke = Instance.new("UIStroke")
+  buyStroke.Color = Color3.fromRGB(100, 200, 255)
+  buyStroke.Thickness = 2
+  buyStroke.Parent = buyButton
 
-  -- Price label
+  -- Gem icon
+  local gemIcon = Instance.new("TextLabel")
+  gemIcon.Name = "GemIcon"
+  gemIcon.Size = UDim2.new(0, 24, 1, 0)
+  gemIcon.Position = UDim2.new(0, 4, 0, 0)
+  gemIcon.BackgroundTransparency = 1
+  gemIcon.Text = "💎"
+  gemIcon.TextSize = 18
+  gemIcon.ZIndex = 3
+  gemIcon.Parent = buyButton
+
   local priceLabel = Instance.new("TextLabel")
   priceLabel.Name = "PriceLabel"
-  priceLabel.Size = UDim2.new(1, -28, 1, 0)
-  priceLabel.Position = UDim2.new(0, 26, 0, 0)
+  priceLabel.Size = UDim2.new(1, -32, 1, 0)
+  priceLabel.Position = UDim2.new(0, 28, 0, 0)
   priceLabel.BackgroundTransparency = 1
   priceLabel.Text = tostring(config.robuxPrice)
   priceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
   priceLabel.TextScaled = true
   priceLabel.Font = Enum.Font.GothamBold
   priceLabel.TextXAlignment = Enum.TextXAlignment.Left
+  priceLabel.ZIndex = 3
   priceLabel.Parent = buyButton
+
+  -- Shine effect
+  local premiumShine = Instance.new("UIGradient")
+  premiumShine.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200)),
+  })
+  premiumShine.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.7),
+    NumberSequenceKeypoint.new(0.3, 0.9),
+    NumberSequenceKeypoint.new(1, 0.85),
+  })
+  premiumShine.Rotation = 45
+  premiumShine.Parent = buyButton
+
+  -- Hover effect
+  buyButton.MouseEnter:Connect(function()
+    buyButton.BackgroundColor3 = Color3.fromRGB(30, 150, 255)
+    buyStroke.Color = Color3.fromRGB(150, 220, 255)
+  end)
+  buyButton.MouseLeave:Connect(function()
+    buyButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+    buyStroke.Color = Color3.fromRGB(100, 200, 255)
+  end)
 
   -- Connect buy button
   buyButton.MouseButton1Click:Connect(function()
@@ -620,7 +694,7 @@ local TIER_COLORS: { [string]: Color3 } = {
 }
 
 --[[
-	Creates a supply/trap card for the store.
+	Creates a supply/trap card for the store with themed styling.
 	@param supplyItem Store.SupplyItem - The supply item data
 	@param parent Frame - Parent frame to add card to
 	@param index number - Index for positioning
@@ -628,9 +702,9 @@ local TIER_COLORS: { [string]: Color3 } = {
 local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, index: number): Frame
   local card = Instance.new("Frame")
   card.Name = supplyItem.id
-  card.Size = UDim2.new(1, -10, 0, 90)
-  card.Position = UDim2.new(0, 5, 0, (index - 1) * 95 + 5)
-  card.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+  card.Size = UDim2.new(1, -20, 0, 104)
+  card.Position = UDim2.new(0, 10, 0, (index - 1) * 112 + 10)
+  card.BackgroundColor3 = Color3.fromRGB(255, 255, 255) -- Base for gradient
   card.BorderSizePixel = 0
   card.Parent = parent
 
@@ -638,129 +712,250 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   cardCorner.CornerRadius = UDim.new(0, 8)
   cardCorner.Parent = card
 
-  -- Tier color bar on left
+  -- Tier-based gradient background
+  local gradientColors = TIER_GRADIENTS[supplyItem.tier] or TIER_GRADIENTS.Basic
+  local cardGradient = Instance.new("UIGradient")
+  cardGradient.Name = "TierGradient"
+  cardGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, gradientColors.start),
+    ColorSequenceKeypoint.new(1, gradientColors.endColor),
+  })
+  cardGradient.Rotation = 90
+  cardGradient.Parent = card
+
+  -- Card stroke for definition
+  local cardStroke = Instance.new("UIStroke")
+  cardStroke.Name = "CardStroke"
+  cardStroke.Color = Color3.fromRGB(60, 40, 20)
+  cardStroke.Thickness = 2
+  cardStroke.Transparency = 0.3
+  cardStroke.Parent = card
+
+  -- Tier color bar on left (accent)
   local tierBar = Instance.new("Frame")
   tierBar.Name = "TierBar"
-  tierBar.Size = UDim2.new(0, 4, 1, -8)
-  tierBar.Position = UDim2.new(0, 4, 0, 4)
+  tierBar.Size = UDim2.new(0, 4, 1, 0)
+  tierBar.Position = UDim2.new(0, 0, 0, 0)
   tierBar.BackgroundColor3 = TIER_COLORS[supplyItem.tier] or Color3.fromRGB(128, 128, 128)
   tierBar.BorderSizePixel = 0
   tierBar.Parent = card
 
   local tierBarCorner = Instance.new("UICorner")
-  tierBarCorner.CornerRadius = UDim.new(0, 2)
+  tierBarCorner.CornerRadius = UDim.new(0, 4)
   tierBarCorner.Parent = tierBar
 
-  -- Icon (trap image - using ImageLabel for reliable cross-platform display)
+  -- Icon shadow for depth
+  local iconShadow = Instance.new("ImageLabel")
+  iconShadow.Name = "IconShadow"
+  iconShadow.Size = UDim2.new(0, 60, 0, 60)
+  iconShadow.Position = UDim2.new(0, -7, 0.5, -27)
+  iconShadow.BackgroundTransparency = 1
+  iconShadow.Image = "rbxassetid://6022668885"
+  iconShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+  iconShadow.ImageTransparency = 0.6
+  iconShadow.ScaleType = Enum.ScaleType.Fit
+  iconShadow.ZIndex = 2
+  iconShadow.Parent = card
+
+  -- Icon (enlarged with pop-out effect)
   local iconImage = Instance.new("ImageLabel")
   iconImage.Name = "Icon"
-  iconImage.Size = UDim2.new(0, 40, 0, 40)
-  iconImage.Position = UDim2.new(0, 15, 0, 8)
+  iconImage.Size = UDim2.new(0, 60, 0, 60)
+  iconImage.Position = UDim2.new(0, -10, 0.5, -30)
   iconImage.BackgroundTransparency = 1
-  iconImage.Image = "rbxassetid://6022668885" -- Trap/cage icon
+  iconImage.Image = "rbxassetid://6022668885"
   iconImage.ScaleType = Enum.ScaleType.Fit
+  iconImage.ZIndex = 3
   iconImage.Parent = card
 
-  -- Name label
+  -- Name label (white with dark stroke)
   local nameLabel = Instance.new("TextLabel")
   nameLabel.Name = "Name"
-  nameLabel.Size = UDim2.new(0.5, -60, 0, 22)
-  nameLabel.Position = UDim2.new(0, 60, 0, 6)
+  nameLabel.Size = UDim2.new(0.35, -20, 0, 28)
+  nameLabel.Position = UDim2.new(0, 55, 0, 12)
   nameLabel.BackgroundTransparency = 1
   nameLabel.Text = supplyItem.displayName
   nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
   nameLabel.TextScaled = true
   nameLabel.Font = Enum.Font.GothamBold
   nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+  nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+  nameLabel.TextStrokeTransparency = 0.3
   nameLabel.Parent = card
 
-  -- Tier label
+  -- Tier label (dark for readability)
   local tierLabel = Instance.new("TextLabel")
   tierLabel.Name = "Tier"
-  tierLabel.Size = UDim2.new(0.5, -60, 0, 16)
-  tierLabel.Position = UDim2.new(0, 60, 0, 28)
+  tierLabel.Size = UDim2.new(0.35, -20, 0, 20)
+  tierLabel.Position = UDim2.new(0, 55, 0, 42)
   tierLabel.BackgroundTransparency = 1
   tierLabel.Text = supplyItem.tier
-  tierLabel.TextColor3 = TIER_COLORS[supplyItem.tier] or Color3.fromRGB(180, 180, 180)
+  tierLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
   tierLabel.TextScaled = true
   tierLabel.Font = Enum.Font.Gotham
   tierLabel.TextXAlignment = Enum.TextXAlignment.Left
+  tierLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+  tierLabel.TextStrokeTransparency = 0.7
   tierLabel.Parent = card
 
   -- Description label
   local descLabel = Instance.new("TextLabel")
   descLabel.Name = "Description"
-  descLabel.Size = UDim2.new(0.9, -60, 0, 28)
-  descLabel.Position = UDim2.new(0, 60, 0, 46)
+  descLabel.Size = UDim2.new(0.4, 0, 0, 20)
+  descLabel.Position = UDim2.new(0, 55, 0, 70)
   descLabel.BackgroundTransparency = 1
   descLabel.Text = supplyItem.description
-  descLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+  descLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
   descLabel.TextScaled = true
   descLabel.Font = Enum.Font.Gotham
   descLabel.TextXAlignment = Enum.TextXAlignment.Left
+  descLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+  descLabel.TextStrokeTransparency = 0.7
   descLabel.TextWrapped = true
   descLabel.Parent = card
 
-  -- Cash buy button
+  -- Cash buy button (stacked vertically)
   local canAfford = cachedPlayerMoney >= supplyItem.price
   local buyButton = Instance.new("TextButton")
   buyButton.Name = "BuyButton"
-  buyButton.Size = UDim2.new(0, 80, 0, 30)
-  buyButton.Position = UDim2.new(1, -170, 0, 8)
+  buyButton.Size = UDim2.new(0, 85, 0, 38)
+  buyButton.Position = UDim2.new(1, -95, 0, 8)
   buyButton.BackgroundColor3 = canAfford and Color3.fromRGB(50, 180, 50)
     or Color3.fromRGB(80, 80, 80)
-  buyButton.Text = "$" .. tostring(supplyItem.price)
-  buyButton.TextColor3 = canAfford and Color3.fromRGB(255, 255, 255)
-    or Color3.fromRGB(150, 150, 150)
-  buyButton.TextScaled = true
-  buyButton.Font = Enum.Font.GothamBold
+  buyButton.Text = ""
+  buyButton.ZIndex = 2
   buyButton.Parent = card
 
   local buyButtonCorner = Instance.new("UICorner")
-  buyButtonCorner.CornerRadius = UDim.new(0, 6)
+  buyButtonCorner.CornerRadius = UDim.new(0, 8)
   buyButtonCorner.Parent = buyButton
 
-  -- Connect cash buy button (server validates affordability)
+  -- Cash button icon
+  local cashIcon = Instance.new("TextLabel")
+  cashIcon.Name = "CashIcon"
+  cashIcon.Size = UDim2.new(0, 24, 1, 0)
+  cashIcon.Position = UDim2.new(0, 4, 0, 0)
+  cashIcon.BackgroundTransparency = 1
+  cashIcon.Text = "💵"
+  cashIcon.TextSize = 18
+  cashIcon.ZIndex = 3
+  cashIcon.Parent = buyButton
+
+  local cashPriceLabel = Instance.new("TextLabel")
+  cashPriceLabel.Name = "CashPriceLabel"
+  cashPriceLabel.Size = UDim2.new(1, -32, 1, 0)
+  cashPriceLabel.Position = UDim2.new(0, 28, 0, 0)
+  cashPriceLabel.BackgroundTransparency = 1
+  cashPriceLabel.Text = "$" .. tostring(supplyItem.price)
+  cashPriceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+  cashPriceLabel.TextScaled = true
+  cashPriceLabel.Font = Enum.Font.GothamBold
+  cashPriceLabel.TextXAlignment = Enum.TextXAlignment.Left
+  cashPriceLabel.ZIndex = 3
+  cashPriceLabel.Parent = buyButton
+
+  -- Shine effect for cash button
+  local cashShine = Instance.new("UIGradient")
+  cashShine.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200)),
+  })
+  cashShine.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.7),
+    NumberSequenceKeypoint.new(0.3, 0.9),
+    NumberSequenceKeypoint.new(1, 0.85),
+  })
+  cashShine.Rotation = 45
+  cashShine.Parent = buyButton
+
+  -- Hover effect for cash button
+  buyButton.MouseEnter:Connect(function()
+    if cachedPlayerMoney >= supplyItem.price then
+      buyButton.BackgroundColor3 = Color3.fromRGB(70, 220, 70)
+    end
+  end)
+  buyButton.MouseLeave:Connect(function()
+    local currentCanAfford = cachedPlayerMoney >= supplyItem.price
+    buyButton.BackgroundColor3 = currentCanAfford and Color3.fromRGB(50, 180, 50)
+      or Color3.fromRGB(80, 80, 80)
+  end)
+
+  -- Connect cash buy button
   buyButton.MouseButton1Click:Connect(function()
     if onTrapPurchaseCallback then
       onTrapPurchaseCallback(supplyItem.id)
     end
   end)
 
-  -- Robux buy button
+  -- Robux buy button (stacked below)
   local robuxButton = Instance.new("TextButton")
   robuxButton.Name = "RobuxButton"
-  robuxButton.Size = UDim2.new(0, 70, 0, 30)
-  robuxButton.Position = UDim2.new(1, -85, 0, 8)
-  robuxButton.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+  robuxButton.Size = UDim2.new(0, 85, 0, 38)
+  robuxButton.Position = UDim2.new(1, -95, 0, 52)
+  robuxButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
   robuxButton.Text = ""
+  robuxButton.ZIndex = 2
   robuxButton.Parent = card
 
   local robuxButtonCorner = Instance.new("UICorner")
-  robuxButtonCorner.CornerRadius = UDim.new(0, 6)
+  robuxButtonCorner.CornerRadius = UDim.new(0, 8)
   robuxButtonCorner.Parent = robuxButton
 
-  -- Robux icon
-  local robuxIcon = Instance.new("ImageLabel")
-  robuxIcon.Name = "RobuxIcon"
-  robuxIcon.Size = UDim2.new(0, 14, 0, 14)
-  robuxIcon.Position = UDim2.new(0, 6, 0.5, -7)
-  robuxIcon.BackgroundTransparency = 1
-  robuxIcon.Image = "rbxassetid://4915439044"
-  robuxIcon.Parent = robuxButton
+  -- UIStroke for premium button
+  local robuxStroke = Instance.new("UIStroke")
+  robuxStroke.Color = Color3.fromRGB(100, 200, 255)
+  robuxStroke.Thickness = 2
+  robuxStroke.Parent = robuxButton
 
-  -- Robux price label
+  -- Gem icon
+  local gemIcon = Instance.new("TextLabel")
+  gemIcon.Name = "GemIcon"
+  gemIcon.Size = UDim2.new(0, 24, 1, 0)
+  gemIcon.Position = UDim2.new(0, 4, 0, 0)
+  gemIcon.BackgroundTransparency = 1
+  gemIcon.Text = "💎"
+  gemIcon.TextSize = 18
+  gemIcon.ZIndex = 3
+  gemIcon.Parent = robuxButton
+
   local robuxPriceLabel = Instance.new("TextLabel")
-  robuxPriceLabel.Name = "Price"
-  robuxPriceLabel.Size = UDim2.new(1, -24, 1, 0)
-  robuxPriceLabel.Position = UDim2.new(0, 22, 0, 0)
+  robuxPriceLabel.Name = "RobuxPriceLabel"
+  robuxPriceLabel.Size = UDim2.new(1, -32, 1, 0)
+  robuxPriceLabel.Position = UDim2.new(0, 28, 0, 0)
   robuxPriceLabel.BackgroundTransparency = 1
   robuxPriceLabel.Text = tostring(supplyItem.robuxPrice)
   robuxPriceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
   robuxPriceLabel.TextScaled = true
   robuxPriceLabel.Font = Enum.Font.GothamBold
   robuxPriceLabel.TextXAlignment = Enum.TextXAlignment.Left
+  robuxPriceLabel.ZIndex = 3
   robuxPriceLabel.Parent = robuxButton
+
+  -- Shine effect for premium button
+  local premiumShine = Instance.new("UIGradient")
+  premiumShine.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200)),
+  })
+  premiumShine.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.7),
+    NumberSequenceKeypoint.new(0.3, 0.9),
+    NumberSequenceKeypoint.new(1, 0.85),
+  })
+  premiumShine.Rotation = 45
+  premiumShine.Parent = robuxButton
+
+  -- Hover effect for premium button
+  robuxButton.MouseEnter:Connect(function()
+    robuxButton.BackgroundColor3 = Color3.fromRGB(30, 150, 255)
+    robuxStroke.Color = Color3.fromRGB(150, 220, 255)
+  end)
+  robuxButton.MouseLeave:Connect(function()
+    robuxButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+    robuxStroke.Color = Color3.fromRGB(100, 200, 255)
+  end)
 
   -- Connect Robux button
   robuxButton.MouseButton1Click:Connect(function()
@@ -772,19 +967,13 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   -- Store price on card for affordability updates
   card:SetAttribute("Price", supplyItem.price)
 
-  -- Update affordability - updates button appearance when money changes
+  -- Update affordability
   local function updateAffordability()
     local currentCanAfford = cachedPlayerMoney >= supplyItem.price
-    if currentCanAfford then
-      buyButton.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
-      buyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    else
-      buyButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-      buyButton.TextColor3 = Color3.fromRGB(150, 150, 150)
-    end
+    buyButton.BackgroundColor3 = currentCanAfford and Color3.fromRGB(50, 180, 50)
+      or Color3.fromRGB(80, 80, 80)
   end
 
-  -- Listen for money updates
   card.AttributeChanged:Connect(function(attributeName)
     if attributeName == "PlayerMoney" then
       updateAffordability()
@@ -802,7 +991,7 @@ local WEAPON_TIER_COLORS: { [string]: Color3 } = {
 }
 
 --[[
-	Creates a weapon card for the store.
+	Creates a weapon card for the store with themed styling.
 	@param weaponItem Store.WeaponItem - The weapon item data
 	@param parent Frame - Parent frame to add card to
 	@param index number - Index for positioning
@@ -810,9 +999,9 @@ local WEAPON_TIER_COLORS: { [string]: Color3 } = {
 local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, index: number): Frame
   local card = Instance.new("Frame")
   card.Name = weaponItem.id
-  card.Size = UDim2.new(1, -10, 0, 90)
-  card.Position = UDim2.new(0, 5, 0, (index - 1) * 95 + 5)
-  card.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+  card.Size = UDim2.new(1, -20, 0, 104)
+  card.Position = UDim2.new(0, 10, 0, (index - 1) * 112 + 10)
+  card.BackgroundColor3 = Color3.fromRGB(255, 255, 255) -- Base for gradient
   card.BorderSizePixel = 0
   card.Parent = parent
 
@@ -820,150 +1009,262 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
   cardCorner.CornerRadius = UDim.new(0, 8)
   cardCorner.Parent = card
 
-  -- Tier color bar on left
+  -- Tier-based gradient background
+  local gradientColors = TIER_GRADIENTS[weaponItem.tier] or TIER_GRADIENTS.Basic
+  local cardGradient = Instance.new("UIGradient")
+  cardGradient.Name = "TierGradient"
+  cardGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, gradientColors.start),
+    ColorSequenceKeypoint.new(1, gradientColors.endColor),
+  })
+  cardGradient.Rotation = 90
+  cardGradient.Parent = card
+
+  -- Card stroke for definition
+  local cardStroke = Instance.new("UIStroke")
+  cardStroke.Name = "CardStroke"
+  cardStroke.Color = Color3.fromRGB(60, 40, 20)
+  cardStroke.Thickness = 2
+  cardStroke.Transparency = 0.3
+  cardStroke.Parent = card
+
+  -- Tier color bar on left (accent)
   local tierBar = Instance.new("Frame")
   tierBar.Name = "TierBar"
-  tierBar.Size = UDim2.new(0, 4, 1, -8)
-  tierBar.Position = UDim2.new(0, 4, 0, 4)
+  tierBar.Size = UDim2.new(0, 4, 1, 0)
+  tierBar.Position = UDim2.new(0, 0, 0, 0)
   tierBar.BackgroundColor3 = WEAPON_TIER_COLORS[weaponItem.tier] or Color3.fromRGB(128, 128, 128)
   tierBar.BorderSizePixel = 0
   tierBar.Parent = card
 
   local tierBarCorner = Instance.new("UICorner")
-  tierBarCorner.CornerRadius = UDim.new(0, 2)
+  tierBarCorner.CornerRadius = UDim.new(0, 4)
   tierBarCorner.Parent = tierBar
 
-  -- Weapon icon
+  -- Icon shadow for depth
+  local iconShadow = Instance.new("TextLabel")
+  iconShadow.Name = "IconShadow"
+  iconShadow.Size = UDim2.new(0, 60, 0, 60)
+  iconShadow.Position = UDim2.new(0, -7, 0.5, -27)
+  iconShadow.BackgroundTransparency = 1
+  iconShadow.Text = weaponItem.icon
+  iconShadow.TextSize = 48
+  iconShadow.TextColor3 = Color3.fromRGB(0, 0, 0)
+  iconShadow.TextTransparency = 0.6
+  iconShadow.ZIndex = 2
+  iconShadow.Parent = card
+
+  -- Weapon icon (enlarged with pop-out)
   local iconLabel = Instance.new("TextLabel")
   iconLabel.Name = "Icon"
-  iconLabel.Size = UDim2.new(0, 30, 0, 30)
-  iconLabel.Position = UDim2.new(0, 15, 0, 10)
+  iconLabel.Size = UDim2.new(0, 60, 0, 60)
+  iconLabel.Position = UDim2.new(0, -10, 0.5, -30)
   iconLabel.BackgroundTransparency = 1
   iconLabel.Text = weaponItem.icon
-  iconLabel.TextSize = 24
+  iconLabel.TextSize = 48
+  iconLabel.ZIndex = 3
   iconLabel.Parent = card
 
-  -- Weapon name
+  -- Weapon name (white with dark stroke)
   local nameLabel = Instance.new("TextLabel")
   nameLabel.Name = "Name"
-  nameLabel.Size = UDim2.new(0.4, -20, 0, 22)
-  nameLabel.Position = UDim2.new(0, 50, 0, 8)
+  nameLabel.Size = UDim2.new(0.35, -20, 0, 28)
+  nameLabel.Position = UDim2.new(0, 55, 0, 12)
   nameLabel.BackgroundTransparency = 1
   nameLabel.Text = weaponItem.displayName
-  nameLabel.TextColor3 = WEAPON_TIER_COLORS[weaponItem.tier] or Color3.fromRGB(255, 255, 255)
+  nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
   nameLabel.TextScaled = true
   nameLabel.Font = Enum.Font.GothamBold
   nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+  nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+  nameLabel.TextStrokeTransparency = 0.3
   nameLabel.Parent = card
 
-  -- Tier and damage label
+  -- Tier and damage label (dark for readability)
   local tierLabel = Instance.new("TextLabel")
   tierLabel.Name = "Tier"
-  tierLabel.Size = UDim2.new(0.4, -20, 0, 16)
-  tierLabel.Position = UDim2.new(0, 50, 0, 30)
+  tierLabel.Size = UDim2.new(0.35, -20, 0, 20)
+  tierLabel.Position = UDim2.new(0, 55, 0, 42)
   tierLabel.BackgroundTransparency = 1
   tierLabel.Text = weaponItem.tier .. " • " .. weaponItem.damage .. " DMG"
-  tierLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+  tierLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
   tierLabel.TextScaled = true
   tierLabel.Font = Enum.Font.Gotham
   tierLabel.TextXAlignment = Enum.TextXAlignment.Left
+  tierLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+  tierLabel.TextStrokeTransparency = 0.7
   tierLabel.Parent = card
 
-  -- Description
-  local descLabel = Instance.new("TextLabel")
-  descLabel.Name = "Description"
-  descLabel.Size = UDim2.new(0.5, -20, 0, 16)
-  descLabel.Position = UDim2.new(0, 50, 0, 48)
-  descLabel.BackgroundTransparency = 1
-  descLabel.Text = weaponItem.description
-  descLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-  descLabel.TextScaled = true
-  descLabel.Font = Enum.Font.Gotham
-  descLabel.TextXAlignment = Enum.TextXAlignment.Left
-  descLabel.Parent = card
-
-  -- Owned status
+  -- Status label (owned/starter)
   local isOwned = cachedOwnedWeapons and cachedOwnedWeapons[weaponItem.id]
   local isFree = weaponItem.price == 0
 
   local statusLabel = Instance.new("TextLabel")
   statusLabel.Name = "Status"
-  statusLabel.Size = UDim2.new(0.4, 0, 0, 16)
-  statusLabel.Position = UDim2.new(0, 50, 0, 66)
+  statusLabel.Size = UDim2.new(0.35, 0, 0, 20)
+  statusLabel.Position = UDim2.new(0, 55, 0, 70)
   statusLabel.BackgroundTransparency = 1
   if isOwned then
     statusLabel.Text = "✓ OWNED"
-    statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    statusLabel.TextColor3 = Color3.fromRGB(20, 120, 20)
   elseif isFree then
     statusLabel.Text = "★ STARTER"
-    statusLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+    statusLabel.TextColor3 = Color3.fromRGB(80, 80, 80)
   else
-    statusLabel.Text = ""
+    statusLabel.Text = weaponItem.description
+    statusLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
   end
   statusLabel.TextScaled = true
   statusLabel.Font = Enum.Font.GothamBold
   statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+  statusLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+  statusLabel.TextStrokeTransparency = 0.7
   statusLabel.Parent = card
 
-  -- Buy button (cash) - only show for non-free, non-owned weapons
+  -- Buy buttons - only show for non-free, non-owned weapons
   if not isOwned and not isFree then
     local canAfford = cachedPlayerMoney >= weaponItem.price
+
+    -- Cash buy button (stacked vertically)
     local buyButton = Instance.new("TextButton")
     buyButton.Name = "BuyButton"
-    buyButton.Size = UDim2.new(0, 70, 0, 28)
-    buyButton.Position = UDim2.new(1, -155, 0.5, -14)
+    buyButton.Size = UDim2.new(0, 85, 0, 38)
+    buyButton.Position = UDim2.new(1, -95, 0, 8)
     buyButton.BackgroundColor3 = canAfford and Color3.fromRGB(50, 180, 50)
       or Color3.fromRGB(80, 80, 80)
-    buyButton.Text = "$" .. tostring(weaponItem.price)
-    buyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    buyButton.TextTransparency = canAfford and 0 or 0.5
-    buyButton.TextScaled = true
-    buyButton.Font = Enum.Font.GothamBold
+    buyButton.Text = ""
+    buyButton.ZIndex = 2
     buyButton.Parent = card
 
     local buyButtonCorner = Instance.new("UICorner")
-    buyButtonCorner.CornerRadius = UDim.new(0, 6)
+    buyButtonCorner.CornerRadius = UDim.new(0, 8)
     buyButtonCorner.Parent = buyButton
 
+    -- Cash button icon
+    local cashIcon = Instance.new("TextLabel")
+    cashIcon.Name = "CashIcon"
+    cashIcon.Size = UDim2.new(0, 24, 1, 0)
+    cashIcon.Position = UDim2.new(0, 4, 0, 0)
+    cashIcon.BackgroundTransparency = 1
+    cashIcon.Text = "💵"
+    cashIcon.TextSize = 18
+    cashIcon.ZIndex = 3
+    cashIcon.Parent = buyButton
+
+    local cashPriceLabel = Instance.new("TextLabel")
+    cashPriceLabel.Name = "CashPriceLabel"
+    cashPriceLabel.Size = UDim2.new(1, -32, 1, 0)
+    cashPriceLabel.Position = UDim2.new(0, 28, 0, 0)
+    cashPriceLabel.BackgroundTransparency = 1
+    cashPriceLabel.Text = "$" .. tostring(weaponItem.price)
+    cashPriceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    cashPriceLabel.TextScaled = true
+    cashPriceLabel.Font = Enum.Font.GothamBold
+    cashPriceLabel.TextXAlignment = Enum.TextXAlignment.Left
+    cashPriceLabel.ZIndex = 3
+    cashPriceLabel.Parent = buyButton
+
+    -- Shine effect for cash button
+    local cashShine = Instance.new("UIGradient")
+    cashShine.Color = ColorSequence.new({
+      ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+      ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+      ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200)),
+    })
+    cashShine.Transparency = NumberSequence.new({
+      NumberSequenceKeypoint.new(0, 0.7),
+      NumberSequenceKeypoint.new(0.3, 0.9),
+      NumberSequenceKeypoint.new(1, 0.85),
+    })
+    cashShine.Rotation = 45
+    cashShine.Parent = buyButton
+
+    -- Hover effect for cash button
+    buyButton.MouseEnter:Connect(function()
+      if cachedPlayerMoney >= weaponItem.price then
+        buyButton.BackgroundColor3 = Color3.fromRGB(70, 220, 70)
+      end
+    end)
+    buyButton.MouseLeave:Connect(function()
+      local currentCanAfford = cachedPlayerMoney >= weaponItem.price
+      buyButton.BackgroundColor3 = currentCanAfford and Color3.fromRGB(50, 180, 50)
+        or Color3.fromRGB(80, 80, 80)
+    end)
+
     buyButton.MouseButton1Click:Connect(function()
-      if onWeaponPurchaseCallback and canAfford then
+      if onWeaponPurchaseCallback and cachedPlayerMoney >= weaponItem.price then
         onWeaponPurchaseCallback(weaponItem.id)
       end
     end)
 
-    -- Robux button
+    -- Robux button (stacked below)
     local robuxButton = Instance.new("TextButton")
     robuxButton.Name = "RobuxButton"
-    robuxButton.Size = UDim2.new(0, 70, 0, 28)
-    robuxButton.Position = UDim2.new(1, -80, 0.5, -14)
-    robuxButton.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+    robuxButton.Size = UDim2.new(0, 85, 0, 38)
+    robuxButton.Position = UDim2.new(1, -95, 0, 52)
+    robuxButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
     robuxButton.Text = ""
-    robuxButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    robuxButton.ZIndex = 2
     robuxButton.Parent = card
 
     local robuxButtonCorner = Instance.new("UICorner")
-    robuxButtonCorner.CornerRadius = UDim.new(0, 6)
+    robuxButtonCorner.CornerRadius = UDim.new(0, 8)
     robuxButtonCorner.Parent = robuxButton
 
-    local robuxIcon = Instance.new("ImageLabel")
-    robuxIcon.Name = "RobuxIcon"
-    robuxIcon.Size = UDim2.new(0, 14, 0, 14)
-    robuxIcon.Position = UDim2.new(0, 6, 0.5, -7)
-    robuxIcon.BackgroundTransparency = 1
-    robuxIcon.Image = "rbxassetid://4915439044"
-    robuxIcon.Parent = robuxButton
+    -- UIStroke for premium button
+    local robuxStroke = Instance.new("UIStroke")
+    robuxStroke.Color = Color3.fromRGB(100, 200, 255)
+    robuxStroke.Thickness = 2
+    robuxStroke.Parent = robuxButton
+
+    -- Gem icon
+    local gemIcon = Instance.new("TextLabel")
+    gemIcon.Name = "GemIcon"
+    gemIcon.Size = UDim2.new(0, 24, 1, 0)
+    gemIcon.Position = UDim2.new(0, 4, 0, 0)
+    gemIcon.BackgroundTransparency = 1
+    gemIcon.Text = "💎"
+    gemIcon.TextSize = 18
+    gemIcon.ZIndex = 3
+    gemIcon.Parent = robuxButton
 
     local robuxPriceLabel = Instance.new("TextLabel")
-    robuxPriceLabel.Name = "Price"
-    robuxPriceLabel.Size = UDim2.new(1, -24, 1, 0)
-    robuxPriceLabel.Position = UDim2.new(0, 22, 0, 0)
+    robuxPriceLabel.Name = "RobuxPriceLabel"
+    robuxPriceLabel.Size = UDim2.new(1, -32, 1, 0)
+    robuxPriceLabel.Position = UDim2.new(0, 28, 0, 0)
     robuxPriceLabel.BackgroundTransparency = 1
     robuxPriceLabel.Text = tostring(weaponItem.robuxPrice)
     robuxPriceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     robuxPriceLabel.TextScaled = true
     robuxPriceLabel.Font = Enum.Font.GothamBold
     robuxPriceLabel.TextXAlignment = Enum.TextXAlignment.Left
+    robuxPriceLabel.ZIndex = 3
     robuxPriceLabel.Parent = robuxButton
+
+    -- Shine effect for premium button
+    local premiumShine = Instance.new("UIGradient")
+    premiumShine.Color = ColorSequence.new({
+      ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+      ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+      ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200)),
+    })
+    premiumShine.Transparency = NumberSequence.new({
+      NumberSequenceKeypoint.new(0, 0.7),
+      NumberSequenceKeypoint.new(0.3, 0.9),
+      NumberSequenceKeypoint.new(1, 0.85),
+    })
+    premiumShine.Rotation = 45
+    premiumShine.Parent = robuxButton
+
+    -- Hover effect for premium button
+    robuxButton.MouseEnter:Connect(function()
+      robuxButton.BackgroundColor3 = Color3.fromRGB(30, 150, 255)
+      robuxStroke.Color = Color3.fromRGB(150, 220, 255)
+    end)
+    robuxButton.MouseLeave:Connect(function()
+      robuxButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+      robuxStroke.Color = Color3.fromRGB(100, 200, 255)
+    end)
 
     robuxButton.MouseButton1Click:Connect(function()
       if onRobuxPurchaseCallback then
@@ -1027,19 +1328,19 @@ local function populateItems()
     for index, item in ipairs(availableTraps) do
       createSupplyCard(item, scrollFrame, index)
     end
-    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableTraps * 95 + 10)
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableTraps * 112 + 20)
   elseif currentTab == "powerups" then
     local powerUps = PowerUpConfig.getAllSorted()
     for index, config in ipairs(powerUps) do
       createPowerUpCard(config.id, config, scrollFrame, index)
     end
-    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #powerUps * 95 + 10)
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #powerUps * 112 + 20)
   elseif currentTab == "weapons" then
     local availableWeapons = Store.getAvailableWeapons()
     for index, item in ipairs(availableWeapons) do
       createWeaponCard(item, scrollFrame, index)
     end
-    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableWeapons * 95 + 10)
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #availableWeapons * 112 + 20)
   end
 end
 
