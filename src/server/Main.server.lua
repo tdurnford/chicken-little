@@ -889,20 +889,36 @@ if swingBatFunc then
 
         local result =
           BaseballBat.hitPredator(batState, gameState.spawnState, targetId, currentTime)
-        if result.success and result.defeated then
-          -- Award money for defeating predator
-          playerData.money = (playerData.money or 0) + result.rewardMoney
-
-          -- Unregister from predator AI
-          PredatorAI.unregisterPredator(gameState.predatorAIState, targetId)
-
-          -- Fire PredatorDefeated event to ALL clients
-          local predatorDefeatedEvent = RemoteSetup.getEvent("PredatorDefeated")
-          if predatorDefeatedEvent then
-            predatorDefeatedEvent:FireAllClients(targetId, true)
+        if result.success then
+          -- Broadcast health update to ALL clients so all players see health bar changes
+          local predatorHealthUpdatedEvent = RemoteSetup.getEvent("PredatorHealthUpdated")
+          if predatorHealthUpdatedEvent then
+            local predator = PredatorSpawning.findPredator(gameState.spawnState, targetId)
+            local maxHealth = predator and PredatorConfig.getBatHitsRequired(predator.predatorType)
+              or 1
+            predatorHealthUpdatedEvent:FireAllClients(
+              targetId,
+              result.remainingHealth,
+              maxHealth,
+              result.damage
+            )
           end
 
-          syncPlayerData(player, playerData, true)
+          if result.defeated then
+            -- Award money for defeating predator
+            playerData.money = (playerData.money or 0) + result.rewardMoney
+
+            -- Unregister from predator AI
+            PredatorAI.unregisterPredator(gameState.predatorAIState, targetId)
+
+            -- Fire PredatorDefeated event to ALL clients
+            local predatorDefeatedEvent = RemoteSetup.getEvent("PredatorDefeated")
+            if predatorDefeatedEvent then
+              predatorDefeatedEvent:FireAllClients(targetId, true)
+            end
+
+            syncPlayerData(player, playerData, true)
+          end
         end
         return result
 

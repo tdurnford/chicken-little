@@ -4048,3 +4048,35 @@
   - Appropriate feedback is given on success/failure ✓
 - Format check passes
 - Next: Work on remaining items (Item #12 Predators Die Instantly, Item #1 Egg Laying, etc.)
+
+[2026-01-15] Completed Gameplay & UI Fixes Work Item #12: Predators Die Instantly Instead of Taking Damage
+- Root cause analysis: The core health tracking was already correct in PredatorSpawning.applyBatHit()
+  - Health properly initialized as math.ceil(catchDifficulty * 0.8) hits per predator
+  - Minor threats (Rat, Crow): 1-2 hits, Catastrophic threats (Bear, Eagle): 8 hits
+  - Damage correctly subtracted: predator.health -= 1 per hit
+  - Defeat only triggered when health <= 0
+- Actual issue: Only the hitting player saw health updates (no broadcast to other clients)
+  - SwingBat returned remainingHealth to caller only
+  - Other players saw predators go from full health to dead instantly
+
+1. src/server/RemoteSetup.lua:
+   - Added "PredatorHealthUpdated" to REMOTE_EVENTS list
+
+2. src/server/Main.server.lua (SwingBat handler):
+   - Added broadcast of PredatorHealthUpdated event when predator takes damage
+   - Event fires to ALL clients with: predatorId, remainingHealth, maxHealth, damage
+   - Fires on any successful hit (not just defeat) so all players see health bar updates
+
+3. src/client/Main.client.lua:
+   - Added listener for PredatorHealthUpdated event
+   - Updates health bar via PredatorHealthBar.updateHealth()
+   - Shows floating damage number via PredatorHealthBar.showDamageNumber()
+
+- Acceptance criteria met:
+  - Predators have health points based on type/threat level (catchDifficulty * 0.8) ✓
+  - Each hit reduces health by weapon's damage amount (1 per hit) ✓
+  - Predator health bar updates to show remaining health (now broadcast to all) ✓
+  - Predators only die when health reaches 0 ✓
+  - Different predator types have different health pools (1-8 hits) ✓
+- Format check passes, build passes
+- Next: Work on remaining items (Item #1 Egg Laying, Item #3 Repeated Collection, etc.)

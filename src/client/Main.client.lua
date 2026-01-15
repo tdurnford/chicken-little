@@ -635,6 +635,22 @@ if predatorPositionUpdatedEvent then
   )
 end
 
+-- PredatorHealthUpdated: Broadcast predator health changes to all clients
+-- This ensures all players see health bar updates when any player hits a predator
+local predatorHealthUpdatedEvent = getEvent("PredatorHealthUpdated")
+if predatorHealthUpdatedEvent then
+  predatorHealthUpdatedEvent.OnClientEvent:Connect(
+    function(predatorId: string, currentHealth: number, maxHealth: number, damage: number)
+      -- Update health bar for this predator
+      PredatorHealthBar.updateHealth(predatorId, currentHealth)
+      -- Show floating damage number
+      if damage and damage > 0 then
+        PredatorHealthBar.showDamageNumber(predatorId, damage)
+      end
+    end
+  )
+end
+
 -- PredatorDefeated: Play defeated animation, remove visual and health bar
 local predatorDefeatedEvent = getEvent("PredatorDefeated")
 if predatorDefeatedEvent then
