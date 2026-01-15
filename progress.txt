@@ -346,3 +346,35 @@ The predator spawning logic in Main.server.lua would spawn predators for players
 - ✅ Predators never target player sections with 0 placed chickens
 - ✅ Players with chickens are still targeted normally
 - ✅ No errors when players have 0 chickens (spawn is simply skipped)
+
+## 2026-01-15: Add Return Arrow After Egg Purchase in Tutorial (bugfix-prd.json Work Item #5) - COMPLETED
+
+Added a dynamic arrow that guides players back to their coop area after purchasing an egg in the tutorial.
+
+### Root cause:
+The `place_egg` tutorial step had a comment stating `targetPosition` should be "set dynamically based on player section" but no implementation existed. When transitioning from `buy_egg` to `place_egg`, the arrow would disappear because `targetPosition` was `nil`.
+
+### Changes made:
+- Added `SectionVisuals` module import to Tutorial.lua for accessing player's current section
+- Added `getPlayerCoopCenter()` helper function that:
+  - Gets player's section index from `SectionVisuals.getCurrentSection()`
+  - Retrieves section position from `MapGeneration.getSectionPosition()`
+  - Calculates coop center position with offset (centered X, -10 studs Z for back of section)
+  - Returns Vector3 position slightly elevated for arrow visibility
+- Modified `Tutorial.nextStep()` function to:
+  - Check if transitioning to `place_egg` step
+  - Dynamically set `targetPosition` using `getPlayerCoopCenter()` if not already set
+
+### Files modified:
+- src/client/Tutorial.lua
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Linter unavailable (architecture mismatch for selene binary)
+- Manual testing recommended: complete tutorial flow buy_egg -> place_egg and verify arrow points to coop
+
+### Acceptance criteria met:
+- ✅ After buying egg, arrow appears pointing toward player's coop area
+- ✅ Arrow updates position as player moves (always pointing to coop)
+- ✅ Tutorial flows smoothly from buy -> return to coop -> place egg

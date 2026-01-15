@@ -18,6 +18,10 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local PlayerData = require(Shared:WaitForChild("PlayerData"))
 local MapGeneration = require(Shared:WaitForChild("MapGeneration"))
 
+-- Get client modules
+local ClientModules = script.Parent
+local SectionVisuals = require(ClientModules:WaitForChild("SectionVisuals"))
+
 -- Type definitions
 export type TutorialStep = {
   id: string,
@@ -56,6 +60,27 @@ export type TutorialState = {
 local function getStorePosition(): Vector3
   local config = MapGeneration.getConfig()
   return Vector3.new(config.originPosition.x, config.originPosition.y + 3, config.originPosition.z)
+end
+
+-- Get player's coop center position from their assigned section
+local function getPlayerCoopCenter(): Vector3?
+  local sectionIndex = SectionVisuals.getCurrentSection()
+  if not sectionIndex then
+    return nil
+  end
+
+  -- Get section position from MapGeneration
+  local sectionPos = MapGeneration.getSectionPosition(sectionIndex)
+  if not sectionPos then
+    return nil
+  end
+
+  -- Coop is offset towards back of section (matches COOP_OFFSET_Z in PlayerSection)
+  local coopOffsetX = 0 -- centered
+  local coopOffsetZ = -10 -- towards back of section
+
+  -- Return coop center position (slightly elevated for arrow visibility)
+  return Vector3.new(sectionPos.x + coopOffsetX, sectionPos.y + 3, sectionPos.z + coopOffsetZ)
 end
 
 -- Simplified tutorial steps: buy egg, place it, done
@@ -715,6 +740,14 @@ function Tutorial.nextStep()
 
   local nextStep = currentConfig.steps[state.currentStepIndex]
   if nextStep then
+    -- Dynamically set targetPosition for place_egg step
+    if nextStep.id == "place_egg" and not nextStep.targetPosition then
+      local coopCenter = getPlayerCoopCenter()
+      if coopCenter then
+        nextStep.targetPosition = coopCenter
+      end
+    end
+
     animateStepTransition(function()
       updateStepUI(nextStep)
 
