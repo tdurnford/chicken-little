@@ -359,6 +359,7 @@ local function createItemCard(
   buyButton.TextTransparency = isSoldOut and 0.5 or 0
   buyButton.TextScaled = true
   buyButton.Font = Enum.Font.GothamBold
+  buyButton.BackgroundTransparency = 0
   buyButton.ZIndex = 2
   buyButton.Parent = card
 
@@ -435,6 +436,7 @@ local function createItemCard(
   robuxButton.TextColor3 = Color3.fromRGB(255, 255, 255)
   robuxButton.TextScaled = true
   robuxButton.Font = Enum.Font.GothamBold
+  robuxButton.BackgroundTransparency = 0
   robuxButton.ZIndex = 2
   robuxButton.Parent = card
 
@@ -706,6 +708,7 @@ local function createPowerUpCard(
   buyButton.Position = UDim2.new(1, -95, 0.5, -21)
   buyButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
   buyButton.Text = ""
+  buyButton.BackgroundTransparency = 0
   buyButton.ZIndex = 2
   buyButton.Parent = card
 
@@ -935,6 +938,7 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   buyButton.BackgroundColor3 = canAfford and Color3.fromRGB(50, 180, 50)
     or Color3.fromRGB(80, 80, 80)
   buyButton.Text = ""
+  buyButton.BackgroundTransparency = 0
   buyButton.ZIndex = 2
   buyButton.Parent = card
 
@@ -1007,6 +1011,7 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   robuxButton.Position = UDim2.new(1, -95, 0, 52)
   robuxButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
   robuxButton.Text = ""
+  robuxButton.BackgroundTransparency = 0
   robuxButton.ZIndex = 2
   robuxButton.Parent = card
 
@@ -1261,6 +1266,7 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
     buyButton.BackgroundColor3 = canAfford and Color3.fromRGB(50, 180, 50)
       or Color3.fromRGB(80, 80, 80)
     buyButton.Text = ""
+    buyButton.BackgroundTransparency = 0
     buyButton.ZIndex = 2
     buyButton.Parent = card
 
@@ -1332,6 +1338,7 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
     robuxButton.Position = UDim2.new(1, -95, 0, 52)
     robuxButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
     robuxButton.Text = ""
+    robuxButton.BackgroundTransparency = 0
     robuxButton.ZIndex = 2
     robuxButton.Parent = card
 

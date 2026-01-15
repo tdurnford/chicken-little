@@ -3726,3 +3726,23 @@
 - Format check passes, build passes
 - Note: Roblox Studio MCP server not available for in-game testing
 - Next: Only Item #16 (3D Rotating Eggs with ViewportFrame) remains - this is a stretch goal requiring 3D assets
+
+[2026-01-15] Completed UI & Gameplay Fixes Work Item #5: Fix Store Button Transparency
+- Added BackgroundTransparency = 0 to all store purchase buttons for full opacity
+- Changes applied in src/client/StoreUI.lua across 7 button instances:
+  1. createItemCard() - buyButton (cash button for eggs/chickens)
+  2. createItemCard() - robuxButton (premium button for eggs/chickens)
+  3. createChickenCard() - buyButton (Robux-only premium button)
+  4. createSupplyCard() - buyButton (cash button for supplies/traps)
+  5. createSupplyCard() - robuxButton (premium button for supplies/traps)
+  6. createWeaponCard() - buyButton (cash button for weapons)
+  7. createWeaponCard() - robuxButton (premium button for weapons)
+- Disabled state already uses distinct grey color (RGB 80,80,80) not transparency
+- Hover states already use color changes, not transparency modifications
+- Acceptance criteria met:
+  - All store buttons have BackgroundTransparency = 0 ✓
+  - Enabled buttons clearly distinguishable from disabled (green vs grey) ✓
+  - Disabled buttons use grey color, not transparency ✓
+  - Buttons are easy to see on all card backgrounds ✓
+- Format check passes, build passes
+- Next: Work on Item #6 (Fix Store Button Text Visibility) which depends on this item
