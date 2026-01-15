@@ -226,7 +226,7 @@
       "category": "UI-World",
       "title": "Add Padding Around Player Name Labels",
       "description": "The name labels above player areas need padding to improve readability and visual appeal.",
-      "completed": false,
+      "completed": true,
       "priority": "low",
       "steps": [
         "Find the TextLabel or BillboardGui for player names in SectionLabels.lua",
@@ -245,7 +245,7 @@
         "src/client/SectionVisuals.lua",
         "src/server/SectionLabels.lua"
       ],
-      "technicalNotes": "UIPadding instance can be added as child of TextLabel. Set PaddingLeft, PaddingRight, PaddingTop, PaddingBottom to UDim.new(0, 8)."
+      "technicalNotes": "Fixed: Added UIPadding instance to the TextLabel in SectionLabels.lua createLabel() function. Changed TextLabel to use full size (UDim2.new(1, 0, 1, 0)) with zero position, then added UIPadding child with 12px horizontal padding and 8px vertical padding. This provides proper spacing between the text and the background frame edges, improving readability. The background frame (with rounded corners and semi-transparent black) extends to show the padding. Consistent styling is applied to all player labels since they're created from the same createLabel() function."
     },
     {
       "id": 8,

@@ -92,8 +92,8 @@ local function createLabel(
   -- Create text label
   local textLabel = Instance.new("TextLabel")
   textLabel.Name = "PlayerName"
-  textLabel.Size = UDim2.new(1, -16, 1, -8)
-  textLabel.Position = UDim2.new(0, 8, 0, 4)
+  textLabel.Size = UDim2.new(1, 0, 1, 0)
+  textLabel.Position = UDim2.new(0, 0, 0, 0)
   textLabel.BackgroundTransparency = 1
   textLabel.Text = "Unclaimed"
   textLabel.TextColor3 = LABEL_COLORS.textColor
@@ -105,6 +105,14 @@ local function createLabel(
   textLabel.TextXAlignment = Enum.TextXAlignment.Center
   textLabel.TextYAlignment = Enum.TextYAlignment.Center
   textLabel.Parent = backgroundFrame
+
+  -- Add padding around text for better readability
+  local padding = Instance.new("UIPadding")
+  padding.PaddingLeft = UDim.new(0, 12)
+  padding.PaddingRight = UDim.new(0, 12)
+  padding.PaddingTop = UDim.new(0, 8)
+  padding.PaddingBottom = UDim.new(0, 8)
+  padding.Parent = textLabel
 
   -- Start hidden since section is initially unassigned
   billboardGui.Enabled = false

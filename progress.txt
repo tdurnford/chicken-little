@@ -4382,3 +4382,28 @@
   - World looks cleaner without unnecessary labels ✓
 - Format check passes, build passes
 - Next: Work on remaining item (Item #7 Add Padding Around Player Name Labels)
+
+[2026-01-15] Completed Gameplay & UI Fixes Work Item #7: Add Padding Around Player Name Labels
+- Root cause: TextLabel was using manual size/position offsets (Size = UDim2.new(1, -16, 1, -8), 
+  Position = UDim2.new(0, 8, 0, 4)) instead of proper UIPadding instance for text spacing.
+
+1. src/server/SectionLabels.lua:
+   - Changed TextLabel to use full size: UDim2.new(1, 0, 1, 0)
+   - Changed TextLabel position to origin: UDim2.new(0, 0, 0, 0)
+   - Added UIPadding child instance with proper padding values:
+     * PaddingLeft = UDim.new(0, 12) - 12px left padding
+     * PaddingRight = UDim.new(0, 12) - 12px right padding  
+     * PaddingTop = UDim.new(0, 8) - 8px top padding
+     * PaddingBottom = UDim.new(0, 8) - 8px bottom padding
+
+- Visual improvement:
+  * Before: Text was positioned with manual offsets (less flexible)
+  * After: Proper UIPadding provides consistent spacing around text content
+  * Background frame (semi-transparent black with rounded corners) extends to show padding
+
+- Acceptance criteria met:
+  - Player names have visible padding around the text ✓
+  - Names are easily readable ✓
+  - Consistent styling across all player labels ✓
+- Format check passes, build passes
+- This completes ALL work items in the Gameplay & UI Fixes PRD!
