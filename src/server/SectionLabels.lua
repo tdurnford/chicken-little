@@ -106,6 +106,9 @@ local function createLabel(
   textLabel.TextYAlignment = Enum.TextYAlignment.Center
   textLabel.Parent = backgroundFrame
 
+  -- Start hidden since section is initially unassigned
+  billboardGui.Enabled = false
+
   return { part = anchorPart, gui = billboardGui }
 end
 
@@ -129,9 +132,10 @@ local function updateLabelText(sectionIndex: number, displayName: string?)
   if displayName then
     textLabel.Text = displayName .. "'s Base"
     textLabel.TextColor3 = LABEL_COLORS.textColor
+    labelData.gui.Enabled = true
   else
-    textLabel.Text = "Unclaimed"
-    textLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    -- Hide label for unassigned sections instead of showing "Unclaimed"
+    labelData.gui.Enabled = false
   end
 end
 

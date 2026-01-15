@@ -4358,3 +4358,27 @@
   - Important text (prices, names) is prominently sized (16-24px min) ✓
 - Format check passes, build passes
 - Next: Work on remaining items (Item #6 Remove Unassigned, Item #7 Add Padding)
+
+[2026-01-15] Completed Gameplay & UI Fixes Work Item #6: Remove 'Unassigned' Text Above Empty Player Areas
+- Root cause: SectionLabels.lua created BillboardGui labels for all sections and displayed "Unclaimed"
+  text in grey for unassigned sections, cluttering the game world with unnecessary labels.
+
+1. src/server/SectionLabels.lua:
+   - Modified createLabel() to set billboardGui.Enabled = false on creation
+   - Labels now start hidden since sections are initially unassigned
+   - Modified updateLabelText() to toggle visibility:
+     * When displayName is provided: set gui.Enabled = true, show "<PlayerName>'s Base"
+     * When displayName is nil: set gui.Enabled = false (hide entirely)
+   - Removed the "Unclaimed" text fallback and grey color styling
+
+- Behavior change:
+  * Before: Unassigned sections showed grey "Unclaimed" text above them
+  * After: Unassigned sections have no visible label at all
+  * Claimed sections still show white "<PlayerName>'s Base" text as before
+
+- Acceptance criteria met:
+  - No 'Unassigned' text visible above unclaimed areas ✓
+  - Claimed areas still show player names correctly ✓
+  - World looks cleaner without unnecessary labels ✓
+- Format check passes, build passes
+- Next: Work on remaining item (Item #7 Add Padding Around Player Name Labels)

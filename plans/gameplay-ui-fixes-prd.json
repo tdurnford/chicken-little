@@ -200,7 +200,7 @@
       "category": "UI-World",
       "title": "Remove 'Unassigned' Text Above Empty Player Areas",
       "description": "Unassigned player areas display 'Unassigned' text which clutters the game world. This should be removed or hidden.",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Locate where 'Unassigned' label is created in SectionLabels.lua or SectionVisuals.lua",
@@ -219,7 +219,7 @@
         "src/client/SectionVisuals.lua",
         "src/server/SectionLabels.lua"
       ],
-      "technicalNotes": "SectionLabels.lua likely has fallback text for unassigned sections. Simply remove the fallback or set Visible = false when no player is assigned."
+      "technicalNotes": "Fixed: In SectionLabels.lua, modified createLabel() to set billboardGui.Enabled = false initially so newly created labels start hidden. Modified updateLabelText() to set labelData.gui.Enabled = true when a player claims a section (showing their name), and labelData.gui.Enabled = false when section is unassigned (hiding the label entirely). This replaces the previous 'Unclaimed' grey text with no visible label at all for unassigned sections."
     },
     {
       "id": 7,
