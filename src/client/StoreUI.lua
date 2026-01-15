@@ -168,21 +168,35 @@ local function createItemCard(
   rarityBarCorner.CornerRadius = UDim.new(0, 4)
   rarityBarCorner.Parent = rarityBar
 
-  -- Item icon
+  -- Item icon (enlarged with pop-out effect)
+  -- Drop shadow behind icon for depth
+  local iconShadow = Instance.new("TextLabel")
+  iconShadow.Name = "IconShadow"
+  iconShadow.Size = UDim2.new(0, 60, 0, 60)
+  iconShadow.Position = UDim2.new(0, -7, 0.5, -27) -- Offset by 3px for shadow effect
+  iconShadow.BackgroundTransparency = 1
+  iconShadow.Text = itemType == "egg" and "🥚" or "🐔"
+  iconShadow.TextSize = 48
+  iconShadow.TextColor3 = Color3.fromRGB(0, 0, 0)
+  iconShadow.TextTransparency = 0.6
+  iconShadow.ZIndex = 2
+  iconShadow.Parent = card
+
   local iconLabel = Instance.new("TextLabel")
   iconLabel.Name = "Icon"
-  iconLabel.Size = UDim2.new(0, 30, 0, 30)
-  iconLabel.Position = UDim2.new(0, 12, 0.5, -15)
+  iconLabel.Size = UDim2.new(0, 60, 0, 60)
+  iconLabel.Position = UDim2.new(0, -10, 0.5, -30) -- Overlaps left edge by 10px
   iconLabel.BackgroundTransparency = 1
   iconLabel.Text = itemType == "egg" and "🥚" or "🐔"
-  iconLabel.TextSize = 24
+  iconLabel.TextSize = 48
+  iconLabel.ZIndex = 3 -- Above shadow and card edge
   iconLabel.Parent = card
 
   -- Item name (white with dark stroke for visibility on gradients)
   local nameLabel = Instance.new("TextLabel")
   nameLabel.Name = "Name"
   nameLabel.Size = UDim2.new(0.35, -20, 0, 28)
-  nameLabel.Position = UDim2.new(0, 45, 0, 12)
+  nameLabel.Position = UDim2.new(0, 55, 0, 12) -- Shifted right for larger icon
   nameLabel.BackgroundTransparency = 1
   nameLabel.Text = displayName
   nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- White for visibility
@@ -197,7 +211,7 @@ local function createItemCard(
   local rarityLabel = Instance.new("TextLabel")
   rarityLabel.Name = "Rarity"
   rarityLabel.Size = UDim2.new(0.35, -20, 0, 20)
-  rarityLabel.Position = UDim2.new(0, 45, 0, 42)
+  rarityLabel.Position = UDim2.new(0, 55, 0, 42) -- Shifted right for larger icon
   rarityLabel.BackgroundTransparency = 1
   rarityLabel.Text = rarity
   rarityLabel.TextColor3 = Color3.fromRGB(50, 50, 50) -- Dark grey for readability
@@ -212,7 +226,7 @@ local function createItemCard(
   local stockLabel = Instance.new("TextLabel")
   stockLabel.Name = "StockLabel"
   stockLabel.Size = UDim2.new(0, 60, 0, 20)
-  stockLabel.Position = UDim2.new(0, 45, 0, 70)
+  stockLabel.Position = UDim2.new(0, 55, 0, 70) -- Shifted right for larger icon
   stockLabel.BackgroundTransparency = 1
   stockLabel.Text = stock > 0 and ("x" .. tostring(stock)) or "SOLD OUT"
   stockLabel.TextColor3 = stock > 0 and Color3.fromRGB(50, 50, 50) or Color3.fromRGB(180, 30, 30)
@@ -1052,6 +1066,12 @@ function StoreUI.create()
   titleCorner.CornerRadius = UDim.new(0, 20) -- Match main frame corners
   titleCorner.Parent = titleBar
 
+  -- Wooden sign border stroke
+  local titleStroke = Instance.new("UIStroke")
+  titleStroke.Color = Color3.fromRGB(80, 50, 25) -- Darker brown for sign border
+  titleStroke.Thickness = 3
+  titleStroke.Parent = titleBar
+
   -- Fix bottom corners of title bar
   local titleCornerFix = Instance.new("Frame")
   titleCornerFix.Name = "CornerFix"
@@ -1061,17 +1081,19 @@ function StoreUI.create()
   titleCornerFix.BorderSizePixel = 0
   titleCornerFix.Parent = titleBar
 
-  -- Title text
+  -- Title text - wooden sign style with cartoony font and text stroke
   local titleLabel = Instance.new("TextLabel")
   titleLabel.Name = "Title"
   titleLabel.Size = UDim2.new(1, -50, 1, 0)
   titleLabel.Position = UDim2.new(0, 15, 0, 0)
   titleLabel.BackgroundTransparency = 1
-  titleLabel.Text = "🏪 STORE"
-  titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+  titleLabel.Text = "🐔 The Roost"
+  titleLabel.TextColor3 = Color3.fromRGB(255, 248, 220) -- Warm cream to match frame
   titleLabel.TextScaled = true
-  titleLabel.Font = Enum.Font.GothamBold
+  titleLabel.Font = Enum.Font.FredokaOne -- Cartoony chunky font
   titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+  titleLabel.TextStrokeColor3 = Color3.fromRGB(60, 30, 10) -- Dark brown stroke
+  titleLabel.TextStrokeTransparency = 0 -- Fully visible stroke
   titleLabel.Parent = titleBar
 
   -- Close button
@@ -1099,13 +1121,22 @@ function StoreUI.create()
   restockFrame.Name = "RestockFrame"
   restockFrame.Size = UDim2.new(1, -20, 0, 35)
   restockFrame.Position = UDim2.new(0, 10, 0, 50)
-  restockFrame.BackgroundColor3 = Color3.fromRGB(180, 140, 90) -- Muted brown to match theme
+  restockFrame.BackgroundColor3 = Color3.fromRGB(255, 100, 50) -- Orange-red base for urgency
   restockFrame.BorderSizePixel = 0
   restockFrame.Parent = mainFrame
 
   local restockCorner = Instance.new("UICorner")
   restockCorner.CornerRadius = UDim.new(0, 8)
   restockCorner.Parent = restockFrame
+
+  -- Urgency gradient (Red to Orange) for restock timer
+  local restockGradient = Instance.new("UIGradient")
+  restockGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(220, 60, 60)), -- Red on left
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 140, 50)), -- Orange on right
+  })
+  restockGradient.Rotation = 0 -- Horizontal gradient
+  restockGradient.Parent = restockFrame
 
   -- Restock timer display
   restockTimerLabel = Instance.new("TextLabel")
@@ -1114,10 +1145,12 @@ function StoreUI.create()
   restockTimerLabel.Position = UDim2.new(0, 5, 0, 0)
   restockTimerLabel.BackgroundTransparency = 1
   restockTimerLabel.Text = "Restocks in 0:00"
-  restockTimerLabel.TextColor3 = Color3.fromRGB(50, 30, 10) -- Dark brown text
+  restockTimerLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text for contrast
   restockTimerLabel.TextScaled = true
   restockTimerLabel.Font = Enum.Font.GothamBold
   restockTimerLabel.TextXAlignment = Enum.TextXAlignment.Center
+  restockTimerLabel.TextStrokeColor3 = Color3.fromRGB(80, 20, 10) -- Dark red stroke
+  restockTimerLabel.TextStrokeTransparency = 0.3 -- Visible stroke for readability
   restockTimerLabel.Parent = restockFrame
 
   -- Initialize timer display

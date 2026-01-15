@@ -3410,3 +3410,23 @@
   - All text remains readable on gradient backgrounds ✓
 - Format check passes, build passes
 - Next: Work on remaining high-priority items (Item #7 Icons, Item #10 Buttons, Item #2 Header)
+
+[2026-01-15] Completed Store Redesign Work Item #2: Create Wooden Sign Header
+- Transformed the plain "STORE" header into an immersive wooden sign "The Roost"
+- Changes applied in src/client/StoreUI.lua:
+  1. Title text changed from "🏪 STORE" to "🐔 The Roost" for chicken theme immersion
+  2. Title font changed from GothamBold to FredokaOne (cartoony chunky font)
+  3. Title text color changed to warm cream RGB(255, 248, 220) to match frame
+  4. Added text stroke (dark brown RGB(60, 30, 10), transparency 0) for pop effect
+  5. Added UIStroke to title bar (darker brown RGB(80, 50, 25), thickness 3) for wooden sign border
+  6. Restock timer frame restyled with urgency gradient:
+     - Background changed to orange-red RGB(255, 100, 50)
+     - Added UIGradient from red RGB(220, 60, 60) to orange RGB(255, 140, 50)
+     - Timer text changed to white with dark red text stroke for readability
+- Acceptance criteria met:
+  - Header appears as a hanging wooden sign ✓
+  - Title text is bold, cartoony, and readable ✓
+  - Text has visible stroke/outline for pop effect ✓
+  - Restock timer is styled with urgency gradient ✓
+- Format check passes, build passes
+- Next: Work on remaining high-priority items (Item #7 Icons, Item #10 Buttons, Item #4 Tabs)
