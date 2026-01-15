@@ -340,7 +340,7 @@
       "category": "UI-World",
       "title": "Show Accumulation Rate on Placed Chickens",
       "description": "Chickens on the ground should display their money accumulation rate so players can see earning potential (e.g., '$0.50/s' or '+$30/min').",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Calculate accumulation rate based on chicken type from ChickenConfig",
@@ -362,7 +362,7 @@
         "src/shared/ChickenConfig.lua",
         "src/shared/MoneyScaling.lua"
       ],
-      "technicalNotes": "ChickenConfig should have moneyPerSecond or similar field per chicken type. Display as '+$X/s' in smaller text below the accumulated amount."
+      "technicalNotes": "Fixed: Updated formatMoneyRate() in ChickenVisuals.lua to use per-minute format for slow rates (<$10/s). Fast rates ($10+/s) still show per-second. Rate text already existed in BillboardGui (yellow, smaller font at top of indicator). Rate updates with health multipliers via updateHealthState() which recalculates effective rate and changes color to orange/red when damaged. Common chicken ($1/s) now shows '$60/m', Uncommon ($10/s) shows '$10.0/s', higher rarities show per-second with K suffix for 1000+."
     }
   ],
   "implementationOrder": [

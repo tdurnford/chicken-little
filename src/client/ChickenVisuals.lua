@@ -201,7 +201,7 @@ local function createPlaceholderModel(chickenType: string, rarity: string): Mode
   return model
 end
 
--- Helper: Format money rate for display ($/s)
+-- Helper: Format money rate for display (uses per-minute for slow rates, per-second for fast)
 local function formatMoneyRate(rate: number): string
   if rate >= 1000 then
     return string.format("$%.1fK/s", rate / 1000)
@@ -209,8 +209,22 @@ local function formatMoneyRate(rate: number): string
     return string.format("$%.0f/s", rate)
   elseif rate >= 10 then
     return string.format("$%.1f/s", rate)
+  elseif rate >= 1 then
+    -- For slow rates ($1-$9.99/s), show per-minute for better readability
+    local perMinute = rate * 60
+    if perMinute >= 100 then
+      return string.format("$%.0f/m", perMinute)
+    else
+      return string.format("$%.1f/m", perMinute)
+    end
   else
-    return string.format("$%.2f/s", rate)
+    -- For very slow rates (<$1/s), show per-minute with decimals
+    local perMinute = rate * 60
+    if perMinute >= 1 then
+      return string.format("$%.1f/m", perMinute)
+    else
+      return string.format("$%.2f/m", perMinute)
+    end
   end
 end
 

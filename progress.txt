@@ -4259,3 +4259,34 @@
   - Uses formatted currency display for large amounts ✓
 - Format check passes
 - Next: Work on remaining items (Item #6 Remove Unassigned, Item #8 Store Buttons, etc.)
+
+[2026-01-15] Completed Gameplay & UI Fixes Work Item #11: Show Accumulation Rate on Placed Chickens
+- Root cause: formatMoneyRate() always displayed rates in per-second format, making slow rates
+  like $1/s (Common chicken) hard to read and interpret. Players couldn't easily compare earnings.
+
+1. src/client/ChickenVisuals.lua:
+   - Updated formatMoneyRate() to use per-minute format for slow rates (<$10/s)
+   - Fast rates ($10+/s) continue to show per-second for readability
+   - Rates $1000+/s show with K suffix (e.g., "$1.5K/s")
+   - Very slow rates (<$1/s) show per-minute with appropriate decimal places
+
+- Existing implementation review:
+  * Rate display already existed in createMoneyIndicator() (lines 240-250)
+  * RateText label: yellow color, smaller font, positioned at top of indicator
+  * updateHealthState() already updates rate when chicken is damaged
+  * Effective rate calculated as moneyPerSecond * healthPercent
+
+- Rate display examples after change:
+  * Common ($1/s) → "$60/m" (was "$1.00/s")
+  * Uncommon ($10/s) → "$10.0/s" (unchanged, threshold is $10)
+  * Rare ($100/s) → "$100/s" (unchanged)
+  * Epic ($1000/s) → "$1.0K/s" (unchanged)
+  * Damaged Common at 50% health → "$30.0/m"
+
+- Acceptance criteria met:
+  - Accumulation rate is visible on each placed chicken ✓
+  - Rate reflects actual earning speed including health penalty ✓
+  - Display uses appropriate time unit (per second or per minute) ✓
+  - Rate updates when health multipliers are applied ✓
+- Format check passes, build passes
+- Next: Work on remaining items (Item #6 Remove Unassigned, Item #8 Store Buttons, etc.)
