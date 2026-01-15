@@ -116,6 +116,11 @@ function DamageUI.showDamageNumber(damage: number, source: string?)
     return
   end
 
+  -- Don't show damage numbers for 0 or negative values (prevents "-0" display)
+  if damage <= 0 then
+    return
+  end
+
   -- Create damage number label
   local damageLabel = Instance.new("TextLabel")
   damageLabel.Name = "DamageNumber"
