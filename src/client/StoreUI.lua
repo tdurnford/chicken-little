@@ -116,6 +116,56 @@ local function updateRestockTimer()
 end
 
 --[[
+	Generates a description for an egg based on its hatch outcomes.
+	Shows what chickens can be hatched from this egg.
+	@param eggType string - The egg type identifier
+	@return string - Description text for the egg
+]]
+local function getEggDescription(eggType: string): string
+  local eggConfig = EggConfig.get(eggType)
+  if not eggConfig then
+    return "Contains mysterious chickens"
+  end
+
+  -- Find the rarest outcome (lowest probability = rarest)
+  local rarestOutcome = eggConfig.hatchOutcomes[1]
+  for _, outcome in ipairs(eggConfig.hatchOutcomes) do
+    if outcome.probability < rarestOutcome.probability then
+      rarestOutcome = outcome
+    end
+  end
+
+  -- Get the display name of the rarest chicken
+  local chickenConfig = ChickenConfig.get(rarestOutcome.chickenType)
+  local rarestName = chickenConfig and chickenConfig.displayName or rarestOutcome.chickenType
+
+  return "Contains "
+    .. eggConfig.rarity:lower()
+    .. " chickens • "
+    .. rarestOutcome.probability
+    .. "% "
+    .. rarestName
+end
+
+--[[
+	Generates a description for a chicken based on its config.
+	@param chickenType string - The chicken type identifier
+	@return string - Description text for the chicken
+]]
+local function getChickenDescription(chickenType: string): string
+  local chickenConfig = ChickenConfig.get(chickenType)
+  if not chickenConfig then
+    return "A fine feathered friend"
+  end
+
+  return "Earns $"
+    .. chickenConfig.moneyPerSecond
+    .. "/sec • Lays eggs every "
+    .. math.floor(chickenConfig.eggLayIntervalSeconds / 60)
+    .. "m"
+end
+
+--[[
 	Creates a single item card for the store (works for both eggs and chickens).
 	@param itemType "egg" | "chicken" - The type of item
 	@param itemId string - The item type identifier
@@ -126,6 +176,7 @@ end
 	@param stock number - Current stock count
 	@param parent Instance - Parent frame to add card to
 	@param index number - Index for positioning
+	@param description string? - Optional description text (generated if not provided)
 ]]
 local function createItemCard(
   itemType: "egg" | "chicken",
@@ -136,7 +187,8 @@ local function createItemCard(
   robuxPrice: number,
   stock: number,
   parent: Frame,
-  index: number
+  index: number,
+  description: string?
 ): Frame
   local card = Instance.new("Frame")
   card.Name = itemId
@@ -209,8 +261,8 @@ local function createItemCard(
   -- Item name (white with dark stroke for visibility on gradients)
   local nameLabel = Instance.new("TextLabel")
   nameLabel.Name = "Name"
-  nameLabel.Size = UDim2.new(0.35, -20, 0, 28)
-  nameLabel.Position = UDim2.new(0, 55, 0, 12) -- Shifted right for larger icon
+  nameLabel.Size = UDim2.new(0.35, -20, 0, 22)
+  nameLabel.Position = UDim2.new(0, 55, 0, 8) -- Shifted right for larger icon
   nameLabel.BackgroundTransparency = 1
   nameLabel.Text = displayName
   nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- White for visibility
@@ -221,11 +273,32 @@ local function createItemCard(
   nameLabel.TextStrokeTransparency = 0
   nameLabel.Parent = card
 
+  -- Subtext description (italicized style, describes egg contents)
+  local subtextContent = description
+  if not subtextContent then
+    subtextContent = itemType == "egg" and getEggDescription(itemId)
+      or getChickenDescription(itemId)
+  end
+  local subtextLabel = Instance.new("TextLabel")
+  subtextLabel.Name = "Subtext"
+  subtextLabel.Size = UDim2.new(0.5, -20, 0, 14)
+  subtextLabel.Position = UDim2.new(0, 55, 0, 30)
+  subtextLabel.BackgroundTransparency = 1
+  subtextLabel.Text = subtextContent
+  subtextLabel.TextColor3 = Color3.fromRGB(80, 60, 40) -- Dark brown, slightly muted
+  subtextLabel.TextScaled = true
+  subtextLabel.Font = Enum.Font.GothamMedium
+  subtextLabel.TextXAlignment = Enum.TextXAlignment.Left
+  subtextLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+  subtextLabel.TextStrokeTransparency = 0.5
+  subtextLabel.TextTransparency = 0.15 -- Slightly faded for subordinate appearance
+  subtextLabel.Parent = card
+
   -- Rarity label (dark text for readability on gradients)
   local rarityLabel = Instance.new("TextLabel")
   rarityLabel.Name = "Rarity"
-  rarityLabel.Size = UDim2.new(0.35, -20, 0, 20)
-  rarityLabel.Position = UDim2.new(0, 55, 0, 42) -- Shifted right for larger icon
+  rarityLabel.Size = UDim2.new(0.35, -20, 0, 16)
+  rarityLabel.Position = UDim2.new(0, 55, 0, 46)
   rarityLabel.BackgroundTransparency = 1
   rarityLabel.Text = rarity
   rarityLabel.TextColor3 = Color3.fromRGB(50, 50, 50) -- Dark grey for readability
@@ -239,8 +312,8 @@ local function createItemCard(
   -- Stock label (dark text for readability)
   local stockLabel = Instance.new("TextLabel")
   stockLabel.Name = "StockLabel"
-  stockLabel.Size = UDim2.new(0, 60, 0, 20)
-  stockLabel.Position = UDim2.new(0, 55, 0, 70) -- Shifted right for larger icon
+  stockLabel.Size = UDim2.new(0, 60, 0, 16)
+  stockLabel.Position = UDim2.new(0, 55, 0, 64)
   stockLabel.BackgroundTransparency = 1
   stockLabel.Text = stock > 0 and ("x" .. tostring(stock)) or "SOLD OUT"
   stockLabel.TextColor3 = stock > 0 and Color3.fromRGB(50, 50, 50) or Color3.fromRGB(180, 30, 30)
@@ -771,8 +844,8 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   -- Name label (white with dark stroke)
   local nameLabel = Instance.new("TextLabel")
   nameLabel.Name = "Name"
-  nameLabel.Size = UDim2.new(0.35, -20, 0, 28)
-  nameLabel.Position = UDim2.new(0, 55, 0, 12)
+  nameLabel.Size = UDim2.new(0.35, -20, 0, 22)
+  nameLabel.Position = UDim2.new(0, 55, 0, 8)
   nameLabel.BackgroundTransparency = 1
   nameLabel.Text = supplyItem.displayName
   nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -783,11 +856,27 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   nameLabel.TextStrokeTransparency = 0
   nameLabel.Parent = card
 
+  -- Subtext description (below name, describes trap functionality)
+  local subtextLabel = Instance.new("TextLabel")
+  subtextLabel.Name = "Subtext"
+  subtextLabel.Size = UDim2.new(0.5, -20, 0, 14)
+  subtextLabel.Position = UDim2.new(0, 55, 0, 30)
+  subtextLabel.BackgroundTransparency = 1
+  subtextLabel.Text = supplyItem.description
+  subtextLabel.TextColor3 = Color3.fromRGB(80, 60, 40) -- Dark brown, slightly muted
+  subtextLabel.TextScaled = true
+  subtextLabel.Font = Enum.Font.GothamMedium
+  subtextLabel.TextXAlignment = Enum.TextXAlignment.Left
+  subtextLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+  subtextLabel.TextStrokeTransparency = 0.5
+  subtextLabel.TextTransparency = 0.15 -- Slightly faded for subordinate appearance
+  subtextLabel.Parent = card
+
   -- Tier label (dark for readability)
   local tierLabel = Instance.new("TextLabel")
   tierLabel.Name = "Tier"
-  tierLabel.Size = UDim2.new(0.35, -20, 0, 20)
-  tierLabel.Position = UDim2.new(0, 55, 0, 42)
+  tierLabel.Size = UDim2.new(0.35, -20, 0, 16)
+  tierLabel.Position = UDim2.new(0, 55, 0, 46)
   tierLabel.BackgroundTransparency = 1
   tierLabel.Text = supplyItem.tier
   tierLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
@@ -798,21 +887,22 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   tierLabel.TextStrokeTransparency = 0.7
   tierLabel.Parent = card
 
-  -- Description label
-  local descLabel = Instance.new("TextLabel")
-  descLabel.Name = "Description"
-  descLabel.Size = UDim2.new(0.4, 0, 0, 20)
-  descLabel.Position = UDim2.new(0, 55, 0, 70)
-  descLabel.BackgroundTransparency = 1
-  descLabel.Text = supplyItem.description
-  descLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
-  descLabel.TextScaled = true
-  descLabel.Font = Enum.Font.GothamMedium -- Standard body font
-  descLabel.TextXAlignment = Enum.TextXAlignment.Left
-  descLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
-  descLabel.TextStrokeTransparency = 0.7
-  descLabel.TextWrapped = true
-  descLabel.Parent = card
+  -- Effectiveness info (catch rate info)
+  local effectivenessLabel = Instance.new("TextLabel")
+  effectivenessLabel.Name = "Effectiveness"
+  effectivenessLabel.Size = UDim2.new(0.4, 0, 0, 16)
+  effectivenessLabel.Position = UDim2.new(0, 55, 0, 64)
+  effectivenessLabel.BackgroundTransparency = 1
+  effectivenessLabel.Text = "+"
+    .. tostring(math.floor((supplyItem.effectiveness or 0) * 100))
+    .. "% catch rate"
+  effectivenessLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
+  effectivenessLabel.TextScaled = true
+  effectivenessLabel.Font = Enum.Font.GothamMedium
+  effectivenessLabel.TextXAlignment = Enum.TextXAlignment.Left
+  effectivenessLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+  effectivenessLabel.TextStrokeTransparency = 0.7
+  effectivenessLabel.Parent = card
 
   -- Cash buy button (stacked vertically)
   local canAfford = cachedPlayerMoney >= supplyItem.price
@@ -1068,8 +1158,8 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
   -- Weapon name (white with dark stroke)
   local nameLabel = Instance.new("TextLabel")
   nameLabel.Name = "Name"
-  nameLabel.Size = UDim2.new(0.35, -20, 0, 28)
-  nameLabel.Position = UDim2.new(0, 55, 0, 12)
+  nameLabel.Size = UDim2.new(0.35, -20, 0, 22)
+  nameLabel.Position = UDim2.new(0, 55, 0, 8)
   nameLabel.BackgroundTransparency = 1
   nameLabel.Text = weaponItem.displayName
   nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1080,11 +1170,27 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
   nameLabel.TextStrokeTransparency = 0
   nameLabel.Parent = card
 
+  -- Subtext description (below name, describes weapon)
+  local subtextLabel = Instance.new("TextLabel")
+  subtextLabel.Name = "Subtext"
+  subtextLabel.Size = UDim2.new(0.5, -20, 0, 14)
+  subtextLabel.Position = UDim2.new(0, 55, 0, 30)
+  subtextLabel.BackgroundTransparency = 1
+  subtextLabel.Text = weaponItem.description
+  subtextLabel.TextColor3 = Color3.fromRGB(80, 60, 40) -- Dark brown, slightly muted
+  subtextLabel.TextScaled = true
+  subtextLabel.Font = Enum.Font.GothamMedium
+  subtextLabel.TextXAlignment = Enum.TextXAlignment.Left
+  subtextLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+  subtextLabel.TextStrokeTransparency = 0.5
+  subtextLabel.TextTransparency = 0.15 -- Slightly faded for subordinate appearance
+  subtextLabel.Parent = card
+
   -- Tier and damage label (dark for readability)
   local tierLabel = Instance.new("TextLabel")
   tierLabel.Name = "Tier"
-  tierLabel.Size = UDim2.new(0.35, -20, 0, 20)
-  tierLabel.Position = UDim2.new(0, 55, 0, 42)
+  tierLabel.Size = UDim2.new(0.35, -20, 0, 16)
+  tierLabel.Position = UDim2.new(0, 55, 0, 46)
   tierLabel.BackgroundTransparency = 1
   tierLabel.Text = weaponItem.tier .. " • " .. weaponItem.damage .. " DMG"
   tierLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
@@ -1101,8 +1207,8 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
 
   local statusLabel = Instance.new("TextLabel")
   statusLabel.Name = "Status"
-  statusLabel.Size = UDim2.new(0.35, 0, 0, 20)
-  statusLabel.Position = UDim2.new(0, 55, 0, 70)
+  statusLabel.Size = UDim2.new(0.35, 0, 0, 16)
+  statusLabel.Position = UDim2.new(0, 55, 0, 64)
   statusLabel.BackgroundTransparency = 1
   if isOwned then
     statusLabel.Text = "✓ OWNED"
@@ -1111,7 +1217,7 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
     statusLabel.Text = "★ STARTER"
     statusLabel.TextColor3 = Color3.fromRGB(80, 80, 80)
   else
-    statusLabel.Text = weaponItem.description
+    statusLabel.Text = ""
     statusLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
   end
   statusLabel.TextScaled = true

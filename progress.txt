@@ -3624,3 +3624,34 @@
   - Scrollbar is visible but not obtrusive (thickness 6, brown color) ✓
 - Format check passes, build passes
 - Next: Work on remaining medium priority item (Item #9 Subtext) or low priority animations (Items #14, #15, #16)
+
+[2026-01-15] Completed Store Redesign Work Item #9: Add Subtext Description to Item Cards
+- Added italicized subtext descriptions below item names in all card types
+- Changes applied in src/client/StoreUI.lua:
+  1. Created getEggDescription() helper function:
+     - Generates "Contains [rarity] chickens • [probability]% [rarest chicken]"
+     - Pulls data from EggConfig and ChickenConfig for accurate descriptions
+  2. Created getChickenDescription() helper function:
+     - Generates "Earns $[moneyPerSecond]/sec • Lays eggs every [minutes]m"
+     - Pulls data from ChickenConfig for accurate stats
+  3. Updated createItemCard function:
+     - Added optional description parameter
+     - Added subtextLabel positioned at Y=30, below nameLabel (Y=8)
+     - Subtext styled with muted dark brown color (80, 60, 40), slight transparency (0.15)
+     - Font: GothamMedium, smaller than name for visual hierarchy
+  4. Updated createSupplyCard function:
+     - Moved description to subtextLabel at Y=30 (was at Y=70)
+     - Added effectiveness label showing "+X% catch rate" at Y=64
+     - Reorganized layout: name (Y=8) -> subtext (Y=30) -> tier (Y=46) -> effectiveness (Y=64)
+  5. Updated createWeaponCard function:
+     - Added subtextLabel at Y=30 for weapon descriptions
+     - Reorganized layout: name (Y=8) -> subtext (Y=30) -> tier+damage (Y=46) -> status (Y=64)
+     - Status label now only shows OWNED/STARTER, not description (moved to subtext)
+- Acceptance criteria met:
+  - Each item card shows descriptive subtext ✓
+  - Subtext is visually subordinate to main item name (smaller, muted, transparent) ✓
+  - Subtext provides useful information about item contents ✓
+  - Layout accommodates subtext without crowding (reorganized positions) ✓
+- Format check passes, build passes
+- Lint skipped (selene CPU architecture issue)
+- Next: Work on remaining low priority items (Item #14, #15, #16) - animations and stretch goals

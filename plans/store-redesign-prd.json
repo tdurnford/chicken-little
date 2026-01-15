@@ -322,7 +322,7 @@
       "category": "UI-ItemCards",
       "title": "Add Subtext Description to Item Cards",
       "description": "Add italicized subtext below the item name that describes what the egg contains, e.g., 'Contains basic chickens' for Common Eggs.",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Add parameter for description/subtext to createItemCard function",
