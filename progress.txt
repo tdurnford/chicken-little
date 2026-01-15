@@ -3574,3 +3574,26 @@
   - Overall typography feels playful and cohesive ✓
 - Format check passes, build passes
 - Next: Work on remaining medium priority items (Item #9 Subtext, Item #11 Replenish Button, Item #12 Scroll Padding)
+
+[2026-01-15] Completed Store Redesign Work Item #11: Transform Replenish Button to Gold 'Restock Now' Button
+- Transformed the replenish button into an attractive gold-themed "Restock Now" button
+- Changes applied in src/client/StoreUI.lua lines 1690-1738:
+  1. Changed BackgroundColor3 from Robux blue to gold RGB(255, 215, 0)
+  2. Updated Text from "⏱ Replenish Now" to "⚡ Restock Now!" with lightning emoji
+  3. Changed TextColor3 to dark brown RGB(80, 50, 0) for contrast on gold
+  4. Changed Font to Enum.Font.FredokaOne for cartoony consistency
+  5. Added TextStrokeColor3 white with TextStrokeTransparency 0.2 for pop effect
+  6. Added UIStroke with dark gold RGB(200, 150, 0), thickness 2 for button definition
+  7. Added UIGradient with 3-point metallic shine (light gold -> gold -> darker gold)
+     - Rotation 90 for vertical gradient effect
+  8. Implemented hover effects via MouseEnter/MouseLeave:
+     - Default: Gold RGB(255, 215, 0) background, dark gold stroke
+     - Hover: Brighter gold RGB(255, 235, 100) background, brighter stroke RGB(255, 200, 50)
+- Acceptance criteria met:
+  - Replenish button is gold colored ✓
+  - Button text includes lightning emoji ✓
+  - Button has visible shine/metallic effect (UIGradient) ✓
+  - Text is readable with white stroke effect ✓
+  - Button attracts attention with gold coloring and hover effects ✓
+- Format check passes, build passes
+- Next: Work on remaining medium priority items (Item #9 Subtext, Item #12 Scroll Padding) or low priority animations (Items #14, #15)

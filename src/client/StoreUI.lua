@@ -1687,21 +1687,55 @@ function StoreUI.create()
   scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(139, 90, 43) -- Brown to match theme
   scrollFrame.Parent = mainFrame
 
-  -- Replenish Now button (Robux purchase)
+  -- Replenish Now button (Robux purchase) - Gold "Restock Now" themed button
   replenishButton = Instance.new("TextButton")
   replenishButton.Name = "ReplenishButton"
   replenishButton.Size = UDim2.new(1, -20, 0, 40)
   replenishButton.Position = UDim2.new(0, 10, 1, -50)
-  replenishButton.BackgroundColor3 = Color3.fromRGB(0, 162, 255) -- Robux blue
-  replenishButton.Text = "⏱ Replenish Now - R$" .. tostring(ROBUX_REPLENISH_PRICE)
-  replenishButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+  replenishButton.BackgroundColor3 = Color3.fromRGB(255, 215, 0) -- Gold color
+  replenishButton.Text = "⚡ Restock Now! - R$" .. tostring(ROBUX_REPLENISH_PRICE)
+  replenishButton.TextColor3 = Color3.fromRGB(80, 50, 0) -- Dark brown for contrast
   replenishButton.TextScaled = true
-  replenishButton.Font = Enum.Font.GothamBold
+  replenishButton.Font = Enum.Font.FredokaOne
+  replenishButton.TextStrokeColor3 = Color3.fromRGB(255, 255, 255) -- White stroke
+  replenishButton.TextStrokeTransparency = 0.2 -- Visible stroke for pop effect
   replenishButton.Parent = mainFrame
 
   local replenishCorner = Instance.new("UICorner")
   replenishCorner.CornerRadius = UDim.new(0, 8)
   replenishCorner.Parent = replenishButton
+
+  -- UIStroke for button definition (dark gold/orange border)
+  local replenishStroke = Instance.new("UIStroke")
+  replenishStroke.Color = Color3.fromRGB(200, 150, 0) -- Dark gold
+  replenishStroke.Thickness = 2
+  replenishStroke.Parent = replenishButton
+
+  -- UIGradient for metallic shine effect (light gold to gold)
+  local replenishGradient = Instance.new("UIGradient")
+  replenishGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 240, 150)), -- Light gold at top
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 215, 0)), -- Gold in middle
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(230, 180, 0)), -- Darker gold at bottom
+  })
+  replenishGradient.Rotation = 90 -- Vertical gradient
+  replenishGradient.Parent = replenishButton
+
+  -- Hover effect for replenish button
+  local defaultGoldColor = Color3.fromRGB(255, 215, 0)
+  local hoverGoldColor = Color3.fromRGB(255, 235, 100) -- Brighter gold on hover
+  local defaultStrokeColor = Color3.fromRGB(200, 150, 0)
+  local hoverStrokeColor = Color3.fromRGB(255, 200, 50) -- Brighter stroke on hover
+
+  replenishButton.MouseEnter:Connect(function()
+    replenishButton.BackgroundColor3 = hoverGoldColor
+    replenishStroke.Color = hoverStrokeColor
+  end)
+
+  replenishButton.MouseLeave:Connect(function()
+    replenishButton.BackgroundColor3 = defaultGoldColor
+    replenishStroke.Color = defaultStrokeColor
+  end)
 
   -- Confirmation dialog (hidden by default)
   confirmationFrame = Instance.new("Frame")
