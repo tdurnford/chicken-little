@@ -321,3 +321,28 @@ Moved the chicken counter from top-left to bottom-right corner with no backgroun
 - ✅ Text has black outline for visibility
 - ✅ Counter is readable and doesn't overlap with other UI
 - ✅ Style matches the money display aesthetic
+
+## 2026-01-15: Predators Should Not Target Players Without Chickens (bugfix-prd.json Work Item #1) - COMPLETED
+
+Fixed predators targeting players who have no placed chickens.
+
+### Root cause:
+The predator spawning logic in Main.server.lua would spawn predators for players regardless of whether they had any placed chickens. Predators would spawn and wander toward empty coops.
+
+### Changes made:
+- Added `hasPlacedChickens` check before spawning predators (line ~2251)
+- Predators now only spawn for players who have at least one placed chicken
+- Players with zero chickens will not be targeted by predators at all
+
+### Files modified:
+- src/server/Main.server.lua
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Existing despawn logic (8-second timer for attacking predators when no chickens remain) is still in place as fallback
+
+### Acceptance criteria met:
+- ✅ Predators never target player sections with 0 placed chickens
+- ✅ Players with chickens are still targeted normally
+- ✅ No errors when players have 0 chickens (spawn is simply skipped)

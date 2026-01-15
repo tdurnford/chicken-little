@@ -2247,9 +2247,13 @@ local function runGameLoop(deltaTime: number)
     -- Get time-of-day spawn multiplier for increased predator danger at night
     local timeSpawnMultiplier = DayNightCycle.getPredatorSpawnMultiplier(dayNightState)
 
+    -- Skip predator spawning if player has no placed chickens (nothing to target)
+    local hasPlacedChickens = #playerData.placedChickens > 0
+
     if
       not isProtected
       and not hasShieldActive
+      and hasPlacedChickens
       and PredatorSpawning.shouldSpawn(gameState.spawnState, currentTime, timeSpawnMultiplier)
     then
       local result =
