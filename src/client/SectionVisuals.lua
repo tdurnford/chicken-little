@@ -17,7 +17,7 @@ local SectionVisuals = {}
 
 -- Visual configuration
 local COLORS = {
-  ground = Color3.fromRGB(76, 153, 76), -- Grass green
+  ground = Color3.fromRGB(76, 153, 76), -- Green ground
   spotAvailable = Color3.fromRGB(100, 200, 100), -- Light green (available)
   spotOccupied = Color3.fromRGB(200, 100, 100), -- Light red (occupied)
   spotHighlight = Color3.fromRGB(255, 255, 150), -- Yellow highlight
@@ -70,7 +70,7 @@ local function createGround(sectionCenter: PlayerSection.Vector3, parent: Instan
     COLORS.ground,
     TRANSPARENCY.ground
   )
-  ground.Material = Enum.Material.Grass
+  ground.Material = Enum.Material.SmoothPlastic
   ground.Parent = parent
 
   return ground

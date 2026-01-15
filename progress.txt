@@ -923,3 +923,33 @@ The center platform was created by the `createCoopFloor` function in SectionVisu
 - ✅ Identified the center platform creation code (createCoopFloor in SectionVisuals.lua)
 - ✅ Removed platform generation
 - ✅ No dependencies broken from removal (function was only called in buildSection)
+
+## 2026-01-15: Remove Grass (ui-fixes-prd.json Work Item - MEDIUM) - COMPLETED
+
+Removed grass material from the game world for a cleaner visual appearance by changing the ground material from Grass to SmoothPlastic.
+
+### Root cause:
+The grass texture was applied to the ground via `Enum.Material.Grass` in the `createGround` function in SectionVisuals.lua. This made the ground appear textured and "busy" visually.
+
+### Changes made:
+- Changed `ground.Material = Enum.Material.Grass` to `ground.Material = Enum.Material.SmoothPlastic` in createGround function (line 73)
+- Updated color comment from "Grass green" to "Green ground" for accuracy (line 20)
+
+### Files modified:
+- src/client/SectionVisuals.lua (2 line changes)
+- plans/ui-fixes-prd.json (marked as completed with resolution)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Ground retains the same green color (RGB 76, 153, 76)
+- Ground now has a smooth, clean appearance instead of textured grass
+- No functionality changes - only visual material swap
+
+### Acceptance criteria met:
+- ✅ Located grass generation code (Enum.Material.Grass in SectionVisuals.lua)
+- ✅ Removed grass creation logic (changed to SmoothPlastic)
+- ✅ Clean up any grass-related references (updated comment)
+
+### Note for next developer:
+The PRD originally listed MapGeneration.lua and PlayerSection.lua as files to check, but the grass material was only in SectionVisuals.lua. The shared modules handle positioning/sizing, not rendering. Updated PRD files list accordingly.

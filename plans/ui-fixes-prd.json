@@ -78,12 +78,15 @@
       "title": "Remove Grass",
       "description": "Remove grass elements from the game world for a cleaner visual appearance.",
       "priority": "medium",
-      "files": ["src/shared/MapGeneration.lua", "src/shared/PlayerSection.lua"],
+      "status": "completed",
+      "completedDate": "2026-01-15",
+      "files": ["src/client/SectionVisuals.lua"],
       "tasks": [
         "Locate grass generation code",
         "Remove grass creation logic",
         "Clean up any grass-related assets or references"
-      ]
+      ],
+      "resolution": "Changed ground material from Enum.Material.Grass to Enum.Material.SmoothPlastic in SectionVisuals.lua createGround function. This gives a cleaner, smoother visual appearance while maintaining the green color (RGB 76, 153, 76). Updated color comment from 'Grass green' to 'Green ground' for accuracy."
     },
     {
       "id": "move-shield-indicator-top",
