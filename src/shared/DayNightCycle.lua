@@ -14,8 +14,9 @@ local Lighting = game:GetService("Lighting")
 local DayNightCycle = {}
 
 -- Configuration
-local FULL_CYCLE_MINUTES = 20 -- Real-world minutes for full 24-hour cycle
+local FULL_CYCLE_MINUTES = 10 -- Real-world minutes for full 24-hour cycle
 local SECONDS_PER_GAME_HOUR = (FULL_CYCLE_MINUTES * 60) / 24
+local START_GAME_HOUR = 9 -- Start at 9:00 AM (during the day)
 
 -- Time thresholds (in game hours, 0-24)
 local TIME_DAWN_START = 5
@@ -40,18 +41,18 @@ local LIGHTING_PRESETS = {
     ColorShift_Bottom = Color3.fromRGB(200, 200, 200),
   },
   dusk = {
-    Ambient = Color3.fromRGB(180, 120, 100),
-    OutdoorAmbient = Color3.fromRGB(200, 140, 110),
+    Ambient = Color3.fromRGB(160, 140, 130),
+    OutdoorAmbient = Color3.fromRGB(180, 160, 145),
     Brightness = 1.5,
-    ColorShift_Top = Color3.fromRGB(255, 180, 120),
-    ColorShift_Bottom = Color3.fromRGB(180, 120, 100),
+    ColorShift_Top = Color3.fromRGB(255, 210, 170),
+    ColorShift_Bottom = Color3.fromRGB(180, 160, 140),
   },
   night = {
-    Ambient = Color3.fromRGB(80, 90, 120),
-    OutdoorAmbient = Color3.fromRGB(60, 70, 100),
-    Brightness = 0.5,
-    ColorShift_Top = Color3.fromRGB(100, 120, 180),
-    ColorShift_Bottom = Color3.fromRGB(60, 80, 120),
+    Ambient = Color3.fromRGB(120, 130, 160),
+    OutdoorAmbient = Color3.fromRGB(100, 110, 140),
+    Brightness = 1.0,
+    ColorShift_Top = Color3.fromRGB(140, 160, 200),
+    ColorShift_Bottom = Color3.fromRGB(100, 120, 160),
   },
 }
 
@@ -65,16 +66,16 @@ local COLOR_CORRECTION_PRESETS = {
   },
   day = { Brightness = 0, Contrast = 0, Saturation = 0, TintColor = Color3.fromRGB(255, 255, 255) },
   dusk = {
-    Brightness = 0.02,
-    Contrast = 0.05,
-    Saturation = 0.15,
-    TintColor = Color3.fromRGB(255, 230, 200),
+    Brightness = 0.01,
+    Contrast = 0.03,
+    Saturation = 0.08,
+    TintColor = Color3.fromRGB(255, 240, 220),
   },
   night = {
-    Brightness = -0.05,
-    Contrast = 0.1,
-    Saturation = -0.1,
-    TintColor = Color3.fromRGB(200, 210, 255),
+    Brightness = 0,
+    Contrast = 0.05,
+    Saturation = -0.05,
+    TintColor = Color3.fromRGB(210, 220, 255),
   },
 }
 
@@ -192,8 +193,10 @@ end
 
 -- Initialize the day/night cycle state
 function DayNightCycle.init(): DayNightState
+  -- Offset start time so we begin at START_GAME_HOUR instead of midnight
+  local startOffset = START_GAME_HOUR * SECONDS_PER_GAME_HOUR
   local state: DayNightState = {
-    startTime = os.time(),
+    startTime = os.time() - startOffset,
     colorCorrection = nil,
     bloom = nil,
   }
