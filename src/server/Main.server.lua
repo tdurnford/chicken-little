@@ -1946,49 +1946,9 @@ local function runGameLoop(deltaTime: number)
   -- Update day/night cycle lighting
   DayNightCycle.update(dayNightState)
 
-  -- Check for time-of-day transitions and warn players about nightfall
+  -- Track time-of-day transitions (notifications removed per Work Item #8)
   local currentTimeOfDay = DayNightCycle.getTimeOfDay(dayNightState)
   if currentTimeOfDay ~= previousTimeOfDay then
-    -- Transitioning to dusk - warn about increased predator danger
-    if currentTimeOfDay == "dusk" then
-      local nightfallWarningEvent = RemoteSetup.getEvent("NightfallWarning")
-      if nightfallWarningEvent then
-        for _, player in ipairs(players) do
-          nightfallWarningEvent:FireClient(player, {
-            timeOfDay = "dusk",
-            message = "Night is falling! Predators are becoming more active.",
-            spawnMultiplier = 1.25,
-          })
-        end
-      end
-      print("[Main.server] Dusk warning sent to all players")
-    -- Transitioning to night - stronger warning
-    elseif currentTimeOfDay == "night" then
-      local nightfallWarningEvent = RemoteSetup.getEvent("NightfallWarning")
-      if nightfallWarningEvent then
-        for _, player in ipairs(players) do
-          nightfallWarningEvent:FireClient(player, {
-            timeOfDay = "night",
-            message = "Night has fallen! Predator danger is at its peak!",
-            spawnMultiplier = 2.0,
-          })
-        end
-      end
-      print("[Main.server] Night warning sent to all players")
-    -- Transitioning to dawn - safety returning
-    elseif currentTimeOfDay == "dawn" then
-      local nightfallWarningEvent = RemoteSetup.getEvent("NightfallWarning")
-      if nightfallWarningEvent then
-        for _, player in ipairs(players) do
-          nightfallWarningEvent:FireClient(player, {
-            timeOfDay = "dawn",
-            message = "Dawn is breaking. Predator activity is decreasing.",
-            spawnMultiplier = 0.75,
-          })
-        end
-      end
-      print("[Main.server] Dawn notification sent to all players")
-    end
     previousTimeOfDay = currentTimeOfDay
   end
 

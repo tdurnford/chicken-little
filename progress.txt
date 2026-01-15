@@ -486,3 +486,30 @@ The `checkAndApplyBankruptcyAssistance` function in Main.server.lua was adding a
 - ✅ Player with $99 receives $1 (to reach $100)
 - ✅ Player with $100+ receives nothing (not bankrupt)
 - ✅ Notification shows correct amount awarded
+
+## 2026-01-15: Remove Day/Night Transition Messages (bugfix-prd.json Work Item #8) - COMPLETED
+
+Removed notification messages that appear during day/night transitions to reduce UI clutter.
+
+### Root cause:
+The server was firing NightfallWarning events to all clients whenever the time of day changed to dusk, night, or dawn. These notifications were unnecessary and cluttered the UI.
+
+### Changes made:
+- Modified Main.server.lua (lines ~1949-1953):
+  - Removed all NightfallWarning event firing blocks for dusk, night, and dawn
+  - Kept the time-of-day tracking (`previousTimeOfDay = currentTimeOfDay`) for internal use
+  - Predator spawn rate multipliers are unaffected (handled separately via `DayNightCycle.getPredatorSpawnMultiplier()`)
+
+### Files modified:
+- src/server/Main.server.lua
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- The NightfallWarning event handler on the client side remains but will simply never be triggered
+- Predator spawn rates still change based on time of day (verified via code path analysis)
+
+### Acceptance criteria met:
+- ✅ No notification messages appear during day/night transitions
+- ✅ Predator spawn rate changes still work correctly
+- ✅ UI is cleaner without unnecessary notifications
