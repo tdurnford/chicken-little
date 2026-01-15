@@ -806,3 +806,28 @@ The target indicator was a pulsing red cylinder (not actually a "bar") created a
 - ✅ Removed the red bar rendering logic (3 functions deleted)
 - ✅ Cleaned up related event connections (3 handlers simplified)
 - ✅ UI is now cleaner without the target indicator clutter
+
+## 2026-01-15: Remove Blue Vertical Bar at Spawn (ui-fixes-prd.json Work Item - HIGH) - COMPLETED
+
+Removed the blue spawn marker that appeared at the player's spawn point. This was a debug/placeholder visual element that cluttered the game world.
+
+### Root cause:
+The blue vertical bar was a neon cylinder created by the `createSpawnMarker` function in SectionVisuals.lua. It was positioned at the spawn point with Color3.fromRGB(100, 150, 255) (blue) and rotated 90 degrees to appear vertical.
+
+### Changes made:
+- Removed `createSpawnMarker` function from SectionVisuals.lua (lines 185-202)
+- Removed `createSpawnMarker(sectionCenter, sectionFolder)` call from `buildSection` function
+
+### Files modified:
+- src/client/SectionVisuals.lua (removed ~18 lines)
+- plans/ui-fixes-prd.json (marked as completed)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Spawn functionality is NOT affected - player positioning is handled by PlayerSection.getSpawnPoint() which is still used for teleporting players
+
+### Acceptance criteria met:
+- ✅ Located the source of the blue vertical bar (createSpawnMarker in SectionVisuals.lua)
+- ✅ Removed the visual element
+- ✅ Spawn functionality remains intact (positioning logic unchanged)

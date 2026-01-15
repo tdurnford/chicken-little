@@ -181,26 +181,6 @@ local function createBoundaries(sectionCenter: PlayerSection.Vector3, parent: In
   end
 end
 
--- Create spawn point marker
-local function createSpawnMarker(sectionCenter: PlayerSection.Vector3, parent: Instance)
-  local spawnPoint = PlayerSection.getSpawnPoint(sectionCenter)
-
-  local marker = createPart(
-    "SpawnMarker",
-    Vector3.new(4, 0.2, 4),
-    Vector3.new(spawnPoint.x, sectionCenter.y + 0.1, spawnPoint.z),
-    Color3.fromRGB(100, 150, 255),
-    0.5
-  )
-  marker.Material = Enum.Material.Neon
-  marker.CanCollide = false
-  marker.Shape = Enum.PartType.Cylinder
-  marker.Orientation = Vector3.new(0, 0, 90)
-  marker.Parent = parent
-
-  return marker
-end
-
 -- Build the complete section visuals
 -- Note: Static coop spots are no longer created since chickens now roam freely
 function SectionVisuals.buildSection(sectionIndex: number, _occupiedSpots: { [number]: boolean }?)
@@ -226,7 +206,6 @@ function SectionVisuals.buildSection(sectionIndex: number, _occupiedSpots: { [nu
   createCoopFloor(sectionCenter, sectionFolder)
   -- Note: Coop spots no longer created - chickens roam freely within section
   createBoundaries(sectionCenter, sectionFolder)
-  createSpawnMarker(sectionCenter, sectionFolder)
 
   print(
     string.format("[SectionVisuals] Built section %d visuals (free-roaming mode)", sectionIndex)
