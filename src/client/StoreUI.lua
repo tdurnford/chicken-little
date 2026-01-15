@@ -381,11 +381,7 @@ local function createItemCard(
     ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
     ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200)),
   })
-  cashShine.Transparency = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 0.7),
-    NumberSequenceKeypoint.new(0.3, 0.9),
-    NumberSequenceKeypoint.new(1, 0.85),
-  })
+  cashShine.Transparency = NumberSequence.new(0) -- Solid, no transparency
   cashShine.Rotation = 45
   cashShine.Parent = buyButton
 
@@ -467,11 +463,7 @@ local function createItemCard(
     ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
     ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200)),
   })
-  premiumShine.Transparency = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 0.7),
-    NumberSequenceKeypoint.new(0.3, 0.9),
-    NumberSequenceKeypoint.new(1, 0.85),
-  })
+  premiumShine.Transparency = NumberSequence.new(0) -- Solid, no transparency
   premiumShine.Rotation = 45
   premiumShine.Parent = robuxButton
 
@@ -738,11 +730,7 @@ local function createPowerUpCard(
     ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
     ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200)),
   })
-  premiumShine.Transparency = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 0.7),
-    NumberSequenceKeypoint.new(0.3, 0.9),
-    NumberSequenceKeypoint.new(1, 0.85),
-  })
+  premiumShine.Transparency = NumberSequence.new(0) -- Solid, no transparency
   premiumShine.Rotation = 45
   premiumShine.Parent = buyButton
 
@@ -964,11 +952,7 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
     ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
     ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200)),
   })
-  cashShine.Transparency = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 0.7),
-    NumberSequenceKeypoint.new(0.3, 0.9),
-    NumberSequenceKeypoint.new(1, 0.85),
-  })
+  cashShine.Transparency = NumberSequence.new(0) -- Solid, no transparency
   cashShine.Rotation = 45
   cashShine.Parent = buyButton
 
@@ -1049,11 +1033,7 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
     ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
     ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200)),
   })
-  premiumShine.Transparency = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 0.7),
-    NumberSequenceKeypoint.new(0.3, 0.9),
-    NumberSequenceKeypoint.new(1, 0.85),
-  })
+  premiumShine.Transparency = NumberSequence.new(0) -- Solid, no transparency
   premiumShine.Rotation = 45
   premiumShine.Parent = robuxButton
 
@@ -1300,11 +1280,7 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
       ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
       ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200)),
     })
-    cashShine.Transparency = NumberSequence.new({
-      NumberSequenceKeypoint.new(0, 0.7),
-      NumberSequenceKeypoint.new(0.3, 0.9),
-      NumberSequenceKeypoint.new(1, 0.85),
-    })
+    cashShine.Transparency = NumberSequence.new(0) -- Solid, no transparency
     cashShine.Rotation = 45
     cashShine.Parent = buyButton
 
@@ -1380,11 +1356,7 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
       ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
       ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200)),
     })
-    premiumShine.Transparency = NumberSequence.new({
-      NumberSequenceKeypoint.new(0, 0.7),
-      NumberSequenceKeypoint.new(0.3, 0.9),
-      NumberSequenceKeypoint.new(1, 0.85),
-    })
+    premiumShine.Transparency = NumberSequence.new(0) -- Solid, no transparency
     premiumShine.Rotation = 45
     premiumShine.Parent = robuxButton
 
@@ -2063,6 +2035,7 @@ function StoreUI.create()
   confirmButton.Size = UDim2.new(0, 100, 0, 35)
   confirmButton.Position = UDim2.new(0.5, -110, 1, -50)
   confirmButton.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+  confirmButton.BackgroundTransparency = 0
   confirmButton.Text = "Confirm"
   confirmButton.TextColor3 = Color3.fromRGB(255, 255, 255)
   confirmButton.TextScaled = true
@@ -2080,6 +2053,7 @@ function StoreUI.create()
   cancelButton.Size = UDim2.new(0, 100, 0, 35)
   cancelButton.Position = UDim2.new(0.5, 10, 1, -50)
   cancelButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+  cancelButton.BackgroundTransparency = 0
   cancelButton.Text = "Cancel"
   cancelButton.TextColor3 = Color3.fromRGB(255, 255, 255)
   cancelButton.TextScaled = true

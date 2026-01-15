@@ -252,7 +252,7 @@
       "category": "UI-Store",
       "title": "Fix Store Button Colors - Make Solid Instead of Transparent",
       "description": "Store buttons appear transparent when they should be solid colors for better visibility and tap targets.",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Locate all button creation in StoreUI.create()",
@@ -272,7 +272,7 @@
       "codeLocations": [
         "src/client/StoreUI.lua"
       ],
-      "technicalNotes": "Search for BackgroundTransparency in StoreUI.lua and change values from > 0 to 0 for buttons. May need to update multiple button creation calls."
+      "technicalNotes": "Fixed: The buttons already had BackgroundTransparency = 0, but UIGradient Transparency properties were causing 70-90% transparency overlay. Changed all 7 UIGradient Transparency instances from NumberSequence with high transparency values (0.7-0.9) to NumberSequence.new(0) for fully opaque buttons. Also added explicit BackgroundTransparency = 0 to confirmation dialog buttons. Button colors: Green (50,180,50) for affordable cash buttons, Grey (80,80,80) for unaffordable/sold out, Blue (0,120,215) for Robux buttons, Gold (255,215,0) for replenish button. Hover states already implemented for all button types."
     },
     {
       "id": 9,

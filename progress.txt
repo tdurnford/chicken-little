@@ -4290,3 +4290,31 @@
   - Rate updates when health multipliers are applied ✓
 - Format check passes, build passes
 - Next: Work on remaining items (Item #6 Remove Unassigned, Item #8 Store Buttons, etc.)
+
+[2026-01-15] Completed Gameplay & UI Fixes Work Item #8: Fix Store Button Colors - Make Solid Instead of Transparent
+- Root cause: UIGradient Transparency properties on all buy buttons were set to 70-90% transparency
+  (NumberSequence with keypoints at 0.7, 0.9, 0.85), causing buttons to appear see-through despite
+  having BackgroundTransparency = 0.
+
+1. src/client/StoreUI.lua:
+   - Changed all 7 UIGradient Transparency instances from high transparency values to NumberSequence.new(0)
+   - Affected buttons: Egg cash/robux buttons, Powerup robux button, Trap cash/robux buttons, Weapon cash/robux buttons
+   - Added explicit BackgroundTransparency = 0 to confirmation dialog Confirm and Cancel buttons
+
+- Button color scheme (unchanged, already correct):
+  * Cash buttons (affordable): Green RGB(50, 180, 50)
+  * Cash buttons (unaffordable/sold out): Grey RGB(80, 80, 80)
+  * Robux buttons: Blue RGB(0, 120, 215)
+  * Replenish button: Gold RGB(255, 215, 0)
+  * Confirm button: Blue RGB(0, 162, 255)
+  * Cancel button: Grey RGB(80, 80, 80)
+
+- Hover states already implemented for all button types
+
+- Acceptance criteria met:
+  - All store buttons are solid colors with no transparency ✓
+  - Buttons are clearly identifiable as interactive elements ✓
+  - Button colors are consistent and visually appealing ✓
+  - Disabled buttons are grey, not transparent ✓
+- Format check passes, build passes
+- Next: Work on remaining items (Item #9 Increase Store Text Size, Item #6 Remove Unassigned, Item #7 Add Padding)
