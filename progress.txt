@@ -20,3 +20,28 @@ Implemented smooth position and rotation interpolation for wandering chickens in
 - Build passes (`make build`)
 - Linter unavailable (architecture mismatch for selene binary)
 - Manual testing recommended: spawn chickens and observe smooth movement transitions
+
+---
+
+## 2026-01-15: Fix Brown Hen Money Rate Display (Work Item #3) - COMPLETED
+
+Fixed formatMoneyRate() function in ChickenVisuals.lua to preserve decimal precision for money rates.
+
+### Changes made:
+- Rewrote `formatMoneyRate()` to conditionally show decimals:
+  - Rates with decimal values (e.g., 1.2) now display as `$1.2/s` instead of `$1/s`
+  - Whole number rates still display without decimals (e.g., `$1/s`, `$10/s`)
+  - Large rates (1000+) show K suffix with decimals if needed (e.g., `$1.3K/s`)
+- Brown Hen now correctly displays `$1.2/s` matching its actual 1.2 moneyPerSecond rate
+
+### Files modified:
+- src/client/ChickenVisuals.lua
+
+### Testing notes:
+- Build passes (`make build`)
+- Expected display values:
+  - Brown Hen (1.2): `$1.2/s`
+  - Basic Chick (1.0): `$1/s`
+  - White Hen (1.5): `$1.5/s`
+  - Epic chicken (1000): `$1K/s`
+  - Epic*1.3 (1300): `$1.3K/s`

@@ -210,11 +210,25 @@ end
 
 -- Helper: Format money rate for display (always per-second, no decimals)
 local function formatMoneyRate(rate: number): string
-  local flooredRate = math.floor(rate)
-  if flooredRate >= 1000 then
-    return string.format("$%dK/s", math.floor(flooredRate / 1000))
+  if rate >= 1000 then
+    local kValue = rate / 1000
+    if kValue == math.floor(kValue) then
+      return string.format("$%dK/s", kValue)
+    else
+      return string.format("$%.1fK/s", kValue)
+    end
+  elseif rate >= 10 then
+    if rate == math.floor(rate) then
+      return string.format("$%d/s", rate)
+    else
+      return string.format("$%.1f/s", rate)
+    end
   else
-    return string.format("$%d/s", flooredRate)
+    if rate == math.floor(rate) then
+      return string.format("$%d/s", rate)
+    else
+      return string.format("$%.1f/s", rate)
+    end
   end
 end
 
