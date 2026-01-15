@@ -246,46 +246,35 @@ end
 local function createChickenCountFrame(screenGui: ScreenGui): (Frame, TextLabel)
   local frame = Instance.new("Frame")
   frame.Name = "ChickenCountFrame"
-  frame.Size = UDim2.new(0, 120, 0, 32)
-  frame.Position = UDim2.new(0, 20, 0, 10) -- Top left corner
-  frame.AnchorPoint = Vector2.new(0, 0)
-  frame.BackgroundColor3 = Color3.fromRGB(40, 35, 25) -- Warm brown
-  frame.BackgroundTransparency = 0.3
+  frame.Size = UDim2.new(0, 120, 0, 40)
+  frame.Position = UDim2.new(1, -20, 1, -20) -- Bottom right corner
+  frame.AnchorPoint = Vector2.new(1, 1) -- Anchor to bottom-right
+  frame.BackgroundTransparency = 1 -- No visible background
   frame.BorderSizePixel = 0
   frame.Parent = screenGui
-
-  -- Corner rounding
-  local corner = Instance.new("UICorner")
-  corner.CornerRadius = UDim.new(0, 8)
-  corner.Parent = frame
-
-  -- Border stroke
-  local stroke = Instance.new("UIStroke")
-  stroke.Color = Color3.fromRGB(100, 80, 60)
-  stroke.Thickness = 2
-  stroke.Transparency = 0.3
-  stroke.Parent = frame
 
   -- Chicken icon (emoji)
   local icon = Instance.new("TextLabel")
   icon.Name = "ChickenIcon"
-  icon.Size = UDim2.new(0, 28, 1, 0)
-  icon.Position = UDim2.new(0, 6, 0, 0)
+  icon.Size = UDim2.new(0, 32, 1, 0)
+  icon.Position = UDim2.new(0, 0, 0, 0)
   icon.BackgroundTransparency = 1
   icon.Text = "🐔"
-  icon.TextSize = 18
+  icon.TextSize = 24
   icon.Parent = frame
 
   -- Count label
   local label = Instance.new("TextLabel")
   label.Name = "ChickenCountLabel"
-  label.Size = UDim2.new(1, -40, 1, 0)
+  label.Size = UDim2.new(1, -36, 1, 0)
   label.Position = UDim2.new(0, 36, 0, 0)
   label.BackgroundTransparency = 1
   label.TextColor3 = Color3.fromRGB(255, 220, 150) -- Warm yellow
-  label.TextSize = 16
+  label.TextSize = 28 -- Larger to match money display style
   label.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
-  label.TextXAlignment = Enum.TextXAlignment.Left
+  label.TextXAlignment = Enum.TextXAlignment.Right -- Align right for bottom-right positioning
+  label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0) -- Black outline
+  label.TextStrokeTransparency = 0 -- Solid outline for visibility
   label.Text = "0/15"
   label.Parent = frame
 

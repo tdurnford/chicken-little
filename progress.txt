@@ -283,3 +283,41 @@ Moved the money display from top-center to bottom-left corner with green text an
 - ✅ No visible background/frame around the money display
 - ✅ Money per second indicator also follows same styling
 - ✅ Readable on all common screen resolutions
+
+## 2026-01-15: Move Chicken Counter to Bottom Right (bugfix-prd.json Work Item #3) - COMPLETED
+
+Moved the chicken counter from top-left to bottom-right corner with no background and improved visibility.
+
+### Changes made:
+- Updated `createChickenCountFrame()` function in MainHUD.lua:
+  - Changed `Position` from `UDim2.new(0, 20, 0, 10)` to `UDim2.new(1, -20, 1, -20)` (bottom-right)
+  - Changed `AnchorPoint` from `Vector2.new(0, 0)` to `Vector2.new(1, 1)` (bottom-right anchor)
+  - Set `BackgroundTransparency = 1` (fully transparent, no visible background)
+  - Removed `BackgroundColor3` property (not needed with transparent background)
+  - Removed `UICorner` and `UIStroke` elements (no visible frame)
+  - Increased frame height from 32 to 40 for better layout
+- Updated chicken icon:
+  - Increased size from 28 to 32 for better visibility
+  - Increased TextSize from 18 to 24
+- Updated chicken count label:
+  - Increased TextSize from 16 to 28 (matches money display style)
+  - Added `TextStrokeColor3 = Color3.fromRGB(0, 0, 0)` (black outline)
+  - Added `TextStrokeTransparency = 0` (solid outline for visibility)
+  - Changed `TextXAlignment` from Left to Right (better for bottom-right position)
+
+### Files modified:
+- src/client/MainHUD.lua
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Chicken counter now appears in bottom-right corner
+- Clean text with black outline, no visible background
+- Style matches the money display aesthetic (bottom-left corner)
+
+### Acceptance criteria met:
+- ✅ Chicken counter displays in bottom-right corner
+- ✅ No visible background around the counter
+- ✅ Text has black outline for visibility
+- ✅ Counter is readable and doesn't overlap with other UI
+- ✅ Style matches the money display aesthetic
