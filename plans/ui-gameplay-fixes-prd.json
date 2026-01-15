@@ -106,7 +106,7 @@
       "category": "UI-World",
       "title": "Add Player Name Label Above Base",
       "description": "Display '<PlayerName>'s Base' text above each player's base area, visible to all players in the server.",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Create BillboardGui or SurfaceGui for base label",
@@ -129,7 +129,8 @@
       "codeLocations": [
         "src/shared/PlayerSection.lua",
         "src/client/SectionVisuals.lua",
-        "src/server/Main.server.lua"
+        "src/server/Main.server.lua",
+        "src/server/SectionLabels.lua"
       ],
       "technicalNotes": "Use BillboardGui parented to the section's central part. Set AlwaysOnTop = false so it doesn't render through objects. MaxDistance can be set to limit visibility range."
     },

@@ -68,6 +68,9 @@ local PlayerSection = require(Shared:WaitForChild("PlayerSection"))
 -- Admin commands module
 local AdminCommands = require(ServerScriptService:WaitForChild("AdminCommands"))
 
+-- Section labels module for player name displays
+local SectionLabels = require(ServerScriptService:WaitForChild("SectionLabels"))
+
 -- Player Data Sync Configuration
 local DATA_SYNC_THROTTLE_INTERVAL = 0.1 -- Minimum seconds between data updates per player
 local lastDataSyncTime: { [number]: number } = {} -- Tracks last sync time per player
@@ -1548,6 +1551,10 @@ local mapState = MapGeneration.createMapState()
 local sectionCount = #mapState.sections
 print(string.format("[Main.server] MapGeneration initialized: %d sections created", sectionCount))
 
+-- Initialize section labels for player name displays
+SectionLabels.initialize(mapState)
+print("[Main.server] SectionLabels initialized")
+
 -- Initialize global random chicken spawn state
 local initialTime = os.time()
 randomChickenSpawnState = RandomChickenSpawn.createSpawnState(nil, initialTime)
@@ -1723,6 +1730,10 @@ Players.PlayerAdded:Connect(function(player)
 
   if sectionIndex then
     print(string.format("[Main.server] Assigned section %d to %s", sectionIndex, player.Name))
+
+    -- Update section label with player's name
+    SectionLabels.onPlayerJoined(player, sectionIndex)
+
     local spawnPoint = MapGeneration.getPlayerSpawnPoint(mapState, playerId)
     if spawnPoint then
       print(
@@ -1827,10 +1838,19 @@ end)
 -- Handle player section reservation on leave
 Players.PlayerRemoving:Connect(function(player)
   local playerId = tostring(player.UserId)
+
+  -- Get section index before handling leave (for label update)
+  local sectionIndex = MapGeneration.getPlayerSection(mapState, playerId)
+
   local reservedSection = MapGeneration.handlePlayerLeave(mapState, playerId)
 
   if reservedSection then
     print(string.format("[Main.server] Reserved section %d for %s", reservedSection, player.Name))
+  end
+
+  -- Update section label to "Unclaimed"
+  if sectionIndex then
+    SectionLabels.onPlayerLeft(sectionIndex)
   end
 
   -- Clean up sync tracking for this player

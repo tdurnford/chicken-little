@@ -3958,3 +3958,34 @@
   - Icon renders correctly on all platforms (using well-supported emoji) ✓
 - Format check passes, build passes
 - Next: Work on remaining items (Item #1 Bat Model, Item #4 Player Name Labels)
+
+[2026-01-15] Completed UI & Gameplay Fixes Work Item #4: Add Player Name Label Above Base
+- Added "<PlayerName>'s Base" labels above each player's section visible to all players
+- Created new server module SectionLabels.lua for managing labels
+
+1. src/server/SectionLabels.lua (NEW):
+   - Created SectionLabels module for server-side label management
+   - initialize() creates BillboardGui labels for all 12 sections
+   - onPlayerJoined() updates label to "PlayerName's Base"
+   - onPlayerLeft() resets label to "Unclaimed" (greyed out)
+   - Labels use BillboardGui with semi-transparent background
+   - MaxDistance = 150 studs for visibility range
+   - Labels positioned 20 studs above section center
+   - Text uses GothamBold font with stroke for readability
+   - cleanup() removes all labels on server shutdown
+
+2. src/server/Main.server.lua:
+   - Added require for SectionLabels module
+   - Added SectionLabels.initialize(mapState) after map creation
+   - Added SectionLabels.onPlayerJoined(player, sectionIndex) in PlayerAdded handler
+   - Added SectionLabels.onPlayerLeft(sectionIndex) in PlayerRemoving handler
+   - Gets sectionIndex before handlePlayerLeave to pass to onPlayerLeft
+
+- Acceptance criteria met:
+  - Player name appears above their base ✓
+  - Text format is "<PlayerName>'s Base" ✓
+  - Label is visible to all players in server (server-side BillboardGui) ✓
+  - Label is readable from reasonable distance (stroke, MaxDistance 150) ✓
+  - Label is removed/updated when player leaves (shows "Unclaimed") ✓
+- Format check passes, build passes
+- Next: Work on remaining Item #1 (Replace Programmatic Bat with 3D Model)
