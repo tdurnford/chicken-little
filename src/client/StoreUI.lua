@@ -127,6 +127,19 @@ local function formatRestockTime(seconds: number): string
 end
 
 --[[
+	Adds a UITextSizeConstraint to a TextLabel to ensure minimum readable text size.
+	@param label TextLabel - The label to constrain
+	@param minSize number - Minimum text size in pixels (default: 14)
+	@param maxSize number - Maximum text size in pixels (default: 100)
+]]
+local function addTextSizeConstraint(label: TextLabel, minSize: number?, maxSize: number?)
+  local constraint = Instance.new("UITextSizeConstraint")
+  constraint.MinTextSize = minSize or 14
+  constraint.MaxTextSize = maxSize or 100
+  constraint.Parent = label
+end
+
+--[[
 	Updates the restock timer display.
 ]]
 local function updateRestockTimer()
@@ -265,8 +278,8 @@ local function createItemCard(
   -- Item name (white with dark stroke for visibility on gradients)
   local nameLabel = Instance.new("TextLabel")
   nameLabel.Name = "Name"
-  nameLabel.Size = UDim2.new(0.35, -20, 0, 22)
-  nameLabel.Position = UDim2.new(0, 55, 0, 8) -- Shifted right for larger icon
+  nameLabel.Size = UDim2.new(0.35, -20, 0, 24)
+  nameLabel.Position = UDim2.new(0, 55, 0, 6) -- Shifted right for larger icon
   nameLabel.BackgroundTransparency = 1
   nameLabel.Text = displayName
   nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- White for visibility
@@ -276,6 +289,7 @@ local function createItemCard(
   nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0) -- Dark stroke for pop effect
   nameLabel.TextStrokeTransparency = 0
   nameLabel.Parent = card
+  addTextSizeConstraint(nameLabel, 16, 24)
 
   -- Subtext description (italicized style, describes egg contents)
   local subtextContent = description
@@ -284,7 +298,7 @@ local function createItemCard(
   end
   local subtextLabel = Instance.new("TextLabel")
   subtextLabel.Name = "Subtext"
-  subtextLabel.Size = UDim2.new(0.5, -20, 0, 14)
+  subtextLabel.Size = UDim2.new(0.5, -20, 0, 18)
   subtextLabel.Position = UDim2.new(0, 55, 0, 30)
   subtextLabel.BackgroundTransparency = 1
   subtextLabel.Text = subtextContent
@@ -296,12 +310,13 @@ local function createItemCard(
   subtextLabel.TextStrokeTransparency = 0.5
   subtextLabel.TextTransparency = 0.15 -- Slightly faded for subordinate appearance
   subtextLabel.Parent = card
+  addTextSizeConstraint(subtextLabel, 14, 18)
 
   -- Rarity label (dark text for readability on gradients)
   local rarityLabel = Instance.new("TextLabel")
   rarityLabel.Name = "Rarity"
-  rarityLabel.Size = UDim2.new(0.35, -20, 0, 16)
-  rarityLabel.Position = UDim2.new(0, 55, 0, 46)
+  rarityLabel.Size = UDim2.new(0.35, -20, 0, 18)
+  rarityLabel.Position = UDim2.new(0, 55, 0, 48)
   rarityLabel.BackgroundTransparency = 1
   rarityLabel.Text = rarity
   rarityLabel.TextColor3 = Color3.fromRGB(50, 50, 50) -- Dark grey for readability
@@ -311,12 +326,13 @@ local function createItemCard(
   rarityLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
   rarityLabel.TextStrokeTransparency = 0.7
   rarityLabel.Parent = card
+  addTextSizeConstraint(rarityLabel, 14, 18)
 
   -- Stock label (dark text for readability)
   local stockLabel = Instance.new("TextLabel")
   stockLabel.Name = "StockLabel"
-  stockLabel.Size = UDim2.new(0, 60, 0, 16)
-  stockLabel.Position = UDim2.new(0, 55, 0, 64)
+  stockLabel.Size = UDim2.new(0, 70, 0, 18)
+  stockLabel.Position = UDim2.new(0, 55, 0, 66)
   stockLabel.BackgroundTransparency = 1
   stockLabel.Text = stock > 0 and ("x" .. tostring(stock)) or "SOLD OUT"
   stockLabel.TextColor3 = stock > 0 and Color3.fromRGB(50, 50, 50) or Color3.fromRGB(180, 30, 30)
@@ -373,6 +389,7 @@ local function createItemCard(
   cashPriceLabel.TextXAlignment = Enum.TextXAlignment.Left
   cashPriceLabel.ZIndex = 3
   cashPriceLabel.Parent = buyButton
+  addTextSizeConstraint(cashPriceLabel, 14, 22)
 
   -- Shine effect for cash button
   local cashShine = Instance.new("UIGradient")
@@ -455,6 +472,7 @@ local function createItemCard(
   robuxPriceLabel.TextXAlignment = Enum.TextXAlignment.Left
   robuxPriceLabel.ZIndex = 3
   robuxPriceLabel.Parent = robuxButton
+  addTextSizeConstraint(robuxPriceLabel, 14, 22)
 
   -- Shine effect for premium button
   local premiumShine = Instance.new("UIGradient")
@@ -624,7 +642,7 @@ local function createPowerUpCard(
   local nameLabel = Instance.new("TextLabel")
   nameLabel.Name = "Name"
   nameLabel.Size = UDim2.new(0.35, -20, 0, 28)
-  nameLabel.Position = UDim2.new(0, 55, 0, 12)
+  nameLabel.Position = UDim2.new(0, 55, 0, 10)
   nameLabel.BackgroundTransparency = 1
   nameLabel.Text = config.displayName
   nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -634,12 +652,13 @@ local function createPowerUpCard(
   nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
   nameLabel.TextStrokeTransparency = 0
   nameLabel.Parent = card
+  addTextSizeConstraint(nameLabel, 16, 24)
 
   -- Description
   local descLabel = Instance.new("TextLabel")
   descLabel.Name = "Description"
-  descLabel.Size = UDim2.new(0.4, 0, 0, 20)
-  descLabel.Position = UDim2.new(0, 55, 0, 42)
+  descLabel.Size = UDim2.new(0.4, 0, 0, 22)
+  descLabel.Position = UDim2.new(0, 55, 0, 40)
   descLabel.BackgroundTransparency = 1
   descLabel.Text = config.description
   descLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
@@ -649,6 +668,7 @@ local function createPowerUpCard(
   descLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
   descLabel.TextStrokeTransparency = 0.7
   descLabel.Parent = card
+  addTextSizeConstraint(descLabel, 14, 18)
 
   -- Duration and status info
   local durationText = PowerUpConfig.formatRemainingTime(config.durationSeconds)
@@ -658,8 +678,8 @@ local function createPowerUpCard(
 
   local statusLabel = Instance.new("TextLabel")
   statusLabel.Name = "Status"
-  statusLabel.Size = UDim2.new(0.4, 0, 0, 20)
-  statusLabel.Position = UDim2.new(0, 55, 0, 70)
+  statusLabel.Size = UDim2.new(0.4, 0, 0, 22)
+  statusLabel.Position = UDim2.new(0, 55, 0, 68)
   statusLabel.BackgroundTransparency = 1
   if isActive then
     local remaining = activeExpiresAt - os.time()
@@ -675,6 +695,7 @@ local function createPowerUpCard(
   statusLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
   statusLabel.TextStrokeTransparency = 0.7
   statusLabel.Parent = card
+  addTextSizeConstraint(statusLabel, 14, 18)
 
   -- Buy button (Robux only, centered vertically)
   local buyButton = Instance.new("TextButton")
@@ -722,6 +743,7 @@ local function createPowerUpCard(
   priceLabel.TextXAlignment = Enum.TextXAlignment.Left
   priceLabel.ZIndex = 3
   priceLabel.Parent = buyButton
+  addTextSizeConstraint(priceLabel, 14, 22)
 
   -- Shine effect
   local premiumShine = Instance.new("UIGradient")
@@ -842,8 +864,8 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   -- Name label (white with dark stroke)
   local nameLabel = Instance.new("TextLabel")
   nameLabel.Name = "Name"
-  nameLabel.Size = UDim2.new(0.35, -20, 0, 22)
-  nameLabel.Position = UDim2.new(0, 55, 0, 8)
+  nameLabel.Size = UDim2.new(0.35, -20, 0, 24)
+  nameLabel.Position = UDim2.new(0, 55, 0, 6)
   nameLabel.BackgroundTransparency = 1
   nameLabel.Text = supplyItem.displayName
   nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -853,11 +875,12 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
   nameLabel.TextStrokeTransparency = 0
   nameLabel.Parent = card
+  addTextSizeConstraint(nameLabel, 16, 24)
 
   -- Subtext description (below name, describes trap functionality)
   local subtextLabel = Instance.new("TextLabel")
   subtextLabel.Name = "Subtext"
-  subtextLabel.Size = UDim2.new(0.5, -20, 0, 14)
+  subtextLabel.Size = UDim2.new(0.5, -20, 0, 18)
   subtextLabel.Position = UDim2.new(0, 55, 0, 30)
   subtextLabel.BackgroundTransparency = 1
   subtextLabel.Text = supplyItem.description
@@ -869,12 +892,13 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   subtextLabel.TextStrokeTransparency = 0.5
   subtextLabel.TextTransparency = 0.15 -- Slightly faded for subordinate appearance
   subtextLabel.Parent = card
+  addTextSizeConstraint(subtextLabel, 14, 18)
 
   -- Tier label (dark for readability)
   local tierLabel = Instance.new("TextLabel")
   tierLabel.Name = "Tier"
-  tierLabel.Size = UDim2.new(0.35, -20, 0, 16)
-  tierLabel.Position = UDim2.new(0, 55, 0, 46)
+  tierLabel.Size = UDim2.new(0.35, -20, 0, 18)
+  tierLabel.Position = UDim2.new(0, 55, 0, 48)
   tierLabel.BackgroundTransparency = 1
   tierLabel.Text = supplyItem.tier
   tierLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
@@ -884,12 +908,13 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   tierLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
   tierLabel.TextStrokeTransparency = 0.7
   tierLabel.Parent = card
+  addTextSizeConstraint(tierLabel, 14, 18)
 
   -- Effectiveness info (catch rate info)
   local effectivenessLabel = Instance.new("TextLabel")
   effectivenessLabel.Name = "Effectiveness"
-  effectivenessLabel.Size = UDim2.new(0.4, 0, 0, 16)
-  effectivenessLabel.Position = UDim2.new(0, 55, 0, 64)
+  effectivenessLabel.Size = UDim2.new(0.4, 0, 0, 18)
+  effectivenessLabel.Position = UDim2.new(0, 55, 0, 66)
   effectivenessLabel.BackgroundTransparency = 1
   effectivenessLabel.Text = "+"
     .. tostring(math.floor((supplyItem.effectiveness or 0) * 100))
@@ -901,6 +926,7 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   effectivenessLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
   effectivenessLabel.TextStrokeTransparency = 0.7
   effectivenessLabel.Parent = card
+  addTextSizeConstraint(effectivenessLabel, 14, 18)
 
   -- Cash buy button (stacked vertically)
   local canAfford = cachedPlayerMoney >= supplyItem.price
@@ -944,6 +970,7 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   cashPriceLabel.TextXAlignment = Enum.TextXAlignment.Left
   cashPriceLabel.ZIndex = 3
   cashPriceLabel.Parent = buyButton
+  addTextSizeConstraint(cashPriceLabel, 14, 22)
 
   -- Shine effect for cash button
   local cashShine = Instance.new("UIGradient")
@@ -1025,6 +1052,7 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   robuxPriceLabel.TextXAlignment = Enum.TextXAlignment.Left
   robuxPriceLabel.ZIndex = 3
   robuxPriceLabel.Parent = robuxButton
+  addTextSizeConstraint(robuxPriceLabel, 14, 22)
 
   -- Shine effect for premium button
   local premiumShine = Instance.new("UIGradient")
@@ -1158,8 +1186,8 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
   -- Weapon name (white with dark stroke)
   local nameLabel = Instance.new("TextLabel")
   nameLabel.Name = "Name"
-  nameLabel.Size = UDim2.new(0.35, -20, 0, 22)
-  nameLabel.Position = UDim2.new(0, 55, 0, 8)
+  nameLabel.Size = UDim2.new(0.35, -20, 0, 24)
+  nameLabel.Position = UDim2.new(0, 55, 0, 6)
   nameLabel.BackgroundTransparency = 1
   nameLabel.Text = weaponItem.displayName
   nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1169,11 +1197,12 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
   nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
   nameLabel.TextStrokeTransparency = 0
   nameLabel.Parent = card
+  addTextSizeConstraint(nameLabel, 16, 24)
 
   -- Subtext description (below name, describes weapon)
   local subtextLabel = Instance.new("TextLabel")
   subtextLabel.Name = "Subtext"
-  subtextLabel.Size = UDim2.new(0.5, -20, 0, 14)
+  subtextLabel.Size = UDim2.new(0.5, -20, 0, 18)
   subtextLabel.Position = UDim2.new(0, 55, 0, 30)
   subtextLabel.BackgroundTransparency = 1
   subtextLabel.Text = weaponItem.description
@@ -1185,12 +1214,13 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
   subtextLabel.TextStrokeTransparency = 0.5
   subtextLabel.TextTransparency = 0.15 -- Slightly faded for subordinate appearance
   subtextLabel.Parent = card
+  addTextSizeConstraint(subtextLabel, 14, 18)
 
   -- Tier and damage label (dark for readability)
   local tierLabel = Instance.new("TextLabel")
   tierLabel.Name = "Tier"
-  tierLabel.Size = UDim2.new(0.35, -20, 0, 16)
-  tierLabel.Position = UDim2.new(0, 55, 0, 46)
+  tierLabel.Size = UDim2.new(0.35, -20, 0, 18)
+  tierLabel.Position = UDim2.new(0, 55, 0, 48)
   tierLabel.BackgroundTransparency = 1
   tierLabel.Text = weaponItem.tier .. " • " .. weaponItem.damage .. " DMG"
   tierLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
@@ -1200,6 +1230,7 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
   tierLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
   tierLabel.TextStrokeTransparency = 0.7
   tierLabel.Parent = card
+  addTextSizeConstraint(tierLabel, 14, 18)
 
   -- Status label (owned/starter)
   local isOwned = cachedOwnedWeapons and cachedOwnedWeapons[weaponItem.id]
@@ -1207,8 +1238,8 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
 
   local statusLabel = Instance.new("TextLabel")
   statusLabel.Name = "Status"
-  statusLabel.Size = UDim2.new(0.35, 0, 0, 16)
-  statusLabel.Position = UDim2.new(0, 55, 0, 64)
+  statusLabel.Size = UDim2.new(0.35, 0, 0, 18)
+  statusLabel.Position = UDim2.new(0, 55, 0, 66)
   statusLabel.BackgroundTransparency = 1
   if isOwned then
     statusLabel.Text = "✓ OWNED"
@@ -1226,6 +1257,7 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
   statusLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
   statusLabel.TextStrokeTransparency = 0.7
   statusLabel.Parent = card
+  addTextSizeConstraint(statusLabel, 14, 18)
 
   -- Buy buttons - only show for non-free, non-owned weapons
   if not isOwned and not isFree then
@@ -1272,6 +1304,7 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
     cashPriceLabel.TextXAlignment = Enum.TextXAlignment.Left
     cashPriceLabel.ZIndex = 3
     cashPriceLabel.Parent = buyButton
+    addTextSizeConstraint(cashPriceLabel, 14, 22)
 
     -- Shine effect for cash button
     local cashShine = Instance.new("UIGradient")
@@ -1348,6 +1381,7 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
     robuxPriceLabel.TextXAlignment = Enum.TextXAlignment.Left
     robuxPriceLabel.ZIndex = 3
     robuxPriceLabel.Parent = robuxButton
+    addTextSizeConstraint(robuxPriceLabel, 14, 22)
 
     -- Shine effect for premium button
     local premiumShine = Instance.new("UIGradient")
@@ -1734,6 +1768,7 @@ function StoreUI.create()
   titleLabel.TextStrokeColor3 = Color3.fromRGB(60, 30, 10) -- Dark brown stroke
   titleLabel.TextStrokeTransparency = 0 -- Fully visible stroke
   titleLabel.Parent = titleBar
+  addTextSizeConstraint(titleLabel, 20, 36)
 
   -- Close button (red wooden square with white painted X)
   local closeButton = Instance.new("TextButton")
@@ -1748,6 +1783,7 @@ function StoreUI.create()
   closeButton.TextStrokeColor3 = Color3.fromRGB(80, 20, 20) -- Dark red stroke
   closeButton.TextStrokeTransparency = 0 -- Fully visible stroke
   closeButton.Parent = titleBar
+  addTextSizeConstraint(closeButton :: any, 16, 28)
 
   local closeCorner = Instance.new("UICorner")
   closeCorner.CornerRadius = UDim.new(0, 6) -- Slight rounding for wooden look
@@ -1816,6 +1852,7 @@ function StoreUI.create()
   restockTimerLabel.TextStrokeColor3 = Color3.fromRGB(80, 20, 10) -- Dark red stroke
   restockTimerLabel.TextStrokeTransparency = 0.3 -- Visible stroke for readability
   restockTimerLabel.Parent = restockFrame
+  addTextSizeConstraint(restockTimerLabel, 16, 24)
 
   -- Initialize timer display
   updateRestockTimer()
@@ -1948,6 +1985,7 @@ function StoreUI.create()
   replenishButton.TextStrokeColor3 = Color3.fromRGB(255, 255, 255) -- White stroke
   replenishButton.TextStrokeTransparency = 0.2 -- Visible stroke for pop effect
   replenishButton.Parent = mainFrame
+  addTextSizeConstraint(replenishButton :: any, 16, 24)
 
   local replenishCorner = Instance.new("UICorner")
   replenishCorner.CornerRadius = UDim.new(0, 8)
@@ -2012,6 +2050,7 @@ function StoreUI.create()
   confirmTitle.Font = Enum.Font.GothamBold
   confirmTitle.ZIndex = 11
   confirmTitle.Parent = confirmationFrame
+  addTextSizeConstraint(confirmTitle, 18, 28)
 
   -- Confirmation message
   local confirmMessage = Instance.new("TextLabel")
@@ -2028,6 +2067,7 @@ function StoreUI.create()
   confirmMessage.TextWrapped = true
   confirmMessage.ZIndex = 11
   confirmMessage.Parent = confirmationFrame
+  addTextSizeConstraint(confirmMessage, 14, 18)
 
   -- Confirm button
   local confirmButton = Instance.new("TextButton")
@@ -2042,6 +2082,7 @@ function StoreUI.create()
   confirmButton.Font = Enum.Font.GothamBold
   confirmButton.ZIndex = 11
   confirmButton.Parent = confirmationFrame
+  addTextSizeConstraint(confirmButton :: any, 14, 20)
 
   local confirmBtnCorner = Instance.new("UICorner")
   confirmBtnCorner.CornerRadius = UDim.new(0, 6)
@@ -2060,6 +2101,7 @@ function StoreUI.create()
   cancelButton.Font = Enum.Font.GothamBold
   cancelButton.ZIndex = 11
   cancelButton.Parent = confirmationFrame
+  addTextSizeConstraint(cancelButton :: any, 14, 20)
 
   local cancelBtnCorner = Instance.new("UICorner")
   cancelBtnCorner.CornerRadius = UDim.new(0, 6)

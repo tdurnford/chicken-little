@@ -4318,3 +4318,43 @@
   - Disabled buttons are grey, not transparent ✓
 - Format check passes, build passes
 - Next: Work on remaining items (Item #9 Increase Store Text Size, Item #6 Remove Unassigned, Item #7 Add Padding)
+
+[2026-01-15] Completed Gameplay & UI Fixes Work Item #9: Increase Store Text Size for Readability
+- Root cause: TextLabels used TextScaled = true but had small fixed heights (14-22px) causing
+  scaled text to be too small to read, especially on mobile devices. No UITextSizeConstraint
+  was used to enforce minimum readable text sizes.
+
+1. src/client/StoreUI.lua:
+   - Added addTextSizeConstraint(label, minSize, maxSize) helper function (lines 130-138)
+   - Creates UITextSizeConstraint instance with configurable min/max sizes
+   - Applied to all card labels across all tabs (eggs, power-ups, traps, weapons)
+   - Applied to store header elements (title, close button, restock timer, replenish button)
+   - Applied to confirmation dialog elements (title, message, confirm/cancel buttons)
+
+- Text size constraints applied:
+  * Item names: Min 16px, Max 24px (prominent, chunky FredokaOne font)
+  * Subtext/descriptions: Min 14px, Max 18px (readable secondary info)
+  * Tier/rarity/status labels: Min 14px, Max 18px (consistent info labels)
+  * Price labels on buttons: Min 14px, Max 22px (clear pricing)
+  * Store title: Min 20px, Max 36px (prominent header)
+  * Close button: Min 16px, Max 28px (clickable X)
+  * Restock timer: Min 16px, Max 24px (urgency info)
+  * Replenish button: Min 16px, Max 24px (action button)
+  * Confirmation dialog title: Min 18px, Max 28px
+  * Confirmation dialog message: Min 14px, Max 18px
+  * Confirmation dialog buttons: Min 14px, Max 20px
+
+- Label heights also increased to accommodate larger minimum text:
+  * nameLabel: 22px → 24px
+  * subtextLabel: 14px → 18px
+  * rarityLabel/tierLabel: 16px → 18px
+  * stockLabel/effectivenessLabel/statusLabel: 16px → 18px
+  * Positions adjusted accordingly to maintain spacing
+
+- Acceptance criteria met:
+  - All store text is easily readable ✓
+  - Minimum text size of 14px throughout ✓
+  - Text scales appropriately on different devices (UITextSizeConstraint) ✓
+  - Important text (prices, names) is prominently sized (16-24px min) ✓
+- Format check passes, build passes
+- Next: Work on remaining items (Item #6 Remove Unassigned, Item #7 Add Padding)

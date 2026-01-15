@@ -279,7 +279,7 @@
       "category": "UI-Store",
       "title": "Increase Store Text Size for Readability",
       "description": "Some text in the store UI is too small to read comfortably, especially on mobile devices.",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Audit all TextLabel instances in StoreUI.lua",
@@ -299,7 +299,7 @@
       "codeLocations": [
         "src/client/StoreUI.lua"
       ],
-      "technicalNotes": "Search for TextSize in StoreUI.lua. Common pattern is TextSize = 12 or 10 which is too small. Increase to 14-18 range."
+      "technicalNotes": "Fixed: Added addTextSizeConstraint() helper function that creates UITextSizeConstraint with configurable min/max sizes. Applied to all TextLabels in the store UI: Egg cards (name 16-24px, subtext 14-18px, rarity 14-18px, stock 14-18px, prices 14-22px), Power-up cards (name 16-24px, description 14-18px, status 14-18px, price 14-22px), Trap cards (name 16-24px, subtext 14-18px, tier 14-18px, effectiveness 14-18px, prices 14-22px), Weapon cards (name 16-24px, subtext 14-18px, tier 14-18px, status 14-18px, prices 14-22px), Title bar (title 20-36px, close button 16-28px), Restock timer (16-24px), Replenish button (16-24px), Confirmation dialog (title 18-28px, message 14-18px, buttons 14-20px). Label heights increased from 14-22px to 18-24px to accommodate larger minimum text. UITextSizeConstraint ensures text never shrinks below minimum even on small screens."
     },
     {
       "id": 10,
