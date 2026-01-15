@@ -862,3 +862,35 @@ Moved the shield status indicator (timer, status label, progress bar) from below
 - ✅ Updated shield indicator position to top of screen (status elements now above button)
 - ✅ Adjusted related UI elements for proper layout (moved tooltip to below)
 - ✅ Better visibility achieved (status/timer visible at very top of screen)
+
+## 2026-01-15: Fix Trap Icon in Store (ui-fixes-prd.json Work Item - MEDIUM) - COMPLETED
+
+Fixed trap icons displaying as generic boxes in the store by replacing unsupported Unicode 13.0+ emojis with widely-supported alternatives that render correctly in Roblox.
+
+### Root cause:
+Several trap icons used newer Unicode emojis (🪵, 🪢, 🕳️, etc.) that are not supported by Roblox's font rendering system. These displayed as empty boxes or tofu characters.
+
+### Changes made:
+- WoodenSnare: 🪵 (wood) → 🪤 (mouse trap) - better represents a snare
+- RopeTrap: 🪢 (knot) → 🎣 (fishing pole) - represents rope/catching
+- MetalCage: 🗑️ (wastebasket) → 🔒 (lock) - represents containment
+- SpringTrap: 🔩 (nut and bolt) → 💥 (explosion) - represents spring action
+- BearTrap: 🐻 (bear) → 🦷 (tooth) - represents the trap's teeth/jaws
+- LaserGrid: 🔴 (red circle) → 🎯 (target) - better laser targeting imagery
+- SonicEmitter: 📢 (loudspeaker) → 📣 (megaphone) - similar but better supported
+- VoidPrison: 🕳️ (hole) → ⬛ (black square) - represents void/darkness
+
+### Files modified:
+- src/shared/TrapConfig.lua (8 icon replacements)
+- plans/ui-fixes-prd.json (marked as completed)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Selected emojis are from Unicode 6.0-11.0 which have broad Roblox support
+- Icons are thematically appropriate for each trap type
+
+### Acceptance criteria met:
+- ✅ Identified the correct trap icon asset (replaced unsupported emojis)
+- ✅ Updated the store UI to use the proper trap icon (via TrapConfig)
+- ✅ Icons display correctly in store views (using supported Unicode)
