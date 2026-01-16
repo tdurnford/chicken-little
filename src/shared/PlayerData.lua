@@ -92,14 +92,7 @@ function PlayerData.createDefault(): PlayerDataSchema
   return {
     money = 100, -- Exactly enough to buy a Common Egg from the store
     inventory = {
-      eggs = {
-        -- New players start with one Common Egg to hatch
-        {
-          id = tostring(currentTime) .. "_starter_egg",
-          eggType = "CommonEgg",
-          rarity = "Common",
-        },
-      },
+      eggs = {}, -- Empty - starter egg is spawned in world on join
       chickens = {},
     },
     -- New players start with one Basic Chick already placed in their area

@@ -1874,6 +1874,52 @@ Players.PlayerAdded:Connect(function(player)
               )
             end
           end
+
+          -- Fire ChickenPlaced events for existing placed chickens so clients create visuals
+          local chickenPlacedEvent = RemoteSetup.getEvent("ChickenPlaced")
+          if chickenPlacedEvent and data.placedChickens then
+            for _, chicken in ipairs(data.placedChickens) do
+              -- Get initial position from AI
+              local initialPosition = nil
+              local aiPos = ChickenAI.getPosition(gameState.playerChickenAIState, chicken.id)
+              if aiPos then
+                initialPosition = aiPos.currentPosition
+              end
+
+              chickenPlacedEvent:FireClient(player, {
+                playerId = player.UserId,
+                chicken = chicken,
+                spotIndex = nil, -- No longer using spots
+                position = initialPosition,
+              })
+            end
+          end
+
+          -- Spawn a starter world egg for new players (no eggs in inventory and has placed chickens)
+          local isNewPlayer = #data.inventory.eggs == 0
+            and #data.inventory.chickens == 0
+            and data.totalPlayTime == 0
+          if isNewPlayer and data.placedChickens and #data.placedChickens > 0 then
+            local starterChicken = data.placedChickens[1]
+            local eggSpawnPos = PlayerSection.getRandomPositionInSection(sectionCenter)
+
+            local starterEgg = WorldEgg.create(
+              "CommonEgg",
+              player.UserId,
+              starterChicken.id,
+              1,
+              eggSpawnPos
+            )
+
+            if starterEgg then
+              WorldEgg.add(gameState.worldEggRegistry, starterEgg)
+              local eggSpawnedEvent = RemoteSetup.getEvent("EggSpawned")
+              if eggSpawnedEvent then
+                eggSpawnedEvent:FireClient(player, WorldEgg.toNetworkData(starterEgg))
+              end
+              print(string.format("[Main.server] Spawned starter egg for new player %s", player.Name))
+            end
+          end
         end
       end
 
