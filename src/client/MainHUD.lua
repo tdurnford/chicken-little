@@ -55,7 +55,7 @@ export type HUDState = {
 -- Default configuration
 local DEFAULT_CONFIG: HUDConfig = {
   anchorPoint = Vector2.new(0, 1), -- Bottom-left anchor
-  position = UDim2.new(0, 20, 1, -20), -- Bottom-left corner
+  position = UDim2.new(0, 10, 1, -10), -- Bottom-left corner - tight to edge
   size = UDim2.new(0, 280, 0, 70),
   backgroundColor = Color3.fromRGB(30, 30, 40),
   textColor = Color3.fromRGB(133, 187, 101), -- Money green (#85BB65 - bright)

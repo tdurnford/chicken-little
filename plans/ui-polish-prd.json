@@ -23,7 +23,9 @@
       "type": "ui",
       "priority": "high",
       "files": ["src/client/MainHUD.lua"],
-      "status": "pending"
+      "status": "completed",
+      "completedDate": "2026-01-16",
+      "resolution": "Changed DEFAULT_CONFIG.position from UDim2.new(0, 20, 1, -20) to UDim2.new(0, 10, 1, -10) in MainHUD.lua. This moves the money indicator tighter to the bottom-left corner with only 10 pixels of padding from the screen edge instead of 20."
     },
     {
       "id": 3,

@@ -1342,3 +1342,32 @@ Updated three color values in MainHUD.lua:
 
 ### Note for next developer:
 The #85BB65 color is the classic "dollar bill green" - a warm, bright green that's highly associated with money. The flash animation colors (FLASH_COLOR_GAIN/FLASH_COLOR_LOSS) were left unchanged as they serve a different purpose (temporary visual feedback).
+
+## 2026-01-16: Reposition Money Indicator to Corner (ui-polish-prd.json Work Item #2 - HIGH) - COMPLETED
+
+Moved the money indicator closer to the bottom-left corner for better positioning.
+
+### Problem:
+The money indicator was positioned at UDim2.new(0, 20, 1, -20), giving it 20 pixels of padding from the screen edges. This made it appear "too high" and not properly in the corner.
+
+### Solution:
+Updated DEFAULT_CONFIG.position in MainHUD.lua:
+- **Before**: `UDim2.new(0, 20, 1, -20)` (20px from left, 20px from bottom)
+- **After**: `UDim2.new(0, 10, 1, -10)` (10px from left, 10px from bottom)
+
+This provides a tighter corner position while still maintaining a small margin for visual comfort and avoiding screen safe zones.
+
+### Files modified:
+- src/client/MainHUD.lua (DEFAULT_CONFIG.position)
+- plans/ui-polish-prd.json (marked as completed with resolution)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+
+### Acceptance criteria met:
+- ✅ Money indicator is positioned closer to the corner
+- ✅ Still has minimal padding to avoid being cut off on some displays
+
+### Note for next developer:
+The position uses UDim2 with pixel offsets. If you need to adjust for different screen sizes or safe areas, consider using scale values (0.0-1.0) instead of pixel offsets. The anchor point is Vector2.new(0, 1) which means the bottom-left corner of the frame is at the specified position.
