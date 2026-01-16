@@ -1088,3 +1088,38 @@ The `getDistance` function in `RandomChickenSpawn.lua` was using 3D distance cal
 
 ### Note for next developer:
 The random chicken claim system now uses 2D horizontal distance for claim validation. The same pattern should be applied if any other distance checks exhibit similar Y-axis issues. The claim range remains 8 studs but is now measured purely on the XZ plane.
+
+## 2026-01-16: Remove Tutorial Carousel (ui-polish-prd.json Work Item #12 - HIGH) - COMPLETED
+
+Removed the tutorial carousel UI completely from the game as it was no longer needed.
+
+### Changes made to Main.client.lua:
+- Removed Tutorial module import (line 26)
+- Removed Tutorial.create() initialization call and print statement
+- Removed Tutorial.shouldShowTutorial() check and Tutorial.start() for new players
+- Removed Tutorial.isActive()/completeStep("place_egg") from egg placement flow
+- Removed Tutorial.isActive()/completeStep("place_egg") from egg hatching flow  
+- Removed Tutorial.isActive()/completeStep("buy_egg") from store purchase flow
+- Removed Tutorial.onComplete(), Tutorial.onSkip(), Tutorial.onStepComplete() callback wiring
+
+### Files modified:
+- src/client/Main.client.lua (removed ~50 lines of Tutorial-related code)
+- plans/ui-polish-prd.json (marked as completed with resolution)
+
+### Files preserved:
+- src/client/Tutorial.lua - kept in codebase for potential future use, but no longer loaded
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- No remaining references to Tutorial in Main.client.lua
+- Client code simplified by removing tutorial integration points
+
+### Acceptance criteria met:
+- ✅ Tutorial carousel no longer creates any UI elements
+- ✅ Tutorial is not started for new or existing players
+- ✅ No tutorial step completions triggered during gameplay
+- ✅ Tutorial callbacks not wired (no server CompleteTutorial events)
+
+### Note for next developer:
+The Tutorial.lua module file remains in src/client/ but is not used. If you need to re-add the tutorial in the future, you can re-import and wire it up in Main.client.lua. The module itself is complete and functional - just not connected. If the tutorial is definitively not needed, Tutorial.lua can be deleted in a future cleanup.

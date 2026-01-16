@@ -23,7 +23,6 @@ local ChickenPickup = require(ClientModules:WaitForChild("ChickenPickup"))
 local ChickenSelling = require(ClientModules:WaitForChild("ChickenSelling"))
 local InventoryUI = require(ClientModules:WaitForChild("InventoryUI"))
 local HatchPreviewUI = require(ClientModules:WaitForChild("HatchPreviewUI"))
-local Tutorial = require(ClientModules:WaitForChild("Tutorial"))
 local SectionVisuals = require(ClientModules:WaitForChild("SectionVisuals"))
 local StoreUI = require(ClientModules:WaitForChild("StoreUI"))
 local DamageUI = require(ClientModules:WaitForChild("DamageUI"))
@@ -99,10 +98,6 @@ print("[Client] HatchPreviewUI created")
 -- Create Store UI
 StoreUI.create()
 print("[Client] StoreUI created")
-
--- Create Tutorial UI
-Tutorial.create()
-print("[Client] Tutorial created")
 
 -- Create Damage UI
 DamageUI.initialize()
@@ -242,12 +237,6 @@ if getPlayerDataFunc then
 
     -- Update StoreUI with initial money
     StoreUI.updateMoney(initialData.money or 0)
-
-    -- Start tutorial for new players
-    if Tutorial.shouldShowTutorial(initialData) then
-      Tutorial.start()
-      print("[Client] Tutorial started for new player")
-    end
   end
 end
 
@@ -1381,10 +1370,6 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
       HatchPreviewUI.show(selectedItem.itemId, selectedItem.itemData.eggType)
       SoundEffects.play("eggPlace")
       InventoryUI.clearSelection()
-      -- Complete tutorial step if active
-      if Tutorial.isActive() then
-        Tutorial.completeStep("place_egg")
-      end
       print("[Client] Egg placed, showing hatch preview")
     elseif actionType == "sell" then
       -- Sell egg via server
@@ -1507,10 +1492,6 @@ HatchPreviewUI.onHatch(function(eggId: string, eggType: string)
     local result = hatchEggFunc:InvokeServer(eggId, 1) -- Pass 1 as placement hint to place in area
     if result and result.success then
       SoundEffects.playEggHatch(result.rarity or "Common")
-      -- Complete tutorial step if active (place_egg completes tutorial)
-      if Tutorial.isActive() then
-        Tutorial.completeStep("place_egg")
-      end
       print("[Client] Egg hatched successfully:", result.chickenType, result.rarity)
 
       -- Show the result screen with what they got
@@ -1534,30 +1515,6 @@ HatchPreviewUI.onCancel(function()
   placedEggData = nil
 end)
 print("[Client] HatchPreviewUI callbacks wired")
-
--- Wire up Tutorial callbacks
-Tutorial.onComplete(function()
-  print("[Client] Tutorial completed")
-  -- Notify server to mark tutorial as complete
-  local completeTutorialEvent = getEvent("CompleteTutorial")
-  if completeTutorialEvent then
-    completeTutorialEvent:FireServer()
-  end
-end)
-
-Tutorial.onSkip(function()
-  print("[Client] Tutorial skipped")
-  -- Notify server to mark tutorial as complete (skipped counts as complete)
-  local completeTutorialEvent = getEvent("CompleteTutorial")
-  if completeTutorialEvent then
-    completeTutorialEvent:FireServer()
-  end
-end)
-
-Tutorial.onStepComplete(function(stepId: string)
-  print("[Client] Tutorial step completed:", stepId)
-end)
-print("[Client] Tutorial callbacks wired")
 
 -- Wire up InventoryUI visibility callback
 InventoryUI.onVisibilityChanged(function(visible: boolean)
@@ -2067,10 +2024,6 @@ StoreUI.onPurchase(function(eggType: string, quantity: number)
     if result.success then
       SoundEffects.play("purchase")
       print("[Client] Purchased", quantity, "x", eggType, ":", result.message)
-      -- Complete tutorial step if active
-      if Tutorial.isActive() then
-        Tutorial.completeStep("buy_egg")
-      end
     else
       SoundEffects.play("uiError")
       warn("[Client] Purchase failed:", result.message)
