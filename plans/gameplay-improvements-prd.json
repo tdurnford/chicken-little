@@ -10,7 +10,7 @@
       "category": "UI",
       "title": "Lower Money Counter Position",
       "description": "The money counter in the bottom left of the HUD is positioned too high. Reduce or remove any extra padding around it to lower its position on screen.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Locate the MainHUD.lua file that contains the money counter",

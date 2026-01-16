@@ -195,3 +195,28 @@ Enabled the in-area chicken selling feature that allows players to sell chickens
 - The "[E] Pick Up" and "[F] Sell" prompts appear side-by-side when near a chicken
 - Sell confirmation dialog shows chicken name, rarity, and total value (base + accumulated money)
 
+---
+
+## 2026-01-16 - Lower Money Counter Position (ID #1)
+
+### Summary
+Lowered the money counter position in the bottom-left HUD by reducing excess frame height.
+
+### Problem
+The money counter frame was 70 pixels tall but only contained a 36-pixel money label (the money icon and money-per-second label were previously removed for a cleaner UI). This left 34 pixels of unused vertical space, making the counter appear higher than necessary on screen.
+
+### Solution
+Reduced the `DEFAULT_CONFIG.size` height from 70 to 44 pixels in `src/client/MainHUD.lua`. The new height properly fits the money label with minimal padding (36px label + 4px top padding + 4px space at bottom).
+
+### Files Changed
+- `src/client/MainHUD.lua` - Reduced money frame height from 70 to 44 pixels
+
+### Testing
+- Build passes with `rojo build`
+- Format check passes with `stylua`
+
+### Notes for Next Developer
+- The money counter is now positioned 26 pixels lower on screen
+- The frame uses `anchorPoint = Vector2.new(0, 1)` for bottom-left anchoring
+- The position offset of -10 from the bottom edge is preserved
+
