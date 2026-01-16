@@ -152,10 +152,10 @@ end
 local function createInventoryButton(screenGui: ScreenGui): (ImageButton, TextLabel)
   local button = Instance.new("ImageButton")
   button.Name = "InventoryButton"
-  button.Size = UDim2.new(0, 50, 0, 50)
-  button.Position = UDim2.new(1, -70, 0, 10) -- Top right corner
+  button.Size = UDim2.new(0, 60, 0, 60) -- Unified size with shield button
+  button.Position = UDim2.new(1, -70, 0, 50) -- Aligned vertically with shield button
   button.AnchorPoint = Vector2.new(0, 0)
-  button.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+  button.BackgroundColor3 = Color3.fromRGB(60, 60, 75) -- Unified neutral color
   button.BackgroundTransparency = 0.2
   button.BorderSizePixel = 0
   button.Image = "rbxassetid://6034684949" -- Backpack icon
@@ -164,14 +164,14 @@ local function createInventoryButton(screenGui: ScreenGui): (ImageButton, TextLa
   button.AutoButtonColor = true
   button.Parent = screenGui
 
-  -- Rounded corners
+  -- Rounded corners - unified with shield button
   local corner = Instance.new("UICorner")
-  corner.CornerRadius = UDim.new(0, 10)
+  corner.CornerRadius = UDim.new(0, 12)
   corner.Parent = button
 
-  -- Border stroke
+  -- Border stroke - unified with shield button style
   local stroke = Instance.new("UIStroke")
-  stroke.Color = Color3.fromRGB(80, 80, 100)
+  stroke.Color = Color3.fromRGB(100, 100, 120)
   stroke.Thickness = 2
   stroke.Transparency = 0.3
   stroke.Parent = button

@@ -34,9 +34,9 @@ export type ShieldUIState = {
 local SHIELD_BUTTON_SIZE = UDim2.new(0, 60, 0, 60)
 local SHIELD_BUTTON_POSITION = UDim2.new(1, -140, 0, 50) -- Next to inventory button, lowered to make room for status above
 
--- Colors
+-- Colors - unified button style with inventory button
 local COLORS = {
-  ready = Color3.fromRGB(80, 180, 80), -- Green - ready to activate
+  ready = Color3.fromRGB(60, 60, 75), -- Neutral dark - matches inventory button
   active = Color3.fromRGB(100, 150, 255), -- Blue - shield active
   cooldown = Color3.fromRGB(150, 150, 150), -- Gray - on cooldown
   disabled = Color3.fromRGB(80, 80, 80),
@@ -44,6 +44,7 @@ local COLORS = {
   progressBg = Color3.fromRGB(40, 40, 50),
   progressActive = Color3.fromRGB(100, 180, 255), -- Blue progress
   progressCooldown = Color3.fromRGB(255, 180, 80), -- Orange progress
+  stroke = Color3.fromRGB(100, 100, 120), -- Unified stroke color
 }
 
 -- Module state
@@ -107,9 +108,9 @@ local function createShieldButton(
   corner.CornerRadius = UDim.new(0, 12)
   corner.Parent = button
 
-  -- Border stroke
+  -- Border stroke - unified with inventory button style
   local stroke = Instance.new("UIStroke")
-  stroke.Color = Color3.fromRGB(100, 200, 100)
+  stroke.Color = COLORS.stroke
   stroke.Thickness = 2
   stroke.Transparency = 0.3
   stroke.Parent = button
@@ -280,7 +281,7 @@ local function updateVisualState()
     -- Update stroke color
     local stroke = state.shieldButton:FindFirstChildOfClass("UIStroke")
     if stroke then
-      stroke.Color = Color3.fromRGB(100, 200, 100)
+      stroke.Color = COLORS.stroke
     end
   end
 end

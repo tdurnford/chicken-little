@@ -953,3 +953,48 @@ The grass texture was applied to the ground via `Enum.Material.Grass` in the `cr
 
 ### Note for next developer:
 The PRD originally listed MapGeneration.lua and PlayerSection.lua as files to check, but the grass material was only in SectionVisuals.lua. The shared modules handle positioning/sizing, not rendering. Updated PRD files list accordingly.
+
+## 2026-01-16: Unify Shield and Inventory Button Styles (ui-fixes-prd.json Work Item - MEDIUM) - COMPLETED
+
+Unified the shield button and inventory button to have consistent visual styling since they are positioned next to each other in the UI.
+
+### Differences identified:
+- Size: Shield 60x60 vs Inventory 50x50
+- Position: Shield at y=50 vs Inventory at y=10 
+- Background color: Shield green RGB(80,180,80) vs Inventory gray RGB(40,40,55)
+- Corner radius: Shield 12 vs Inventory 10
+- Stroke color: Shield green RGB(100,200,100) vs Inventory gray RGB(80,80,100)
+
+### Changes made to MainHUD.lua (Inventory button):
+- Size: 50x50 → 60x60
+- Position Y: 10 → 50 (aligned with shield button)
+- Corner radius: 10 → 12
+- Background color: RGB(40,40,55) → RGB(60,60,75)
+- Stroke color: RGB(80,80,100) → RGB(100,100,120)
+
+### Changes made to ShieldUI.lua (Shield button):
+- Added COLORS.stroke constant RGB(100,100,120)
+- Ready state color: RGB(80,180,80) → RGB(60,60,75) (neutral, matches inventory)
+- Stroke creation: hardcoded green → COLORS.stroke
+- Ready state stroke update: hardcoded green → COLORS.stroke
+
+### Files modified:
+- src/client/MainHUD.lua (inventory button styling)
+- src/client/ShieldUI.lua (shield button styling)
+- plans/ui-fixes-prd.json (marked as completed with resolution)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Both buttons now have identical visual properties
+- Functional state colors (active=blue, cooldown=gray) preserved for shield
+- AutoButtonColor and hover states work consistently
+
+### Acceptance criteria met:
+- ✅ Identified styling differences (size, position, colors, corner radius)
+- ✅ Chose unified button style (neutral dark with consistent stroke)
+- ✅ Applied consistent styling to both buttons
+- ✅ Hover/click states consistent (both use AutoButtonColor)
+
+### Note for next developer:
+The inventory button is defined in MainHUD.lua, not InventoryUI.lua. InventoryUI.lua contains the inventory panel that opens when the button is clicked. The PRD files list has been corrected.

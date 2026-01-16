@@ -212,9 +212,10 @@
       "title": "Unify Shield and Inventory Button Styles",
       "description": "The shield button and inventory button are positioned next to each other but have different visual styles. Update them to have consistent styling.",
       "priority": "medium",
+      "status": "completed",
+      "completedDate": "2026-01-16",
       "files": [
         "src/client/ShieldUI.lua",
-        "src/client/InventoryUI.lua",
         "src/client/MainHUD.lua"
       ],
       "tasks": [
@@ -222,7 +223,8 @@
         "Choose a unified button style",
         "Apply consistent styling to both buttons",
         "Ensure hover/click states are also consistent"
-      ]
+      ],
+      "resolution": "Unified both buttons to consistent styling. Inventory button: changed size from 50x50 to 60x60, position aligned to y=50 to match shield button, corner radius from 10 to 12, background color from RGB(40,40,55) to RGB(60,60,75), stroke color from RGB(80,80,100) to RGB(100,100,120). Shield button: changed ready state color from green RGB(80,180,80) to neutral RGB(60,60,75), stroke color from green RGB(100,200,100) to neutral RGB(100,100,120). Both buttons now have identical size, corner radius, transparency, stroke thickness, and color scheme."
     }
   ],
   "testingNotes": [
