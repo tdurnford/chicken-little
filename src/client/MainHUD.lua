@@ -272,7 +272,7 @@ local function createChickenCountFrame(screenGui: ScreenGui): (Frame, TextLabel)
   -- Chicken icon (emoji)
   local icon = Instance.new("TextLabel")
   icon.Name = "ChickenIcon"
-  icon.Size = UDim2.new(0, 32, 1, 0)
+  icon.Size = UDim2.new(0, 24, 1, 0)
   icon.Position = UDim2.new(0, 0, 0, 0)
   icon.BackgroundTransparency = 1
   icon.Text = "🐔"
@@ -282,8 +282,8 @@ local function createChickenCountFrame(screenGui: ScreenGui): (Frame, TextLabel)
   -- Count label
   local label = Instance.new("TextLabel")
   label.Name = "ChickenCountLabel"
-  label.Size = UDim2.new(1, -30, 1, 0)
-  label.Position = UDim2.new(0, 30, 0, 0)
+  label.Size = UDim2.new(1, -26, 1, 0)
+  label.Position = UDim2.new(0, 26, 0, 0)
   label.BackgroundTransparency = 1
   label.TextColor3 = Color3.fromRGB(255, 220, 150) -- Warm yellow
   label.TextSize = 28 -- Larger to match money display style

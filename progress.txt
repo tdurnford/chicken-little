@@ -286,3 +286,33 @@ Restyled the restock counter to be minimal and unobtrusive:
 - The text "Restocks in X:XX" is now subtle dark text without any background
 - The timer update logic (`updateRestockTimer`) remains unchanged and works correctly
 - Only 1 remaining incomplete item in the PRD: #8 (Reduce Chicken Counter Icon Spacing)
+
+---
+
+## 2026-01-16 - Reduce Chicken Counter Icon Spacing (ID #8)
+
+### Summary
+Reduced the spacing between the chicken icon and counter number in the bottom-right HUD.
+
+### Problem
+The chicken counter had too much space between the chicken emoji icon and the count text. The icon was 32px wide and the label was positioned at x=30, creating unnecessary visual separation between the elements.
+
+### Solution
+Reduced the spacing by:
+1. Icon width: 32px → 24px (better fits the 24px text size)
+2. Label position offset: 30px → 26px
+3. Label size adjustment: -30px → -26px for width calculation
+
+This brings the counter number closer to the chicken icon, making them appear as a cohesive group.
+
+### Files Changed
+- `src/client/MainHUD.lua` - Reduced icon width and label position offset in `createChickenCountFrame`
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+
+### Notes for Next Developer
+- All 8 work items in the gameplay-improvements-prd.json are now complete
+- The PRD has been fully implemented
+

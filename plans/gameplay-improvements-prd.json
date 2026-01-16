@@ -219,7 +219,7 @@
       "category": "UI",
       "title": "Reduce Chicken Counter Icon Spacing",
       "description": "On the bottom right, there is a chicken counter with an icon. There is too much space between the counter number and the icon. Reduce this spacing.",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Locate the chicken counter UI element in MainHUD.lua",
