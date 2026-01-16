@@ -1371,3 +1371,35 @@ This provides a tighter corner position while still maintaining a small margin f
 
 ### Note for next developer:
 The position uses UDim2 with pixel offsets. If you need to adjust for different screen sizes or safe areas, consider using scale values (0.0-1.0) instead of pixel offsets. The anchor point is Vector2.new(0, 1) which means the bottom-left corner of the frame is at the specified position.
+
+## 2026-01-16: Reduce Chicken Icon/Count Spacing (ui-polish-prd.json Work Item #4 - MEDIUM) - COMPLETED
+
+Reduced the visual gap between the chicken icon and count label in the bottom-right corner HUD display.
+
+### Problem:
+The spacing between the chicken emoji (🐔) and the count label (e.g., "5/15") was too large, making the layout feel loose and wasting horizontal space.
+
+### Solution:
+In MainHUD.lua `createChickenCountFrame()` function:
+
+- **Before**: Count label started at X position 36px (with icon width of 32px = 4px gap)
+- **After**: Count label starts at X position 30px (slight overlap with icon boundary for tighter layout)
+
+Updated values:
+- `label.Position = UDim2.new(0, 30, 0, 0)` (was 36)
+- `label.Size = UDim2.new(1, -30, 1, 0)` (was -36)
+
+### Files modified:
+- src/client/MainHUD.lua (createChickenCountFrame function, 2 line changes)
+- plans/ui-polish-prd.json (marked as completed with resolution)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+
+### Acceptance criteria met:
+- ✅ Gap between chicken icon and count reduced
+- ✅ Tighter, more polished layout
+
+### Note for next developer:
+The chicken icon is a TextLabel with emoji text (🐔) sized at 32px width. The count label now starts at 30px, creating a 2px overlap which visually appears as a tight gap due to emoji padding. If the gap is still too large, consider reducing the icon width or moving the label position even closer.

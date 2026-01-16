@@ -45,7 +45,9 @@
       "type": "ui",
       "priority": "medium",
       "files": ["src/client/MainHUD.lua"],
-      "status": "pending"
+      "status": "completed",
+      "completedDate": "2026-01-16",
+      "resolution": "Reduced the gap between the chicken icon and count label in createChickenCountFrame(). Changed count label position from 36px to 30px (start position) and adjusted size accordingly. The chicken icon is 32px wide, so the text now starts 2px earlier, creating a tighter visual layout while maintaining readability."
     },
     {
       "id": 5,

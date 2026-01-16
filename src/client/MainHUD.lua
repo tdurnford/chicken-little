@@ -266,8 +266,8 @@ local function createChickenCountFrame(screenGui: ScreenGui): (Frame, TextLabel)
   -- Count label
   local label = Instance.new("TextLabel")
   label.Name = "ChickenCountLabel"
-  label.Size = UDim2.new(1, -36, 1, 0)
-  label.Position = UDim2.new(0, 36, 0, 0)
+  label.Size = UDim2.new(1, -30, 1, 0)
+  label.Position = UDim2.new(0, 30, 0, 0)
   label.BackgroundTransparency = 1
   label.TextColor3 = Color3.fromRGB(255, 220, 150) -- Warm yellow
   label.TextSize = 28 -- Larger to match money display style
