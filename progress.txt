@@ -1,0 +1,28 @@
+## 2026-01-16 - Fix Predator Targeting Inconsistency (ID #6)
+
+### Summary
+Fixed a bug where predators would visually target one chicken but actually capture a different chicken during attacks.
+
+### Problem
+The `PredatorAttack.executeAttack` function was using `selectChickensForAttack` which randomly selected chickens to capture, completely ignoring the `targetChickenId` that was set by the predator AI for visual targeting. This caused a disconnect between what the player saw (predator approaching chicken A) and what actually happened (chicken B gets captured).
+
+### Solution
+Modified `selectChickensForAttack` in `src/shared/PredatorAttack.lua` to:
+1. Accept an optional `targetChickenId` parameter
+2. Prioritize the targeted chicken when selecting chickens for attack (if it exists and is not protected)
+3. Fill remaining attack slots with random chickens as before
+
+Also updated `executeAttack` to pass the predator's `targetChickenId` from the spawn state to the selection function.
+
+### Files Changed
+- `src/shared/PredatorAttack.lua` - Modified `selectChickensForAttack` and `executeAttack` functions
+- `src/shared/IntegrationTests.lua` - Added import for PredatorAttack, added test for targeted chicken priority
+
+### Testing
+- Added integration test `"PredatorAttack: executeAttack prioritizes targeted chicken"`
+- Format check passes with `stylua`
+
+### Notes for Next Developer
+- The predator targeting now correctly prioritizes the chicken it's visually approaching
+- If the targeted chicken is protected (newly placed within 15 seconds), a random chicken will be selected instead
+- The `PredatorSpawning.updateTargetChicken` function is used by the server to set which chicken a predator is targeting

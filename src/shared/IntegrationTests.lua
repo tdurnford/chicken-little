@@ -27,6 +27,7 @@ local ChickenHealth = require(script.Parent.ChickenHealth)
 local PredatorAI = require(script.Parent.PredatorAI)
 local BaseballBat = require(script.Parent.BaseballBat)
 local PredatorSpawning = require(script.Parent.PredatorSpawning)
+local PredatorAttack = require(script.Parent.PredatorAttack)
 local ChickenAI = require(script.Parent.ChickenAI)
 local DayNightCycle = require(script.Parent.DayNightCycle)
 
@@ -3078,6 +3079,63 @@ test("PredatorSpawning: getSummary includes timeOfDayMultiplier", function()
   assert_true(defaultSummary.timeOfDayMultiplier == 1.0, "Summary should default to 1.0 multiplier")
 
   return true, "getSummary includes timeOfDayMultiplier"
+end)
+
+-- ============================================================================
+-- PredatorAttack Tests
+-- ============================================================================
+
+test("PredatorAttack: executeAttack prioritizes targeted chicken", function()
+  -- Create player data with multiple chickens
+  local playerData = PlayerData.create("test_player")
+  playerData.money = 10000
+
+  -- Place 3 chickens with different IDs
+  local chicken1 = ChickenPlacement.place(playerData, "BasicChick", 1, os.time() - 100)
+  local chicken2 = ChickenPlacement.place(playerData, "BasicChick", 2, os.time() - 100)
+  local chicken3 = ChickenPlacement.place(playerData, "BasicChick", 3, os.time() - 100)
+
+  if not chicken1 or not chicken2 or not chicken3 then
+    return false, "Failed to place chickens"
+  end
+
+  -- Create spawn state with predator targeting chicken2
+  local spawnState = PredatorSpawning.createSpawnState()
+  local spawnResult = PredatorSpawning.spawnPredator(spawnState, "Rat", "test_player", os.time())
+  if not spawnResult.success or not spawnResult.predator then
+    return false, "Failed to spawn predator"
+  end
+
+  -- Set predator to attacking state and target chicken2
+  PredatorSpawning.updatePredatorState(spawnState, spawnResult.predator.id, "attacking")
+  PredatorSpawning.updateTargetChicken(spawnState, spawnResult.predator.id, chicken2.id)
+
+  -- Execute attack
+  local attackResult =
+    PredatorAttack.executeAttack(playerData, spawnState, spawnResult.predator.id, os.time())
+
+  -- Verify attack succeeded
+  local pass, msg = assert_true(attackResult.success, "Attack should succeed")
+  if not pass then
+    return pass, msg
+  end
+
+  -- Verify targeted chicken was captured
+  pass, msg = assert_gt(attackResult.chickensLost, 0, "Should have lost chickens")
+  if not pass then
+    return pass, msg
+  end
+
+  -- Check that chicken2 (the targeted one) was included in captured chickens
+  local targetedChickenCaptured = false
+  for _, chickenId in ipairs(attackResult.chickenIds) do
+    if chickenId == chicken2.id then
+      targetedChickenCaptured = true
+      break
+    end
+  end
+
+  return assert_true(targetedChickenCaptured, "Targeted chicken should be prioritized in attack")
 end)
 
 -- ============================================================================

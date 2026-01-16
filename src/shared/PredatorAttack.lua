@@ -72,11 +72,13 @@ function PredatorAttack.startAttacking(
   return PredatorSpawning.updatePredatorState(spawnState, predatorId, "attacking")
 end
 
--- Select random chickens from coop for attack (excluding protected chickens)
+-- Select chickens from coop for attack (excluding protected chickens)
+-- If targetChickenId is provided, prioritize that chicken first
 local function selectChickensForAttack(
   playerData: PlayerData.PlayerDataSchema,
   count: number,
-  currentTime: number
+  currentTime: number,
+  targetChickenId: string?
 ): { PlayerData.ChickenData }
   local placedChickens = playerData.placedChickens
   if #placedChickens == 0 then
@@ -85,6 +87,7 @@ local function selectChickensForAttack(
 
   local selected = {}
   local indices = {}
+  local targetChickenIndex: number? = nil
 
   -- Create list of indices to select from (excluding protected chickens)
   for i = 1, #placedChickens do
@@ -93,11 +96,27 @@ local function selectChickensForAttack(
     local timeSincePlaced = currentTime - placedTime
     if timeSincePlaced >= CHICKEN_PLACEMENT_PROTECTION_SECONDS then
       table.insert(indices, i)
+      -- Track if the targeted chicken is available
+      if targetChickenId and chicken.id == targetChickenId then
+        targetChickenIndex = i
+      end
     end
   end
 
-  -- Randomly select chickens up to count or available chickens
-  local toSelect = math.min(count, #indices)
+  -- Prioritize the targeted chicken if it exists and is not protected
+  if targetChickenIndex then
+    table.insert(selected, placedChickens[targetChickenIndex])
+    -- Remove targeted chicken from available indices
+    for j, idx in ipairs(indices) do
+      if idx == targetChickenIndex then
+        table.remove(indices, j)
+        break
+      end
+    end
+  end
+
+  -- Fill remaining slots with random chickens
+  local toSelect = math.min(count - #selected, #indices)
   for _ = 1, toSelect do
     if #indices == 0 then
       break
@@ -194,8 +213,10 @@ function PredatorAttack.executeAttack(
     }
   end
 
-  -- Select chickens to attack (excluding protected chickens)
-  local chickensToAttack = selectChickensForAttack(playerData, config.chickensPerAttack, attackTime)
+  -- Select chickens to attack (prioritize targeted chicken if set)
+  local targetChickenId = predator.targetChickenId
+  local chickensToAttack =
+    selectChickensForAttack(playerData, config.chickensPerAttack, attackTime, targetChickenId)
   local chickenIds = {}
   local chickenSpots = {} -- Map of chickenId to spotIndex
   local totalValueLost = 0
