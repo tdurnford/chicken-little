@@ -198,12 +198,13 @@ local function generateSpawnId(): string
   return "spawn_" .. tostring(os.time()) .. "_" .. tostring(math.random(1000, 9999))
 end
 
--- Calculate distance between two positions
+-- Calculate horizontal distance between two positions (XZ plane only)
+-- Uses 2D distance to avoid Y-axis differences between player (standing height)
+-- and chicken (ground level) causing false "too far" rejections
 local function getDistance(pos1: Vector3, pos2: Vector3): number
   local dx = pos2.x - pos1.x
-  local dy = pos2.y - pos1.y
   local dz = pos2.z - pos1.z
-  return math.sqrt(dx * dx + dy * dy + dz * dz)
+  return math.sqrt(dx * dx + dz * dz)
 end
 
 -- Calculate next spawn time based on config

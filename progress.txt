@@ -1053,3 +1053,38 @@ Moved the tutorial carousel from the bottom of the screen to a higher position f
 
 ### Note for next developer:
 All features in ui-fixes-prd.json are now COMPLETE. The PRD status has been updated to "completed" with completedDate "2026-01-16". Consider archiving this PRD or creating a new one for future work.
+
+## 2026-01-16: Fix Random Chicken Claiming Distance Check (ui-polish-prd.json Work Item #16 - CRITICAL) - COMPLETED
+
+Fixed the bug where players were unable to claim random chickens due to "chicken is too far away" warnings even when standing next to the chicken.
+
+### Root Cause Analysis:
+The `getDistance` function in `RandomChickenSpawn.lua` was using 3D distance calculation including the Y-axis:
+- Player HumanoidRootPart is at Y position ~3-4 studs (standing height)
+- Chicken spawns at Y position ~0 studs (ground level from map config)
+- This Y difference of 3-4 studs was being added to the distance calculation
+- With a claim range of only 8 studs, this Y difference consumed nearly half the allowed distance
+- Combined with any XZ distance and server/client position sync lag, claims would fail
+
+### Changes made to RandomChickenSpawn.lua:
+- Changed `getDistance` function from 3D distance to 2D horizontal distance (XZ plane only)
+- Removed Y-axis from distance calculation: `dy * dy` removed from the formula
+- Added comment explaining why 2D distance is used for claiming
+
+### Files modified:
+- src/shared/RandomChickenSpawn.lua (getDistance function, lines 201-208)
+- plans/ui-polish-prd.json (marked as completed with resolution)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Existing integration test "claim chicken fails when out of range" still works (uses 100 studs on X-axis)
+- Fix is minimal and surgical - only changed the distance calculation logic
+
+### Acceptance criteria met:
+- ✅ Identified the incorrect distance check logic (3D vs 2D distance)
+- ✅ Fixed the distance check to use horizontal (XZ) distance only
+- ✅ Players can now claim random chickens when standing near them horizontally
+
+### Note for next developer:
+The random chicken claim system now uses 2D horizontal distance for claim validation. The same pattern should be applied if any other distance checks exhibit similar Y-axis issues. The claim range remains 8 studs but is now measured purely on the XZ plane.
