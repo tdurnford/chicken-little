@@ -43,7 +43,7 @@ export type DefenseCheckResult = {
 -- Constants
 local APPROACH_TIME_SECONDS = 5 -- Time for predator to reach coop after spawning
 local ESCAPE_DELAY_SECONDS = 3 -- Time for predator to escape after attacking
-local CHICKEN_PLACEMENT_PROTECTION_SECONDS = 5 -- Protection period for newly placed chickens
+local CHICKEN_PLACEMENT_PROTECTION_SECONDS = 15 -- Protection period for newly placed chickens (grace period)
 
 -- Check if a predator has reached the coop (transition from approaching to attacking)
 function PredatorAttack.hasReachedCoop(

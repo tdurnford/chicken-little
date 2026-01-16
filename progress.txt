@@ -1123,3 +1123,37 @@ Removed the tutorial carousel UI completely from the game as it was no longer ne
 
 ### Note for next developer:
 The Tutorial.lua module file remains in src/client/ but is not used. If you need to re-add the tutorial in the future, you can re-import and wire it up in Main.client.lua. The module itself is complete and functional - just not connected. If the tutorial is definitively not needed, Tutorial.lua can be deleted in a future cleanup.
+
+## 2026-01-16: Add Grace Period for Predator Attacks on New Chickens (ui-polish-prd.json Work Item #7 - HIGH) - COMPLETED
+
+Increased the grace period for newly placed chickens from 5 to 15 seconds to give players meaningful time to prepare defenses.
+
+### Problem:
+When a player has no chickens and a predator hasn't been around in a while, placing a new chicken would result in it being immediately attacked. The existing 5-second protection window was too short to be effective.
+
+### Solution:
+Increased CHICKEN_PLACEMENT_PROTECTION_SECONDS from 5 to 15 seconds in PredatorAttack.lua.
+
+### How it works:
+The protection mechanism was already implemented in the `selectChickensForAttack()` function:
+1. When a predator executes an attack, it calls `selectChickensForAttack()` to choose which chickens to target
+2. This function checks each chicken's `placedTime` and excludes chickens placed within the protection window
+3. Only chickens that have been placed for longer than CHICKEN_PLACEMENT_PROTECTION_SECONDS can be attacked
+4. The `placedTime` is set in `ChickenPlacement.placeChicken()` and `placeChickenFreeRoaming()` via `os.time()`
+
+### Files modified:
+- src/shared/PredatorAttack.lua (line 46: changed constant from 5 to 15)
+- plans/ui-polish-prd.json (marked as completed with resolution)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- The protection is applied at attack execution time, so it affects all chickens regardless of when the predator spawned
+
+### Acceptance criteria met:
+- ✅ Newly placed chickens have a grace period before being targeted by predators
+- ✅ 15-second window gives players time to prepare defenses
+- ✅ Protection applies to all newly placed chickens, not just the first one
+
+### Note for next developer:
+The 15-second grace period can be adjusted by modifying `CHICKEN_PLACEMENT_PROTECTION_SECONDS` in PredatorAttack.lua. If players report this is too short or too long, it can be easily tuned. The same constant is used for all chicken placement scenarios (hatching, placing from inventory, etc.).
