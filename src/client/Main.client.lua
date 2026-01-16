@@ -19,7 +19,6 @@ local PredatorVisuals = require(ClientModules:WaitForChild("PredatorVisuals"))
 local PredatorHealthBar = require(ClientModules:WaitForChild("PredatorHealthBar"))
 local EggVisuals = require(ClientModules:WaitForChild("EggVisuals"))
 local MainHUD = require(ClientModules:WaitForChild("MainHUD"))
-local ChickenPickup = require(ClientModules:WaitForChild("ChickenPickup"))
 local ChickenSelling = require(ClientModules:WaitForChild("ChickenSelling"))
 local MobileTouchControls = require(ClientModules:WaitForChild("MobileTouchControls"))
 local InventoryUI = require(ClientModules:WaitForChild("InventoryUI"))
@@ -1232,9 +1231,11 @@ local function findNearbyRandomChicken(playerPosition: Vector3): (string?, strin
 end
 
 --[[
-	Helper function to find the nearest placed chicken within pickup range.
+	Helper function to find the nearest placed chicken within interaction range.
 	Returns chickenId, chickenType, rarity, accumulatedMoney or nil.
 ]]
+local CHICKEN_INTERACTION_RANGE = 10 -- Range for selling chickens
+
 local function findNearbyPlacedChicken(
   playerPosition: Vector3
 ): (string?, string?, string?, number?)
@@ -1242,8 +1243,7 @@ local function findNearbyPlacedChicken(
     return nil, nil, nil, nil
   end
 
-  local pickupRange = ChickenPickup.getPickupRange()
-  local nearestDistance = pickupRange
+  local nearestDistance = CHICKEN_INTERACTION_RANGE
   local nearestChicken = nil
 
   for _, chicken in ipairs(playerDataCache.placedChickens) do
@@ -1315,47 +1315,8 @@ local function findNearbyAvailableTrapSpot(playerPosition: Vector3): number?
   return nearestSpot
 end
 
--- Wire up ChickenPickup callbacks for proximity checking
-ChickenPickup.create()
-ChickenPickup.setGetNearbyChicken(function(position: Vector3): (string?, number?)
-  local chickenId = findNearbyPlacedChicken(position)
-  return chickenId, nil -- spotIndex no longer used
-end)
-ChickenPickup.setGetAvailableSpot(function(_position: Vector3): number?
-  return nil -- No longer using spots for free-roaming chickens
-end)
-ChickenPickup.setGetPlayerData(function()
-  return playerDataCache
-end)
-
--- Wire up pickup callback - pickup chicken to inventory
-ChickenPickup.setOnPickup(function(chickenId: string, _spotIndex: number)
-  -- Call server to pick up chicken into inventory
-  local pickupChickenFunc = getFunction("PickupChicken")
-  if pickupChickenFunc then
-    local result = pickupChickenFunc:InvokeServer(chickenId)
-    if result and result.success then
-      SoundEffects.play("chickenPickup")
-      print("[Client] Chicken picked up to inventory:", chickenId)
-    else
-      SoundEffects.play("uiError")
-      warn("[Client] Failed to pick up chicken:", result and result.message or "Unknown error")
-    end
-  end
-end)
-
--- Wire up place callback - no longer used for free-roaming
-ChickenPickup.setOnPlace(function(_chickenId: string, _newSpotIndex: number)
-  -- Free-roaming chickens are placed directly via PlaceChicken, not moved
-  warn("[Client] ChickenPickup.setOnPlace called but no longer used for free-roaming chickens")
-end)
-
--- Wire up cancel callback
-ChickenPickup.setOnCancel(function()
-  SoundEffects.play("uiCancel")
-  print("[Client] Pickup cancelled")
-end)
-print("[Client] ChickenPickup system initialized")
+-- ChickenPickup functionality removed - players can only sell chickens now
+-- The old pickup callbacks have been removed as part of the sell-only feature
 
 -- Wire up ChickenSelling callbacks for proximity checking
 ChickenSelling.create()
@@ -1388,20 +1349,23 @@ ChickenSelling.setPerformServerSale(function(chickenId: string)
     }
   end
 end)
+
+-- Wire up ChickenVisuals sell prompt to trigger ChickenSelling confirmation
+ChickenVisuals.setOnSellPromptTriggered(function(chickenId: string)
+  -- Find the chicken to get its details
+  local visualState = ChickenVisuals.get(chickenId)
+  if visualState then
+    -- Trigger sell directly (starts confirmation flow)
+    ChickenSelling.startSell(chickenId, visualState.chickenType, visualState.rarity, visualState.accumulatedMoney)
+  end
+end)
+
 print("[Client] ChickenSelling system initialized")
 
 -- Initialize MobileTouchControls and wire up button actions
 MobileTouchControls.create()
-MobileTouchControls.setAction("pickup", function()
-  ChickenPickup.touchPickup()
-end)
-MobileTouchControls.setAction("place", function()
-  ChickenPickup.touchPickup() -- Same action - place when holding
-end)
 MobileTouchControls.setAction("cancel", function()
-  if ChickenPickup.isHolding() then
-    ChickenPickup.touchCancel()
-  elseif ChickenSelling.isConfirming() then
+  if ChickenSelling.isConfirming() then
     ChickenSelling.touchCancel()
   end
 end)
@@ -1916,9 +1880,8 @@ end
 
 --[[
 	Updates proximity-based prompts based on player position.
-	Shows pickup prompt when near a placed chicken (and not holding).
-	Shows sell prompt when near a placed chicken with money (and not holding).
-	Shows place prompt when holding and near an available spot.
+	Shows sell prompt when near a placed chicken (via ProximityPrompt on chicken model).
+	Also handles mobile touch controls and random chicken claiming.
 ]]
 local function updateProximityPrompts()
   local character = localPlayer.Character
@@ -1939,107 +1902,90 @@ local function updateProximityPrompts()
     return
   end
 
-  -- Check if holding a chicken
-  local isHoldingChicken = ChickenPickup.isHolding()
+  -- Check for nearby chickens (for auto-collect and mobile controls)
+  local chickenId, chickenType, _, accumulatedMoney = findNearbyPlacedChicken(playerPosition)
 
-  if isHoldingChicken then
-    -- Free-roaming chickens don't need spot placement
-    ChickenPickup.hidePrompt()
-    ChickenSelling.hidePrompt()
-    hideRandomChickenPrompt()
-    isNearRandomChicken = false
-    -- Show place context for mobile
-    MobileTouchControls.showPlaceContext()
-  else
-    -- When not holding, check for nearby chickens
-    local chickenId, chickenType, _, accumulatedMoney = findNearbyPlacedChicken(playerPosition)
+  if chickenId then
+    isNearChicken = true
+    nearestChickenId = chickenId
+    nearestChickenType = chickenType
 
-    if chickenId then
-      isNearChicken = true
-      nearestChickenId = chickenId
-      nearestChickenType = chickenType
+    -- Auto-collect money when near a chicken with at least $1 accumulated
+    if accumulatedMoney and accumulatedMoney >= 1 then
+      local currentTime = os.clock()
+      local lastCollectTime = lastCollectedChickenTimes[chickenId] or 0
 
-      -- Auto-collect money when near a chicken with at least $1 accumulated
-      if accumulatedMoney and accumulatedMoney >= 1 then
-        local currentTime = os.clock()
-        local lastCollectTime = lastCollectedChickenTimes[chickenId] or 0
+      -- Check cooldown to prevent spam
+      if currentTime - lastCollectTime >= MONEY_COLLECTION_COOLDOWN then
+        lastCollectedChickenTimes[chickenId] = currentTime
 
-        -- Check cooldown to prevent spam
-        if currentTime - lastCollectTime >= MONEY_COLLECTION_COOLDOWN then
-          lastCollectedChickenTimes[chickenId] = currentTime
+        -- Call server to collect money from this specific chicken
+        local collectMoneyFunc = getFunction("CollectMoney")
+        if collectMoneyFunc then
+          -- Run in a separate thread to not block the game loop
+          task.spawn(function()
+            local result = collectMoneyFunc:InvokeServer(chickenId)
+            if
+              result
+              and result.success
+              and result.amountCollected
+              and result.amountCollected > 0
+            then
+              -- Reset client-side accumulated money to the remainder
+              ChickenVisuals.resetAccumulatedMoney(chickenId, result.remainder or 0)
 
-          -- Call server to collect money from this specific chicken
-          local collectMoneyFunc = getFunction("CollectMoney")
-          if collectMoneyFunc then
-            -- Run in a separate thread to not block the game loop
-            task.spawn(function()
-              local result = collectMoneyFunc:InvokeServer(chickenId)
-              if
-                result
-                and result.success
-                and result.amountCollected
-                and result.amountCollected > 0
-              then
-                -- Reset client-side accumulated money to the remainder
-                ChickenVisuals.resetAccumulatedMoney(chickenId, result.remainder or 0)
-
-                -- Play collection sound and show visual effect
-                SoundEffects.playMoneyCollect(result.amountCollected)
-                -- Get position from visual state
-                local visualState = ChickenVisuals.get(chickenId)
-                if visualState and visualState.position then
-                  ChickenVisuals.createMoneyPopEffect({
-                    amount = result.amountCollected,
-                    position = visualState.position + Vector3.new(0, 2, 0),
-                    isLarge = result.amountCollected >= 1000,
-                  })
-                end
+              -- Play collection sound and show visual effect
+              SoundEffects.playMoneyCollect(result.amountCollected)
+              -- Get position from visual state
+              local visualState = ChickenVisuals.get(chickenId)
+              if visualState and visualState.position then
+                ChickenVisuals.createMoneyPopEffect({
+                  amount = result.amountCollected,
+                  position = visualState.position + Vector3.new(0, 2, 0),
+                  isLarge = result.amountCollected >= 1000,
+                })
               end
-            end)
-          end
+
+              -- Update the sell prompt price after money collection
+              ChickenVisuals.updateSellPromptPrice(chickenId)
+            end
+          end)
         end
       end
+    end
 
-      -- Show pickup prompt
-      ChickenPickup.showPickupPrompt()
+    -- ProximityPrompt handles the sell UI now (shows on chicken model)
+    -- Show mobile touch controls for sell only (pickup removed)
+    MobileTouchControls.showSellContext()
 
-      -- Show sell prompt with price
-      ChickenSelling.showSellPrompt(chickenType)
+    -- Hide random chicken prompt when near placed chicken
+    hideRandomChickenPrompt()
+    isNearRandomChicken = false
+    nearestRandomChickenId = nil
+    nearestRandomChickenType = nil
+  else
+    if isNearChicken then
+      -- Was near, now not - hide mobile controls
+      MobileTouchControls.hideAllButtons()
+    end
+    isNearChicken = false
+    nearestChickenId = nil
+    nearestChickenType = nil
 
-      -- Show mobile touch controls for both pickup and sell
-      MobileTouchControls.showChickenContext()
-
-      -- Hide random chicken prompt when near placed chicken
-      hideRandomChickenPrompt()
+    -- Check for nearby random chickens (only when not near placed chicken)
+    local randomChickenId, randomChickenType, _ = findNearbyRandomChicken(playerPosition)
+    if randomChickenId then
+      isNearRandomChicken = true
+      nearestRandomChickenId = randomChickenId
+      nearestRandomChickenType = randomChickenType
+      showRandomChickenPrompt(randomChickenType or "Chicken")
+    else
+      if isNearRandomChicken then
+        hideRandomChickenPrompt()
+      end
       isNearRandomChicken = false
       nearestRandomChickenId = nil
       nearestRandomChickenType = nil
-    else
-      if isNearChicken then
-        -- Was near, now not - hide prompts
-        ChickenPickup.hidePrompt()
-        ChickenSelling.hidePrompt()
-        MobileTouchControls.hideAllButtons()
-      end
-      isNearChicken = false
-      nearestChickenId = nil
-      nearestChickenType = nil
-
-      -- Check for nearby random chickens (only when not near placed chicken)
-      local randomChickenId, randomChickenType, _ = findNearbyRandomChicken(playerPosition)
-      if randomChickenId then
-        isNearRandomChicken = true
-        nearestRandomChickenId = randomChickenId
-        nearestRandomChickenType = randomChickenType
-        showRandomChickenPrompt(randomChickenType or "Chicken")
-      else
-        if isNearRandomChicken then
-          hideRandomChickenPrompt()
-        end
-        isNearRandomChicken = false
-        nearestRandomChickenId = nil
-        nearestRandomChickenType = nil
-      end
     end
   end
 

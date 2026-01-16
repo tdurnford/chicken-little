@@ -16,6 +16,10 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ChickenConfig = require(Shared:WaitForChild("ChickenConfig"))
 local MoneyScaling = require(Shared:WaitForChild("MoneyScaling"))
+local Store = require(Shared:WaitForChild("Store"))
+
+-- Callback for sell prompt triggered
+local onSellPromptTriggered: ((chickenId: string) -> ())?
 
 -- Type definitions
 export type AnimationState = "idle" | "laying" | "celebrating" | "walking"
@@ -538,6 +542,28 @@ function ChickenVisuals.create(
   local chickenIsPlaced = isPlaced == true
   if chickenIsPlaced then
     moneyIndicator = createMoneyIndicator(model.PrimaryPart, chickenMoneyPerSecond)
+
+    -- Add ProximityPrompt for selling (placed chickens only)
+    local sellPrice = Store.getChickenValue(chickenType)
+    local prompt = Instance.new("ProximityPrompt")
+    prompt.Name = "SellPrompt"
+    prompt.ObjectText = "Chicken"
+    prompt.ActionText = "Sell (" .. MoneyScaling.formatCurrency(sellPrice) .. ")"
+    prompt.HoldDuration = 0
+    prompt.MaxActivationDistance = 10
+    prompt.RequiresLineOfSight = false
+    prompt.KeyboardKeyCode = Enum.KeyCode.F
+    prompt.Parent = model.PrimaryPart
+
+    -- Store chickenId in prompt for reference
+    prompt:SetAttribute("ChickenId", chickenId)
+
+    -- Handle sell trigger
+    prompt.Triggered:Connect(function(playerWhoTriggered: Player)
+      if playerWhoTriggered == Players.LocalPlayer and onSellPromptTriggered then
+        onSellPromptTriggered(chickenId)
+      end
+    end)
   end
 
   -- Create state
@@ -880,6 +906,31 @@ function ChickenVisuals.getSummary(): { activeCount: number, animationTime: numb
     activeCount = ChickenVisuals.getActiveCount(),
     animationTime = animationTime,
   }
+end
+
+-- Set callback for when sell proximity prompt is triggered
+function ChickenVisuals.setOnSellPromptTriggered(callback: (chickenId: string) -> ())
+  onSellPromptTriggered = callback
+end
+
+-- Update sell prompt price for a chicken (call when accumulated money changes significantly)
+function ChickenVisuals.updateSellPromptPrice(chickenId: string)
+  local state = activeChickens[chickenId]
+  if not state or not state.model or not state.isPlaced then
+    return
+  end
+
+  local primaryPart = state.model.PrimaryPart
+  if not primaryPart then
+    return
+  end
+
+  local prompt = primaryPart:FindFirstChild("SellPrompt") :: ProximityPrompt?
+  if prompt then
+    local basePrice = Store.getChickenValue(state.chickenType)
+    local totalValue = basePrice + math.floor(state.accumulatedMoney)
+    prompt.ActionText = "Sell ($" .. MoneyScaling.formatCurrency(totalValue) .. ")"
+  end
 end
 
 -- Note: showTargetIndicator, clearAllTargetIndicators, and updateTargetIndicator

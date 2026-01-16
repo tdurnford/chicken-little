@@ -534,6 +534,48 @@ function ChickenSelling.destroy()
   }
 end
 
+-- Start selling a specific chicken directly (used by ProximityPrompt)
+function ChickenSelling.startSell(chickenId: string, chickenType: string?, rarity: string?, accumulatedMoney: number?): SellResult
+  if state.isConfirming then
+    return {
+      success = false,
+      message = "Already confirming a sale",
+      chickenId = state.pendingChickenId,
+    }
+  end
+
+  local resolvedChickenType = chickenType or ""
+  local resolvedRarity = rarity or "Common"
+  local resolvedAccumulatedMoney = accumulatedMoney or 0
+
+  -- Get sell price
+  local sellPrice = Store.getChickenValue(resolvedChickenType)
+  if sellPrice == 0 then
+    return {
+      success = false,
+      message = "Could not determine chicken value",
+    }
+  end
+
+  -- Update state
+  state.pendingChickenId = chickenId
+  state.pendingChickenType = resolvedChickenType
+  state.pendingChickenRarity = resolvedRarity
+  state.pendingSpotIndex = nil
+  state.pendingAccumulatedMoney = resolvedAccumulatedMoney
+  state.isConfirming = true
+
+  -- Show confirmation dialog
+  showConfirmation(resolvedChickenType, resolvedRarity, sellPrice, resolvedAccumulatedMoney)
+  updatePrompt(nil, false)
+
+  return {
+    success = true,
+    message = "Showing sell confirmation",
+    chickenId = chickenId,
+  }
+end
+
 -- Try to start selling a chicken at the player's position
 function ChickenSelling.trySell(): SellResult
   if state.isConfirming then
