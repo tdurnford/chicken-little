@@ -59,23 +59,6 @@ local function createPart(
   return part
 end
 
--- Create the ground for a section
-local function createGround(sectionCenter: PlayerSection.Vector3, parent: Instance)
-  local sectionSize = PlayerSection.getSectionSize()
-
-  local ground = createPart(
-    "Ground",
-    Vector3.new(sectionSize.x, 1, sectionSize.z),
-    Vector3.new(sectionCenter.x, sectionCenter.y - 0.5, sectionCenter.z),
-    COLORS.ground,
-    TRANSPARENCY.ground
-  )
-  ground.Material = Enum.Material.SmoothPlastic
-  ground.Parent = parent
-
-  return ground
-end
-
 -- Create a single coop spot visual
 local function createSpotVisual(
   spotData: PlayerSection.SpotData,
@@ -172,8 +155,6 @@ function SectionVisuals.buildSection(sectionIndex: number, _occupiedSpots: { [nu
   sectionFolder.Name = "PlayerSection_" .. sectionIndex
   sectionFolder.Parent = workspace
 
-  -- Create all visual elements
-  createGround(sectionCenter, sectionFolder)
   -- Note: Coop spots no longer created - chickens roam freely within section
   createBoundaries(sectionCenter, sectionFolder)
 
