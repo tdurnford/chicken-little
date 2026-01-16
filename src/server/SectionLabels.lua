@@ -15,9 +15,9 @@ local SectionLabels = {}
 
 -- Configuration
 local LABEL_HEIGHT_OFFSET = 20 -- Studs above section center
-local LABEL_SIZE = UDim2.new(0, 200, 0, 50)
+local LABEL_SIZE = UDim2.new(0, 300, 0, 60)
 local LABEL_MAX_DISTANCE = 150 -- Maximum visibility distance in studs
-local LABEL_FONT_SIZE = 28
+local LABEL_FONT_SIZE = 42
 
 -- Visual styling
 local LABEL_COLORS = {
@@ -76,15 +76,16 @@ local function createLabel(
   billboardGui.Adornee = anchorPart
   billboardGui.Parent = anchorPart
 
-  -- Create background frame with rounded corners
+  -- Create background frame with rounded corners (now fully transparent - no visible background)
   local backgroundFrame = Instance.new("Frame")
   backgroundFrame.Name = "Background"
   backgroundFrame.Size = UDim2.new(1, 0, 1, 0)
   backgroundFrame.BackgroundColor3 = LABEL_COLORS.backgroundColor
-  backgroundFrame.BackgroundTransparency = 0.4
+  backgroundFrame.BackgroundTransparency = 1 -- Fully transparent, no visible background
   backgroundFrame.BorderSizePixel = 0
   backgroundFrame.Parent = billboardGui
 
+  -- UICorner no longer needed since background is transparent, but keep for structure
   local corner = Instance.new("UICorner")
   corner.CornerRadius = UDim.new(0, 8)
   corner.Parent = backgroundFrame

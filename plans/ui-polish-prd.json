@@ -185,7 +185,9 @@
         "src/client/SectionVisuals.lua",
         "src/server/SectionLabels.lua"
       ],
-      "status": "pending"
+      "status": "completed",
+      "completedDate": "2026-01-16",
+      "resolution": "Removed background from section name labels and increased text size in SectionLabels.lua. Changed BackgroundTransparency from 0.4 to 1 (fully transparent) to remove the visible background. Increased LABEL_SIZE from 200x50 to 300x60 pixels and LABEL_FONT_SIZE from 28 to 42 for larger, more prominent text. The text stroke remains for readability against varying backgrounds."
     },
     {
       "id": 16,

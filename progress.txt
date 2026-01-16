@@ -1538,3 +1538,41 @@ The top-right corner now has a consistent row of UI elements at Y=10:
 - Inventory button (top-right, X=-70)
 
 If adding more buttons to this area, continue the pattern with X offsets of -70 increments.
+
+## 2026-01-16: Update Player Name Display Over Area (ui-polish-prd.json Work Item #15 - MEDIUM) - COMPLETED
+
+Removed the background from player name labels displayed over sections and increased the text size for better visibility.
+
+### Problem:
+The player name labels (showing "<PlayerName>'s Base") over each section had:
+1. A semi-transparent black background (0.4 transparency) that looked dated
+2. Small text (28px font size, 200x50 pixel container) that was hard to read from a distance
+
+### Solution:
+Modified SectionLabels.lua with the following changes:
+
+**Configuration constants updated:**
+- `LABEL_SIZE`: Changed from `UDim2.new(0, 200, 0, 50)` to `UDim2.new(0, 300, 0, 60)` (50% wider, 20% taller)
+- `LABEL_FONT_SIZE`: Changed from `28` to `42` (50% larger text)
+
+**Background removed:**
+- Changed `backgroundFrame.BackgroundTransparency` from `0.4` to `1` (fully transparent)
+- The Frame container is kept for layout structure, but is now invisible
+- UICorner is retained but has no visual effect with transparent background
+
+The text stroke (TextStrokeTransparency = 0) ensures the text remains readable against any background color in the game world.
+
+### Files modified:
+- src/server/SectionLabels.lua (configuration constants and createLabel function)
+- plans/ui-polish-prd.json (marked as completed with resolution)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Changes are purely visual - no logic changes
+
+### Note for next developer:
+The section labels are created by the server and replicated to all clients. If you need to adjust visibility further:
+- `LABEL_MAX_DISTANCE` controls how far away the label is visible (currently 150 studs)
+- `LABEL_HEIGHT_OFFSET` controls how high above the section center the label appears (currently 20 studs)
+- The text stroke color (LABEL_COLORS.strokeColor) can be adjusted if the white-on-dark text doesn't contrast well with new environments
