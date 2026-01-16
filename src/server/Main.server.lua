@@ -70,6 +70,12 @@ local PlayerSection = require(Shared:WaitForChild("PlayerSection"))
 -- Day/Night cycle module
 local DayNightCycle = require(Shared:WaitForChild("DayNightCycle"))
 
+-- XP reward configuration module
+local XPConfig = require(Shared:WaitForChild("XPConfig"))
+
+-- Level configuration module
+local LevelConfig = require(Shared:WaitForChild("LevelConfig"))
+
 -- Admin commands module
 local AdminCommands = require(ServerScriptService:WaitForChild("AdminCommands"))
 
@@ -163,6 +169,11 @@ local dayNightState: DayNightCycle.DayNightState
 -- Track previous time of day for nightfall warnings
 local previousTimeOfDay: string = "day"
 
+-- Track night cycle completions for XP rewards (userId -> last awarded cycle number)
+local playerNightCycleCount: { [number]: number } = {}
+local currentNightCycleNumber = 0
+local wasNight = false
+
 -- Initialize all RemoteEvents and RemoteFunctions
 local remotes = RemoteSetup.initialize()
 
@@ -194,6 +205,63 @@ local function syncPlayerData(player: Player, data: { [string]: any }?, forceSyn
   if playerDataChangedEvent then
     playerDataChangedEvent:FireClient(player, syncData)
     lastDataSyncTime[userId] = currentTime
+  end
+end
+
+--[[
+  Awards XP to a player and handles level-up events.
+  Fires XPGained and LevelUp events as appropriate.
+  @param player Player - The player to award XP to
+  @param playerData PlayerData.PlayerDataSchema - The player's data (modified in place)
+  @param xpAmount number - Amount of XP to award
+  @param reason string - Description of why XP was awarded (for notifications)
+]]
+local function awardXP(
+  player: Player,
+  playerData: PlayerData.PlayerDataSchema,
+  xpAmount: number,
+  reason: string
+)
+  if xpAmount <= 0 then
+    return
+  end
+
+  -- Award XP and check for level up
+  local newLevel = PlayerData.addXP(playerData, xpAmount)
+
+  -- Fire XPGained event to player
+  local xpGainedEvent = RemoteSetup.getEvent("XPGained")
+  if xpGainedEvent then
+    xpGainedEvent:FireClient(player, xpAmount, reason)
+  end
+
+  -- If player leveled up, fire LevelUp event
+  if newLevel then
+    -- Check what unlocks at this level
+    local unlocks = {}
+
+    -- Check threat level unlocks
+    local threatUnlockLevels = LevelConfig.getThreatUnlockLevels()
+    for threatLevel, requiredLevel in pairs(threatUnlockLevels) do
+      if requiredLevel == newLevel then
+        table.insert(unlocks, threatLevel .. " predators unlocked!")
+      end
+    end
+
+    -- Check max predator increase
+    local prevMaxPredators = LevelConfig.getMaxPredatorsForLevel(newLevel - 1)
+    local newMaxPredators = LevelConfig.getMaxPredatorsForLevel(newLevel)
+    if newMaxPredators > prevMaxPredators then
+      table.insert(unlocks, "Max simultaneous predators: " .. newMaxPredators)
+    end
+
+    -- Fire LevelUp event to player
+    local levelUpEvent = RemoteSetup.getEvent("LevelUp")
+    if levelUpEvent then
+      levelUpEvent:FireClient(player, newLevel, unlocks)
+    end
+
+    print("[Main.server] Player", player.Name, "leveled up to", newLevel)
   end
 end
 
@@ -772,6 +840,13 @@ if hatchEggFunc then
           message = result.message,
         })
       end
+
+      -- Award XP for hatching a chicken
+      if result.chickenRarity then
+        local xpAmount = XPConfig.calculateChickenHatchXP(result.chickenRarity)
+        awardXP(player, playerData, xpAmount, "Hatched " .. (result.chickenType or "chicken"))
+      end
+
       syncPlayerData(player, playerData, true)
     end
     return result
@@ -811,6 +886,10 @@ if collectWorldEggFunc then
           rarity = inventoryEgg.rarity,
         })
       end
+
+      -- Award XP for collecting an egg
+      local xpAmount = XPConfig.calculateEggCollectedXP(inventoryEgg.rarity)
+      awardXP(player, playerData, xpAmount, "Collected " .. inventoryEgg.eggType)
 
       syncPlayerData(player, playerData, true)
       return { success = true, message = message, egg = inventoryEgg }
@@ -928,6 +1007,13 @@ if swingBatFunc then
           if result.defeated then
             -- Award money for defeating predator
             playerData.money = (playerData.money or 0) + result.rewardMoney
+
+            -- Award XP for defeating predator
+            local defeatedPredator = PredatorSpawning.findPredator(gameState.spawnState, targetId)
+            if defeatedPredator then
+              local xpAmount = XPConfig.calculatePredatorKillXP(defeatedPredator.predatorType)
+              awardXP(player, playerData, xpAmount, "Defeated " .. defeatedPredator.predatorType)
+            end
 
             -- Unregister from predator AI
             PredatorAI.unregisterPredator(gameState.predatorAIState, targetId)
@@ -1049,6 +1135,10 @@ if claimRandomChickenFunc then
       if randomChickenClaimedEvent then
         randomChickenClaimedEvent:FireAllClients(result.chicken.id, player)
       end
+
+      -- Award XP for catching a random chicken
+      local xpAmount = XPConfig.calculateRandomChickenXP(result.chicken.rarity)
+      awardXP(player, playerData, xpAmount, "Caught " .. result.chicken.chickenType)
 
       -- Sync player data
       syncPlayerData(player, playerData, true)
@@ -1903,13 +1993,8 @@ Players.PlayerAdded:Connect(function(player)
             local starterChicken = data.placedChickens[1]
             local eggSpawnPos = PlayerSection.getRandomPositionInSection(sectionCenter)
 
-            local starterEgg = WorldEgg.create(
-              "CommonEgg",
-              player.UserId,
-              starterChicken.id,
-              1,
-              eggSpawnPos
-            )
+            local starterEgg =
+              WorldEgg.create("CommonEgg", player.UserId, starterChicken.id, 1, eggSpawnPos)
 
             if starterEgg then
               WorldEgg.add(gameState.worldEggRegistry, starterEgg)
@@ -1917,7 +2002,9 @@ Players.PlayerAdded:Connect(function(player)
               if eggSpawnedEvent then
                 eggSpawnedEvent:FireClient(player, WorldEgg.toNetworkData(starterEgg))
               end
-              print(string.format("[Main.server] Spawned starter egg for new player %s", player.Name))
+              print(
+                string.format("[Main.server] Spawned starter egg for new player %s", player.Name)
+              )
             end
           end
         end
@@ -2037,8 +2124,35 @@ local function runGameLoop(deltaTime: number)
   -- Update day/night cycle lighting
   DayNightCycle.update(dayNightState)
 
-  -- Track time-of-day transitions (notifications removed per Work Item #8)
+  -- Track time-of-day transitions and award XP for surviving night cycles
   local currentTimeOfDay = DayNightCycle.getTimeOfDay(dayNightState)
+  local isCurrentlyNight = DayNightCycle.isNight(dayNightState)
+
+  -- Check for night cycle completion (transition from night to dawn/day)
+  if wasNight and not isCurrentlyNight then
+    -- Night cycle completed, increment cycle number
+    currentNightCycleNumber = currentNightCycleNumber + 1
+
+    -- Award XP to all players who survived the night
+    for _, player in ipairs(players) do
+      local userId = player.UserId
+      local lastCycle = playerNightCycleCount[userId] or 0
+
+      -- Only award if they haven't been awarded for this cycle yet
+      if lastCycle < currentNightCycleNumber then
+        playerNightCycleCount[userId] = currentNightCycleNumber
+
+        local playerData = DataPersistence.getData(userId)
+        if playerData then
+          local xpAmount = XPConfig.calculateDayNightCycleXP()
+          awardXP(player, playerData, xpAmount, "Survived the night")
+          syncPlayerData(player, playerData, true)
+        end
+      end
+    end
+  end
+  wasNight = isCurrentlyNight
+
   if currentTimeOfDay ~= previousTimeOfDay then
     previousTimeOfDay = currentTimeOfDay
   end

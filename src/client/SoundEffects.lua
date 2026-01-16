@@ -82,6 +82,8 @@ local SOUND_IDS = {
   tradeRequest = "rbxassetid://4590657391", -- Trade notification
   tradeComplete = "rbxassetid://4612373808", -- Trade successful
   error = "rbxassetid://4590628823", -- Error beep
+  xpGain = "rbxassetid://6895079853", -- XP gain ding
+  levelUp = "rbxassetid://5628226610", -- Level up fanfare
 }
 
 -- Default category volumes
@@ -313,6 +315,18 @@ local SOUND_CONFIGS: { [string]: SoundConfig } = {
     name = "Error",
     category = "ui",
     volume = 0.5,
+  },
+  xpGain = {
+    id = SOUND_IDS.xpGain,
+    name = "XP Gain",
+    category = "ui",
+    volume = 0.6,
+  },
+  levelUp = {
+    id = SOUND_IDS.levelUp,
+    name = "Level Up",
+    category = "ui",
+    volume = 1.0,
   },
 }
 

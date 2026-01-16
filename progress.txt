@@ -85,3 +85,65 @@ Added a complete player leveling system with XP requirements, level-based diffic
 - The client should call `MainHUD.setLevelAndXP()` when receiving `PlayerDataChanged`
 - Threat level unlocks mean players won't face Bears until level 75
 
+---
+
+## 2026-01-16 - Implement XP Reward System (ID #7)
+
+### Summary
+Added a complete XP reward system that awards XP for various player actions, making the leveling system (ID #2) meaningful.
+
+### Features Implemented
+1. **XPConfig Module** (`src/shared/XPConfig.lua`)
+   - Base XP rewards for 6 action types
+   - Rarity multipliers: Common(1x) to Mythic(32x)
+   - Threat level multipliers: Minor(1x) to Catastrophic(32x)
+   - Functions: `calculatePredatorKillXP`, `calculateChickenHatchXP`, `calculateRandomChickenXP`, `calculateEggCollectedXP`, `calculateTrapCatchXP`, `calculateDayNightCycleXP`
+
+2. **XP Rewards Integrated**
+   - Killing predators: 25 XP base, scaled by threat level (Rat=25, Bear=800)
+   - Hatching chickens: 10 XP base, scaled by rarity (Common=10, Mythic=320)
+   - Catching random chickens: 50 XP base, scaled by rarity
+   - Collecting eggs: 5 XP base, scaled by rarity
+   - Surviving night cycles: 15 XP flat
+
+3. **Server Integration** (`src/server/Main.server.lua`)
+   - Added `awardXP()` helper function for XP rewards and level-up handling
+   - Fires `XPGained` event to show floating XP text
+   - Fires `LevelUp` event when player reaches new level with unlock info
+   - Night cycle completion tracking for XP awards
+
+4. **Client Integration** (`src/client/Main.client.lua`)
+   - Added `XPGained` event handler to show XP gain notifications
+   - Added `LevelUp` event handler to show level-up celebrations
+
+5. **Sound Effects** (`src/client/SoundEffects.lua`)
+   - Added `xpGain` and `levelUp` sound configurations
+
+### XP Reward Values
+| Action | Base XP | Multiplier |
+|--------|---------|------------|
+| Kill Predator | 25 | Threat level (1-32x) |
+| Hatch Chicken | 10 | Rarity (1-32x) |
+| Catch Random Chicken | 50 | Rarity (1-32x) |
+| Collect Egg | 5 | Rarity (1-32x) |
+| Trap Catch Predator | 35 | Threat level (1-32x) |
+| Survive Night | 15 | Flat |
+
+### Files Changed
+- `src/shared/XPConfig.lua` - NEW: XP reward configuration
+- `src/server/Main.server.lua` - XP reward integration for all actions
+- `src/client/Main.client.lua` - XPGained and LevelUp event handlers
+- `src/client/SoundEffects.lua` - Added xpGain and levelUp sounds
+- `src/shared/IntegrationTests.lua` - Added 8 tests for XPConfig
+
+### Testing
+- Added 8 integration tests for XPConfig functions
+- Format check passes with `stylua`
+
+### Notes for Next Developer
+- The XP system now makes the leveling system (ID #2) meaningful
+- Players receive XP notifications via `MainHUD.showXPGain(amount)`
+- Level-up celebrations show via `MainHUD.showLevelUp(newLevel, unlocks)`
+- Night cycle XP is awarded to all online players when night ends (dawn transition)
+- Trap catch XP would need integration in `SellPredator` when trap predator selling is implemented
+

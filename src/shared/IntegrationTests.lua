@@ -31,6 +31,7 @@ local PredatorAttack = require(script.Parent.PredatorAttack)
 local ChickenAI = require(script.Parent.ChickenAI)
 local DayNightCycle = require(script.Parent.DayNightCycle)
 local LevelConfig = require(script.Parent.LevelConfig)
+local XPConfig = require(script.Parent.XPConfig)
 
 -- Type definitions
 export type TestResult = {
@@ -3360,6 +3361,130 @@ test("PredatorSpawning: getSummary includes playerLevel", function()
 
   if summary.playerLevel ~= 15 then
     return assert_eq(summary.playerLevel, 15, "Summary should include player level 15")
+  end
+
+  return true, "OK"
+end)
+
+-- ============================================================================
+-- XPConfig Tests
+-- ============================================================================
+
+test("XPConfig: getBaseReward returns correct values", function()
+  local predatorKillXP = XPConfig.getBaseReward("predator_killed")
+  if predatorKillXP ~= 25 then
+    return assert_eq(predatorKillXP, 25, "Base predator kill XP should be 25")
+  end
+
+  local hatchXP = XPConfig.getBaseReward("chicken_hatched")
+  if hatchXP ~= 10 then
+    return assert_eq(hatchXP, 10, "Base hatch XP should be 10")
+  end
+
+  local cycleXP = XPConfig.getBaseReward("day_night_cycle_survived")
+  if cycleXP ~= 15 then
+    return assert_eq(cycleXP, 15, "Base day/night cycle XP should be 15")
+  end
+
+  return true, "OK"
+end)
+
+test("XPConfig: calculatePredatorKillXP scales with threat level", function()
+  local ratXP = XPConfig.calculatePredatorKillXP("Rat") -- Minor = 1x
+  local foxXP = XPConfig.calculatePredatorKillXP("Fox") -- Dangerous = 4x
+  local bearXP = XPConfig.calculatePredatorKillXP("Bear") -- Catastrophic = 32x
+
+  if ratXP ~= 25 then
+    return assert_eq(ratXP, 25, "Rat (Minor) should give 25 XP")
+  end
+  if foxXP ~= 100 then
+    return assert_eq(foxXP, 100, "Fox (Dangerous) should give 100 XP (25 * 4)")
+  end
+  if bearXP ~= 800 then
+    return assert_eq(bearXP, 800, "Bear (Catastrophic) should give 800 XP (25 * 32)")
+  end
+
+  return true, "OK"
+end)
+
+test("XPConfig: calculateChickenHatchXP scales with rarity", function()
+  local commonXP = XPConfig.calculateChickenHatchXP("Common") -- 1x
+  local rareXP = XPConfig.calculateChickenHatchXP("Rare") -- 4x
+  local mythicXP = XPConfig.calculateChickenHatchXP("Mythic") -- 32x
+
+  if commonXP ~= 10 then
+    return assert_eq(commonXP, 10, "Common hatch should give 10 XP")
+  end
+  if rareXP ~= 40 then
+    return assert_eq(rareXP, 40, "Rare hatch should give 40 XP (10 * 4)")
+  end
+  if mythicXP ~= 320 then
+    return assert_eq(mythicXP, 320, "Mythic hatch should give 320 XP (10 * 32)")
+  end
+
+  return true, "OK"
+end)
+
+test("XPConfig: calculateRandomChickenXP scales with rarity", function()
+  local uncommonXP = XPConfig.calculateRandomChickenXP("Uncommon") -- 2x
+  local epicXP = XPConfig.calculateRandomChickenXP("Epic") -- 8x
+  local legendaryXP = XPConfig.calculateRandomChickenXP("Legendary") -- 16x
+
+  if uncommonXP ~= 100 then
+    return assert_eq(uncommonXP, 100, "Uncommon catch should give 100 XP (50 * 2)")
+  end
+  if epicXP ~= 400 then
+    return assert_eq(epicXP, 400, "Epic catch should give 400 XP (50 * 8)")
+  end
+  if legendaryXP ~= 800 then
+    return assert_eq(legendaryXP, 800, "Legendary catch should give 800 XP (50 * 16)")
+  end
+
+  return true, "OK"
+end)
+
+test("XPConfig: calculateEggCollectedXP scales with rarity", function()
+  local commonXP = XPConfig.calculateEggCollectedXP("Common") -- 1x
+  local epicXP = XPConfig.calculateEggCollectedXP("Epic") -- 8x
+
+  if commonXP ~= 5 then
+    return assert_eq(commonXP, 5, "Common egg should give 5 XP")
+  end
+  if epicXP ~= 40 then
+    return assert_eq(epicXP, 40, "Epic egg should give 40 XP (5 * 8)")
+  end
+
+  return true, "OK"
+end)
+
+test("XPConfig: calculateTrapCatchXP scales with threat level", function()
+  local weaselXP = XPConfig.calculateTrapCatchXP("Weasel") -- Moderate = 2x
+  local wolfXP = XPConfig.calculateTrapCatchXP("Wolf") -- Deadly = 16x
+
+  if weaselXP ~= 70 then
+    return assert_eq(weaselXP, 70, "Weasel trap catch should give 70 XP (35 * 2)")
+  end
+  if wolfXP ~= 560 then
+    return assert_eq(wolfXP, 560, "Wolf trap catch should give 560 XP (35 * 16)")
+  end
+
+  return true, "OK"
+end)
+
+test("XPConfig: calculateDayNightCycleXP returns flat amount", function()
+  local cycleXP = XPConfig.calculateDayNightCycleXP()
+  if cycleXP ~= 15 then
+    return assert_eq(cycleXP, 15, "Day/night cycle XP should be 15")
+  end
+
+  return true, "OK"
+end)
+
+test("XPConfig: getAllRewardTypes returns all types", function()
+  local rewardTypes = XPConfig.getAllRewardTypes()
+
+  if #rewardTypes ~= 6 then
+    return assert_eq(#rewardTypes, 6, "Should have 6 reward types")
   end
 
   return true, "OK"

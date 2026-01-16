@@ -1120,6 +1120,26 @@ if nightfallWarningEvent then
   end)
 end
 
+-- XPGained: Show XP gain floating text
+local xpGainedEvent = getEvent("XPGained")
+if xpGainedEvent then
+  xpGainedEvent.OnClientEvent:Connect(function(amount: number, reason: string)
+    MainHUD.showXPGain(amount)
+    SoundEffects.play("xpGain")
+    print("[Client] XP gained:", amount, "for", reason)
+  end)
+end
+
+-- LevelUp: Show level up celebration
+local levelUpEvent = getEvent("LevelUp")
+if levelUpEvent then
+  levelUpEvent.OnClientEvent:Connect(function(newLevel: number, unlocks: { string })
+    MainHUD.showLevelUp(newLevel, unlocks)
+    SoundEffects.play("levelUp")
+    print("[Client] Level up! Now level", newLevel, "Unlocks:", table.concat(unlocks, ", "))
+  end)
+end
+
 --[[ Utility Functions for other modules ]]
 
 -- Expose player data cache getter

@@ -1,0 +1,245 @@
+{
+  "project": {
+    "name": "Chicken Coop Tycoon - Gameplay Improvements",
+    "description": "A set of UI polish, leveling system, XP mechanics, and bug fixes to improve the overall gameplay experience.",
+    "version": "1.1.0"
+  },
+  "workItems": [
+    {
+      "id": 1,
+      "category": "UI",
+      "title": "Lower Money Counter Position",
+      "description": "The money counter in the bottom left of the HUD is positioned too high. Reduce or remove any extra padding around it to lower its position on screen.",
+      "completed": false,
+      "priority": "high",
+      "steps": [
+        "Locate the MainHUD.lua file that contains the money counter",
+        "Identify the padding or position properties affecting the money display",
+        "Reduce vertical padding or adjust Y position to lower the counter",
+        "Test on various screen sizes to ensure proper positioning",
+        "Verify the change doesn't overlap with other UI elements"
+      ],
+      "acceptanceCriteria": [
+        "Money counter is visibly lower on screen",
+        "No excess padding around the counter",
+        "UI looks clean and properly aligned",
+        "Works correctly on all device sizes"
+      ],
+      "tests": [
+        "Visual inspection on desktop resolution",
+        "Visual inspection on mobile resolution",
+        "Verify no UI overlap with other elements"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Gameplay",
+      "title": "Implement Player Leveling System",
+      "description": "Add a leveling system where players gain levels over time. As players level up, they face more dangerous predators and can be attacked by multiple predators simultaneously based on their level.",
+      "completed": true,
+      "priority": "high",
+      "steps": [
+        "Create a LevelConfig module to define level thresholds and XP requirements",
+        "Add level and xp fields to PlayerData structure",
+        "Create level progression logic that determines current level from XP",
+        "Implement predator difficulty scaling based on player level",
+        "Implement simultaneous predator spawning based on player level",
+        "Create UI element to display current level and XP progress",
+        "Add level-up celebration effects and notifications"
+      ],
+      "acceptanceCriteria": [
+        "Players have a visible level displayed in the HUD",
+        "XP accumulates and contributes to leveling up",
+        "Higher level players face stronger predators",
+        "Multiple predators can attack simultaneously at higher levels",
+        "Level progression feels rewarding and balanced"
+      ],
+      "tests": [
+        "Test XP accumulation increases level",
+        "Test predator difficulty scales with level",
+        "Test multiple predator spawning at higher levels",
+        "Test level persists across sessions",
+        "Test level-up notification triggers"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "UI",
+      "title": "Fix Store Disabled Button Flash",
+      "description": "When the user clicks on a disabled button in the store, it flashes white. Remove this flash effect for disabled buttons.",
+      "completed": false,
+      "priority": "medium",
+      "steps": [
+        "Locate the StoreUI.lua file that handles store button interactions",
+        "Identify the click handler that causes the white flash on disabled buttons",
+        "Add a check to prevent the flash effect when button is disabled",
+        "Ensure disabled buttons have consistent visual feedback (or none)",
+        "Test all disabled button states in the store"
+      ],
+      "acceptanceCriteria": [
+        "Disabled buttons do not flash white when clicked",
+        "Disabled buttons maintain their disabled appearance",
+        "Enabled buttons still work normally with proper feedback",
+        "Store UX is improved and less confusing"
+      ],
+      "tests": [
+        "Test clicking disabled buy buttons",
+        "Test clicking disabled sell buttons",
+        "Test clicking enabled buttons still works",
+        "Verify no visual glitches on rapid clicking"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "UI",
+      "title": "Restyle Store Restock Counter",
+      "description": "The restock counter in the store spans the entire top and is too large. Remove the background, make the text black, align it to one side, and reduce the text size.",
+      "completed": false,
+      "priority": "medium",
+      "steps": [
+        "Locate the restock counter UI element in StoreUI.lua",
+        "Remove or make transparent the background of the restock counter",
+        "Change the text color to black",
+        "Align the text to one side (left or right) instead of centered across the top",
+        "Reduce the font size to be more subtle",
+        "Test the new styling looks clean and readable"
+      ],
+      "acceptanceCriteria": [
+        "Restock counter has no visible background",
+        "Text is black colored",
+        "Text is aligned to one side, not spanning full width",
+        "Text size is smaller but still readable",
+        "Counter integrates well with overall store UI design"
+      ],
+      "tests": [
+        "Visual inspection of restock counter appearance",
+        "Verify counter still updates correctly",
+        "Test readability of smaller text",
+        "Verify alignment on different screen sizes"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Gameplay",
+      "title": "Implement In-Area Chicken Selling",
+      "description": "Allow players to sell chickens directly in their area by walking up to them. Display a button prompt (like 'Press F to Sell') similar to the egg pickup button.",
+      "completed": false,
+      "priority": "high",
+      "steps": [
+        "Create proximity detection for player near their owned chickens",
+        "Design and implement the 'Press F to Sell' button UI similar to egg pickup",
+        "Add F key binding to trigger chicken sale when prompt is visible",
+        "Calculate and display the sell price for the targeted chicken",
+        "Process the sale: add money to player, remove chicken from coop",
+        "Add mobile touch equivalent for the sell action",
+        "Add visual and audio feedback on successful sale"
+      ],
+      "acceptanceCriteria": [
+        "Walking near a chicken shows 'Press F to Sell' button",
+        "Button displays the sell price of the chicken",
+        "Pressing F sells the chicken and adds money",
+        "Chicken is removed from the coop after sale",
+        "Only works on player's own chickens",
+        "Mobile players can also sell chickens with touch"
+      ],
+      "tests": [
+        "Test prompt appears near owned chicken",
+        "Test prompt does not appear near other players' chickens",
+        "Test F key triggers sale correctly",
+        "Test correct money amount is received",
+        "Test chicken is properly removed",
+        "Test mobile touch functionality"
+      ]
+    },
+    {
+      "id": 6,
+      "category": "Bug Fix",
+      "title": "Fix Predator Targeting Inconsistency",
+      "description": "Predators don't always take the chicken they're targeting. They may go for one chicken but a different chicken on the other side of the flock disappears instead.",
+      "completed": true,
+      "priority": "high",
+      "steps": [
+        "Review PredatorAI.lua and PredatorAttack.lua for targeting logic",
+        "Identify where the disconnect between visual targeting and actual capture occurs",
+        "Ensure the predator locks onto a specific chicken and only that chicken can be taken",
+        "Fix any race conditions or timing issues in the capture logic",
+        "Add validation to ensure the captured chicken matches the targeted chicken",
+        "Test with multiple chickens to verify correct behavior"
+      ],
+      "acceptanceCriteria": [
+        "Predator visually targets a specific chicken",
+        "Only the targeted chicken is captured/killed",
+        "No other chickens disappear unexpectedly",
+        "Targeting is consistent and predictable"
+      ],
+      "tests": [
+        "Test predator targeting with multiple chickens",
+        "Test that targeted chicken is the one captured",
+        "Test no chickens disappear that weren't targeted",
+        "Test edge cases with chickens close together"
+      ]
+    },
+    {
+      "id": 7,
+      "category": "Gameplay",
+      "title": "Implement XP Reward System",
+      "description": "Award XP to players for various actions: killing predators, hatching chickens, catching random chickens, surviving day/night cycles, and other meaningful actions.",
+      "completed": true,
+      "priority": "high",
+      "steps": [
+        "Create XPConfig module defining XP rewards for each action",
+        "Add XP reward when player kills a predator (scale with predator difficulty)",
+        "Add XP reward when player hatches a chicken (scale with rarity)",
+        "Add XP reward when player catches a random chicken",
+        "Add XP reward for completing a day/night cycle",
+        "Add XP reward for collecting eggs",
+        "Add XP reward for placing traps that catch predators",
+        "Create XP gain notification/animation in the UI",
+        "Ensure XP properly feeds into the leveling system"
+      ],
+      "acceptanceCriteria": [
+        "Killing predators awards XP based on predator type",
+        "Hatching chickens awards XP based on rarity",
+        "Catching random chickens awards XP",
+        "Surviving day/night cycles awards XP",
+        "XP notifications appear when gaining XP",
+        "XP contributes to player level progression"
+      ],
+      "tests": [
+        "Test XP awarded for killing predator",
+        "Test XP awarded for hatching chicken",
+        "Test XP awarded for catching random chicken",
+        "Test XP awarded for day/night cycle completion",
+        "Test XP notification displays correctly",
+        "Test XP accumulation triggers level up"
+      ]
+    },
+    {
+      "id": 8,
+      "category": "UI",
+      "title": "Reduce Chicken Counter Icon Spacing",
+      "description": "On the bottom right, there is a chicken counter with an icon. There is too much space between the counter number and the icon. Reduce this spacing.",
+      "completed": false,
+      "priority": "medium",
+      "steps": [
+        "Locate the chicken counter UI element in MainHUD.lua",
+        "Identify the spacing/padding between the icon and the number",
+        "Reduce the gap between the chicken icon and the counter text",
+        "Ensure the elements are visually balanced after adjustment",
+        "Test on various screen sizes"
+      ],
+      "acceptanceCriteria": [
+        "Gap between chicken icon and counter is reduced",
+        "Icon and number appear visually connected/grouped",
+        "UI looks clean and professional",
+        "Works correctly on all device sizes"
+      ],
+      "tests": [
+        "Visual inspection on desktop resolution",
+        "Visual inspection on mobile resolution",
+        "Verify counter still updates correctly",
+        "Verify no overlap or clipping issues"
+      ]
+    }
+  ]
+}
