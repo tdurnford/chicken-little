@@ -1317,3 +1317,28 @@ Modified the hatching flow to pass the player's position from client to server:
 
 ### Note for next developer:
 The spread radius (3 studs) can be adjusted in the server's call to `PlayerSection.getPositionNear()`. The clamping margin (4 studs) is consistent with other section boundary logic. If you need chickens to spawn at the exact player position (no offset), pass 0 as the spread radius.
+
+## 2026-01-16: Fix Money Indicator Color (ui-polish-prd.json Work Item #1 - HIGH) - COMPLETED
+
+Changed the money indicator color from dark to bright money green for better visibility.
+
+### Problem:
+The money indicator text in the bottom-left corner was using ForestGreen (34, 139, 34) which was too dark and hard to read against the background.
+
+### Solution:
+Updated three color values in MainHUD.lua:
+
+1. **DEFAULT_CONFIG.textColor**: Changed from ForestGreen (34,139,34) to money green #85BB65 (133,187,101) - this is the main money display color
+2. **Money icon color**: Updated from LimeGreen (50,205,50) to (133,187,101) to match the text
+3. **Money per second label**: Updated from (100,220,100) to (150,210,130) for a lighter variant that complements the main color
+
+### Files modified:
+- src/client/MainHUD.lua (3 color changes)
+- plans/ui-polish-prd.json (marked as completed with resolution)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+
+### Note for next developer:
+The #85BB65 color is the classic "dollar bill green" - a warm, bright green that's highly associated with money. The flash animation colors (FLASH_COLOR_GAIN/FLASH_COLOR_LOSS) were left unchanged as they serve a different purpose (temporary visual feedback).

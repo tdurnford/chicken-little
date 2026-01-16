@@ -58,7 +58,7 @@ local DEFAULT_CONFIG: HUDConfig = {
   position = UDim2.new(0, 20, 1, -20), -- Bottom-left corner
   size = UDim2.new(0, 280, 0, 70),
   backgroundColor = Color3.fromRGB(30, 30, 40),
-  textColor = Color3.fromRGB(34, 139, 34), -- Green (ForestGreen - darker)
+  textColor = Color3.fromRGB(133, 187, 101), -- Money green (#85BB65 - bright)
   fontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold),
 }
 
@@ -104,7 +104,7 @@ local function createMoneyIcon(parent: Frame): ImageLabel
   icon.Position = UDim2.new(0, 6, 0, 10)
   icon.BackgroundTransparency = 1
   icon.Image = "rbxassetid://6034973115" -- Coin icon
-  icon.ImageColor3 = Color3.fromRGB(50, 205, 50) -- Green to match text
+  icon.ImageColor3 = Color3.fromRGB(133, 187, 101) -- Money green to match text
   icon.ScaleType = Enum.ScaleType.Fit
   icon.Parent = parent
   return icon
@@ -137,7 +137,7 @@ local function createMoneyPerSecLabel(parent: Frame, config: HUDConfig): TextLab
   label.Position = UDim2.new(0, 50, 0, 42)
   label.BackgroundTransparency = 1
   label.Text = "+$0/s"
-  label.TextColor3 = Color3.fromRGB(100, 220, 100) -- Lighter green
+  label.TextColor3 = Color3.fromRGB(150, 210, 130) -- Lighter money green
   label.TextSize = 16 -- Slightly larger for visibility
   label.FontFace = config.fontFace or DEFAULT_CONFIG.fontFace
   label.TextXAlignment = Enum.TextXAlignment.Left

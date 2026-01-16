@@ -12,7 +12,9 @@
       "type": "ui",
       "priority": "high",
       "files": ["src/client/MainHUD.lua"],
-      "status": "pending"
+      "status": "completed",
+      "completedDate": "2026-01-16",
+      "resolution": "Changed DEFAULT_CONFIG.textColor from dark ForestGreen (34,139,34) to bright money green #85BB65 (133,187,101). Also updated money icon color and money-per-second label to use consistent brighter green shades for visual harmony."
     },
     {
       "id": 2,
