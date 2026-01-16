@@ -659,11 +659,16 @@ end
 ]]
 
 -- HatchEgg RemoteFunction handler
--- Parameters: eggId, spotIndex (optional, legacy - ignored for free-roaming)
--- If any placement hint is provided, chicken is placed as free-roaming
+-- Parameters: eggId, spotIndex (optional, legacy - ignored for free-roaming), playerPosition (optional)
+-- If any placement hint is provided, chicken is placed as free-roaming near playerPosition
 local hatchEggFunc = RemoteSetup.getFunction("HatchEgg")
 if hatchEggFunc then
-  hatchEggFunc.OnServerInvoke = function(player: Player, eggId: string, placementHint: number?)
+  hatchEggFunc.OnServerInvoke = function(
+    player: Player,
+    eggId: string,
+    placementHint: number?,
+    playerPosition: { x: number, y: number, z: number }?
+  )
     local userId = player.UserId
     local playerData = DataPersistence.getData(userId)
     if not playerData then
@@ -711,10 +716,18 @@ if hatchEggFunc then
           )
 
           -- Register chicken with AI for free-roaming behavior
+          -- Spawn near player position if provided, otherwise use random position
           if gameState.playerChickenAIState then
             local sectionCenter = MapGeneration.getSectionPosition(playerData.sectionIndex or 1)
             if sectionCenter then
-              local spawnPos = PlayerSection.getRandomPositionInSection(sectionCenter)
+              local spawnPos
+              if playerPosition then
+                -- Spawn near player with small offset, clamped to section bounds
+                spawnPos = PlayerSection.getPositionNear(playerPosition, sectionCenter, 3)
+              else
+                -- Fallback to random position if no player position provided
+                spawnPos = PlayerSection.getRandomPositionInSection(sectionCenter)
+              end
               local spawnPosV3 = Vector3.new(spawnPos.x, spawnPos.y, spawnPos.z)
               ChickenAI.registerChicken(
                 gameState.playerChickenAIState,

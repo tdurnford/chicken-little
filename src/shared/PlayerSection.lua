@@ -498,6 +498,44 @@ function PlayerSection.getRandomPositionInSection(sectionCenter: Vector3): Vecto
   }
 end
 
+-- Clamp a position to be within the section's boundaries (with margin)
+-- Useful for spawning chickens near a target position while keeping them in bounds
+function PlayerSection.clampPositionToSection(position: Vector3, sectionCenter: Vector3): Vector3
+  local margin = 4 -- Same margin as getRandomPositionInSection
+  local halfWidth = SECTION_WIDTH / 2 - margin
+  local halfDepth = SECTION_DEPTH / 2 - margin
+
+  return {
+    x = math.clamp(position.x, sectionCenter.x - halfWidth, sectionCenter.x + halfWidth),
+    y = sectionCenter.y, -- Always use ground level
+    z = math.clamp(position.z, sectionCenter.z - halfDepth, sectionCenter.z + halfDepth),
+  }
+end
+
+-- Get a position near a target position, with small random offset for natural spawning
+-- Ensures the position stays within section bounds
+function PlayerSection.getPositionNear(
+  targetPosition: Vector3,
+  sectionCenter: Vector3,
+  spreadRadius: number?
+): Vector3
+  local spread = spreadRadius or 3 -- Default 3 stud spread
+  local offset = {
+    x = (math.random() - 0.5) * spread * 2,
+    y = 0,
+    z = (math.random() - 0.5) * spread * 2,
+  }
+
+  local nearPosition = {
+    x = targetPosition.x + offset.x,
+    y = targetPosition.y,
+    z = targetPosition.z + offset.z,
+  }
+
+  -- Clamp to section bounds
+  return PlayerSection.clampPositionToSection(nearPosition, sectionCenter)
+end
+
 -- Get a random position that's at least minDistance from a given position
 -- Useful for spawning chickens with some spread
 function PlayerSection.getRandomPositionWithSpread(

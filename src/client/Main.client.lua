@@ -1510,10 +1510,21 @@ HatchPreviewUI.onHatch(function(eggId: string, eggType: string)
     return
   end
 
-  -- Hatch egg via server (pass placement hint to place chicken in area)
+  -- Get player's current position for spawning chicken nearby
+  local playerPosition = nil
+  local character = localPlayer.Character
+  if character then
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if humanoidRootPart then
+      local pos = humanoidRootPart.Position
+      playerPosition = { x = pos.X, y = pos.Y, z = pos.Z }
+    end
+  end
+
+  -- Hatch egg via server (pass placement hint and player position)
   local hatchEggFunc = getFunction("HatchEgg")
   if hatchEggFunc then
-    local result = hatchEggFunc:InvokeServer(eggId, 1) -- Pass 1 as placement hint to place in area
+    local result = hatchEggFunc:InvokeServer(eggId, 1, playerPosition) -- Pass position for nearby spawn
     if result and result.success then
       SoundEffects.playEggHatch(result.rarity or "Common")
       print("[Client] Egg hatched successfully:", result.chickenType, result.rarity)

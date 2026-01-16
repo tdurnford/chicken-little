@@ -1273,3 +1273,47 @@ If any check fails:
 
 ### Note for next developer:
 The area check uses `PlayerSection.isPositionInSection()` which checks 2D (XZ) boundaries only - Y position is ignored. The same approach could be applied to other actions that should be restricted to the player's own area. The section center is retrieved via `MapGeneration.getSectionPosition(sectionIndex)`.
+
+## 2026-01-16: Hatch Chickens Next to Player (ui-polish-prd.json Work Item #6 - HIGH) - COMPLETED
+
+When players hatch eggs, chickens now spawn next to the player's current position instead of at a random location in their section.
+
+### Problem:
+When hatching eggs, chickens would spawn at random positions within the player's section. This was disorienting because players couldn't see where their newly hatched chicken appeared, and the chicken might spawn far away from where the player was standing.
+
+### Solution:
+Modified the hatching flow to pass the player's position from client to server:
+
+1. **Client-side (Main.client.lua)**:
+   - In the HatchPreviewUI.onHatch callback, retrieve the player's current position from HumanoidRootPart
+   - Pass the position as a third parameter to the HatchEgg server function
+
+2. **Server-side (Main.server.lua)**:
+   - Modified HatchEgg handler to accept an optional playerPosition parameter
+   - Use PlayerSection.getPositionNear() to spawn the chicken within 3 studs of the player
+   - Falls back to random position if no player position provided
+
+3. **New PlayerSection functions**:
+   - `clampPositionToSection(position, sectionCenter)`: Ensures a position stays within section bounds with a 4-stud margin from walls
+   - `getPositionNear(targetPosition, sectionCenter, spreadRadius?)`: Generates a position near the target with small random offset (default 3 studs), clamped to section bounds
+
+### Files modified:
+- src/shared/PlayerSection.lua (+40 lines: two new helper functions)
+- src/client/Main.client.lua (HatchPreviewUI.onHatch callback)
+- src/server/Main.server.lua (HatchEgg handler)
+- plans/ui-polish-prd.json (marked as completed with resolution)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Position clamping ensures chickens stay within section bounds even if player is at edge
+- Random offset (±3 studs) creates natural-looking spawn placement
+
+### Acceptance criteria met:
+- ✅ Chickens spawn next to the player when hatching eggs
+- ✅ Spawn position has small random offset for natural appearance
+- ✅ Position is clamped to stay within section boundaries
+- ✅ Backwards compatible: falls back to random spawn if no position provided
+
+### Note for next developer:
+The spread radius (3 studs) can be adjusted in the server's call to `PlayerSection.getPositionNear()`. The clamping margin (4 studs) is consistent with other section boundary logic. If you need chickens to spawn at the exact player position (no offset), pass 0 as the spread radius.

@@ -1,0 +1,200 @@
+{
+  "title": "UI Polish & Gameplay Improvements",
+  "version": "1.0.0",
+  "created": "2025-01-15",
+  "status": "pending",
+  "description": "Collection of UI polish fixes, gameplay improvements, and bug fixes to improve the overall player experience.",
+  "tasks": [
+    {
+      "id": 1,
+      "title": "Fix money indicator color",
+      "description": "The money indicator in the left corner is too dark. Change it to a proper money green color (e.g., #85BB65 or similar bright green).",
+      "type": "ui",
+      "priority": "high",
+      "files": ["src/client/MainHUD.lua"],
+      "status": "pending"
+    },
+    {
+      "id": 2,
+      "title": "Reposition money indicator to corner",
+      "description": "The money indicator in the left corner is positioned too high. Move it to be properly in the corner of the screen.",
+      "type": "ui",
+      "priority": "high",
+      "files": ["src/client/MainHUD.lua"],
+      "status": "pending"
+    },
+    {
+      "id": 3,
+      "title": "Disable store buttons when insufficient funds",
+      "description": "Store buttons should be visually disabled (grayed out or dimmed) and non-interactive when the player does not have enough money to purchase the item.",
+      "type": "ui",
+      "priority": "high",
+      "files": ["src/client/StoreUI.lua"],
+      "status": "completed",
+      "completedDate": "2026-01-16",
+      "resolution": "Updated StoreUI.lua to prevent purchases when player cannot afford items. For egg buttons: added affordability check to hover effect (only highlight when can afford) and click handler (only fire callback when can afford). For trap/supply buttons: added affordability check to click handler. Weapon buttons already had this check. The visual dimming (gray background, faded text) was already implemented - this change adds the interaction blocking to match the visual feedback."
+    },
+    {
+      "id": 4,
+      "title": "Reduce spacing between chicken icon and count",
+      "description": "The space between the chicken icon and the chicken count in the bottom right corner is too large. Reduce the gap for a tighter layout.",
+      "type": "ui",
+      "priority": "medium",
+      "files": ["src/client/MainHUD.lua"],
+      "status": "pending"
+    },
+    {
+      "id": 5,
+      "title": "Restrict egg hatching to player's area",
+      "description": "Players should only be able to hatch eggs if they are currently standing within their own designated area.",
+      "type": "gameplay",
+      "priority": "high",
+      "files": ["src/shared/EggHatching.lua", "src/client/HatchPreviewUI.lua"],
+      "status": "completed",
+      "completedDate": "2026-01-16",
+      "resolution": "Added area validation check in Main.client.lua before showing the HatchPreviewUI. When a player tries to hatch an egg (place action), the code now checks: 1) that the player has an assigned section, 2) that the player character exists with a position, 3) that the player's position is within their own section boundaries using PlayerSection.isPositionInSection(). If any check fails, an error sound plays and a warning is logged. This prevents players from hatching eggs while standing in other players' areas."
+    },
+    {
+      "id": 6,
+      "title": "Hatch chickens next to player",
+      "description": "When eggs hatch, the chickens should spawn next to the player's current position rather than at a fixed location.",
+      "type": "gameplay",
+      "priority": "high",
+      "files": [
+        "src/shared/PlayerSection.lua",
+        "src/client/Main.client.lua",
+        "src/server/Main.server.lua"
+      ],
+      "status": "completed",
+      "completedDate": "2026-01-16",
+      "resolution": "Modified hatching flow to spawn chickens near the player. Client now sends player's current position when hatching an egg. Server uses PlayerSection.getPositionNear() to spawn the chicken within 3 studs of the player (with random offset for natural appearance). Added two new helper functions to PlayerSection: clampPositionToSection() ensures positions stay within section boundaries with margin, and getPositionNear() generates a position near a target with clamping. If no position is provided, falls back to random spawn location."
+    },
+    {
+      "id": 7,
+      "title": "Add grace period for predator attacks on new chickens",
+      "description": "If a player has no chickens and a predator hasn't been around in a while, when the player places a chicken it immediately gets attacked. Add a grace period or delay predator targeting for newly placed chickens.",
+      "type": "gameplay",
+      "priority": "high",
+      "files": [
+        "src/shared/PredatorAI.lua",
+        "src/shared/PredatorAttack.lua",
+        "src/shared/PredatorSpawning.lua"
+      ],
+      "status": "completed",
+      "completedDate": "2026-01-16",
+      "resolution": "Increased CHICKEN_PLACEMENT_PROTECTION_SECONDS from 5 to 15 seconds in PredatorAttack.lua. The protection mechanism was already implemented in selectChickensForAttack() which excludes chickens with placedTime within the protection window from being selected for predator attacks. The 15-second grace period gives players meaningful time to place their chicken and prepare defenses before predators can target it."
+    },
+    {
+      "id": 8,
+      "title": "Increase predator spawn distance from player",
+      "description": "Predators should spawn further away from the player to give them more reaction time.",
+      "type": "gameplay",
+      "priority": "medium",
+      "files": [
+        "src/shared/PredatorSpawning.lua",
+        "src/shared/PredatorConfig.lua"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 9,
+      "title": "Reduce initial shield time to 2 minutes",
+      "description": "Reduce the initial shield protection time from current value down to 2 minutes (120 seconds).",
+      "type": "balance",
+      "priority": "medium",
+      "files": ["src/shared/AreaShield.lua", "src/shared/BalanceConfig.lua"],
+      "status": "pending"
+    },
+    {
+      "id": 10,
+      "title": "Start new players with a chicken and egg",
+      "description": "New players should start with one chicken and one egg already in their area to help them get started.",
+      "type": "gameplay",
+      "priority": "high",
+      "files": ["src/shared/PlayerData.lua", "src/server/Main.server.lua"],
+      "status": "completed",
+      "completedDate": "2026-01-16",
+      "resolution": "Modified PlayerData.createDefault() to include a starter Basic Chick (placed in spot 1) and a Common Egg in inventory. The chicken has proper ID generation using os.time(), correct type/rarity values, and lastEggTime set to current time so it won't immediately lay an egg. The egg is also properly typed as CommonEgg with Common rarity. This ensures all new players have something to start with immediately."
+    },
+    {
+      "id": 11,
+      "title": "Remove green from coop floor",
+      "description": "The green color on the coop floor is still visible. Remove it completely.",
+      "type": "visual",
+      "priority": "medium",
+      "files": [
+        "src/shared/MapGeneration.lua",
+        "src/client/SectionVisuals.lua"
+      ],
+      "status": "completed"
+    },
+    {
+      "id": 12,
+      "title": "Remove tutorial carousel",
+      "description": "Remove the tutorial carousel UI completely from the game.",
+      "type": "ui",
+      "priority": "high",
+      "files": ["src/client/Tutorial.lua", "src/client/Main.client.lua"],
+      "status": "completed",
+      "completedDate": "2026-01-16",
+      "resolution": "Removed all Tutorial module references from Main.client.lua: removed import, Tutorial.create() initialization, Tutorial.shouldShowTutorial/start() for new players, Tutorial.isActive()/completeStep() calls in egg placement/hatching/purchase flows, and all Tutorial callback wiring. The Tutorial.lua file is kept in the codebase but is no longer loaded or executed. Build and format checks pass."
+    },
+    {
+      "id": 13,
+      "title": "Move shield countdown to top of screen",
+      "description": "Reposition the shield countdown status indicator to be at the top of the screen.",
+      "type": "ui",
+      "priority": "medium",
+      "files": ["src/client/ShieldUI.lua", "src/client/MainHUD.lua"],
+      "status": "pending"
+    },
+    {
+      "id": 14,
+      "title": "Move inventory and shield icons to top of screen",
+      "description": "Reposition the inventory icon and shield icon to be at the top of the screen.",
+      "type": "ui",
+      "priority": "medium",
+      "files": [
+        "src/client/InventoryUI.lua",
+        "src/client/ShieldUI.lua",
+        "src/client/MainHUD.lua"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 15,
+      "title": "Update player name display over area",
+      "description": "Remove the background from the player's name displayed over their area and make the text bigger.",
+      "type": "ui",
+      "priority": "medium",
+      "files": [
+        "src/client/SectionVisuals.lua",
+        "src/server/SectionLabels.lua"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 16,
+      "title": "Fix random chicken claiming distance check",
+      "description": "Players are unable to claim random chickens due to an incorrect 'chicken is too far away' warning. Fix the distance check logic for claiming random chickens.",
+      "type": "bug",
+      "priority": "critical",
+      "files": [
+        "src/shared/RandomChickenSpawn.lua",
+        "src/client/ChickenPickup.lua",
+        "src/shared/ChickenPlacement.lua"
+      ],
+      "status": "completed",
+      "completedDate": "2026-01-16",
+      "resolution": "Changed distance calculation in RandomChickenSpawn.lua from 3D distance (including Y) to 2D horizontal distance (XZ only). The bug occurred because player HumanoidRootPart Y position (~3-4 studs) differs from chicken ground position (~0 studs), adding 3-4 studs to the distance calculation. With an 8-stud claim range, this Y difference was consuming nearly half the allowed distance. The fix ensures players can claim chickens when horizontally close regardless of the minor vertical position differences."
+    }
+  ],
+  "summary": {
+    "total_tasks": 16,
+    "ui_tasks": 7,
+    "gameplay_tasks": 5,
+    "balance_tasks": 1,
+    "visual_tasks": 1,
+    "bug_fixes": 2
+  }
+}
