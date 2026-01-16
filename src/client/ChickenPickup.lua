@@ -164,7 +164,7 @@ local function createPromptUI(parent: ScreenGui): Frame
   frame.Name = "ActionPrompt"
   frame.AnchorPoint = Vector2.new(0.5, 1)
   frame.Size = UDim2.new(0, 150, 0, 40)
-  frame.Position = UDim2.new(0.5, 0, 0.9, -20)
+  frame.Position = UDim2.new(0.5, -85, 0.9, -20) -- Offset left to avoid overlap with sell prompt
   frame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
   frame.BackgroundTransparency = 0.3
   frame.BorderSizePixel = 0

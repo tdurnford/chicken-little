@@ -85,6 +85,10 @@ local getNearbyChicken: ((position: Vector3) -> (string?, number?, string?, stri
   nil
 local getPlayerData: (() -> any)? = nil
 local updatePlayerData: ((data: any) -> ())? = nil
+local performServerSale: (
+  (chickenId: string) -> { success: boolean, message: string?, sellPrice: number?, error: string? }
+)? =
+  nil
 
 -- Create screen GUI
 local function createScreenGui(player: Player): ScreenGui
@@ -104,7 +108,7 @@ local function createPromptUI(parent: ScreenGui): Frame
   frame.Name = "SellPrompt"
   frame.AnchorPoint = Vector2.new(0.5, 1)
   frame.Size = UDim2.new(0, 150, 0, 40)
-  frame.Position = UDim2.new(0.5, 0, 0.9, -20)
+  frame.Position = UDim2.new(0.5, 85, 0.9, -20) -- Offset right to avoid overlap with pickup prompt
   frame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
   frame.BackgroundTransparency = 0.3
   frame.BorderSizePixel = 0
@@ -610,7 +614,47 @@ function ChickenSelling.confirmSell(): SellResult
     }
   end
 
-  -- Get player data
+  local chickenId = state.pendingChickenId
+  local chickenType = state.pendingChickenType
+  local spotIndex = state.pendingSpotIndex
+
+  -- Clear state before server call
+  state.pendingChickenId = nil
+  state.pendingChickenType = nil
+  state.pendingChickenRarity = nil
+  state.pendingSpotIndex = nil
+  state.pendingAccumulatedMoney = nil
+  state.isConfirming = false
+
+  -- Hide confirmation
+  hideConfirmation()
+
+  -- Use server sale callback if available
+  if performServerSale then
+    local result = performServerSale(chickenId)
+    if result and result.success then
+      -- Notify about the sale
+      if onSell and result.sellPrice then
+        onSell(chickenId, spotIndex, result.sellPrice)
+      end
+
+      return {
+        success = true,
+        message = result.message or "Chicken sold successfully",
+        chickenId = chickenId,
+        amountReceived = result.sellPrice,
+        newBalance = nil, -- Server handles balance update
+      }
+    else
+      return {
+        success = false,
+        message = result and (result.message or result.error) or "Sale failed",
+        chickenId = chickenId,
+      }
+    end
+  end
+
+  -- Fallback to local sale (deprecated)
   if not getPlayerData then
     return {
       success = false,
@@ -626,23 +670,8 @@ function ChickenSelling.confirmSell(): SellResult
     }
   end
 
-  local chickenId = state.pendingChickenId
-  local chickenType = state.pendingChickenType
-  local spotIndex = state.pendingSpotIndex
-
-  -- Execute the sale
+  -- Execute the sale locally (deprecated - use performServerSale callback)
   local result = Store.sellChicken(playerData, chickenId)
-
-  -- Clear state
-  state.pendingChickenId = nil
-  state.pendingChickenType = nil
-  state.pendingChickenRarity = nil
-  state.pendingSpotIndex = nil
-  state.pendingAccumulatedMoney = nil
-  state.isConfirming = false
-
-  -- Hide confirmation
-  hideConfirmation()
 
   if result.success then
     -- Notify about the sale
@@ -759,6 +788,16 @@ end
 -- Set callback to update player data after sale
 function ChickenSelling.setUpdatePlayerData(callback: (data: any) -> ())
   updatePlayerData = callback
+end
+
+-- Set callback to perform server-side chicken sale
+-- This should invoke the SellChicken RemoteFunction
+function ChickenSelling.setPerformServerSale(
+  callback: (
+    chickenId: string
+  ) -> { success: boolean, message: string?, sellPrice: number?, error: string? }
+)
+  performServerSale = callback
 end
 
 -- Show sell prompt (call when player is near an owned chicken)

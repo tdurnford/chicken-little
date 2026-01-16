@@ -123,7 +123,7 @@
       "category": "Gameplay",
       "title": "Implement In-Area Chicken Selling",
       "description": "Allow players to sell chickens directly in their area by walking up to them. Display a button prompt (like 'Press F to Sell') similar to the egg pickup button.",
-      "completed": false,
+      "completed": true,
       "priority": "high",
       "steps": [
         "Create proximity detection for player near their owned chickens",

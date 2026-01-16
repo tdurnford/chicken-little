@@ -147,3 +147,51 @@ Added a complete XP reward system that awards XP for various player actions, mak
 - Night cycle XP is awarded to all online players when night ends (dawn transition)
 - Trap catch XP would need integration in `SellPredator` when trap predator selling is implemented
 
+
+---
+
+## 2026-01-16 - Implement In-Area Chicken Selling (ID #5)
+
+### Summary
+Enabled the in-area chicken selling feature that allows players to sell chickens directly by walking up to them and pressing F, with a confirmation dialog showing the sell price.
+
+### Features Enabled
+1. **Proximity Sell Prompts**
+   - "[E] Pick Up" prompt shows on the left side of screen when near a chicken
+   - "[F] Sell (price)" prompt shows on the right side when near a chicken
+   - Prompts are positioned side-by-side to avoid overlap
+
+2. **Server-Side Sale Integration**
+   - Added `ChickenSelling.setPerformServerSale()` callback for server communication
+   - Wired up to invoke `SellChicken` RemoteFunction on the server
+   - Plays money collect sound on successful sale
+   - Plays error sound on failed sale
+
+3. **Mobile Touch Support**
+   - Added `MobileTouchControls` import and initialization
+   - Wired up all button actions: pickup, place, cancel, sell, confirm
+   - Shows chicken context (pickup + sell) when near a chicken
+   - Shows place context (place + cancel) when holding a chicken
+   - Shows sell confirmation context when confirming a sale
+
+4. **Store Module Enhancement**
+   - Added `sellPrice` field to `Store.sellChicken()` return value
+   - Returns total value including accumulated money for proper UI feedback
+
+### Files Changed
+- `src/client/ChickenSelling.lua` - Fixed prompt position, added `setPerformServerSale` callback, refactored `confirmSell` to use server callback
+- `src/client/ChickenPickup.lua` - Fixed prompt position to offset left
+- `src/client/Main.client.lua` - Added MobileTouchControls import, wired up server sale callback, enabled sell prompts, initialized mobile touch controls
+- `src/shared/Store.lua` - Added `sellPrice` to sell transaction return value
+
+### Testing
+- Build check passes with `rojo build`
+- Format check passes with `stylua`
+
+### Notes for Next Developer
+- The ChickenSelling module now properly communicates with the server via the `SellChicken` RemoteFunction
+- When a chicken is sold, the server fires `ChickenSold` event and syncs player data automatically
+- Mobile players see contextual touch buttons on the right side of the screen
+- The "[E] Pick Up" and "[F] Sell" prompts appear side-by-side when near a chicken
+- Sell confirmation dialog shows chicken name, rarity, and total value (base + accumulated money)
+

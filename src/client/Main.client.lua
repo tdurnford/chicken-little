@@ -21,6 +21,7 @@ local EggVisuals = require(ClientModules:WaitForChild("EggVisuals"))
 local MainHUD = require(ClientModules:WaitForChild("MainHUD"))
 local ChickenPickup = require(ClientModules:WaitForChild("ChickenPickup"))
 local ChickenSelling = require(ClientModules:WaitForChild("ChickenSelling"))
+local MobileTouchControls = require(ClientModules:WaitForChild("MobileTouchControls"))
 local InventoryUI = require(ClientModules:WaitForChild("InventoryUI"))
 local HatchPreviewUI = require(ClientModules:WaitForChild("HatchPreviewUI"))
 local SectionVisuals = require(ClientModules:WaitForChild("SectionVisuals"))
@@ -1365,7 +1366,52 @@ end)
 ChickenSelling.setGetPlayerData(function()
   return playerDataCache
 end)
+-- Wire up server-side sale via SellChicken RemoteFunction
+ChickenSelling.setPerformServerSale(function(chickenId: string)
+  local sellChickenFunc = getFunction("SellChicken")
+  if not sellChickenFunc then
+    return { success = false, error = "SellChicken function not available" }
+  end
+  local result = sellChickenFunc:InvokeServer(chickenId)
+  if result and result.success then
+    SoundEffects.playMoneyCollect(result.sellPrice or 0)
+    return {
+      success = true,
+      message = result.message,
+      sellPrice = result.sellPrice,
+    }
+  else
+    SoundEffects.play("uiError")
+    return {
+      success = false,
+      error = result and result.message or "Unknown error",
+    }
+  end
+end)
 print("[Client] ChickenSelling system initialized")
+
+-- Initialize MobileTouchControls and wire up button actions
+MobileTouchControls.create()
+MobileTouchControls.setAction("pickup", function()
+  ChickenPickup.touchPickup()
+end)
+MobileTouchControls.setAction("place", function()
+  ChickenPickup.touchPickup() -- Same action - place when holding
+end)
+MobileTouchControls.setAction("cancel", function()
+  if ChickenPickup.isHolding() then
+    ChickenPickup.touchCancel()
+  elseif ChickenSelling.isConfirming() then
+    ChickenSelling.touchCancel()
+  end
+end)
+MobileTouchControls.setAction("sell", function()
+  ChickenSelling.touchSell()
+end)
+MobileTouchControls.setAction("confirm", function()
+  ChickenSelling.touchSell() -- Same action - confirm when in confirmation mode
+end)
+print("[Client] MobileTouchControls initialized")
 
 -- Wire InventoryUI callbacks for item actions (after helper functions are defined)
 InventoryUI.onItemSelected(function(selectedItem)
@@ -1887,6 +1933,12 @@ local function updateProximityPrompts()
 
   local playerPosition = rootPart.Position
 
+  -- Check if in sell confirmation mode
+  if ChickenSelling.isConfirming() then
+    MobileTouchControls.showSellConfirmContext()
+    return
+  end
+
   -- Check if holding a chicken
   local isHoldingChicken = ChickenPickup.isHolding()
 
@@ -1896,6 +1948,8 @@ local function updateProximityPrompts()
     ChickenSelling.hidePrompt()
     hideRandomChickenPrompt()
     isNearRandomChicken = false
+    -- Show place context for mobile
+    MobileTouchControls.showPlaceContext()
   else
     -- When not holding, check for nearby chickens
     local chickenId, chickenType, _, accumulatedMoney = findNearbyPlacedChicken(playerPosition)
@@ -1949,8 +2003,11 @@ local function updateProximityPrompts()
       -- Show pickup prompt
       ChickenPickup.showPickupPrompt()
 
-      -- Hide sell prompt (we auto-collect now)
-      ChickenSelling.hidePrompt()
+      -- Show sell prompt with price
+      ChickenSelling.showSellPrompt(chickenType)
+
+      -- Show mobile touch controls for both pickup and sell
+      MobileTouchControls.showChickenContext()
 
       -- Hide random chicken prompt when near placed chicken
       hideRandomChickenPrompt()
@@ -1962,6 +2019,7 @@ local function updateProximityPrompts()
         -- Was near, now not - hide prompts
         ChickenPickup.hidePrompt()
         ChickenSelling.hidePrompt()
+        MobileTouchControls.hideAllButtons()
       end
       isNearChicken = false
       nearestChickenId = nil

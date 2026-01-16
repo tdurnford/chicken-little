@@ -425,6 +425,7 @@ function Store.sellChicken(
     message = message,
     newBalance = playerData.money,
     itemId = chickenId,
+    sellPrice = totalValue, -- Total value including accumulated money
   }
 end
 
