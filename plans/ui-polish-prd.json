@@ -156,7 +156,9 @@
       "type": "ui",
       "priority": "medium",
       "files": ["src/client/ShieldUI.lua", "src/client/MainHUD.lua"],
-      "status": "pending"
+      "status": "completed",
+      "completedDate": "2026-01-16",
+      "resolution": "Changed the ProtectionFrame position in MainHUD.lua createProtectionFrame() from UDim2.new(0.5, 0, 0, 90) to UDim2.new(0.5, 0, 0, 10). This moves the new player shield countdown timer from 90px below the top edge to 10px from the top, making it prominently displayed at the top-center of the screen. The frame remains horizontally centered with AnchorPoint (0.5, 0)."
     },
     {
       "id": 14,

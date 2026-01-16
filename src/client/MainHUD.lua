@@ -668,7 +668,7 @@ local function createProtectionFrame(screenGui: ScreenGui): Frame
   local frame = Instance.new("Frame")
   frame.Name = "ProtectionFrame"
   frame.Size = UDim2.new(0, 220, 0, 40)
-  frame.Position = UDim2.new(0.5, 0, 0, 90) -- Below the main HUD
+  frame.Position = UDim2.new(0.5, 0, 0, 10) -- Top center of screen
   frame.AnchorPoint = Vector2.new(0.5, 0)
   frame.BackgroundColor3 = Color3.fromRGB(20, 60, 20) -- Dark green
   frame.BackgroundTransparency = 0.3

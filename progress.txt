@@ -1463,3 +1463,38 @@ This gives players approximately 1.25 seconds more reaction time (with default w
 
 ### Note for next developer:
 The `SPAWN_BOUNDARY_OFFSET` constant is located near line 113 in PredatorAI.lua. Adjust this value if you need to tune predator spawn distance further. Consider that faster predators (Severe, Deadly, Catastrophic threat levels) use speed multipliers up to 1.5x, so they will cover the extra distance faster than minor threats.
+
+## 2026-01-16: Move Shield Countdown to Top of Screen (ui-polish-prd.json Work Item #13 - MEDIUM) - COMPLETED
+
+Repositioned the new player protection shield countdown timer to the top-center of the screen for better visibility.
+
+### Problem:
+The protection timer (showing "Protected: X:XX" for new players) was positioned at Y=90 pixels from the top, which was described as "Below the main HUD". This made it less prominent than desired.
+
+### Solution:
+In MainHUD.lua `createProtectionFrame()` function:
+
+- **Before**: `frame.Position = UDim2.new(0.5, 0, 0, 90)` -- 90px from top
+- **After**: `frame.Position = UDim2.new(0.5, 0, 0, 10)` -- 10px from top
+
+The frame remains:
+- Horizontally centered (0.5 scale X)
+- Anchored at top-center (AnchorPoint = Vector2.new(0.5, 0))
+- Size: 220x40 pixels
+- Styled with dark green background and light green border
+
+### Files modified:
+- src/client/MainHUD.lua (createProtectionFrame function, 1 line change)
+- plans/ui-polish-prd.json (marked as completed with resolution)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Change is a simple position adjustment with no logic changes
+
+### Acceptance criteria met:
+- ✅ Shield countdown is now at top of screen (Y=10px)
+- ✅ Prominently displayed for new players during protection period
+
+### Note for next developer:
+The ProtectionFrame is only visible during the new player protection period (controlled by NEW_PLAYER_PROTECTION_DURATION in Main.server.lua, currently 120 seconds). The ShieldUI.lua file handles the player-activated shield button which is positioned in the top-right corner and was not modified - it already had proper top positioning (Y=50). If you need to adjust both elements, ensure they don't overlap.
