@@ -1498,3 +1498,43 @@ The frame remains:
 
 ### Note for next developer:
 The ProtectionFrame is only visible during the new player protection period (controlled by NEW_PLAYER_PROTECTION_DURATION in Main.server.lua, currently 120 seconds). The ShieldUI.lua file handles the player-activated shield button which is positioned in the top-right corner and was not modified - it already had proper top positioning (Y=50). If you need to adjust both elements, ensure they don't overlap.
+
+## 2026-01-16: Move Inventory and Shield Icons to Top (ui-polish-prd.json Work Item #14 - MEDIUM) - COMPLETED
+
+Repositioned the inventory and shield button icons from Y=50 to Y=10 to place them at the very top of the screen, aligned with the protection timer.
+
+### Problem:
+The inventory button and shield button were positioned at Y=50 pixels from the top edge. The task requested moving them to the "top of the screen" to match the protection timer (moved in task #13 to Y=10).
+
+### Solution:
+Modified two files to change the Y position from 50 to 10:
+
+**ShieldUI.lua:**
+- **Before**: `SHIELD_BUTTON_POSITION = UDim2.new(1, -140, 0, 50)`
+- **After**: `SHIELD_BUTTON_POSITION = UDim2.new(1, -140, 0, 10)`
+
+**MainHUD.lua (createInventoryButton):**
+- **Before**: `button.Position = UDim2.new(1, -70, 0, 50)`
+- **After**: `button.Position = UDim2.new(1, -70, 0, 10)`
+
+Both buttons remain:
+- Inventory: 70px from right edge (X offset -70)
+- Shield: 140px from right edge (X offset -140), to the left of inventory
+
+### Files modified:
+- src/client/ShieldUI.lua (SHIELD_BUTTON_POSITION constant)
+- src/client/MainHUD.lua (createInventoryButton function)
+- plans/ui-polish-prd.json (marked as completed with resolution)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Simple position adjustment with no logic changes
+
+### Note for next developer:
+The top-right corner now has a consistent row of UI elements at Y=10:
+- Protection timer (center-top) - from task #13
+- Shield button (top-right, X=-140) 
+- Inventory button (top-right, X=-70)
+
+If adding more buttons to this area, continue the pattern with X offsets of -70 increments.

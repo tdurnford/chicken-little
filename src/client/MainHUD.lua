@@ -153,7 +153,7 @@ local function createInventoryButton(screenGui: ScreenGui): (ImageButton, TextLa
   local button = Instance.new("ImageButton")
   button.Name = "InventoryButton"
   button.Size = UDim2.new(0, 60, 0, 60) -- Unified size with shield button
-  button.Position = UDim2.new(1, -70, 0, 50) -- Aligned vertically with shield button
+  button.Position = UDim2.new(1, -70, 0, 10) -- Top-right corner, aligned with shield button
   button.AnchorPoint = Vector2.new(0, 0)
   button.BackgroundColor3 = Color3.fromRGB(60, 60, 75) -- Unified neutral color
   button.BackgroundTransparency = 0.2

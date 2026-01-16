@@ -32,7 +32,7 @@ export type ShieldUIState = {
 
 -- Configuration
 local SHIELD_BUTTON_SIZE = UDim2.new(0, 60, 0, 60)
-local SHIELD_BUTTON_POSITION = UDim2.new(1, -140, 0, 50) -- Next to inventory button, lowered to make room for status above
+local SHIELD_BUTTON_POSITION = UDim2.new(1, -140, 0, 10) -- Top-right area, next to inventory button
 
 -- Colors - unified button style with inventory button
 local COLORS = {
