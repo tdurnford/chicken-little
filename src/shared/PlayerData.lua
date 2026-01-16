@@ -70,6 +70,8 @@ export type PlayerDataSchema = {
   lastLogoutTime: number?,
   totalPlayTime: number,
   tutorialComplete: boolean?,
+  level: number?, -- Player's current level (calculated from XP)
+  xp: number?, -- Total experience points earned
 }
 
 -- Rarity tiers for validation
@@ -126,6 +128,8 @@ function PlayerData.createDefault(): PlayerDataSchema
     lastLogoutTime = nil,
     totalPlayTime = 0,
     tutorialComplete = false,
+    level = 1,
+    xp = 0,
   }
 end
 
@@ -391,6 +395,14 @@ function PlayerData.validate(data: any): boolean
   if data.tutorialComplete ~= nil and type(data.tutorialComplete) ~= "boolean" then
     return false
   end
+  -- level is optional number (1+)
+  if data.level ~= nil and not validateNumber(data.level, 1) then
+    return false
+  end
+  -- xp is optional number (0+)
+  if data.xp ~= nil and not validateNumber(data.xp, 0) then
+    return false
+  end
 
   return true
 end
@@ -573,6 +585,52 @@ end
 -- Get all owned weapons
 function PlayerData.getOwnedWeapons(data: PlayerDataSchema): { string }
   return data.ownedWeapons or { "BaseballBat" }
+end
+
+-- Get player's current level
+function PlayerData.getLevel(data: PlayerDataSchema): number
+  return data.level or 1
+end
+
+-- Get player's current XP
+function PlayerData.getXP(data: PlayerDataSchema): number
+  return data.xp or 0
+end
+
+-- Add XP to player (returns new level if leveled up, nil otherwise)
+function PlayerData.addXP(data: PlayerDataSchema, amount: number): number?
+  if amount <= 0 then
+    return nil
+  end
+
+  local oldXP = data.xp or 0
+  local newXP = oldXP + math.floor(amount)
+  data.xp = newXP
+
+  -- Calculate levels from XP (lazy load LevelConfig to avoid circular deps)
+  local LevelConfig = require(script.Parent.LevelConfig)
+  local oldLevel = LevelConfig.getLevelFromXP(oldXP)
+  local newLevel = LevelConfig.getLevelFromXP(newXP)
+
+  -- Update stored level
+  data.level = newLevel
+
+  -- Return new level if leveled up
+  if newLevel > oldLevel then
+    return newLevel
+  end
+  return nil
+end
+
+-- Set player's level and XP directly (for admin/testing)
+function PlayerData.setLevelAndXP(data: PlayerDataSchema, level: number, xp: number): boolean
+  if level < 1 or xp < 0 then
+    return false
+  end
+
+  data.level = math.floor(level)
+  data.xp = math.floor(xp)
+  return true
 end
 
 return PlayerData

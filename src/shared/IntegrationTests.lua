@@ -30,6 +30,7 @@ local PredatorSpawning = require(script.Parent.PredatorSpawning)
 local PredatorAttack = require(script.Parent.PredatorAttack)
 local ChickenAI = require(script.Parent.ChickenAI)
 local DayNightCycle = require(script.Parent.DayNightCycle)
+local LevelConfig = require(script.Parent.LevelConfig)
 
 -- Type definitions
 export type TestResult = {
@@ -3136,6 +3137,232 @@ test("PredatorAttack: executeAttack prioritizes targeted chicken", function()
   end
 
   return assert_true(targetedChickenCaptured, "Targeted chicken should be prioritized in attack")
+end)
+
+-- ============================================================================
+-- LevelConfig Tests
+-- ============================================================================
+
+test("LevelConfig: getLevelFromXP returns correct level for XP", function()
+  -- Level 1 = 0 XP
+  local level1 = LevelConfig.getLevelFromXP(0)
+  if level1 ~= 1 then
+    return assert_eq(level1, 1, "0 XP should be level 1")
+  end
+
+  -- Level 1 = 50 XP (not enough for level 2)
+  local level1b = LevelConfig.getLevelFromXP(50)
+  if level1b ~= 1 then
+    return assert_eq(level1b, 1, "50 XP should still be level 1")
+  end
+
+  -- Level 2 = 100+ XP
+  local level2 = LevelConfig.getLevelFromXP(100)
+  if level2 ~= 2 then
+    return assert_eq(level2, 2, "100 XP should be level 2")
+  end
+
+  return true, "OK"
+end)
+
+test("LevelConfig: getXPForLevel returns correct XP threshold", function()
+  -- Level 1 = 0 XP required
+  local xp1 = LevelConfig.getXPForLevel(1)
+  if xp1 ~= 0 then
+    return assert_eq(xp1, 0, "Level 1 should require 0 XP")
+  end
+
+  -- Level 2 = 100 XP required
+  local xp2 = LevelConfig.getXPForLevel(2)
+  if xp2 ~= 100 then
+    return assert_eq(xp2, 100, "Level 2 should require 100 XP")
+  end
+
+  -- XP should increase with level
+  local xp3 = LevelConfig.getXPForLevel(3)
+  if xp3 <= xp2 then
+    return false, "Level 3 XP should be greater than level 2"
+  end
+
+  return true, "OK"
+end)
+
+test("LevelConfig: getLevelProgress returns correct progress", function()
+  -- At level start should be 0
+  local progress0 = LevelConfig.getLevelProgress(0)
+  if progress0 ~= 0 then
+    return assert_eq(progress0, 0, "0 XP should have 0 progress")
+  end
+
+  -- At level 2 (100 XP) should have some progress towards level 3
+  local progress2 = LevelConfig.getLevelProgress(100)
+  if progress2 ~= 0 then
+    return assert_eq(progress2, 0, "Exactly at level 2 should have 0 progress to level 3")
+  end
+
+  -- Progress should be between 0 and 1
+  local progress50 = LevelConfig.getLevelProgress(50)
+  if progress50 < 0 or progress50 > 1 then
+    return false, "Progress should be between 0 and 1"
+  end
+
+  return true, "OK"
+end)
+
+test("LevelConfig: getMaxPredatorsForLevel scales with level", function()
+  -- Level 1 should have base predators
+  local pred1 = LevelConfig.getMaxPredatorsForLevel(1)
+  if pred1 < 1 then
+    return false, "Level 1 should have at least 1 max predator"
+  end
+
+  -- Higher levels should have more predators
+  local pred10 = LevelConfig.getMaxPredatorsForLevel(10)
+  if pred10 <= pred1 then
+    return false, "Level 10 should have more max predators than level 1"
+  end
+
+  -- Very high level should be capped
+  local pred100 = LevelConfig.getMaxPredatorsForLevel(100)
+  if pred100 > 8 then
+    return false, "Max predators should be capped at 8"
+  end
+
+  return true, "OK"
+end)
+
+test("LevelConfig: isThreatLevelUnlocked respects level requirements", function()
+  -- Minor should always be unlocked
+  local minorUnlocked = LevelConfig.isThreatLevelUnlocked(1, "Minor")
+  if not minorUnlocked then
+    return false, "Minor threat should be unlocked at level 1"
+  end
+
+  -- Moderate requires level 5
+  local modLevel1 = LevelConfig.isThreatLevelUnlocked(1, "Moderate")
+  local modLevel5 = LevelConfig.isThreatLevelUnlocked(5, "Moderate")
+  if modLevel1 then
+    return false, "Moderate should NOT be unlocked at level 1"
+  end
+  if not modLevel5 then
+    return false, "Moderate should be unlocked at level 5"
+  end
+
+  -- Catastrophic requires level 75
+  local catLevel50 = LevelConfig.isThreatLevelUnlocked(50, "Catastrophic")
+  local catLevel75 = LevelConfig.isThreatLevelUnlocked(75, "Catastrophic")
+  if catLevel50 then
+    return false, "Catastrophic should NOT be unlocked at level 50"
+  end
+  if not catLevel75 then
+    return false, "Catastrophic should be unlocked at level 75"
+  end
+
+  return true, "OK"
+end)
+
+test("LevelConfig: getLevelData returns valid data structure", function()
+  local data = LevelConfig.getLevelData(5)
+
+  if data.level ~= 5 then
+    return assert_eq(data.level, 5, "Level should be 5")
+  end
+  if type(data.xpRequired) ~= "number" or data.xpRequired < 0 then
+    return false, "xpRequired should be a non-negative number"
+  end
+  if type(data.maxSimultaneousPredators) ~= "number" or data.maxSimultaneousPredators < 1 then
+    return false, "maxSimultaneousPredators should be at least 1"
+  end
+  if type(data.predatorThreatMultiplier) ~= "number" or data.predatorThreatMultiplier < 1 then
+    return false, "predatorThreatMultiplier should be at least 1"
+  end
+
+  return true, "OK"
+end)
+
+test("LevelConfig: XP calculations are consistent", function()
+  -- Converting XP to level and back should be consistent
+  for testXP = 0, 1000, 100 do
+    local level = LevelConfig.getLevelFromXP(testXP)
+    local levelXP = LevelConfig.getXPForLevel(level)
+    if levelXP > testXP then
+      return false, "Level XP threshold should not exceed test XP"
+    end
+  end
+
+  return true, "OK"
+end)
+
+test("PlayerData: addXP increases XP and updates level", function()
+  local data = PlayerData.createDefault()
+  data.xp = 0
+  data.level = 1
+
+  -- Add XP but not enough to level up
+  local levelUp1 = PlayerData.addXP(data, 50)
+  if data.xp ~= 50 then
+    return assert_eq(data.xp, 50, "XP should be 50 after adding 50")
+  end
+  if levelUp1 ~= nil then
+    return false, "Should not level up from 50 XP"
+  end
+
+  -- Add more XP to reach level 2
+  local levelUp2 = PlayerData.addXP(data, 50)
+  if data.xp ~= 100 then
+    return assert_eq(data.xp, 100, "XP should be 100 after adding 50 more")
+  end
+  if levelUp2 ~= 2 then
+    return assert_eq(levelUp2, 2, "Should level up to 2 at 100 XP")
+  end
+
+  return true, "OK"
+end)
+
+test("PredatorSpawning: createSpawnState with playerLevel", function()
+  -- Create spawn state with specific level
+  local state = PredatorSpawning.createSpawnState(10)
+
+  if state.playerLevel ~= 10 then
+    return assert_eq(state.playerLevel, 10, "Spawn state should have player level 10")
+  end
+
+  -- Max predators should reflect level
+  local maxPred = PredatorSpawning.getMaxActivePredators(state)
+  local expectedMax = LevelConfig.getMaxPredatorsForLevel(10)
+  if maxPred ~= expectedMax then
+    return assert_eq(maxPred, expectedMax, "Max predators should match level config")
+  end
+
+  return true, "OK"
+end)
+
+test("PredatorSpawning: setPlayerLevel updates spawn state", function()
+  local state = PredatorSpawning.createSpawnState(1)
+
+  if state.playerLevel ~= 1 then
+    return assert_eq(state.playerLevel, 1, "Initial level should be 1")
+  end
+
+  PredatorSpawning.setPlayerLevel(state, 20)
+
+  if state.playerLevel ~= 20 then
+    return assert_eq(state.playerLevel, 20, "Level should be updated to 20")
+  end
+
+  return true, "OK"
+end)
+
+test("PredatorSpawning: getSummary includes playerLevel", function()
+  local state = PredatorSpawning.createSpawnState(15)
+  local currentTime = os.time()
+  local summary = PredatorSpawning.getSummary(state, currentTime, 1.0)
+
+  if summary.playerLevel ~= 15 then
+    return assert_eq(summary.playerLevel, 15, "Summary should include player level 15")
+  end
+
+  return true, "OK"
 end)
 
 -- ============================================================================

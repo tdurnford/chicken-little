@@ -26,3 +26,62 @@ Also updated `executeAttack` to pass the predator's `targetChickenId` from the s
 - The predator targeting now correctly prioritizes the chicken it's visually approaching
 - If the targeted chicken is protected (newly placed within 15 seconds), a random chicken will be selected instead
 - The `PredatorSpawning.updateTargetChicken` function is used by the server to set which chicken a predator is targeting
+
+---
+
+## 2026-01-16 - Implement Player Leveling System (ID #2)
+
+### Summary
+Added a complete player leveling system with XP requirements, level-based difficulty scaling for predators, and HUD display for level/XP progress.
+
+### Features Implemented
+1. **LevelConfig Module** (`src/shared/LevelConfig.lua`)
+   - XP requirements per level (base 100 XP, scaling 15% per level)
+   - Max level: 100
+   - Functions: `getLevelFromXP`, `getXPForLevel`, `getLevelProgress`, `getXPToNextLevel`
+   - Max predators scale with level (1 at level 1, up to 8 at high levels)
+   - Threat level unlocks: Minor(1), Moderate(5), Dangerous(15), Severe(30), Deadly(50), Catastrophic(75)
+
+2. **PlayerData Updates** (`src/shared/PlayerData.lua`)
+   - Added `level` and `xp` fields to `PlayerDataSchema`
+   - New functions: `getLevel`, `getXP`, `addXP`, `setLevelAndXP`
+   - `addXP` returns new level when player levels up
+
+3. **PredatorSpawning Updates** (`src/shared/PredatorSpawning.lua`)
+   - `SpawnState` now includes `playerLevel`
+   - `createSpawnState(playerLevel)` accepts player level
+   - `getMaxActivePredators` now uses `LevelConfig.getMaxPredatorsForLevel`
+   - `selectPredatorForWave` respects threat level unlocks based on player level
+   - `setPlayerLevel` function for updating level on spawn state
+
+4. **MainHUD Level Display** (`src/client/MainHUD.lua`)
+   - Level badge in top-left corner showing "Level X"
+   - XP progress bar below level text
+   - `setLevelAndXP(level, xp, progress)` function
+   - `showLevelUp(newLevel, unlocks)` celebration notification
+   - `showXPGain(amount)` floating XP text
+
+5. **Remote Events** (`src/server/RemoteSetup.lua`)
+   - Added `XPGained` and `LevelUp` events
+
+### Files Changed
+- `src/shared/LevelConfig.lua` - NEW: Level configuration and XP calculations
+- `src/shared/PlayerData.lua` - Added level/xp fields and helper functions
+- `src/shared/PredatorSpawning.lua` - Level-based predator scaling
+- `src/client/MainHUD.lua` - Level/XP HUD display and level-up effects
+- `src/server/RemoteSetup.lua` - Added XPGained and LevelUp events
+- `src/shared/IntegrationTests.lua` - Added 12 new tests for leveling system
+
+### Testing
+- Added integration tests for LevelConfig functions
+- Added tests for PlayerData XP/level functions
+- Added tests for PredatorSpawning level integration
+- Format check passes with `stylua`
+
+### Notes for Next Developer
+- XP reward system (ID #7) should use `PlayerData.addXP()` to award XP for actions
+- When `addXP` returns a number (new level), fire the `LevelUp` remote to show celebration
+- Call `PredatorSpawning.setPlayerLevel(state, level)` when player levels up to update spawning
+- The client should call `MainHUD.setLevelAndXP()` when receiving `PlayerDataChanged`
+- Threat level unlocks mean players won't face Bears until level 75
+

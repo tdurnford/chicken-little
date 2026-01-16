@@ -50,6 +50,14 @@ export type HUDState = {
   chickenCountLabel: TextLabel?,
   chickenCount: number,
   chickenMax: number,
+  -- Level/XP state
+  levelFrame: Frame?,
+  levelLabel: TextLabel?,
+  xpProgressBar: Frame?,
+  xpProgressFill: Frame?,
+  currentLevel: number,
+  currentXP: number,
+  xpProgress: number,
 }
 
 -- Default configuration
@@ -94,6 +102,14 @@ local state: HUDState = {
   chickenCountLabel = nil,
   chickenCount = 0,
   chickenMax = 15,
+  -- Level/XP state
+  levelFrame = nil,
+  levelLabel = nil,
+  xpProgressBar = nil,
+  xpProgressFill = nil,
+  currentLevel = 1,
+  currentXP = 0,
+  xpProgress = 0,
 }
 
 -- Create the money icon
@@ -281,6 +297,61 @@ local function createChickenCountFrame(screenGui: ScreenGui): (Frame, TextLabel)
   return frame, label
 end
 
+-- Create level and XP display frame
+local function createLevelFrame(screenGui: ScreenGui): (Frame, TextLabel, Frame, Frame)
+  local frame = Instance.new("Frame")
+  frame.Name = "LevelFrame"
+  frame.Size = UDim2.new(0, 140, 0, 50)
+  frame.Position = UDim2.new(0, 10, 0, 10) -- Top left corner
+  frame.AnchorPoint = Vector2.new(0, 0)
+  frame.BackgroundTransparency = 1 -- No background
+  frame.BorderSizePixel = 0
+  frame.Parent = screenGui
+
+  -- Level text (e.g., "Level 5")
+  local levelLabel = Instance.new("TextLabel")
+  levelLabel.Name = "LevelLabel"
+  levelLabel.Size = UDim2.new(1, 0, 0, 28)
+  levelLabel.Position = UDim2.new(0, 0, 0, 0)
+  levelLabel.BackgroundTransparency = 1
+  levelLabel.Text = "Level 1"
+  levelLabel.TextColor3 = Color3.fromRGB(255, 215, 0) -- Gold
+  levelLabel.TextSize = 22
+  levelLabel.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
+  levelLabel.TextXAlignment = Enum.TextXAlignment.Left
+  levelLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+  levelLabel.TextStrokeTransparency = 0
+  levelLabel.Parent = frame
+
+  -- XP progress bar background
+  local xpProgressBar = Instance.new("Frame")
+  xpProgressBar.Name = "XPProgressBar"
+  xpProgressBar.Size = UDim2.new(1, 0, 0, 8)
+  xpProgressBar.Position = UDim2.new(0, 0, 0, 32)
+  xpProgressBar.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+  xpProgressBar.BorderSizePixel = 0
+  xpProgressBar.Parent = frame
+
+  local barCorner = Instance.new("UICorner")
+  barCorner.CornerRadius = UDim.new(0, 4)
+  barCorner.Parent = xpProgressBar
+
+  -- XP progress bar fill
+  local xpProgressFill = Instance.new("Frame")
+  xpProgressFill.Name = "XPProgressFill"
+  xpProgressFill.Size = UDim2.new(0, 0, 1, 0) -- Width set by progress
+  xpProgressFill.Position = UDim2.new(0, 0, 0, 0)
+  xpProgressFill.BackgroundColor3 = Color3.fromRGB(100, 200, 255) -- Light blue XP color
+  xpProgressFill.BorderSizePixel = 0
+  xpProgressFill.Parent = xpProgressBar
+
+  local fillCorner = Instance.new("UICorner")
+  fillCorner.CornerRadius = UDim.new(0, 4)
+  fillCorner.Parent = xpProgressFill
+
+  return frame, levelLabel, xpProgressBar, xpProgressFill
+end
+
 -- Create the main HUD frame
 local function createMainFrame(screenGui: ScreenGui, config: HUDConfig): Frame
   local frame = Instance.new("Frame")
@@ -441,6 +512,19 @@ local function updateChickenCountDisplay()
   end
 end
 
+-- Update level and XP display
+local function updateLevelDisplay()
+  if not state.levelLabel or not state.xpProgressFill then
+    return
+  end
+
+  state.levelLabel.Text = "Level " .. state.currentLevel
+
+  -- Update XP progress bar width
+  local progress = math.clamp(state.xpProgress, 0, 1)
+  state.xpProgressFill.Size = UDim2.new(progress, 0, 1, 0)
+end
+
 -- Initialize the HUD
 function MainHUD.create(config: HUDConfig?): boolean
   local player = Players.LocalPlayer
@@ -467,9 +551,14 @@ function MainHUD.create(config: HUDConfig?): boolean
   -- Create chicken count display
   state.chickenCountFrame, state.chickenCountLabel = createChickenCountFrame(state.screenGui)
 
+  -- Create level/XP display
+  state.levelFrame, state.levelLabel, state.xpProgressBar, state.xpProgressFill =
+    createLevelFrame(state.screenGui)
+
   -- Initialize display
   updateMoneyDisplay(false)
   updateChickenCountDisplay()
+  updateLevelDisplay()
 
   return true
 end
@@ -508,6 +597,13 @@ function MainHUD.destroy()
   state.chickenCountLabel = nil
   state.chickenCount = 0
   state.chickenMax = 15
+  state.levelFrame = nil
+  state.levelLabel = nil
+  state.xpProgressBar = nil
+  state.xpProgressFill = nil
+  state.currentLevel = 1
+  state.currentXP = 0
+  state.xpProgress = 0
 end
 
 -- Set current money (with optional animation)
@@ -941,6 +1037,165 @@ function MainHUD.showBankruptcyAssistance(data: {
           notificationFrame:Destroy()
         end
       end)
+    end
+  end)
+end
+
+-- Set level and XP progress
+function MainHUD.setLevelAndXP(level: number, xp: number, progress: number)
+  state.currentLevel = math.max(1, level)
+  state.currentXP = math.max(0, xp)
+  state.xpProgress = math.clamp(progress, 0, 1)
+  updateLevelDisplay()
+end
+
+-- Get current level
+function MainHUD.getLevel(): number
+  return state.currentLevel
+end
+
+-- Get current XP
+function MainHUD.getXP(): number
+  return state.currentXP
+end
+
+-- Get XP progress (0-1)
+function MainHUD.getXPProgress(): number
+  return state.xpProgress
+end
+
+-- Show level up celebration notification
+function MainHUD.showLevelUp(newLevel: number, unlocks: { string }?)
+  if not state.screenGui then
+    return
+  end
+
+  -- Create a celebration notification frame
+  local notificationFrame = Instance.new("Frame")
+  notificationFrame.Name = "LevelUpNotification"
+  notificationFrame.Size = UDim2.new(0, 300, 0, 100)
+  notificationFrame.Position = UDim2.new(0.5, 0, 0.3, 0)
+  notificationFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+  notificationFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+  notificationFrame.BackgroundTransparency = 0.1
+  notificationFrame.BorderSizePixel = 0
+  notificationFrame.Parent = state.screenGui
+
+  -- Corner rounding
+  local corner = Instance.new("UICorner")
+  corner.CornerRadius = UDim.new(0, 12)
+  corner.Parent = notificationFrame
+
+  -- Golden border
+  local stroke = Instance.new("UIStroke")
+  stroke.Color = Color3.fromRGB(255, 215, 0) -- Gold
+  stroke.Thickness = 3
+  stroke.Parent = notificationFrame
+
+  -- Level up title
+  local titleLabel = Instance.new("TextLabel")
+  titleLabel.Name = "TitleLabel"
+  titleLabel.Size = UDim2.new(1, -20, 0, 36)
+  titleLabel.Position = UDim2.new(0, 10, 0, 10)
+  titleLabel.BackgroundTransparency = 1
+  titleLabel.Text = "⬆️ LEVEL UP! ⬆️"
+  titleLabel.TextColor3 = Color3.fromRGB(255, 215, 0) -- Gold
+  titleLabel.TextSize = 24
+  titleLabel.Font = Enum.Font.GothamBold
+  titleLabel.TextXAlignment = Enum.TextXAlignment.Center
+  titleLabel.Parent = notificationFrame
+
+  -- Level number
+  local levelLabel = Instance.new("TextLabel")
+  levelLabel.Name = "LevelLabel"
+  levelLabel.Size = UDim2.new(1, -20, 0, 30)
+  levelLabel.Position = UDim2.new(0, 10, 0, 48)
+  levelLabel.BackgroundTransparency = 1
+  levelLabel.Text = "Level " .. newLevel
+  levelLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+  levelLabel.TextSize = 20
+  levelLabel.Font = Enum.Font.GothamBold
+  levelLabel.TextXAlignment = Enum.TextXAlignment.Center
+  levelLabel.Parent = notificationFrame
+
+  -- Unlocks text (if any)
+  if unlocks and #unlocks > 0 then
+    notificationFrame.Size = UDim2.new(0, 300, 0, 130)
+
+    local unlocksLabel = Instance.new("TextLabel")
+    unlocksLabel.Name = "UnlocksLabel"
+    unlocksLabel.Size = UDim2.new(1, -20, 0, 24)
+    unlocksLabel.Position = UDim2.new(0, 10, 0, 82)
+    unlocksLabel.BackgroundTransparency = 1
+    unlocksLabel.Text = "🔓 " .. table.concat(unlocks, ", ")
+    unlocksLabel.TextColor3 = Color3.fromRGB(150, 255, 150)
+    unlocksLabel.TextSize = 14
+    unlocksLabel.Font = Enum.Font.Gotham
+    unlocksLabel.TextWrapped = true
+    unlocksLabel.TextXAlignment = Enum.TextXAlignment.Center
+    unlocksLabel.Parent = notificationFrame
+  end
+
+  -- Animate in (scale up)
+  notificationFrame.Size = UDim2.new(0, 0, 0, 0)
+  local targetSize = unlocks and #unlocks > 0 and UDim2.new(0, 300, 0, 130)
+    or UDim2.new(0, 300, 0, 100)
+
+  local scaleIn = TweenService:Create(
+    notificationFrame,
+    TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+    { Size = targetSize }
+  )
+  scaleIn:Play()
+
+  -- Auto-dismiss after 3 seconds
+  task.delay(3, function()
+    if notificationFrame and notificationFrame.Parent then
+      local scaleOut = TweenService:Create(
+        notificationFrame,
+        TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+        { Size = UDim2.new(0, 0, 0, 0) }
+      )
+      scaleOut:Play()
+      scaleOut.Completed:Connect(function()
+        if notificationFrame and notificationFrame.Parent then
+          notificationFrame:Destroy()
+        end
+      end)
+    end
+  end)
+end
+
+-- Show XP gain floating text
+function MainHUD.showXPGain(amount: number)
+  if not state.levelFrame or not state.screenGui then
+    return
+  end
+
+  local xpText = Instance.new("TextLabel")
+  xpText.Name = "XPGainText"
+  xpText.Size = UDim2.new(0, 100, 0, 24)
+  xpText.Position = UDim2.new(0, 150, 0, 20) -- Near level display
+  xpText.AnchorPoint = Vector2.new(0.5, 0.5)
+  xpText.BackgroundTransparency = 1
+  xpText.Text = "+" .. amount .. " XP"
+  xpText.TextColor3 = Color3.fromRGB(100, 200, 255) -- Light blue
+  xpText.TextSize = 18
+  xpText.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
+  xpText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+  xpText.TextStrokeTransparency = 0
+  xpText.Parent = state.screenGui
+
+  -- Float up and fade out
+  local floatTween = TweenService:Create(
+    xpText,
+    TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    { Position = UDim2.new(0, 150, 0, -20), TextTransparency = 1, TextStrokeTransparency = 1 }
+  )
+  floatTween:Play()
+  floatTween.Completed:Connect(function()
+    if xpText and xpText.Parent then
+      xpText:Destroy()
     end
   end)
 end

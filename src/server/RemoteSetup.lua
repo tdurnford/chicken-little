@@ -60,6 +60,8 @@ local REMOTE_EVENTS = {
   "PowerUpActivated",
   "AdminWarning",
   "NightfallWarning",
+  "XPGained",
+  "LevelUp",
 }
 
 -- List of all RemoteFunctions to create

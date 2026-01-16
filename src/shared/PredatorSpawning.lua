@@ -8,6 +8,7 @@ local PredatorSpawning = {}
 
 -- Import dependencies
 local PredatorConfig = require(script.Parent.PredatorConfig)
+local LevelConfig = require(script.Parent.LevelConfig)
 
 -- Type definitions
 export type PredatorInstance = {
@@ -27,6 +28,7 @@ export type SpawnState = {
   predatorsSpawned: number,
   activePredators: { PredatorInstance },
   difficultyMultiplier: number,
+  playerLevel: number?, -- Player level for difficulty scaling
 }
 
 export type SpawnResult = {
@@ -49,7 +51,6 @@ local BASE_SPAWN_INTERVAL = 60 -- Base seconds between spawns
 local MIN_SPAWN_INTERVAL = 15 -- Minimum spawn interval at high difficulty
 local WAVE_SIZE_BASE = 1 -- Predators per wave at start
 local WAVE_SIZE_INCREMENT = 0.5 -- Additional predators per wave number
-local MAX_ACTIVE_PREDATORS = 5 -- Maximum predators active at once
 local DIFFICULTY_SCALE_RATE = 0.05 -- Difficulty increase per wave
 
 -- Generate unique ID for predators
@@ -58,14 +59,26 @@ local function generateId(): string
 end
 
 -- Create initial spawn state
-function PredatorSpawning.createSpawnState(): SpawnState
+function PredatorSpawning.createSpawnState(playerLevel: number?): SpawnState
   return {
     lastSpawnTime = 0,
     waveNumber = 0,
     predatorsSpawned = 0,
     activePredators = {},
     difficultyMultiplier = 1.0,
+    playerLevel = playerLevel or 1,
   }
+end
+
+-- Get max active predators based on player level
+function PredatorSpawning.getMaxActivePredators(spawnState: SpawnState): number
+  local level = spawnState.playerLevel or 1
+  return LevelConfig.getMaxPredatorsForLevel(level)
+end
+
+-- Set player level for spawn state (call when player levels up)
+function PredatorSpawning.setPlayerLevel(spawnState: SpawnState, level: number)
+  spawnState.playerLevel = math.max(1, level)
 end
 
 -- Calculate spawn interval based on wave number, difficulty, and time of day
@@ -93,12 +106,25 @@ function PredatorSpawning.getWaveInfo(
   timeOfDayMultiplier: number?
 ): WaveInfo
   local waveNumber = spawnState.waveNumber
+  local maxPredators = PredatorSpawning.getMaxActivePredators(spawnState)
   local predatorCount = math.floor(WAVE_SIZE_BASE + (waveNumber - 1) * WAVE_SIZE_INCREMENT)
-  predatorCount = math.min(predatorCount, MAX_ACTIVE_PREDATORS)
+  predatorCount = math.min(predatorCount, maxPredators)
 
-  -- Threat level increases with wave number
+  -- Threat level increases with wave number AND player level
   local threatLevels = PredatorConfig.getThreatLevels()
-  local threatIndex = math.min(math.ceil(waveNumber / 5), #threatLevels)
+  local playerLevel = spawnState.playerLevel or 1
+
+  -- Find max threat index allowed by player level
+  local maxThreatByLevel = 1
+  for i, threatLevel in ipairs(threatLevels) do
+    if LevelConfig.isThreatLevelUnlocked(playerLevel, threatLevel) then
+      maxThreatByLevel = i
+    end
+  end
+
+  -- Combine wave-based and level-based threat selection
+  local waveBasedThreatIndex = math.min(math.ceil(waveNumber / 5), #threatLevels)
+  local threatIndex = math.min(waveBasedThreatIndex, maxThreatByLevel)
   local dominantThreat = threatLevels[threatIndex]
 
   return {
@@ -114,12 +140,22 @@ function PredatorSpawning.getWaveInfo(
   }
 end
 
--- Select predator type based on wave difficulty
-function PredatorSpawning.selectPredatorForWave(waveNumber: number): string
+-- Select predator type based on wave difficulty and player level
+function PredatorSpawning.selectPredatorForWave(waveNumber: number, playerLevel: number?): string
+  local level = playerLevel or 1
   -- Early waves favor lower threat predators
-  -- Later waves can include higher threats
+  -- Later waves can include higher threats (capped by player level)
   local threatLevels = PredatorConfig.getThreatLevels()
-  local maxThreatIndex = math.min(math.ceil(waveNumber / 3), #threatLevels)
+
+  -- Find max threat allowed by player level
+  local maxThreatByLevel = 1
+  for i, threatLevel in ipairs(threatLevels) do
+    if LevelConfig.isThreatLevelUnlocked(level, threatLevel) then
+      maxThreatByLevel = i
+    end
+  end
+
+  local maxThreatIndex = math.min(math.ceil(waveNumber / 3), maxThreatByLevel)
 
   -- Weight towards higher threats as waves progress
   local totalWeight = 0
@@ -197,9 +233,10 @@ function PredatorSpawning.shouldSpawn(
   currentTime: number,
   timeOfDayMultiplier: number?
 ): boolean
-  -- Check max active predators
+  -- Check max active predators (now level-based)
   local activePredatorCount = PredatorSpawning.getActivePredatorCount(spawnState)
-  if activePredatorCount >= MAX_ACTIVE_PREDATORS then
+  local maxPredators = PredatorSpawning.getMaxActivePredators(spawnState)
+  if activePredatorCount >= maxPredators then
     return false
   end
 
@@ -229,7 +266,8 @@ function PredatorSpawning.spawn(
   -- Check if spawn should occur
   if not PredatorSpawning.shouldSpawn(spawnState, currentTime, timeOfDayMultiplier) then
     local nextSpawn = PredatorSpawning.getNextSpawnTime(spawnState, timeOfDayMultiplier)
-    local reason = PredatorSpawning.getActivePredatorCount(spawnState) >= MAX_ACTIVE_PREDATORS
+    local maxPredators = PredatorSpawning.getMaxActivePredators(spawnState)
+    local reason = PredatorSpawning.getActivePredatorCount(spawnState) >= maxPredators
         and "Max active predators reached"
       or "Spawn interval not elapsed"
 
@@ -246,8 +284,9 @@ function PredatorSpawning.spawn(
     spawnState.waveNumber = 1
   end
 
-  -- Select and create predator
-  local predatorType = PredatorSpawning.selectPredatorForWave(spawnState.waveNumber)
+  -- Select and create predator (now uses player level)
+  local playerLevel = spawnState.playerLevel or 1
+  local predatorType = PredatorSpawning.selectPredatorForWave(spawnState.waveNumber, playerLevel)
   local predator = PredatorSpawning.createPredator(predatorType, currentTime, targetPlayerId)
 
   if not predator then
@@ -300,8 +339,9 @@ function PredatorSpawning.forceSpawn(
     }
   end
 
-  -- Check max active predators
-  if PredatorSpawning.getActivePredatorCount(spawnState) >= MAX_ACTIVE_PREDATORS then
+  -- Check max active predators (now level-based)
+  local maxPredators = PredatorSpawning.getMaxActivePredators(spawnState)
+  if PredatorSpawning.getActivePredatorCount(spawnState) >= maxPredators then
     return {
       success = false,
       message = "Max active predators reached",
@@ -526,6 +566,7 @@ function PredatorSpawning.getSummary(
   difficultyMultiplier: number,
   dominantThreat: PredatorConfig.ThreatLevel,
   timeOfDayMultiplier: number,
+  playerLevel: number,
 }
   local waveInfo = PredatorSpawning.getWaveInfo(spawnState, timeOfDayMultiplier)
   local timeMultiplier = timeOfDayMultiplier or 1.0
@@ -533,7 +574,7 @@ function PredatorSpawning.getSummary(
   return {
     waveNumber = spawnState.waveNumber,
     activePredators = PredatorSpawning.getActivePredatorCount(spawnState),
-    maxPredators = MAX_ACTIVE_PREDATORS,
+    maxPredators = PredatorSpawning.getMaxActivePredators(spawnState),
     predatorsSpawned = spawnState.predatorsSpawned,
     timeUntilNextSpawn = PredatorSpawning.getTimeUntilNextSpawn(
       spawnState,
@@ -543,6 +584,7 @@ function PredatorSpawning.getSummary(
     difficultyMultiplier = spawnState.difficultyMultiplier,
     dominantThreat = waveInfo.threatLevel,
     timeOfDayMultiplier = timeMultiplier,
+    playerLevel = spawnState.playerLevel or 1,
   }
 end
 
@@ -605,19 +647,19 @@ function PredatorSpawning.decreaseAttacks(
 end
 
 -- Reset spawn state (for new game or testing)
-function PredatorSpawning.reset(spawnState: SpawnState): ()
+function PredatorSpawning.reset(spawnState: SpawnState, playerLevel: number?): ()
   spawnState.lastSpawnTime = 0
   spawnState.waveNumber = 0
   spawnState.predatorsSpawned = 0
   spawnState.activePredators = {}
   spawnState.difficultyMultiplier = 1.0
+  spawnState.playerLevel = playerLevel or spawnState.playerLevel or 1
 end
 
 -- Get constants for external configuration
 function PredatorSpawning.getConstants(): {
   baseSpawnInterval: number,
   minSpawnInterval: number,
-  maxActivePredators: number,
   waveSizeBase: number,
   waveSizeIncrement: number,
   difficultyScaleRate: number,
@@ -625,7 +667,6 @@ function PredatorSpawning.getConstants(): {
   return {
     baseSpawnInterval = BASE_SPAWN_INTERVAL,
     minSpawnInterval = MIN_SPAWN_INTERVAL,
-    maxActivePredators = MAX_ACTIVE_PREDATORS,
     waveSizeBase = WAVE_SIZE_BASE,
     waveSizeIncrement = WAVE_SIZE_INCREMENT,
     difficultyScaleRate = DIFFICULTY_SCALE_RATE,
