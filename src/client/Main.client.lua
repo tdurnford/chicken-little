@@ -1361,6 +1361,30 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
 
   if selectedItem.itemType == "egg" then
     if actionType == "place" then
+      -- Check if player is in their own area before allowing hatching
+      local sectionIndex = playerDataCache.sectionIndex
+      if not sectionIndex then
+        SoundEffects.play("uiError")
+        warn("[Client] Cannot hatch egg: No section assigned")
+        return
+      end
+
+      local character = localPlayer.Character
+      local rootPart = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+      if not rootPart then
+        SoundEffects.play("uiError")
+        warn("[Client] Cannot hatch egg: Player position not found")
+        return
+      end
+
+      local sectionCenter = MapGeneration.getSectionPosition(sectionIndex)
+      local isInOwnArea = PlayerSection.isPositionInSection(rootPart.Position, sectionCenter)
+      if not isInOwnArea then
+        SoundEffects.play("uiError")
+        warn("[Client] Cannot hatch egg: You must be in your own area to hatch eggs")
+        return
+      end
+
       -- Show hatch preview for the egg (free-roaming, no spot needed)
       placedEggData = {
         id = selectedItem.itemId,

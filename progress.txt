@@ -1237,3 +1237,39 @@ Added affordability checks to button click handlers and hover effects:
 
 ### Note for next developer:
 The affordability checks use cachedPlayerMoney which is updated via card attributes. The visual state (graying out) is handled by updateAffordability() functions that respond to PlayerMoney attribute changes. Both visual and interaction states are now aligned - if a button looks disabled, it IS disabled.
+
+## 2026-01-16: Restrict Egg Hatching to Player's Area (ui-polish-prd.json Work Item #5 - HIGH) - COMPLETED
+
+Players can now only hatch eggs when standing within their own designated area.
+
+### Problem:
+Players could hatch eggs anywhere on the map, even while standing in other players' areas. This undermined the area ownership mechanic and allowed players to potentially spawn chickens in inconvenient locations.
+
+### Solution:
+Added area validation check in Main.client.lua before showing the HatchPreviewUI for egg hatching:
+
+1. **Section Assignment Check**: Verify the player has an assigned sectionIndex
+2. **Player Position Check**: Get the player's current position via HumanoidRootPart
+3. **Boundary Check**: Use `PlayerSection.isPositionInSection(playerPosition, sectionCenter)` to validate the player is within their section's 2D boundaries
+
+If any check fails:
+- Play "uiError" sound effect
+- Log appropriate warning message
+- Block the hatching action (return early)
+
+### Files modified:
+- src/client/Main.client.lua (InventoryUI.onAction handler, +18 lines)
+- plans/ui-polish-prd.json (marked as completed with resolution)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Uses existing PlayerSection.isPositionInSection() which performs 2D XZ boundary check
+
+### Acceptance criteria met:
+- ✅ Players can only hatch eggs while standing in their own area
+- ✅ Clear feedback (error sound) when trying to hatch outside own area
+- ✅ Uses existing section boundary logic for consistency
+
+### Note for next developer:
+The area check uses `PlayerSection.isPositionInSection()` which checks 2D (XZ) boundaries only - Y position is ignored. The same approach could be applied to other actions that should be restricted to the player's own area. The section center is retrieved via `MapGeneration.getSectionPosition(sectionIndex)`.
