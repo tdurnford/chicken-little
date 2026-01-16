@@ -94,7 +94,7 @@
       "category": "UI",
       "title": "Restyle Store Restock Counter",
       "description": "The restock counter in the store spans the entire top and is too large. Remove the background, make the text black, align it to one side, and reduce the text size.",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Locate the restock counter UI element in StoreUI.lua",

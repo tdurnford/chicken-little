@@ -1827,43 +1827,30 @@ function StoreUI.create()
     StoreUI.close()
   end)
 
-  -- Restock timer frame (balance removed - shown in main HUD)
+  -- Restock timer frame (minimal styling - no background, right-aligned)
   local restockFrame = Instance.new("Frame")
   restockFrame.Name = "RestockFrame"
-  restockFrame.Size = UDim2.new(1, -20, 0, 35)
-  restockFrame.Position = UDim2.new(0, 10, 0, 50)
-  restockFrame.BackgroundColor3 = Color3.fromRGB(71, 85, 105) -- Muted slate blue for subtle appearance
+  restockFrame.Size = UDim2.new(0.5, 0, 0, 20)
+  restockFrame.Position = UDim2.new(1, -10, 0, 55)
+  restockFrame.AnchorPoint = Vector2.new(1, 0) -- Anchor to right side
+  restockFrame.BackgroundTransparency = 1 -- No background
   restockFrame.BorderSizePixel = 0
   restockFrame.Parent = mainFrame
-
-  local restockCorner = Instance.new("UICorner")
-  restockCorner.CornerRadius = UDim.new(0, 8)
-  restockCorner.Parent = restockFrame
-
-  -- Subtle gradient (slate blue) for restock timer
-  local restockGradient = Instance.new("UIGradient")
-  restockGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(71, 85, 105)), -- Slate blue on left
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 116, 139)), -- Lighter slate on right
-  })
-  restockGradient.Rotation = 0 -- Horizontal gradient
-  restockGradient.Parent = restockFrame
 
   -- Restock timer display
   restockTimerLabel = Instance.new("TextLabel")
   restockTimerLabel.Name = "RestockTimerLabel"
-  restockTimerLabel.Size = UDim2.new(1, -10, 1, 0)
-  restockTimerLabel.Position = UDim2.new(0, 5, 0, 0)
+  restockTimerLabel.Size = UDim2.new(1, 0, 1, 0)
+  restockTimerLabel.Position = UDim2.new(0, 0, 0, 0)
   restockTimerLabel.BackgroundTransparency = 1
   restockTimerLabel.Text = "Restocks in 0:00"
-  restockTimerLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text for contrast
-  restockTimerLabel.TextScaled = true
-  restockTimerLabel.Font = Enum.Font.GothamBold
-  restockTimerLabel.TextXAlignment = Enum.TextXAlignment.Center
-  restockTimerLabel.TextStrokeColor3 = Color3.fromRGB(30, 41, 59) -- Dark slate stroke
-  restockTimerLabel.TextStrokeTransparency = 0.3 -- Visible stroke for readability
+  restockTimerLabel.TextColor3 = Color3.fromRGB(30, 41, 59) -- Dark slate/black text
+  restockTimerLabel.TextScaled = false
+  restockTimerLabel.TextSize = 14 -- Smaller, subtle text
+  restockTimerLabel.Font = Enum.Font.Gotham -- Regular weight for subtlety
+  restockTimerLabel.TextXAlignment = Enum.TextXAlignment.Right -- Right-aligned
+  restockTimerLabel.TextStrokeTransparency = 1 -- No stroke needed
   restockTimerLabel.Parent = restockFrame
-  addTextSizeConstraint(restockTimerLabel, 16, 24)
 
   -- Initialize timer display
   updateRestockTimer()

@@ -254,3 +254,35 @@ This prevents the default Roblox button color change behavior while preserving t
 - Disabled buttons now maintain their grey appearance without any visual feedback when clicked
 - The tab buttons already had `AutoButtonColor = false` set (line 1894)
 
+
+---
+
+## 2026-01-16 - Restyle Store Restock Counter (ID #4)
+
+### Summary
+Restyled the restock counter in the store UI to be more subtle and clean. Removed the background, changed text to dark color, aligned to the right side, and reduced the text size.
+
+### Problem
+The restock counter spanned the entire top of the store with a large slate-blue background gradient, making it visually prominent and distracting from the store items. The counter was 35 pixels tall with bold white text and a centered alignment.
+
+### Solution
+Restyled the restock counter to be minimal and unobtrusive:
+1. **Removed background**: Set `BackgroundTransparency = 1` and removed the UICorner and UIGradient decorations
+2. **Dark text color**: Changed from white (`255, 255, 255`) to dark slate (`30, 41, 59`)
+3. **Right-aligned**: Changed `TextXAlignment` from Center to Right, and positioned frame on the right side using `AnchorPoint = Vector2.new(1, 0)`
+4. **Reduced size**: Changed from 35px tall spanning full width to 20px tall and 50% width, with `TextSize = 14` instead of scaled text (16-24px)
+5. **Lighter font weight**: Changed from `GothamBold` to `Gotham` for a more subtle appearance
+6. **Removed text stroke**: Set `TextStrokeTransparency = 1` since dark text on light background doesn't need it
+
+### Files Changed
+- `src/client/StoreUI.lua` - Restyled RestockFrame and RestockTimerLabel (lines 1830-1853)
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+
+### Notes for Next Developer
+- The counter now sits in the top-right area of the store, not spanning the full width
+- The text "Restocks in X:XX" is now subtle dark text without any background
+- The timer update logic (`updateRestockTimer`) remains unchanged and works correctly
+- Only 1 remaining incomplete item in the PRD: #8 (Reduce Chicken Counter Icon Spacing)
