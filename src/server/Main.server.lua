@@ -87,7 +87,7 @@ local CHICKEN_PLACEMENT_PROTECTION_SECONDS = 5 -- Protection period for newly pl
 local PREDATOR_ATTACK_RANGE_STUDS = 15 -- Predators must be within this range of coop to damage chickens
 
 -- New Player Protection Configuration
-local NEW_PLAYER_PROTECTION_DURATION = 180 -- 3 minutes of predator immunity for new players
+local NEW_PLAYER_PROTECTION_DURATION = 120 -- 2 minutes of predator immunity for new players
 local playerJoinTimes: { [number]: number } = {} -- Tracks when each player joined (userId -> os.time())
 
 -- Bankruptcy Protection Configuration

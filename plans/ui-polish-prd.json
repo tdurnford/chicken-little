@@ -108,8 +108,10 @@
       "description": "Reduce the initial shield protection time from current value down to 2 minutes (120 seconds).",
       "type": "balance",
       "priority": "medium",
-      "files": ["src/shared/AreaShield.lua", "src/shared/BalanceConfig.lua"],
-      "status": "pending"
+      "files": ["src/server/Main.server.lua"],
+      "status": "completed",
+      "completedDate": "2026-01-16",
+      "resolution": "Changed NEW_PLAYER_PROTECTION_DURATION from 180 seconds (3 minutes) to 120 seconds (2 minutes) in Main.server.lua. This constant controls the predator immunity period given to new players when they join the game. The protection status is sent to clients via PlayerProtectionStatus remote event and prevents predator spawning for the specified duration."
     },
     {
       "id": 10,

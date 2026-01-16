@@ -1403,3 +1403,32 @@ Updated values:
 
 ### Note for next developer:
 The chicken icon is a TextLabel with emoji text (🐔) sized at 32px width. The count label now starts at 30px, creating a 2px overlap which visually appears as a tight gap due to emoji padding. If the gap is still too large, consider reducing the icon width or moving the label position even closer.
+
+## 2026-01-16: Reduce Initial Shield Time to 2 Minutes (ui-polish-prd.json Work Item #9 - MEDIUM) - COMPLETED
+
+Reduced the new player protection duration from 3 minutes to 2 minutes.
+
+### Problem:
+The initial shield protection time for new players was 3 minutes (180 seconds), which was considered too long.
+
+### Solution:
+Changed `NEW_PLAYER_PROTECTION_DURATION` in Main.server.lua:
+- **Before**: `180` (3 minutes)
+- **After**: `120` (2 minutes)
+
+This constant is used in:
+- Line 1805-1806: Sent to client via PlayerProtectionStatus event when player joins
+- Line 2285: Checked during predator spawning to skip protected players
+- Line 2879: Used in protection status update loop
+
+### Files modified:
+- src/server/Main.server.lua (NEW_PLAYER_PROTECTION_DURATION constant)
+- plans/ui-polish-prd.json (marked as completed with resolution)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Change is a simple constant value modification
+
+### Note for next developer:
+The NEW_PLAYER_PROTECTION_DURATION constant controls predator immunity for new players. This is separate from the AreaShield module which handles the player-activated shield (60 second duration, 5 minute cooldown). If you need to adjust the player-activated shield, edit SHIELD_DURATION in AreaShield.lua instead.
