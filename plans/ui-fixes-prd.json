@@ -200,12 +200,15 @@
       "title": "Rename Eggs 'Place' Button to 'Hatch'",
       "description": "Change the button text on the eggs tab in the inventory from 'Place' to 'Hatch' for clearer user understanding.",
       "priority": "low",
+      "status": "completed",
+      "completedDate": "2026-01-16",
       "files": ["src/client/InventoryUI.lua"],
       "tasks": [
         "Locate the eggs tab button text",
         "Change 'Place' to 'Hatch'",
         "Verify button functionality remains the same"
-      ]
+      ],
+      "resolution": "Changed egg action button text from '📍 Place' to '🐣 Hatch' in InventoryUI.lua. Updated comment from 'Place (to hatch in coop)' to 'Hatch (place in coop to hatch)' for clarity. The action ID remains 'place' so existing functionality is unchanged."
     },
     {
       "id": "unify-button-styles",

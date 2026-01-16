@@ -998,3 +998,30 @@ Unified the shield button and inventory button to have consistent visual styling
 
 ### Note for next developer:
 The inventory button is defined in MainHUD.lua, not InventoryUI.lua. InventoryUI.lua contains the inventory panel that opens when the button is clicked. The PRD files list has been corrected.
+
+## 2026-01-16: Rename Eggs 'Place' Button to 'Hatch' (ui-fixes-prd.json Work Item - LOW) - COMPLETED
+
+Changed the egg action button text from "Place" to "Hatch" for clearer user understanding of the egg hatching mechanic.
+
+### Changes made:
+- Changed button text from "📍 Place" to "🐣 Hatch" in InventoryUI.lua (line 618)
+- Updated comment from "Place (to hatch in coop)" to "Hatch (place in coop to hatch)" for clarity (line 615)
+- Action ID remains "place" so all existing event handlers and functionality work unchanged
+
+### Files modified:
+- src/client/InventoryUI.lua (2 line changes)
+- plans/ui-fixes-prd.json (marked as completed with resolution)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Button functionality unchanged - only display text modified
+- Chicken and trap buttons still show "📍 Place" as intended
+
+### Acceptance criteria met:
+- ✅ Located the eggs tab button text (line 618 in updateActionButtons function)
+- ✅ Changed 'Place' to 'Hatch' with appropriate emoji change
+- ✅ Button functionality remains the same (action ID still "place")
+
+### Note for next developer:
+Only one feature remains in the PRD: "move-tutorial-carousel-up" (low priority). This involves adjusting the Y position of the tutorial carousel in Tutorial.lua to be higher on the screen.

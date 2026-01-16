@@ -612,10 +612,10 @@ local function updateActionButtons()
   end
 
   if state.selectedItem.itemType == "egg" then
-    -- Egg actions: Place (to hatch in coop), Sell
+    -- Egg actions: Hatch (place in coop to hatch), Sell
     createActionButton(
       state.actionFrame,
-      "📍 Place",
+      "🐣 Hatch",
       "place",
       UDim2.new(0, 0, 0, 0),
       Color3.fromRGB(80, 160, 80)
