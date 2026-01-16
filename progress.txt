@@ -1025,3 +1025,31 @@ Changed the egg action button text from "Place" to "Hatch" for clearer user unde
 
 ### Note for next developer:
 Only one feature remains in the PRD: "move-tutorial-carousel-up" (low priority). This involves adjusting the Y position of the tutorial carousel in Tutorial.lua to be higher on the screen.
+
+## 2026-01-16: Move Tutorial Carousel Up (ui-fixes-prd.json Work Item - LOW) - COMPLETED
+
+Moved the tutorial carousel from the bottom of the screen to a higher position for better visibility and less obstruction of gameplay.
+
+### Changes made:
+- Changed frame position from UDim2.new(0.5, 0, 1, -20) to UDim2.new(0.5, 0, 0.75, 0) in createMainFrame
+- Updated showFrame animation to slide from UDim2.new(0.5, 0, 1, 0) to UDim2.new(0.5, 0, 0.75, 0)
+- Updated hideFrame animation to slide from current position to UDim2.new(0.5, 0, 1, 0)
+- Carousel now appears at 75% down the screen (was at 100% minus 20px offset)
+
+### Files modified:
+- src/client/Tutorial.lua (3 position changes)
+- plans/ui-fixes-prd.json (marked as completed with resolution, overall PRD marked complete)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Position uses scale-based UDim2 (0.75) which works across different screen sizes
+- Animation still slides up from bottom, just stops higher on screen
+
+### Acceptance criteria met:
+- ✅ Adjusted the Y position of the tutorial carousel (from 1,-20 to 0.75,0)
+- ✅ Carousel remains fully visible on screen (140px height fits within 25% bottom area)
+- ✅ Scale-based positioning works across different screen sizes
+
+### Note for next developer:
+All features in ui-fixes-prd.json are now COMPLETE. The PRD status has been updated to "completed" with completedDate "2026-01-16". Consider archiving this PRD or creating a new one for future work.

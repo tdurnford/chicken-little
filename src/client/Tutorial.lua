@@ -160,7 +160,7 @@ local function createMainFrame(parent: ScreenGui): Frame
   local frame = Instance.new("Frame")
   frame.Name = "TutorialFrame"
   frame.AnchorPoint = Vector2.new(0.5, 1)
-  frame.Position = UDim2.new(0.5, 0, 1, -20)
+  frame.Position = UDim2.new(0.5, 0, 0.75, 0) -- Positioned at 75% down the screen for better visibility
   frame.Size = UDim2.new(0, 450, 0, 140)
   frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
   frame.BackgroundTransparency = 0.1
@@ -563,12 +563,12 @@ local function showFrame()
   end
 
   state.mainFrame.Visible = true
-  state.mainFrame.Position = UDim2.new(0.5, 0, 1, 150)
+  state.mainFrame.Position = UDim2.new(0.5, 0, 1, 0) -- Start off-screen at bottom
 
   TweenService:Create(
     state.mainFrame,
     TweenInfo.new(SLIDE_IN_DURATION, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-    { Position = UDim2.new(0.5, 0, 1, -20) }
+    { Position = UDim2.new(0.5, 0, 0.75, 0) } -- Slide up to 75% down the screen
   ):Play()
 end
 
@@ -584,7 +584,7 @@ local function hideFrame(callback: (() -> ())?)
   local tween = TweenService:Create(
     state.mainFrame,
     TweenInfo.new(SLIDE_IN_DURATION, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-    { Position = UDim2.new(0.5, 0, 1, 150) }
+    { Position = UDim2.new(0.5, 0, 1, 0) } -- Slide down off-screen
   )
   tween:Play()
 

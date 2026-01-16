@@ -3,7 +3,8 @@
   "description": "A collection of UI improvements, visual cleanup, and game balance fixes to improve the overall player experience.",
   "version": "1.0.0",
   "created": "2025-01-15",
-  "status": "planned",
+  "status": "completed",
+  "completedDate": "2026-01-16",
   "features": [
     {
       "id": "remove-predator-target-bar",
@@ -108,12 +109,15 @@
       "title": "Move Tutorial Carousel Up",
       "description": "Adjust the tutorial carousel position to be higher on the screen for better visibility and less obstruction of gameplay.",
       "priority": "low",
+      "status": "completed",
+      "completedDate": "2026-01-16",
       "files": ["src/client/Tutorial.lua"],
       "tasks": [
         "Adjust the Y position of the tutorial carousel",
         "Ensure carousel remains fully visible on screen",
         "Test on different screen sizes if possible"
-      ]
+      ],
+      "resolution": "Moved tutorial carousel from bottom of screen (Y: 1, -20px offset) to 75% down the screen (Y: 0.75, 0 offset). Updated createMainFrame initial position, showFrame animation target position, and hideFrame animation start position. The carousel now appears higher on screen, reducing obstruction of gameplay while remaining fully visible."
     },
     {
       "id": "fix-legendary-chicken-drop",
