@@ -86,15 +86,34 @@ local VALID_RARITIES = {
 local CHEAPEST_ITEM_PRICE = 100 -- Common egg costs $100
 local BANKRUPTCY_STARTER_MONEY = 100 -- Amount given to bankrupt players
 
--- Creates default player data with starting money (enough to buy a common egg)
+-- Creates default player data with starting money and starter items
 function PlayerData.createDefault(): PlayerDataSchema
+  local currentTime = os.time()
   return {
     money = 100, -- Exactly enough to buy a Common Egg from the store
     inventory = {
-      eggs = {},
+      eggs = {
+        -- New players start with one Common Egg to hatch
+        {
+          id = tostring(currentTime) .. "_starter_egg",
+          eggType = "CommonEgg",
+          rarity = "Common",
+        },
+      },
       chickens = {},
     },
-    placedChickens = {},
+    -- New players start with one Basic Chick already placed in their area
+    placedChickens = {
+      {
+        id = tostring(currentTime) .. "_starter_chicken",
+        chickenType = "BasicChick",
+        rarity = "Common",
+        accumulatedMoney = 0,
+        lastEggTime = currentTime,
+        spotIndex = 1,
+        placedTime = currentTime,
+      },
+    },
     traps = {},
     upgrades = {
       cageTier = 1,

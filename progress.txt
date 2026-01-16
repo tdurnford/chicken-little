@@ -1157,3 +1157,42 @@ The protection mechanism was already implemented in the `selectChickensForAttack
 
 ### Note for next developer:
 The 15-second grace period can be adjusted by modifying `CHICKEN_PLACEMENT_PROTECTION_SECONDS` in PredatorAttack.lua. If players report this is too short or too long, it can be easily tuned. The same constant is used for all chicken placement scenarios (hatching, placing from inventory, etc.).
+
+## 2026-01-16: Start New Players with a Chicken and Egg (ui-polish-prd.json Work Item #10 - HIGH) - COMPLETED
+
+New players now start with a Basic Chick already placed in their area and a Common Egg in their inventory.
+
+### Problem:
+New players started with nothing and had to immediately figure out the game mechanics (buying eggs, hatching, etc.) before seeing any gameplay value. This led to a confusing and potentially discouraging new player experience.
+
+### Solution:
+Modified `PlayerData.createDefault()` to include starter items:
+1. **Starter Chicken**: A BasicChick placed in spot 1 with:
+   - Unique ID using `os.time() .. "_starter_chicken"`
+   - Proper rarity ("Common")
+   - accumulatedMoney set to 0
+   - lastEggTime set to current time (so it doesn't immediately lay an egg)
+   - placedTime set to current time (gets predator protection)
+
+2. **Starter Egg**: A CommonEgg in inventory with:
+   - Unique ID using `os.time() .. "_starter_egg"`
+   - Proper type ("CommonEgg") and rarity ("Common")
+
+### Files modified:
+- src/shared/PlayerData.lua (createDefault function, lines 89-118)
+- plans/ui-polish-prd.json (marked as completed with resolution)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Starter items use proper data structures that pass PlayerData.validate()
+- IDs are unique per player using os.time() + suffix
+
+### Acceptance criteria met:
+- ✅ New players start with one chicken already placed in their area
+- ✅ New players start with one egg in their inventory
+- ✅ Starter items are Common rarity (appropriate for new players)
+- ✅ Chicken is placed and will start generating money immediately
+
+### Note for next developer:
+The starter chicken is placed in spotIndex 1 (first coop spot). The starter egg can be hatched by the player to learn the hatching mechanic. Both items use time-based unique IDs to avoid any potential ID collision issues. If you want to change what new players start with, modify the `createDefault()` function in PlayerData.lua.
