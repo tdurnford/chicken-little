@@ -405,7 +405,9 @@ local function createItemCard(
   -- Hover effect for cash button
   local cashOriginalColor = buyButton.BackgroundColor3
   buyButton.MouseEnter:Connect(function()
-    if not isSoldOut then
+    local canAfford = cachedPlayerMoney >= (card:GetAttribute("Price") or price)
+    local soldOut = (card:GetAttribute("Stock") or stock) <= 0
+    if not soldOut and canAfford then
       buyButton.BackgroundColor3 = Color3.fromRGB(70, 220, 70) -- Brighter green
     end
   end)
@@ -495,14 +497,14 @@ local function createItemCard(
     robuxStroke.Color = Color3.fromRGB(100, 200, 255)
   end)
 
-  -- Connect buy button (only if in stock)
-  if not isSoldOut then
-    buyButton.MouseButton1Click:Connect(function()
-      if itemType == "egg" and onEggPurchaseCallback then
-        onEggPurchaseCallback(itemId, 1)
-      end
-    end)
-  end
+  -- Connect buy button (only if in stock and can afford)
+  buyButton.MouseButton1Click:Connect(function()
+    local canAfford = cachedPlayerMoney >= (card:GetAttribute("Price") or price)
+    local soldOut = (card:GetAttribute("Stock") or stock) <= 0
+    if not soldOut and canAfford and itemType == "egg" and onEggPurchaseCallback then
+      onEggPurchaseCallback(itemId, 1)
+    end
+  end)
 
   -- Connect Robux button (always available)
   robuxButton.MouseButton1Click:Connect(function()
@@ -995,12 +997,14 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
       or Color3.fromRGB(80, 80, 80)
   end)
 
-  -- Connect cash buy button
+  -- Connect cash buy button (only if can afford)
   buyButton.MouseButton1Click:Connect(function()
     print("[StoreUI] Trap buy button clicked for:", supplyItem.id)
-    if onTrapPurchaseCallback then
+    if cachedPlayerMoney >= supplyItem.price and onTrapPurchaseCallback then
       print("[StoreUI] Calling onTrapPurchaseCallback")
       onTrapPurchaseCallback(supplyItem.id)
+    elseif cachedPlayerMoney < supplyItem.price then
+      print("[StoreUI] Cannot afford trap:", supplyItem.id)
     else
       warn("[StoreUI] onTrapPurchaseCallback is nil!")
     end

@@ -1196,3 +1196,44 @@ Modified `PlayerData.createDefault()` to include starter items:
 
 ### Note for next developer:
 The starter chicken is placed in spotIndex 1 (first coop spot). The starter egg can be hatched by the player to learn the hatching mechanic. Both items use time-based unique IDs to avoid any potential ID collision issues. If you want to change what new players start with, modify the `createDefault()` function in PlayerData.lua.
+
+## 2026-01-16: Disable Store Buttons When Insufficient Funds (ui-polish-prd.json Work Item #3 - HIGH) - COMPLETED
+
+Store buttons are now non-interactive when the player cannot afford the item.
+
+### Problem:
+Players could click on grayed-out store buttons even when they couldn't afford items. While the visual feedback (dimmed buttons, faded text) was already present, the buttons were still clickable and would attempt purchases.
+
+### Solution:
+Added affordability checks to button click handlers and hover effects:
+
+1. **Egg buttons (createItemCard function)**:
+   - Hover effect now checks both soldOut AND canAfford before highlighting
+   - Click handler now checks soldOut AND canAfford before firing callback
+   - Changed from conditional listener attachment (if not isSoldOut) to always-attached listener with runtime checks
+
+2. **Trap/Supply buttons (createSupplyCard function)**:
+   - Hover effect already had affordability check (no change needed)
+   - Click handler now checks canAfford before firing callback
+   - Added debug print when player cannot afford
+
+3. **Weapon buttons (createWeaponCard function)**:
+   - Already had correct affordability checks (no change needed)
+
+### Files modified:
+- src/client/StoreUI.lua (3 changes, +15/-11 lines)
+- plans/ui-polish-prd.json (marked as completed with resolution)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- All button types now properly block interaction when unaffordable
+
+### Acceptance criteria met:
+- ✅ Buttons are visually disabled (grayed out/dimmed) when insufficient funds - already existed
+- ✅ Buttons are non-interactive when insufficient funds - NEW
+- ✅ Hover effects don't trigger when insufficient funds - NEW for eggs
+- ✅ Consistent behavior across all button types (eggs, traps, weapons)
+
+### Note for next developer:
+The affordability checks use cachedPlayerMoney which is updated via card attributes. The visual state (graying out) is handled by updateAffordability() functions that respond to PlayerMoney attribute changes. Both visual and interaction states are now aligned - if a button looks disabled, it IS disabled.
