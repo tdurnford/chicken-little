@@ -220,3 +220,37 @@ Reduced the `DEFAULT_CONFIG.size` height from 70 to 44 pixels in `src/client/Mai
 - The frame uses `anchorPoint = Vector2.new(0, 1)` for bottom-left anchoring
 - The position offset of -10 from the bottom edge is preserved
 
+---
+
+## 2026-01-16 - Fix Store Disabled Button Flash (ID #3)
+
+### Summary
+Fixed the white flash effect that occurred when clicking disabled buy buttons in the store.
+
+### Problem
+Roblox's default `AutoButtonColor` property causes TextButtons to automatically change color when pressed. This was causing a distracting white flash when players clicked on disabled (greyed out) buttons that they couldn't afford or that were sold out.
+
+### Solution
+Set `AutoButtonColor = false` on all buy buttons in the store UI:
+- Egg cash buy button (line 361)
+- Egg Robux buy button (line 440)
+- Power-up Robux buy button (line 713)
+- Trap/supply cash buy button (line 947)
+- Trap/supply Robux buy button (line 1026)
+- Weapon cash buy button (line 1285)
+- Weapon Robux buy button (line 1357)
+
+This prevents the default Roblox button color change behavior while preserving the custom hover effects already implemented via MouseEnter/MouseLeave handlers.
+
+### Files Changed
+- `src/client/StoreUI.lua` - Added `AutoButtonColor = false` to all 7 buy buttons
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+
+### Notes for Next Developer
+- The hover effects for enabled buttons still work correctly (they use custom MouseEnter/MouseLeave handlers)
+- Disabled buttons now maintain their grey appearance without any visual feedback when clicked
+- The tab buttons already had `AutoButtonColor = false` set (line 1894)
+

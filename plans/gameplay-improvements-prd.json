@@ -67,7 +67,7 @@
       "category": "UI",
       "title": "Fix Store Disabled Button Flash",
       "description": "When the user clicks on a disabled button in the store, it flashes white. Remove this flash effect for disabled buttons.",
-      "completed": false,
+      "completed": true,
       "priority": "medium",
       "steps": [
         "Locate the StoreUI.lua file that handles store button interactions",

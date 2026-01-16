@@ -358,6 +358,7 @@ local function createItemCard(
   buyButton.Font = Enum.Font.GothamBold
   buyButton.BackgroundTransparency = 0
   buyButton.ZIndex = 2
+  buyButton.AutoButtonColor = false -- Disable default click flash for disabled states
   buyButton.Parent = card
 
   local buyButtonCorner = Instance.new("UICorner")
@@ -436,6 +437,7 @@ local function createItemCard(
   robuxButton.Font = Enum.Font.GothamBold
   robuxButton.BackgroundTransparency = 0
   robuxButton.ZIndex = 2
+  robuxButton.AutoButtonColor = false -- Disable default click flash
   robuxButton.Parent = card
 
   local robuxButtonCorner = Instance.new("UICorner")
@@ -708,6 +710,7 @@ local function createPowerUpCard(
   buyButton.Text = ""
   buyButton.BackgroundTransparency = 0
   buyButton.ZIndex = 2
+  buyButton.AutoButtonColor = false -- Disable default click flash
   buyButton.Parent = card
 
   local buyButtonCorner = Instance.new("UICorner")
@@ -941,6 +944,7 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   buyButton.Text = ""
   buyButton.BackgroundTransparency = 0
   buyButton.ZIndex = 2
+  buyButton.AutoButtonColor = false -- Disable default click flash for disabled states
   buyButton.Parent = card
 
   local buyButtonCorner = Instance.new("UICorner")
@@ -1019,6 +1023,7 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   robuxButton.Text = ""
   robuxButton.BackgroundTransparency = 0
   robuxButton.ZIndex = 2
+  robuxButton.AutoButtonColor = false -- Disable default click flash
   robuxButton.Parent = card
 
   local robuxButtonCorner = Instance.new("UICorner")
@@ -1277,6 +1282,7 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
     buyButton.Text = ""
     buyButton.BackgroundTransparency = 0
     buyButton.ZIndex = 2
+    buyButton.AutoButtonColor = false -- Disable default click flash for disabled states
     buyButton.Parent = card
 
     local buyButtonCorner = Instance.new("UICorner")
@@ -1348,6 +1354,7 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
     robuxButton.Text = ""
     robuxButton.BackgroundTransparency = 0
     robuxButton.ZIndex = 2
+    robuxButton.AutoButtonColor = false -- Disable default click flash
     robuxButton.Parent = card
 
     local robuxButtonCorner = Instance.new("UICorner")
