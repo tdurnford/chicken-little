@@ -100,7 +100,9 @@
         "src/shared/PredatorSpawning.lua",
         "src/shared/PredatorConfig.lua"
       ],
-      "status": "pending"
+      "status": "completed",
+      "completedDate": "2026-01-16",
+      "resolution": "Added SPAWN_BOUNDARY_OFFSET constant (15 studs) to PredatorAI.lua and refactored calculateSpawnPosition() to use it instead of hardcoded value of 5. Predators now spawn 15 studs outside the section boundary (was 5), giving players 3x more time to react before predators reach their area. With default walk speed of 8 studs/second, this adds ~1.25 seconds of extra reaction time."
     },
     {
       "id": 9,

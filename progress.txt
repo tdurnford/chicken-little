@@ -1432,3 +1432,34 @@ This constant is used in:
 
 ### Note for next developer:
 The NEW_PLAYER_PROTECTION_DURATION constant controls predator immunity for new players. This is separate from the AreaShield module which handles the player-activated shield (60 second duration, 5 minute cooldown). If you need to adjust the player-activated shield, edit SHIELD_DURATION in AreaShield.lua instead.
+
+## 2026-01-16: Increase Predator Spawn Distance (ui-polish-prd.json Work Item #8 - MEDIUM) - COMPLETED
+
+Increased the distance at which predators spawn from the player's section boundary to give players more reaction time.
+
+### Problem:
+Predators spawned only 5 studs outside the section boundary, which meant they appeared very close to the player's area and gave minimal reaction time.
+
+### Solution:
+Added a new constant `SPAWN_BOUNDARY_OFFSET = 15` to PredatorAI.lua and refactored `calculateSpawnPosition()` to use this constant instead of hardcoded `5` values in each direction case (north, south, east, west).
+
+**Changes made:**
+- Added `SPAWN_BOUNDARY_OFFSET = 15` constant after `SPAWN_EDGES` definition
+- Updated all 4 directional spawn calculations to use the constant
+
+**Before:** Predators spawned 5 studs outside section edge
+**After:** Predators spawned 15 studs outside section edge
+
+This gives players approximately 1.25 seconds more reaction time (with default walk speed of 8 studs/second: 10 extra studs / 8 = 1.25s).
+
+### Files modified:
+- src/shared/PredatorAI.lua (added constant, updated 4 Vector3 calculations)
+- plans/ui-polish-prd.json (marked as completed with resolution)
+
+### Testing notes:
+- Build passes (`make build`)
+- Format check passes (`make format-check`)
+- Lint check skipped due to CPU architecture mismatch with selene binary (pre-existing issue)
+
+### Note for next developer:
+The `SPAWN_BOUNDARY_OFFSET` constant is located near line 113 in PredatorAI.lua. Adjust this value if you need to tune predator spawn distance further. Consider that faster predators (Severe, Deadly, Catastrophic threat levels) use speed multipliers up to 1.5x, so they will cover the extra distance faster than minor threats.

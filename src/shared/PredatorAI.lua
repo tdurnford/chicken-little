@@ -110,6 +110,9 @@ local THREAT_SPEED_MULTIPLIER: { [string]: number } = {
 -- Spawn edge options
 local SPAWN_EDGES = { "north", "south", "east", "west" }
 
+-- Spawn distance from section boundary (gives players more reaction time)
+local SPAWN_BOUNDARY_OFFSET = 15 -- studs outside section edge
+
 -- Create initial AI state
 function PredatorAI.createState(
   neutralZoneCenter: Vector3?,
@@ -155,23 +158,32 @@ function PredatorAI.calculateSpawnPosition(sectionCenter: Vector3, preferredEdge
     spawnPos = Vector3.new(
       sectionCenter.X + randomX,
       sectionCenter.Y + 1, -- slightly above ground
-      sectionCenter.Z - halfDepth - 5 -- outside section boundary
+      sectionCenter.Z - halfDepth - SPAWN_BOUNDARY_OFFSET -- outside section boundary
     )
   elseif edge == "south" then
     -- Front of section (positive Z)
     local randomX = (math.random() - 0.5) * sectionConfig.width * 0.6
-    spawnPos =
-      Vector3.new(sectionCenter.X + randomX, sectionCenter.Y + 1, sectionCenter.Z + halfDepth + 5)
+    spawnPos = Vector3.new(
+      sectionCenter.X + randomX,
+      sectionCenter.Y + 1,
+      sectionCenter.Z + halfDepth + SPAWN_BOUNDARY_OFFSET
+    )
   elseif edge == "east" then
     -- Right side (positive X)
     local randomZ = (math.random() - 0.5) * sectionConfig.depth * 0.6
-    spawnPos =
-      Vector3.new(sectionCenter.X + halfWidth + 5, sectionCenter.Y + 1, sectionCenter.Z + randomZ)
+    spawnPos = Vector3.new(
+      sectionCenter.X + halfWidth + SPAWN_BOUNDARY_OFFSET,
+      sectionCenter.Y + 1,
+      sectionCenter.Z + randomZ
+    )
   else -- west
     -- Left side (negative X)
     local randomZ = (math.random() - 0.5) * sectionConfig.depth * 0.6
-    spawnPos =
-      Vector3.new(sectionCenter.X - halfWidth - 5, sectionCenter.Y + 1, sectionCenter.Z + randomZ)
+    spawnPos = Vector3.new(
+      sectionCenter.X - halfWidth - SPAWN_BOUNDARY_OFFSET,
+      sectionCenter.Y + 1,
+      sectionCenter.Z + randomZ
+    )
   end
 
   return spawnPos
