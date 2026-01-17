@@ -1846,8 +1846,8 @@ function StoreUI.create()
   restockTimerLabel.Text = "Restocks in 0:00"
   restockTimerLabel.TextColor3 = Color3.fromRGB(30, 41, 59) -- Dark slate/black text
   restockTimerLabel.TextScaled = false
-  restockTimerLabel.TextSize = 14 -- Smaller, subtle text
-  restockTimerLabel.Font = Enum.Font.Gotham -- Regular weight for subtlety
+  restockTimerLabel.TextSize = 18 -- Larger, more readable text
+  restockTimerLabel.Font = Enum.Font.GothamMedium -- Medium weight for better visibility
   restockTimerLabel.TextXAlignment = Enum.TextXAlignment.Right -- Right-aligned
   restockTimerLabel.TextStrokeTransparency = 1 -- No stroke needed
   restockTimerLabel.Parent = restockFrame
