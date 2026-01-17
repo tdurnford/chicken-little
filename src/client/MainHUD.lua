@@ -14,6 +14,7 @@ local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local MoneyScaling = require(Shared:WaitForChild("MoneyScaling"))
+local LevelConfig = require(Shared:WaitForChild("LevelConfig"))
 
 -- Type definitions
 export type HUDConfig = {
@@ -341,7 +342,7 @@ local function createLevelFrame(screenGui: ScreenGui): (Frame, TextLabel, Frame,
   xpProgressFill.Name = "XPProgressFill"
   xpProgressFill.Size = UDim2.new(0, 0, 1, 0) -- Width set by progress
   xpProgressFill.Position = UDim2.new(0, 0, 0, 0)
-  xpProgressFill.BackgroundColor3 = Color3.fromRGB(100, 200, 255) -- Light blue XP color
+  xpProgressFill.BackgroundColor3 = Color3.fromRGB(255, 215, 0) -- Gold to match level text
   xpProgressFill.BorderSizePixel = 0
   xpProgressFill.Parent = xpProgressBar
 
@@ -692,6 +693,13 @@ function MainHUD.updateFromPlayerData(playerData: any, moneyPerSecond: number?)
   end
   if moneyPerSecond then
     MainHUD.setMoneyPerSecond(moneyPerSecond)
+  end
+  -- Update level and XP display
+  if playerData then
+    local xp = playerData.xp or 0
+    local level = playerData.level or LevelConfig.getLevelFromXP(xp)
+    local progress = LevelConfig.getLevelProgress(xp)
+    MainHUD.setLevelAndXP(level, xp, progress)
   end
 end
 
