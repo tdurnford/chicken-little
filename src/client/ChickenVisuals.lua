@@ -21,6 +21,9 @@ local Store = require(Shared:WaitForChild("Store"))
 -- Callback for sell prompt triggered
 local onSellPromptTriggered: ((chickenId: string) -> ())?
 
+-- Callback for claim prompt triggered (random chickens)
+local onClaimPromptTriggered: ((chickenId: string) -> ())?
+
 -- Type definitions
 export type AnimationState = "idle" | "laying" | "celebrating" | "walking"
 
@@ -564,6 +567,27 @@ function ChickenVisuals.create(
         onSellPromptTriggered(chickenId)
       end
     end)
+  else
+    -- Add ProximityPrompt for claiming (random/wandering chickens only)
+    local claimPrompt = Instance.new("ProximityPrompt")
+    claimPrompt.Name = "ClaimPrompt"
+    claimPrompt.ObjectText = config.displayName or chickenType
+    claimPrompt.ActionText = "Collect"
+    claimPrompt.HoldDuration = 0
+    claimPrompt.MaxActivationDistance = 10 -- Slightly less than server CLAIM_RANGE to ensure valid claims
+    claimPrompt.RequiresLineOfSight = false
+    claimPrompt.KeyboardKeyCode = Enum.KeyCode.E
+    claimPrompt.Parent = model.PrimaryPart
+
+    -- Store chickenId in prompt for reference
+    claimPrompt:SetAttribute("ChickenId", chickenId)
+
+    -- Handle claim trigger
+    claimPrompt.Triggered:Connect(function(playerWhoTriggered: Player)
+      if playerWhoTriggered == Players.LocalPlayer and onClaimPromptTriggered then
+        onClaimPromptTriggered(chickenId)
+      end
+    end)
   end
 
   -- Create state
@@ -851,6 +875,12 @@ function ChickenVisuals.updatePosition(
     state.targetPosition = currentPosition
     state.currentAnimation = "idle"
   else
+    -- Sync position with server to prevent drift
+    -- Only snap if we're too far off (more than 2 studs difference)
+    local drift = (state.position - currentPosition).Magnitude
+    if drift > 2 then
+      state.position = currentPosition
+    end
     -- Use target position if provided, otherwise fall back to current position
     state.targetPosition = targetPosition or currentPosition
     state.currentAnimation = "walking"
@@ -913,6 +943,11 @@ function ChickenVisuals.setOnSellPromptTriggered(callback: (chickenId: string) -
   onSellPromptTriggered = callback
 end
 
+-- Set callback for when claim proximity prompt is triggered (random chickens)
+function ChickenVisuals.setOnClaimPromptTriggered(callback: (chickenId: string) -> ())
+  onClaimPromptTriggered = callback
+end
+
 -- Update sell prompt price for a chicken (call when accumulated money changes significantly)
 function ChickenVisuals.updateSellPromptPrice(chickenId: string)
   local state = activeChickens[chickenId]
@@ -929,7 +964,7 @@ function ChickenVisuals.updateSellPromptPrice(chickenId: string)
   if prompt then
     local basePrice = Store.getChickenValue(state.chickenType)
     local totalValue = basePrice + math.floor(state.accumulatedMoney)
-    prompt.ActionText = "Sell ($" .. MoneyScaling.formatCurrency(totalValue) .. ")"
+    prompt.ActionText = "Sell (" .. MoneyScaling.formatCurrency(totalValue) .. ")"
   end
 end
 

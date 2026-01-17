@@ -21,7 +21,7 @@ local DEFAULT_SPAWN_INTERVAL_MIN = 120 -- 2 minutes minimum between spawns
 local DEFAULT_SPAWN_INTERVAL_MAX = 300 -- 5 minutes maximum between spawns
 local DEFAULT_DESPAWN_TIME = 30 -- seconds before unclaimed chicken despawns
 local NEUTRAL_ZONE_SIZE = 32 -- studs, size of neutral spawn area
-local CLAIM_RANGE = 8 -- studs, how close player must be to claim
+local CLAIM_RANGE = 12 -- studs, how close player must be to claim (generous to account for movement)
 
 -- Spawn zone type for multi-zone spawning (spawn across entire map)
 export type SpawnZone = {

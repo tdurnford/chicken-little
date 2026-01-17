@@ -116,71 +116,6 @@ else
   warn("[Client] Cannot create ShieldUI - no MainHUD ScreenGui")
 end
 
--- Create Random Chicken Claim Prompt UI
-local randomChickenPromptFrame: Frame? = nil
-local randomChickenPromptLabel: TextLabel? = nil
-
-local function createRandomChickenPromptUI()
-  local screenGui = MainHUD.getScreenGui()
-  if not screenGui then
-    warn("[Client] Cannot create random chicken prompt - no ScreenGui")
-    return
-  end
-
-  local frame = Instance.new("Frame")
-  frame.Name = "RandomChickenClaimPrompt"
-  frame.AnchorPoint = Vector2.new(0.5, 1)
-  frame.Size = UDim2.new(0, 180, 0, 40)
-  frame.Position = UDim2.new(0.5, 0, 0.85, -20)
-  frame.BackgroundColor3 = Color3.fromRGB(40, 80, 40)
-  frame.BackgroundTransparency = 0.3
-  frame.BorderSizePixel = 0
-  frame.Visible = false
-  frame.ZIndex = 8
-  frame.Parent = screenGui
-
-  local corner = Instance.new("UICorner")
-  corner.CornerRadius = UDim.new(0, 8)
-  corner.Parent = frame
-
-  local stroke = Instance.new("UIStroke")
-  stroke.Color = Color3.fromRGB(100, 200, 100)
-  stroke.Thickness = 2
-  stroke.Parent = frame
-
-  local label = Instance.new("TextLabel")
-  label.Name = "PromptLabel"
-  label.Size = UDim2.new(1, -8, 1, 0)
-  label.Position = UDim2.new(0, 4, 0, 0)
-  label.BackgroundTransparency = 1
-  label.Text = "[E] Claim Chicken"
-  label.TextSize = 16
-  label.TextColor3 = Color3.fromRGB(255, 255, 255)
-  label.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
-  label.ZIndex = 9
-  label.Parent = frame
-
-  randomChickenPromptFrame = frame
-  randomChickenPromptLabel = label
-  print("[Client] Random chicken claim prompt created")
-end
-
-local function showRandomChickenPrompt(chickenType: string)
-  if randomChickenPromptFrame and randomChickenPromptLabel then
-    randomChickenPromptLabel.Text = "[E] Claim " .. chickenType
-    randomChickenPromptFrame.Visible = true
-  end
-end
-
-local function hideRandomChickenPrompt()
-  if randomChickenPromptFrame then
-    randomChickenPromptFrame.Visible = false
-  end
-end
-
--- Delay creation until after MainHUD is ready
-task.delay(0.1, createRandomChickenPromptUI)
-
 -- Track placed egg for hatching flow
 local placedEggData: { id: string, eggType: string }? = nil
 
@@ -770,11 +705,6 @@ if randomChickenClaimedEvent then
     end
     if claimedBy == localPlayer then
       SoundEffects.play("chickenClaim")
-      -- Hide the claim prompt for claiming player
-      hideRandomChickenPrompt()
-      isNearRandomChicken = false
-      nearestRandomChickenId = nil
-      nearestRandomChickenType = nil
     end
     print("[Client] Random chicken claimed:", chickenId, "by", claimedBy.Name)
   end)
@@ -790,16 +720,8 @@ if randomChickenDespawnedEvent then
       return
     end
 
-    -- Destroy the visual
+    -- Destroy the visual (which also removes the ProximityPrompt)
     ChickenVisuals.destroy(chickenId)
-
-    -- Clear tracking if this was the nearby chicken
-    if nearestRandomChickenId == chickenId then
-      hideRandomChickenPrompt()
-      isNearRandomChicken = false
-      nearestRandomChickenId = nil
-      nearestRandomChickenType = nil
-    end
 
     print("[Client] Random chicken despawned:", chickenId)
   end)
@@ -1182,53 +1104,9 @@ local lastLockTimerUpdateTime = 0
 local isNearChicken = false
 local lastCollectedChickenTimes: { [string]: number } = {} -- Track when each chicken was last collected
 
--- Random chicken claiming state
-local RANDOM_CHICKEN_CLAIM_RANGE = 8 -- studs, same as server-side claim range
-local isNearRandomChicken = false
-local nearestRandomChickenId: string? = nil
-
 -- Store interaction state
 local STORE_INTERACTION_RANGE = 12 -- studs, matches ProximityPrompt MaxActivationDistance
 local isNearStore = false
-
---[[
-	Helper function to find the nearest random chicken within claim range.
-	Random chickens are not in the player's placedChickens list.
-	Returns chickenId, chickenType, position or nil.
-]]
-local function findNearbyRandomChicken(playerPosition: Vector3): (string?, string?, Vector3?)
-  local allChickens = ChickenVisuals.getAll()
-  local nearestDistance = RANDOM_CHICKEN_CLAIM_RANGE
-  local nearestId: string? = nil
-  local nearestType: string? = nil
-  local nearestPos: Vector3? = nil
-
-  for chickenId, state in pairs(allChickens) do
-    -- All chickens are now free-roaming, check if they're owned by checking playerDataCache
-    local isOwnedChicken = false
-    if playerDataCache and playerDataCache.placedChickens then
-      for _, placed in ipairs(playerDataCache.placedChickens) do
-        if placed.id == chickenId then
-          isOwnedChicken = true
-          break
-        end
-      end
-    end
-
-    -- Random chickens are not in the player's placedChickens list
-    if not isOwnedChicken and state.position then
-      local distance = (playerPosition - state.position).Magnitude
-      if distance < nearestDistance then
-        nearestDistance = distance
-        nearestId = chickenId
-        nearestType = state.chickenType
-        nearestPos = state.position
-      end
-    end
-  end
-
-  return nearestId, nearestType, nearestPos
-end
 
 --[[
 	Helper function to find the nearest placed chicken within interaction range.
@@ -1357,6 +1235,36 @@ ChickenVisuals.setOnSellPromptTriggered(function(chickenId: string)
   if visualState then
     -- Trigger sell directly (starts confirmation flow)
     ChickenSelling.startSell(chickenId, visualState.chickenType, visualState.rarity, visualState.accumulatedMoney)
+  end
+end)
+
+-- Wire up ChickenVisuals claim prompt to handle collecting random chickens
+ChickenVisuals.setOnClaimPromptTriggered(function(chickenId: string)
+  -- Claim the random chicken via server
+  local claimFunc = getFunction("ClaimRandomChicken")
+  if claimFunc then
+    task.spawn(function()
+      local result = claimFunc:InvokeServer()
+      if result and result.success then
+        -- Play success sound
+        SoundEffects.play("chickenClaim")
+
+        -- Destroy the visual (server will also fire RandomChickenClaimed to handle this)
+        ChickenVisuals.destroy(chickenId)
+
+        -- Update local cache and UI with returned player data (immediate sync)
+        if result.playerData then
+          playerDataCache = result.playerData
+          MainHUD.updateFromPlayerData(result.playerData)
+          InventoryUI.updateFromPlayerData(result.playerData)
+        end
+
+        print("[Client] Claimed random chicken:", result.chicken and result.chicken.chickenType)
+      else
+        SoundEffects.play("uiError")
+        warn("[Client] Failed to claim random chicken:", result and result.message)
+      end
+    end)
   end
 end)
 
@@ -1957,12 +1865,6 @@ local function updateProximityPrompts()
     -- ProximityPrompt handles the sell UI now (shows on chicken model)
     -- Show mobile touch controls for sell only (pickup removed)
     MobileTouchControls.showSellContext()
-
-    -- Hide random chicken prompt when near placed chicken
-    hideRandomChickenPrompt()
-    isNearRandomChicken = false
-    nearestRandomChickenId = nil
-    nearestRandomChickenType = nil
   else
     if isNearChicken then
       -- Was near, now not - hide mobile controls
@@ -1971,22 +1873,6 @@ local function updateProximityPrompts()
     isNearChicken = false
     nearestChickenId = nil
     nearestChickenType = nil
-
-    -- Check for nearby random chickens (only when not near placed chicken)
-    local randomChickenId, randomChickenType, _ = findNearbyRandomChicken(playerPosition)
-    if randomChickenId then
-      isNearRandomChicken = true
-      nearestRandomChickenId = randomChickenId
-      nearestRandomChickenType = randomChickenType
-      showRandomChickenPrompt(randomChickenType or "Chicken")
-    else
-      if isNearRandomChicken then
-        hideRandomChickenPrompt()
-      end
-      isNearRandomChicken = false
-      nearestRandomChickenId = nil
-      nearestRandomChickenType = nil
-    end
   end
 
   -- Check distance to store for fallback E key handling
@@ -2200,8 +2086,8 @@ StoreUI.onWeaponPurchase(function(weaponType: string)
 end)
 
 --[[
-  Random Chicken Claim Input Handler
-  Handles E key press to claim random chickens in the neutral zone.
+  Fallback E key handler for store interaction.
+  Random chicken claiming is now handled via ProximityPrompt on the chicken model.
 ]]
 UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
   if gameProcessed then
@@ -2209,44 +2095,8 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
   end
 
   if input.KeyCode == Enum.KeyCode.E then
-    -- Only handle if near a random chicken and NOT near a placed chicken
-    if isNearRandomChicken and nearestRandomChickenId and not isNearChicken then
-      -- Claim the random chicken
-      local claimFunc = getFunction("ClaimRandomChicken")
-      if claimFunc then
-        task.spawn(function()
-          local result = claimFunc:InvokeServer()
-          if result and result.success then
-            -- Play success sound
-            SoundEffects.play("chickenClaim")
-
-            -- Destroy the visual (server will fire RandomChickenClaimed to do this)
-            if nearestRandomChickenId then
-              ChickenVisuals.destroy(nearestRandomChickenId)
-            end
-
-            -- Hide prompt
-            hideRandomChickenPrompt()
-            isNearRandomChicken = false
-            nearestRandomChickenId = nil
-            nearestRandomChickenType = nil
-
-            -- Update local cache and UI with returned player data (immediate sync)
-            if result.playerData then
-              playerDataCache = result.playerData
-              MainHUD.updateFromPlayerData(result.playerData)
-              InventoryUI.updateFromPlayerData(result.playerData)
-            end
-
-            print("[Client] Claimed random chicken:", result.chicken and result.chicken.chickenType)
-          else
-            SoundEffects.play("uiError")
-            warn("[Client] Failed to claim random chicken:", result and result.message)
-          end
-        end)
-      end
     -- Fallback: If near store and ProximityPrompt didn't handle it, toggle store manually
-    elseif isNearStore and not isNearChicken and not isNearRandomChicken then
+    if isNearStore and not isNearChicken then
       StoreUI.toggle()
       print("[Client] Store opened via fallback E key handler")
     end
