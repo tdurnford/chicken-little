@@ -9,6 +9,9 @@
 build/
 dist/
 
+# Wally packages (installed via wally install)
+Packages/
+
 # Tooling caches
 .aftman/
 .vscode/*.log

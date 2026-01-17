@@ -16,6 +16,10 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local MoneyScaling = require(Shared:WaitForChild("MoneyScaling"))
 local LevelConfig = require(Shared:WaitForChild("LevelConfig"))
 
+-- TopbarPlus for native topbar integration
+local Packages = ReplicatedStorage:WaitForChild("Packages")
+local Icon = require(Packages:WaitForChild("TopbarPlus"))
+
 -- Type definitions
 export type HUDConfig = {
   anchorPoint: Vector2?,
@@ -41,9 +45,8 @@ export type HUDState = {
   protectionLabel: TextLabel?,
   protectionEndTime: number?,
   protectionUpdateConnection: RBXScriptConnection?,
-  -- Inventory button state
-  inventoryButton: ImageButton?,
-  inventoryBadge: TextLabel?,
+  -- Inventory button state (using TopbarPlus Icon)
+  inventoryIcon: any?, -- TopbarPlus Icon instance
   inventoryItemCount: number,
   onInventoryClick: (() -> ())?,
   -- Chicken count state
@@ -93,9 +96,8 @@ local state: HUDState = {
   protectionLabel = nil,
   protectionEndTime = nil,
   protectionUpdateConnection = nil,
-  -- Inventory button state
-  inventoryButton = nil,
-  inventoryBadge = nil,
+  -- Inventory button state (using TopbarPlus Icon)
+  inventoryIcon = nil,
   inventoryItemCount = 0,
   onInventoryClick = nil,
   -- Chicken count state
@@ -165,98 +167,23 @@ local function createMoneyPerSecLabel(parent: Frame, config: HUDConfig): TextLab
   return label
 end
 
--- Create inventory button with item count badge
-local function createInventoryButton(screenGui: ScreenGui): (ImageButton, TextLabel)
-  local button = Instance.new("ImageButton")
-  button.Name = "InventoryButton"
-  button.Size = UDim2.new(0, 60, 0, 60) -- Unified size with shield button
-  button.Position = UDim2.new(1, -70, 0, 10) -- Top-right corner, aligned with shield button
-  button.AnchorPoint = Vector2.new(0, 0)
-  button.BackgroundColor3 = Color3.fromRGB(60, 60, 75) -- Unified neutral color
-  button.BackgroundTransparency = 0.2
-  button.BorderSizePixel = 0
-  button.Image = "rbxassetid://6034684949" -- Backpack icon
-  button.ImageColor3 = Color3.fromRGB(220, 200, 160)
-  button.ScaleType = Enum.ScaleType.Fit
-  button.AutoButtonColor = true
-  button.Parent = screenGui
-
-  -- Rounded corners - unified with shield button
-  local corner = Instance.new("UICorner")
-  corner.CornerRadius = UDim.new(0, 12)
-  corner.Parent = button
-
-  -- Border stroke - unified with shield button style
-  local stroke = Instance.new("UIStroke")
-  stroke.Color = Color3.fromRGB(100, 100, 120)
-  stroke.Thickness = 2
-  stroke.Transparency = 0.3
-  stroke.Parent = button
-
-  -- Padding for the image
-  local padding = Instance.new("UIPadding")
-  padding.PaddingTop = UDim.new(0, 8)
-  padding.PaddingBottom = UDim.new(0, 8)
-  padding.PaddingLeft = UDim.new(0, 8)
-  padding.PaddingRight = UDim.new(0, 8)
-  padding.Parent = button
-
-  -- Item count badge (shows number of items in inventory)
-  local badge = Instance.new("TextLabel")
-  badge.Name = "ItemBadge"
-  badge.Size = UDim2.new(0, 22, 0, 22)
-  badge.Position = UDim2.new(1, -6, 0, -6)
-  badge.AnchorPoint = Vector2.new(0.5, 0.5)
-  badge.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
-  badge.Text = "0"
-  badge.TextColor3 = Color3.fromRGB(255, 255, 255)
-  badge.TextSize = 12
-  badge.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
-  badge.BorderSizePixel = 0
-  badge.Visible = false -- Hidden when count is 0
-  badge.Parent = button
-
-  local badgeCorner = Instance.new("UICorner")
-  badgeCorner.CornerRadius = UDim.new(1, 0) -- Fully round
-  badgeCorner.Parent = badge
-
-  -- Tooltip showing keybind
-  local tooltip = Instance.new("TextLabel")
-  tooltip.Name = "Tooltip"
-  tooltip.Size = UDim2.new(0, 80, 0, 20)
-  tooltip.Position = UDim2.new(0.5, 0, 1, 4)
-  tooltip.AnchorPoint = Vector2.new(0.5, 0)
-  tooltip.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-  tooltip.BackgroundTransparency = 0.2
-  tooltip.Text = "Inventory (I)"
-  tooltip.TextColor3 = Color3.fromRGB(180, 180, 180)
-  tooltip.TextSize = 10
-  tooltip.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular)
-  tooltip.BorderSizePixel = 0
-  tooltip.Visible = false
-  tooltip.Parent = button
-
-  local tooltipCorner = Instance.new("UICorner")
-  tooltipCorner.CornerRadius = UDim.new(0, 4)
-  tooltipCorner.Parent = tooltip
-
-  -- Show/hide tooltip on hover
-  button.MouseEnter:Connect(function()
-    tooltip.Visible = true
-  end)
-
-  button.MouseLeave:Connect(function()
-    tooltip.Visible = false
-  end)
+-- Create inventory button using TopbarPlus
+local function createInventoryIcon(): any
+  local icon = Icon.new()
+    :setImage("rbxasset://textures/ui/TopBar/inventoryOn.png") -- Native Roblox backpack icon
+    :setImageScale(0.85) -- Make the icon larger
+    :setOrder(1)
 
   -- Wire click to callback
-  button.MouseButton1Click:Connect(function()
+  icon.selected:Connect(function()
     if state.onInventoryClick then
       state.onInventoryClick()
     end
+    -- Deselect immediately so it acts like a button, not a toggle
+    icon:deselect()
   end)
 
-  return button, badge
+  return icon
 end
 
 -- Create chicken count display frame
@@ -303,7 +230,7 @@ local function createLevelFrame(screenGui: ScreenGui): (Frame, TextLabel, Frame,
   local frame = Instance.new("Frame")
   frame.Name = "LevelFrame"
   frame.Size = UDim2.new(0, 140, 0, 50)
-  frame.Position = UDim2.new(0, 10, 0, 10) -- Top left corner
+  frame.Position = UDim2.new(0, 10, 0, 10) -- Top left corner (inventory button is now in topbar)
   frame.AnchorPoint = Vector2.new(0, 0)
   frame.BackgroundTransparency = 1 -- No background
   frame.BorderSizePixel = 0
@@ -546,8 +473,8 @@ function MainHUD.create(config: HUDConfig?): boolean
   state.moneyLabel = createMoneyLabel(state.mainFrame, hudConfig)
   -- Note: Money per second label removed for cleaner UI
 
-  -- Create inventory button
-  state.inventoryButton, state.inventoryBadge = createInventoryButton(state.screenGui)
+  -- Create inventory button using TopbarPlus
+  state.inventoryIcon = createInventoryIcon()
 
   -- Create chicken count display
   state.chickenCountFrame, state.chickenCountLabel = createChickenCountFrame(state.screenGui)
@@ -591,8 +518,10 @@ function MainHUD.destroy()
   state.protectionFrame = nil
   state.protectionLabel = nil
   state.protectionEndTime = nil
-  state.inventoryButton = nil
-  state.inventoryBadge = nil
+  if state.inventoryIcon then
+    state.inventoryIcon:destroy()
+  end
+  state.inventoryIcon = nil
   state.inventoryItemCount = 0
   state.chickenCountFrame = nil
   state.chickenCountLabel = nil
@@ -710,21 +639,15 @@ end
 
 -- Update inventory item count badge
 function MainHUD.setInventoryItemCount(count: number)
+  local previousCount = state.inventoryItemCount
   state.inventoryItemCount = count
 
-  if state.inventoryBadge then
-    if count <= 0 then
-      state.inventoryBadge.Visible = false
-    else
-      state.inventoryBadge.Visible = true
-      -- Format count (show 99+ for large numbers)
-      if count > 99 then
-        state.inventoryBadge.Text = "99+"
-        state.inventoryBadge.Size = UDim2.new(0, 28, 0, 22)
-      else
-        state.inventoryBadge.Text = tostring(count)
-        state.inventoryBadge.Size = UDim2.new(0, 22, 0, 22)
-      end
+  if state.inventoryIcon then
+    -- Clear existing notices first
+    state.inventoryIcon:clearNotices()
+    -- Add notices for each item (TopbarPlus shows count automatically)
+    for _ = 1, math.min(count, 99) do
+      state.inventoryIcon:notify()
     end
   end
 end
