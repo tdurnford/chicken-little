@@ -46,6 +46,32 @@ export type LoadResult = {
 
 export type OfflineEarningsResult = OfflineEarnings.OfflineEarningsResult
 
+-- ProfileService Profile type definition (simplified for type checking)
+-- ProfileService returns Profile objects with these key members:
+--   Profile.Data - The actual player data (our PlayerDataSchema)
+--   Profile.MetaData - Metadata about the profile (SessionLoadCount, etc.)
+--   Profile:IsActive() - Returns true if profile is still active
+--   Profile:Release() - Releases the profile session lock
+--   Profile:Save() - Triggers a manual save
+--   Profile:ListenToRelease(callback) - Listener for when profile is released
+--   Profile:Reconcile() - Fills in missing template values
+--   Profile:AddUserId(userId) - Associates userId with profile (GDPR)
+export type Profile = {
+  Data: PlayerData.PlayerDataSchema,
+  MetaData: {
+    ProfileCreateTime: number,
+    SessionLoadCount: number,
+    ActiveSession: { number | string }?,
+    MetaTags: { [string]: any },
+  },
+  IsActive: (self: Profile) -> boolean,
+  Release: (self: Profile) -> (),
+  Save: (self: Profile) -> (),
+  ListenToRelease: (self: Profile, callback: () -> ()) -> (),
+  Reconcile: (self: Profile) -> (),
+  AddUserId: (self: Profile, userId: number) -> (),
+}
+
 -- Profile template - default data structure for new players
 local ProfileTemplate = PlayerData.createDefault()
 
@@ -53,7 +79,7 @@ local ProfileTemplate = PlayerData.createDefault()
 local ProfileStore = ProfileService.GetProfileStore(DATA_STORE_NAME, ProfileTemplate)
 
 -- Private state
-local profiles: { [number]: any } = {} -- Active profiles keyed by userId
+local profiles: { [number]: Profile } = {} -- Active profiles keyed by userId
 local playerDataCache: { [number]: PlayerData.PlayerDataSchema } = {}
 local profileStoreInitialized = false
 
@@ -91,6 +117,12 @@ function DataPersistence.load(userId: number): LoadResult
   local profileKey = getProfileKey(userId)
 
   -- Load the profile with ForceLoad to handle session locking
+  -- ForceLoad is used to ensure players can always join this server even if their
+  -- profile is still locked by another server (e.g., after a server crash).
+  -- ProfileService handles this safely by:
+  -- 1. Waiting for the other session to release naturally (with timeout)
+  -- 2. Force-claiming the session if the lock is stale (assumed dead after 30 mins)
+  -- 3. The previous server's Profile:ListenToRelease will fire, kicking the player there
   local profile = ProfileStore:LoadProfileAsync(profileKey, "ForceLoad")
 
   if not profile then
@@ -470,7 +502,7 @@ function DataPersistence.getGlobalChickenCounts(): { [string]: number }
 end
 
 -- Get the active profile for a user (for advanced usage)
-function DataPersistence.getProfile(userId: number): any?
+function DataPersistence.getProfile(userId: number): Profile?
   return profiles[userId]
 end
 
