@@ -1023,8 +1023,6 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
       if onTrapPurchaseCallback then
         print("[StoreUI] Calling onTrapPurchaseCallback")
         onTrapPurchaseCallback(supplyItem.id)
-      else
-        warn("[StoreUI] onTrapPurchaseCallback is nil!")
       end
     else
       print("[StoreUI] Cannot afford trap:", supplyItem.id)
