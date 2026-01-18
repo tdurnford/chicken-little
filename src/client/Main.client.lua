@@ -39,6 +39,7 @@ local BaseballBat = require(Shared:WaitForChild("BaseballBat"))
 local AreaShield = require(Shared:WaitForChild("AreaShield"))
 local WorldEgg = require(Shared:WaitForChild("WorldEgg"))
 local TrapPlacement = require(Shared:WaitForChild("TrapPlacement"))
+local UISignals = require(Shared:WaitForChild("UISignals"))
 
 -- Local player reference
 local localPlayer = Players.LocalPlayer
@@ -930,9 +931,9 @@ if shieldDeactivatedEvent then
   end)
 end
 
--- Wire ShieldUI activation callback to server
+-- Wire ShieldUI activation via UISignals
 local activateShieldFunc = getFunction("ActivateShield")
-ShieldUI.onActivate(function()
+UISignals.ShieldActivate:Connect(function()
   if activateShieldFunc then
     local result = activateShieldFunc:InvokeServer()
     if result then
@@ -1285,8 +1286,8 @@ MobileTouchControls.setAction("confirm", function()
 end)
 print("[Client] MobileTouchControls initialized")
 
--- Wire InventoryUI callbacks for item actions (after helper functions are defined)
-InventoryUI.onItemSelected(function(selectedItem)
+-- Wire InventoryUI signals for item actions (after helper functions are defined)
+UISignals.ItemSelected:Connect(function(selectedItem)
   if selectedItem then
     print("[Client] Inventory item selected:", selectedItem.itemType, selectedItem.itemId)
   else
@@ -1294,7 +1295,7 @@ InventoryUI.onItemSelected(function(selectedItem)
   end
 end)
 
-InventoryUI.onAction(function(actionType: string, selectedItem)
+UISignals.ItemAction:Connect(function(actionType: string, selectedItem)
   print("[Client] Inventory action:", actionType, selectedItem.itemType, selectedItem.itemId)
 
   if selectedItem.itemType == "egg" then
@@ -1428,10 +1429,10 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
     end
   end
 end)
-print("[Client] InventoryUI callbacks wired")
+print("[Client] InventoryUI signals wired")
 
--- Wire up HatchPreviewUI callbacks for egg hatching
-HatchPreviewUI.onHatch(function(eggId: string, eggType: string)
+-- Wire up HatchPreviewUI signals for egg hatching
+UISignals.HatchConfirmed:Connect(function(eggId: string, eggType: string)
   print("[Client] Hatch confirmed for egg:", eggId, eggType)
 
   if not placedEggData or placedEggData.id ~= eggId then
@@ -1482,15 +1483,15 @@ HatchPreviewUI.onHatch(function(eggId: string, eggType: string)
   placedEggData = nil
 end)
 
-HatchPreviewUI.onCancel(function()
+UISignals.HatchCancelled:Connect(function()
   print("[Client] Hatch cancelled")
   -- Clear placed egg data
   placedEggData = nil
 end)
-print("[Client] HatchPreviewUI callbacks wired")
+print("[Client] HatchPreviewUI signals wired")
 
--- Wire up InventoryUI visibility callback
-InventoryUI.onVisibilityChanged(function(visible: boolean)
+-- Wire up InventoryUI visibility signal
+UISignals.InventoryVisibilityChanged:Connect(function(visible: boolean)
   -- Reserved for future tutorial steps if needed
 end)
 
@@ -1506,8 +1507,8 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
 end)
 print("[Client] Inventory toggle key binding (I) set up")
 
--- Wire up MainHUD inventory button to toggle InventoryUI
-MainHUD.onInventoryClick(function()
+-- Wire up MainHUD inventory button to toggle InventoryUI via UISignals
+UISignals.InventoryClicked:Connect(function()
   InventoryUI.toggle()
 end)
 print("[Client] MainHUD inventory button wired")
@@ -1956,8 +1957,8 @@ end
 -- Setup store interaction after a delay to ensure store is built
 task.delay(0.5, setupStoreInteraction)
 
--- Wire up store purchase callback
-StoreUI.onPurchase(function(eggType: string, quantity: number)
+-- Wire up store purchase signals
+UISignals.EggPurchase:Connect(function(eggType: string, quantity: number)
   local buyEggFunc = getFunction("BuyEgg")
   if not buyEggFunc then
     warn("[Client] BuyEgg RemoteFunction not found")
@@ -1976,8 +1977,8 @@ StoreUI.onPurchase(function(eggType: string, quantity: number)
   end
 end)
 
--- Wire up store Robux replenish callback
-StoreUI.onReplenish(function()
+-- Wire up store Robux replenish signal
+UISignals.StoreReplenish:Connect(function()
   local replenishFunc = getFunction("ReplenishStoreWithRobux")
   if not replenishFunc then
     warn("[Client] ReplenishStoreWithRobux RemoteFunction not found")
@@ -1996,8 +1997,8 @@ StoreUI.onReplenish(function()
   end
 end)
 
--- Wire up store Robux item purchase callback
-StoreUI.onRobuxPurchase(function(itemType: string, itemId: string)
+-- Wire up store Robux item purchase signal
+UISignals.RobuxPurchase:Connect(function(itemType: string, itemId: string)
   local buyItemFunc = getFunction("BuyItemWithRobux")
   if not buyItemFunc then
     warn("[Client] BuyItemWithRobux RemoteFunction not found")
@@ -2018,8 +2019,8 @@ StoreUI.onRobuxPurchase(function(itemType: string, itemId: string)
   end
 end)
 
--- Wire up store power-up purchase callback
-StoreUI.onPowerUpPurchase(function(powerUpId: string)
+-- Wire up store power-up purchase signal
+UISignals.PowerUpPurchase:Connect(function(powerUpId: string)
   local buyPowerUpFunc = getFunction("BuyPowerUp")
   if not buyPowerUpFunc then
     warn("[Client] BuyPowerUp RemoteFunction not found")
@@ -2040,9 +2041,9 @@ StoreUI.onPowerUpPurchase(function(powerUpId: string)
   end
 end)
 
--- Wire up store trap/supply purchase callback
-StoreUI.onTrapPurchase(function(trapType: string)
-  print("[Client] onTrapPurchase callback invoked with trapType:", trapType)
+-- Wire up store trap/supply purchase signal
+UISignals.TrapPurchase:Connect(function(trapType: string)
+  print("[Client] TrapPurchase signal received with trapType:", trapType)
   local buyTrapFunc = getFunction("BuyTrap")
   if not buyTrapFunc then
     warn("[Client] BuyTrap RemoteFunction not found")
@@ -2064,7 +2065,7 @@ StoreUI.onTrapPurchase(function(trapType: string)
   end
 end)
 
-StoreUI.onWeaponPurchase(function(weaponType: string)
+UISignals.WeaponPurchase:Connect(function(weaponType: string)
   local buyWeaponFunc = getFunction("BuyWeapon")
   if not buyWeaponFunc then
     warn("[Client] BuyWeapon RemoteFunction not found")

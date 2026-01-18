@@ -102,14 +102,6 @@ local CONTENT_FADE_INFO =
 local isAnimating = false
 local isTabSwitching = false
 
--- Callbacks
-local onEggPurchaseCallback: ((eggType: string, quantity: number) -> any)? = nil
-local onReplenishCallback: (() -> any)? = nil
-local onRobuxPurchaseCallback: ((itemType: string, itemId: string) -> any)? = nil
-local onPowerUpPurchaseCallback: ((powerUpId: string) -> any)? = nil
-local onTrapPurchaseCallback: ((trapType: string) -> any)? = nil
-local onWeaponPurchaseCallback: ((weaponType: string) -> any)? = nil
-
 -- Cached owned weapons for display
 local cachedOwnedWeapons: { [string]: boolean }? = nil
 
@@ -505,23 +497,13 @@ local function createItemCard(
     local canAfford = cachedPlayerMoney >= (card:GetAttribute("Price") or price)
     local soldOut = (card:GetAttribute("Stock") or stock) <= 0
     if not soldOut and canAfford and itemType == "egg" then
-      -- Fire signal for signal-based consumers
       UISignals.EggPurchase:Fire(itemId, 1)
-      -- Also call legacy callback for backward compatibility
-      if onEggPurchaseCallback then
-        onEggPurchaseCallback(itemId, 1)
-      end
     end
   end)
 
   -- Connect Robux button (always available)
   robuxButton.MouseButton1Click:Connect(function()
-    -- Fire signal for signal-based consumers
     UISignals.RobuxPurchase:Fire(itemType, itemId)
-    -- Also call legacy callback for backward compatibility
-    if onRobuxPurchaseCallback then
-      onRobuxPurchaseCallback(itemType, itemId)
-    end
   end)
 
   -- Store price and stock on card for affordability updates
@@ -782,12 +764,7 @@ local function createPowerUpCard(
 
   -- Connect buy button
   buyButton.MouseButton1Click:Connect(function()
-    -- Fire signal for signal-based consumers
     UISignals.PowerUpPurchase:Fire(powerUpId)
-    -- Also call legacy callback for backward compatibility
-    if onPowerUpPurchaseCallback then
-      onPowerUpPurchaseCallback(powerUpId)
-    end
   end)
 
   return card
@@ -1017,13 +994,7 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   buyButton.MouseButton1Click:Connect(function()
     print("[StoreUI] Trap buy button clicked for:", supplyItem.id)
     if cachedPlayerMoney >= supplyItem.price then
-      -- Fire signal for signal-based consumers
       UISignals.TrapPurchase:Fire(supplyItem.id)
-      -- Also call legacy callback for backward compatibility
-      if onTrapPurchaseCallback then
-        print("[StoreUI] Calling onTrapPurchaseCallback")
-        onTrapPurchaseCallback(supplyItem.id)
-      end
     else
       print("[StoreUI] Cannot afford trap:", supplyItem.id)
     end
@@ -1101,12 +1072,7 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
 
   -- Connect Robux button
   robuxButton.MouseButton1Click:Connect(function()
-    -- Fire signal for signal-based consumers
     UISignals.RobuxPurchase:Fire("trap", supplyItem.id)
-    -- Also call legacy callback for backward compatibility
-    if onRobuxPurchaseCallback then
-      onRobuxPurchaseCallback("trap", supplyItem.id)
-    end
   end)
 
   -- Store price on card for affordability updates
@@ -1359,12 +1325,7 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
 
     buyButton.MouseButton1Click:Connect(function()
       if cachedPlayerMoney >= weaponItem.price then
-        -- Fire signal for signal-based consumers
         UISignals.WeaponPurchase:Fire(weaponItem.id)
-        -- Also call legacy callback for backward compatibility
-        if onWeaponPurchaseCallback then
-          onWeaponPurchaseCallback(weaponItem.id)
-        end
       end
     end)
 
@@ -1439,12 +1400,7 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
     end)
 
     robuxButton.MouseButton1Click:Connect(function()
-      -- Fire signal for signal-based consumers
       UISignals.RobuxPurchase:Fire("weapon", weaponItem.id)
-      -- Also call legacy callback for backward compatibility
-      if onRobuxPurchaseCallback then
-        onRobuxPurchaseCallback("weapon", weaponItem.id)
-      end
     end)
   end
 
@@ -2143,12 +2099,7 @@ function StoreUI.create()
     if confirmationFrame then
       confirmationFrame.Visible = false
     end
-    -- Fire signal for signal-based consumers
     UISignals.StoreReplenish:Fire()
-    -- Also call legacy callback for backward compatibility
-    if onReplenishCallback then
-      onReplenishCallback()
-    end
   end)
 
   -- Cancel button closes confirmation
@@ -2292,54 +2243,6 @@ function StoreUI.updateMoney(money: number)
       end
     end
   end
-end
-
---[[
-	Sets the callback for when an egg purchase is attempted.
-	@param callback function - Function to call with (eggType, quantity)
-]]
-function StoreUI.onPurchase(callback: (eggType: string, quantity: number) -> any)
-  onEggPurchaseCallback = callback
-end
-
---[[
-	Sets the callback for when Robux replenish is attempted.
-	@param callback function - Function to call when replenish is confirmed
-]]
-function StoreUI.onReplenish(callback: () -> any)
-  onReplenishCallback = callback
-end
-
---[[
-	Sets the callback for when Robux item purchase is attempted.
-	@param callback function - Function to call with (itemType, itemId)
-]]
-function StoreUI.onRobuxPurchase(callback: (itemType: string, itemId: string) -> any)
-  onRobuxPurchaseCallback = callback
-end
-
---[[
-	Sets the callback for when a power-up purchase is attempted.
-	@param callback function - Function to call with (powerUpId)
-]]
-function StoreUI.onPowerUpPurchase(callback: (powerUpId: string) -> any)
-  onPowerUpPurchaseCallback = callback
-end
-
---[[
-	Sets the callback for when a trap/supply purchase is attempted.
-	@param callback function - Function to call with (trapType)
-]]
-function StoreUI.onTrapPurchase(callback: (trapType: string) -> any)
-  onTrapPurchaseCallback = callback
-end
-
---[[
-	Registers a callback for weapon purchase events.
-	@param callback function(weaponType: string) - Called when player clicks buy on a weapon
-]]
-function StoreUI.onWeaponPurchase(callback: (weaponType: string) -> any)
-  onWeaponPurchaseCallback = callback
 end
 
 --[[

@@ -49,8 +49,6 @@ export type InventoryState = {
   currentTab: "eggs" | "chickens" | "traps",
   isVisible: boolean,
   slots: { [string]: Frame },
-  onItemSelected: ((SelectedItem?) -> ())?,
-  onAction: ((string, SelectedItem) -> ())?,
 }
 
 -- Rarity colors for visual distinction
@@ -108,12 +106,7 @@ local state: InventoryState = {
   currentTab = "eggs",
   isVisible = false, -- Start hidden, player opens with I key
   slots = {},
-  onItemSelected = nil,
-  onAction = nil,
 }
-
--- Callback for visibility changes
-local onVisibilityChanged: ((boolean) -> ())? = nil
 
 -- Cached player data for refreshing inventory when opened
 local cachedPlayerData: any = nil
@@ -270,12 +263,7 @@ local function createActionButton(
 
   button.MouseButton1Click:Connect(function()
     if state.selectedItem then
-      -- Fire signal for signal-based consumers
       UISignals.ItemAction:Fire(actionType, state.selectedItem)
-      -- Also call legacy callback for backward compatibility
-      if state.onAction then
-        state.onAction(actionType, state.selectedItem)
-      end
     end
   end)
 
@@ -970,12 +958,7 @@ function InventoryUI.selectItem(
   updateSelectionVisual()
   updateActionButtons()
 
-  -- Fire signal for signal-based consumers
   UISignals.ItemSelected:Fire(state.selectedItem)
-  -- Also call legacy callback for backward compatibility
-  if state.onItemSelected then
-    state.onItemSelected(state.selectedItem)
-  end
 end
 
 -- Get current selection
@@ -990,12 +973,7 @@ function InventoryUI.clearSelection()
   updateSelectionVisual()
   updateActionButtons()
 
-  -- Fire signal for signal-based consumers
   UISignals.ItemSelected:Fire(nil)
-  -- Also call legacy callback for backward compatibility
-  if state.onItemSelected then
-    state.onItemSelected(nil)
-  end
 end
 
 -- Set visibility
@@ -1010,12 +988,7 @@ function InventoryUI.setVisible(visible: boolean)
   if visible and cachedPlayerData then
     InventoryUI.updateFromPlayerData(cachedPlayerData)
   end
-  -- Fire signal for signal-based consumers
   UISignals.InventoryVisibilityChanged:Fire(visible)
-  -- Also call legacy callback for backward compatibility
-  if onVisibilityChanged then
-    onVisibilityChanged(visible)
-  end
 end
 
 -- Get visibility
@@ -1031,16 +1004,6 @@ end
 -- Check if created
 function InventoryUI.isCreated(): boolean
   return state.screenGui ~= nil and state.mainFrame ~= nil
-end
-
--- Set callback for item selection
-function InventoryUI.onItemSelected(callback: (SelectedItem?) -> ())
-  state.onItemSelected = callback
-end
-
--- Set callback for action button clicks
-function InventoryUI.onAction(callback: (string, SelectedItem) -> ())
-  state.onAction = callback
 end
 
 -- Get current tab
@@ -1116,11 +1079,6 @@ function InventoryUI.getRarityColors(): { [string]: Color3 }
     copy[rarity] = color
   end
   return copy
-end
-
--- Set callback for visibility changes
-function InventoryUI.onVisibilityChanged(callback: (boolean) -> ())
-  onVisibilityChanged = callback
 end
 
 return InventoryUI

@@ -32,7 +32,6 @@ export type ShieldUIState = {
   durationTotal: number,
   cooldownTotal: number,
   updateConnection: RBXScriptConnection?,
-  onActivateCallback: (() -> ())?,
 }
 
 -- Configuration
@@ -68,7 +67,6 @@ local state: ShieldUIState = {
   durationTotal = 60,
   cooldownTotal = 300,
   updateConnection = nil,
-  onActivateCallback = nil,
 }
 
 -- Format seconds to MM:SS
@@ -208,12 +206,7 @@ local function createShieldButton(
   -- Wire click handler
   button.MouseButton1Click:Connect(function()
     if not state.isActive and not state.isOnCooldown then
-      -- Fire signal for signal-based consumers
       UISignals.ShieldActivate:Fire()
-      -- Also call legacy callback for backward compatibility
-      if state.onActivateCallback then
-        state.onActivateCallback()
-      end
     end
   end)
 
@@ -355,7 +348,6 @@ function ShieldUI.destroy()
   state.isOnCooldown = false
   state.remainingDuration = 0
   state.remainingCooldown = 0
-  state.onActivateCallback = nil
 end
 
 -- Update shield status from server
@@ -376,11 +368,6 @@ function ShieldUI.updateStatus(data: {
   state.cooldownTotal = data.cooldownTotal
 
   updateVisualState()
-end
-
--- Set the callback for shield activation
-function ShieldUI.onActivate(callback: () -> ())
-  state.onActivateCallback = callback
 end
 
 -- Show activation feedback

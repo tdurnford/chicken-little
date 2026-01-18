@@ -51,7 +51,6 @@ export type HUDState = {
   -- Inventory button state (using TopbarPlus Icon)
   inventoryIcon: any?, -- TopbarPlus Icon instance
   inventoryItemCount: number,
-  onInventoryClick: (() -> ())?,
   -- Chicken count state
   chickenCountFrame: Frame?,
   chickenCountLabel: TextLabel?,
@@ -102,7 +101,6 @@ local state: HUDState = {
   -- Inventory button state (using TopbarPlus Icon)
   inventoryIcon = nil,
   inventoryItemCount = 0,
-  onInventoryClick = nil,
   -- Chicken count state
   chickenCountFrame = nil,
   chickenCountLabel = nil,
@@ -177,14 +175,9 @@ local function createInventoryIcon(): any
     :setImageScale(0.85) -- Make the icon larger
     :setOrder(1)
 
-  -- Wire click to signal and callback
+  -- Wire click to signal
   icon.selected:Connect(function()
-    -- Fire the signal for signal-based consumers
     UISignals.InventoryClicked:Fire()
-    -- Also call legacy callback for backward compatibility
-    if state.onInventoryClick then
-      state.onInventoryClick()
-    end
     -- Deselect immediately so it acts like a button, not a toggle
     icon:deselect()
   end)
@@ -636,11 +629,6 @@ function MainHUD.updateFromPlayerData(playerData: any, moneyPerSecond: number?)
     local progress = LevelConfig.getLevelProgress(xp)
     MainHUD.setLevelAndXP(level, xp, progress)
   end
-end
-
--- Set callback for inventory button click
-function MainHUD.onInventoryClick(callback: () -> ())
-  state.onInventoryClick = callback
 end
 
 -- Update inventory item count badge

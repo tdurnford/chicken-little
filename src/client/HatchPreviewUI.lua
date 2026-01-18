@@ -33,8 +33,6 @@ export type PreviewState = {
   currentEggId: string?,
   currentEggType: string?,
   isVisible: boolean,
-  onHatch: ((eggId: string, eggType: string) -> ())?,
-  onCancel: (() -> ())?,
   inputConnection: RBXScriptConnection?,
 }
 
@@ -68,8 +66,6 @@ local state: PreviewState = {
   currentEggId = nil,
   currentEggType = nil,
   isVisible = false,
-  onHatch = nil,
-  onCancel = nil,
   inputConnection = nil,
 }
 
@@ -512,8 +508,6 @@ function HatchPreviewUI.destroy()
   state.currentEggId = nil
   state.currentEggType = nil
   state.isVisible = false
-  state.onHatch = nil
-  state.onCancel = nil
 end
 
 -- Show the preview for a specific egg
@@ -579,12 +573,7 @@ function HatchPreviewUI.confirmHatch()
   local eggId = state.currentEggId
   local eggType = state.currentEggType
 
-  -- Fire signal for signal-based consumers
   UISignals.HatchConfirmed:Fire(eggId, eggType)
-  -- Also call legacy callback for backward compatibility
-  if state.onHatch then
-    state.onHatch(eggId, eggType)
-  end
 
   -- Hide the popup
   HatchPreviewUI.hide()
@@ -592,12 +581,7 @@ end
 
 -- Cancel without hatching
 function HatchPreviewUI.cancel()
-  -- Fire signal for signal-based consumers
   UISignals.HatchCancelled:Fire()
-  -- Also call legacy callback for backward compatibility
-  if state.onCancel then
-    state.onCancel()
-  end
   HatchPreviewUI.hide()
 end
 
@@ -614,16 +598,6 @@ end
 -- Get current egg being previewed
 function HatchPreviewUI.getCurrentEgg(): (string?, string?)
   return state.currentEggId, state.currentEggType
-end
-
--- Set callback for when hatch is confirmed
-function HatchPreviewUI.onHatch(callback: (eggId: string, eggType: string) -> ())
-  state.onHatch = callback
-end
-
--- Set callback for when preview is cancelled
-function HatchPreviewUI.onCancel(callback: () -> ())
-  state.onCancel = callback
 end
 
 -- Get the screen GUI
