@@ -8,6 +8,21 @@ version = "3.4.0"
 dependencies = []
 
 [[package]]
+name = "csqrl/colour-utils"
+version = "1.4.1"
+dependencies = []
+
+[[package]]
+name = "elttob/fusion"
+version = "0.3.0"
+dependencies = []
+
+[[package]]
+name = "imavafe/onyx-ui"
+version = "1.0.2"
+dependencies = [["ColorUtils", "csqrl/colour-utils@1.4.1"], ["Fusion", "elttob/fusion@0.3.0"]]
+
+[[package]]
 name = "yourname/mygame"
 version = "0.1.0"
-dependencies = [["TopbarPlus", "1foreverhd/topbarplus@3.4.0"]]
+dependencies = [["Fusion", "elttob/fusion@0.3.0"], ["OnyxUI", "imavafe/onyx-ui@1.0.2"], ["TopbarPlus", "1foreverhd/topbarplus@3.4.0"]]
