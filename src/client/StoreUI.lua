@@ -19,15 +19,13 @@ local OnyxUI = require(Packages:WaitForChild("OnyxUI"))
 local scoped = Fusion.scoped
 local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
-local Computed = Fusion.Computed
 local Value = Fusion.Value
 local Spring = Fusion.Spring
 local peek = Fusion.peek
-local Observer = Fusion.Observer
 local ForValues = Fusion.ForValues
+local Observer = Fusion.Observer
 
 -- OnyxUI imports
-local Themer = OnyxUI.Themer
 local OnyxComponents = OnyxUI.Components
 local Util = OnyxUI.Util
 
@@ -168,7 +166,6 @@ end
 local function createEggCard(cardScope: typeof(scope), item: Store.InventoryItem, index: number)
   local gradientColors = RARITY_GRADIENTS[item.rarity] or RARITY_GRADIENTS.Common
   local rarityColor = RARITY_COLORS[item.rarity] or Color3.fromRGB(128, 128, 128)
-  local hovering = cardScope:Value(false)
 
   local canAfford = cardScope:Computed(function(use)
     return use(playerMoneyState :: any) >= item.price
@@ -732,38 +729,49 @@ local function createWeaponCard(
 end
 
 --[[
-	Creates the content list for the current tab.
+	Creates the content list for the current tab using ForValues for better performance.
 ]]
 local function createTabContent(contentScope: typeof(scope))
+  -- Create reactive values for each tab's data
+  local eggsData = contentScope:Value(Store.getAvailableEggsWithStock())
+  local trapsData = contentScope:Value(Store.getAvailableTraps())
+  local powerUpsData = contentScope:Value(PowerUpConfig.getAllSorted())
+  local weaponsData = contentScope:Value(Store.getAvailableWeapons())
+
+  -- Observe inventory refresh to update data
+  contentScope:Observer(inventoryRefreshState :: any):onChange(function()
+    eggsData:set(Store.getAvailableEggsWithStock())
+    trapsData:set(Store.getAvailableTraps())
+    powerUpsData:set(PowerUpConfig.getAllSorted())
+    weaponsData:set(Store.getAvailableWeapons())
+  end)
+
   return contentScope:Computed(function(use)
     local currentTab = use(currentTabState :: any)
-    local _ = use(inventoryRefreshState :: any) -- Force refresh
-
-    local children = {}
 
     if currentTab == "eggs" then
-      local availableEggs = Store.getAvailableEggsWithStock()
-      for index, item in ipairs(availableEggs) do
-        table.insert(children, createEggCard(contentScope, item, index))
-      end
+      return ForValues(eggsData, function(itemScope, item)
+        local index = table.find(peek(eggsData), item) or 1
+        return createEggCard(itemScope, item, index)
+      end, Fusion.cleanup)
     elseif currentTab == "supplies" then
-      local availableTraps = Store.getAvailableTraps()
-      for index, item in ipairs(availableTraps) do
-        table.insert(children, createSupplyCard(contentScope, item, index))
-      end
+      return ForValues(trapsData, function(itemScope, item)
+        local index = table.find(peek(trapsData), item) or 1
+        return createSupplyCard(itemScope, item, index)
+      end, Fusion.cleanup)
     elseif currentTab == "powerups" then
-      local powerUps = PowerUpConfig.getAllSorted()
-      for index, config in ipairs(powerUps) do
-        table.insert(children, createPowerUpCard(contentScope, config.id, config, index))
-      end
+      return ForValues(powerUpsData, function(itemScope, config)
+        local index = table.find(peek(powerUpsData), config) or 1
+        return createPowerUpCard(itemScope, config.id, config, index)
+      end, Fusion.cleanup)
     elseif currentTab == "weapons" then
-      local availableWeapons = Store.getAvailableWeapons()
-      for index, item in ipairs(availableWeapons) do
-        table.insert(children, createWeaponCard(contentScope, item, index))
-      end
+      return ForValues(weaponsData, function(itemScope, item)
+        local index = table.find(peek(weaponsData), item) or 1
+        return createWeaponCard(itemScope, item, index)
+      end, Fusion.cleanup)
     end
 
-    return children
+    return {}
   end)
 end
 
@@ -1066,6 +1074,42 @@ function StoreUI.close()
   end
 
   print("[StoreUI] Closed")
+end
+
+--[[
+	Destroys the store UI and cleans up all Fusion state.
+	Call this when the UI is no longer needed.
+]]
+function StoreUI.destroy()
+  -- Stop timer
+  if timerConnection then
+    timerConnection:Disconnect()
+    timerConnection = nil
+  end
+
+  -- Destroy Fusion scope (cleans up all reactive state)
+  if scope then
+    Fusion.doCleanup(scope)
+    scope = nil
+  end
+
+  -- Clear state references
+  isOpenState = nil
+  currentTabState = nil
+  playerMoneyState = nil
+  activePowerUpsState = nil
+  ownedWeaponsState = nil
+  restockTimeState = nil
+  showConfirmationState = nil
+  inventoryRefreshState = nil
+
+  -- Destroy screen GUI
+  if screenGui then
+    screenGui:Destroy()
+    screenGui = nil
+  end
+
+  print("[StoreUI] Destroyed")
 end
 
 --[[
