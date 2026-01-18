@@ -1,28 +1,31 @@
 --[[
 	DataPersistence Module
-	Handles saving and loading player data using Roblox DataStore.
-	Includes auto-save, offline earnings calculation, and error handling.
+	Handles saving and loading player data using ProfileService.
+	Includes auto-save, offline earnings calculation, session locking, and error handling.
+	
+	ProfileService provides:
+	- Automatic session locking to prevent data corruption
+	- Automatic data saving on a regular interval
+	- Data reconciliation with templates
+	- Safe handling of server crashes and player disconnects
 ]]
 
-local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Packages = ReplicatedStorage:WaitForChild("Packages")
+local ProfileService = require(Packages:WaitForChild("ProfileService"))
+
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local PlayerData = require(Shared:WaitForChild("PlayerData"))
-local ChickenConfig = require(Shared:WaitForChild("ChickenConfig"))
 local OfflineEarnings = require(Shared:WaitForChild("OfflineEarnings"))
 
 local DataPersistence = {}
 
 -- Configuration
 local DATA_STORE_NAME = "ChickenCoopTycoon_PlayerData_v1"
-local AUTO_SAVE_INTERVAL = 300 -- 5 minutes
 local MAX_OFFLINE_HOURS = 24 -- Maximum hours of offline earnings
 local OFFLINE_EARNINGS_RATE = 0.5 -- 50% of normal earnings while offline
-local MAX_RETRY_ATTEMPTS = 3
-local RETRY_DELAY = 1
 
 -- Type definitions
 export type SaveResult = {
@@ -43,50 +46,26 @@ export type LoadResult = {
 
 export type OfflineEarningsResult = OfflineEarnings.OfflineEarningsResult
 
+-- Profile template - default data structure for new players
+local ProfileTemplate = PlayerData.createDefault()
+
+-- ProfileStore instance
+local ProfileStore = ProfileService.GetProfileStore(DATA_STORE_NAME, ProfileTemplate)
+
 -- Private state
-local dataStore: DataStore? = nil
+local profiles: { [number]: any } = {} -- Active profiles keyed by userId
 local playerDataCache: { [number]: PlayerData.PlayerDataSchema } = {}
-local saveInProgress: { [number]: boolean } = {}
-local autoSaveConnection: RBXScriptConnection? = nil
+local profileStoreInitialized = false
 
--- Initialize the DataStore
+-- Initialize ProfileService (ProfileService initializes automatically)
 function DataPersistence.init(): boolean
-  local success, store = pcall(function()
-    return DataStoreService:GetDataStore(DATA_STORE_NAME)
-  end)
-
-  if success and store then
-    dataStore = store
-    return true
-  end
-
-  warn("[DataPersistence] Failed to initialize DataStore:", store)
-  return false
+  profileStoreInitialized = true
+  return true
 end
 
--- Get the data key for a player
-local function getDataKey(userId: number): string
+-- Get the profile key for a player
+local function getProfileKey(userId: number): string
   return "Player_" .. tostring(userId)
-end
-
--- Retry wrapper for DataStore operations
-local function retryOperation<T>(operation: () -> T, maxAttempts: number?): (boolean, T | string)
-  local attempts = maxAttempts or MAX_RETRY_ATTEMPTS
-
-  for attempt = 1, attempts do
-    local success, result = pcall(operation)
-    if success then
-      return true, result
-    end
-
-    if attempt < attempts then
-      task.wait(RETRY_DELAY * attempt)
-    else
-      return false, result :: string
-    end
-  end
-
-  return false, "Max retry attempts exceeded"
 end
 
 -- Calculate offline earnings for a player's placed chickens
@@ -107,36 +86,16 @@ local function applyOfflineEarnings(
   return result.updatedData or data
 end
 
--- Load player data from DataStore
+-- Load player profile using ProfileService
 function DataPersistence.load(userId: number): LoadResult
-  if not dataStore then
-    if not DataPersistence.init() then
-      -- DataStore not available (offline mode) - create default data and cache it
-      warn("[DataPersistence] DataStore not initialized, creating default data for offline mode")
-      local currentTime = os.time()
-      local defaultData = PlayerData.createDefault()
-      defaultData.lastLogoutTime = currentTime
-      playerDataCache[userId] = defaultData
+  local profileKey = getProfileKey(userId)
 
-      return {
-        success = true,
-        message = "Offline mode - created default data",
-        data = defaultData,
-        isNewPlayer = true,
-      }
-    end
-  end
+  -- Load the profile with ForceLoad to handle session locking
+  local profile = ProfileStore:LoadProfileAsync(profileKey, "ForceLoad")
 
-  local dataKey = getDataKey(userId)
-  local success, result = retryOperation(function()
-    return dataStore:GetAsync(dataKey)
-  end)
-
-  if not success then
-    -- DataStore operation failed - fallback to offline mode with default data
-    warn(
-      "[DataPersistence] Failed to load from DataStore, using default data: " .. tostring(result)
-    )
+  if not profile then
+    -- Profile failed to load - create default data for offline mode
+    warn("[DataPersistence] Failed to load profile for user " .. tostring(userId))
     local currentTime = os.time()
     local defaultData = PlayerData.createDefault()
     defaultData.lastLogoutTime = currentTime
@@ -144,29 +103,48 @@ function DataPersistence.load(userId: number): LoadResult
 
     return {
       success = true,
-      message = "DataStore error - using default data",
+      message = "Profile load failed - created default data",
       data = defaultData,
       isNewPlayer = true,
     }
   end
 
-  local currentTime = os.time()
-  local isNewPlayer = result == nil
-  local playerDataValue: PlayerData.PlayerDataSchema
+  -- Add userId to profile (for GDPR compliance)
+  profile:AddUserId(userId)
 
-  if isNewPlayer then
-    playerDataValue = PlayerData.createDefault()
-    playerDataValue.lastLogoutTime = currentTime
-  else
-    -- Validate loaded data
-    if not PlayerData.validate(result) then
-      warn("[DataPersistence] Invalid data for user " .. tostring(userId) .. ", creating new data")
-      playerDataValue = PlayerData.createDefault()
-      playerDataValue.lastLogoutTime = currentTime
-      isNewPlayer = true
-    else
-      playerDataValue = result :: PlayerData.PlayerDataSchema
+  -- Reconcile profile data with template to add any new fields
+  profile:Reconcile()
+
+  -- Store the active profile
+  profiles[userId] = profile
+
+  -- Set up profile release listener
+  profile:ListenToRelease(function()
+    profiles[userId] = nil
+    playerDataCache[userId] = nil
+
+    -- Kick the player if they're still in the game (session was stolen)
+    local player = Players:GetPlayerByUserId(userId)
+    if player then
+      player:Kick("Your data was loaded on another server. Please rejoin.")
     end
+  end)
+
+  local currentTime = os.time()
+  local profileData = profile.Data :: PlayerData.PlayerDataSchema
+
+  -- Determine if this is a new player (check if profile was just created)
+  local isNewPlayer = profile.MetaData.SessionLoadCount == 1
+
+  -- Validate loaded data
+  if not PlayerData.validate(profileData) then
+    warn("[DataPersistence] Invalid data for user " .. tostring(userId) .. ", resetting to default")
+    -- Reset to default data
+    local defaultData = PlayerData.createDefault()
+    for key, value in pairs(defaultData) do
+      profileData[key] = value
+    end
+    isNewPlayer = true
   end
 
   -- Calculate and apply offline earnings for returning players
@@ -174,24 +152,28 @@ function DataPersistence.load(userId: number): LoadResult
   local offlineEggs: number? = nil
   local offlineSeconds: number? = nil
 
-  if not isNewPlayer and playerDataValue.lastLogoutTime then
-    local offlineResult = DataPersistence.calculateOfflineEarnings(playerDataValue, currentTime)
+  if not isNewPlayer and profileData.lastLogoutTime then
+    local offlineResult = DataPersistence.calculateOfflineEarnings(profileData, currentTime)
 
     if offlineResult.cappedMoney > 0 or #offlineResult.eggsEarned > 0 then
-      playerDataValue = applyOfflineEarnings(playerDataValue, offlineResult)
+      -- Apply offline earnings directly to profile data
+      local updatedData = applyOfflineEarnings(profileData, offlineResult)
+      for key, value in pairs(updatedData) do
+        profileData[key] = value
+      end
       offlineEarnings = offlineResult.cappedMoney
       offlineEggs = #offlineResult.eggsEarned
       offlineSeconds = offlineResult.cappedSeconds
     end
   end
 
-  -- Cache the data
-  playerDataCache[userId] = playerDataValue
+  -- Cache the data reference
+  playerDataCache[userId] = profileData
 
   return {
     success = true,
     message = isNewPlayer and "New player created" or "Data loaded successfully",
-    data = playerDataValue,
+    data = profileData,
     isNewPlayer = isNewPlayer,
     offlineEarnings = offlineEarnings,
     offlineEggs = offlineEggs,
@@ -199,31 +181,23 @@ function DataPersistence.load(userId: number): LoadResult
   }
 end
 
--- Save player data to DataStore
+-- Save player data (ProfileService auto-saves, but this allows manual save)
 function DataPersistence.save(userId: number, data: PlayerData.PlayerDataSchema?): SaveResult
-  if not dataStore then
-    if not DataPersistence.init() then
-      return {
-        success = false,
-        message = "DataStore not initialized",
-      }
-    end
+  local profile = profiles[userId]
+
+  if not profile then
+    return {
+      success = false,
+      message = "No active profile for user",
+    }
   end
 
-  -- Use cached data if not provided
+  -- Use provided data or get from cache
   local saveData = data or playerDataCache[userId]
   if not saveData then
     return {
       success = false,
       message = "No data to save",
-    }
-  end
-
-  -- Prevent concurrent saves
-  if saveInProgress[userId] then
-    return {
-      success = false,
-      message = "Save already in progress",
     }
   end
 
@@ -235,26 +209,17 @@ function DataPersistence.save(userId: number, data: PlayerData.PlayerDataSchema?
     }
   end
 
-  saveInProgress[userId] = true
-
-  -- Update logout time and play time
+  -- Update logout time
   local currentTime = os.time()
   saveData.lastLogoutTime = currentTime
 
-  local dataKey = getDataKey(userId)
-  local success, result = retryOperation(function()
-    dataStore:SetAsync(dataKey, saveData)
-    return true
-  end)
-
-  saveInProgress[userId] = false
-
-  if not success then
-    return {
-      success = false,
-      message = "Failed to save data: " .. tostring(result),
-    }
+  -- Copy data to profile (ProfileService handles the actual save)
+  for key, value in pairs(saveData) do
+    profile.Data[key] = value
   end
+
+  -- Trigger a save
+  profile:Save()
 
   -- Update cache
   playerDataCache[userId] = saveData
@@ -271,16 +236,30 @@ function DataPersistence.getData(userId: number): PlayerData.PlayerDataSchema?
   return playerDataCache[userId]
 end
 
+-- Get player data by player object (convenience method)
+function DataPersistence.get(player: Player): PlayerData.PlayerDataSchema?
+  return playerDataCache[player.UserId]
+end
+
 -- Update cached player data
 function DataPersistence.updateData(userId: number, data: PlayerData.PlayerDataSchema): boolean
   if not PlayerData.validate(data) then
     return false
   end
+
+  local profile = profiles[userId]
+  if profile then
+    -- Update profile data
+    for key, value in pairs(data) do
+      profile.Data[key] = value
+    end
+  end
+
   playerDataCache[userId] = data
   return true
 end
 
--- Remove player data from cache
+-- Remove player data from cache (called internally when profile is released)
 function DataPersistence.clearCache(userId: number): boolean
   if playerDataCache[userId] then
     playerDataCache[userId] = nil
@@ -289,22 +268,34 @@ function DataPersistence.clearCache(userId: number): boolean
   return false
 end
 
--- Handle player leaving - save and clear cache
+-- Handle player leaving - release profile
 function DataPersistence.onPlayerLeave(player: Player): SaveResult
   local userId = player.UserId
-  local data = playerDataCache[userId]
+  local profile = profiles[userId]
 
-  if not data then
+  if not profile then
     return {
       success = true,
-      message = "No data to save",
+      message = "No active profile",
     }
   end
 
-  local result = DataPersistence.save(userId, data)
-  DataPersistence.clearCache(userId)
+  -- Update logout time before release
+  local currentTime = os.time()
+  profile.Data.lastLogoutTime = currentTime
 
-  return result
+  -- Release the profile (ProfileService will save before releasing)
+  profile:Release()
+
+  -- Clear local references
+  profiles[userId] = nil
+  playerDataCache[userId] = nil
+
+  return {
+    success = true,
+    message = "Profile released successfully",
+    timestamp = currentTime,
+  }
 end
 
 -- Handle player joining - load data
@@ -312,66 +303,40 @@ function DataPersistence.onPlayerJoin(player: Player): LoadResult
   return DataPersistence.load(player.UserId)
 end
 
--- Save all cached player data
+-- Save all cached player data (triggers save on all active profiles)
 function DataPersistence.saveAll(): { [number]: SaveResult }
   local results: { [number]: SaveResult } = {}
 
-  for userId, data in pairs(playerDataCache) do
-    results[userId] = DataPersistence.save(userId, data)
+  for userId, profile in pairs(profiles) do
+    if profile:IsActive() then
+      profile:Save()
+      results[userId] = {
+        success = true,
+        message = "Save triggered",
+        timestamp = os.time(),
+      }
+    else
+      results[userId] = {
+        success = false,
+        message = "Profile not active",
+      }
+    end
   end
 
   return results
 end
 
--- Start auto-save system
+-- Start auto-save system (ProfileService handles auto-save, but this maintains API compatibility)
 function DataPersistence.startAutoSave(): boolean
-  if autoSaveConnection then
-    return false -- Already running
-  end
-
-  local lastSaveTime = os.time()
-
-  autoSaveConnection = RunService.Heartbeat:Connect(function()
-    local currentTime = os.time()
-    if currentTime - lastSaveTime >= AUTO_SAVE_INTERVAL then
-      lastSaveTime = currentTime
-      task.spawn(function()
-        local results = DataPersistence.saveAll()
-        local successCount = 0
-        local failCount = 0
-
-        for _, result in pairs(results) do
-          if result.success then
-            successCount += 1
-          else
-            failCount += 1
-          end
-        end
-
-        if successCount > 0 or failCount > 0 then
-          print(
-            string.format(
-              "[DataPersistence] Auto-save completed: %d success, %d failed",
-              successCount,
-              failCount
-            )
-          )
-        end
-      end)
-    end
-  end)
-
+  -- ProfileService automatically saves profiles every ~30 seconds
+  -- This function is kept for API compatibility
   return true
 end
 
--- Stop auto-save system
+-- Stop auto-save system (no-op since ProfileService handles this)
 function DataPersistence.stopAutoSave(): boolean
-  if autoSaveConnection then
-    autoSaveConnection:Disconnect()
-    autoSaveConnection = nil
-    return true
-  end
-  return false
+  -- ProfileService manages auto-save internally
+  return true
 end
 
 -- Setup player connections
@@ -380,7 +345,7 @@ function DataPersistence.setupPlayerConnections(): ()
   Players.PlayerAdded:Connect(function(player)
     local result = DataPersistence.onPlayerJoin(player)
     if result.success then
-      print(string.format("[DataPersistence] Loaded data for %s", player.Name))
+      print(string.format("[DataPersistence] Loaded profile for %s", player.Name))
       if
         (result.offlineEarnings and result.offlineEarnings > 0)
         or (result.offlineEggs and result.offlineEggs > 0)
@@ -398,7 +363,7 @@ function DataPersistence.setupPlayerConnections(): ()
     else
       warn(
         string.format(
-          "[DataPersistence] Failed to load data for %s: %s",
+          "[DataPersistence] Failed to load profile for %s: %s",
           player.Name,
           result.message
         )
@@ -410,11 +375,11 @@ function DataPersistence.setupPlayerConnections(): ()
   Players.PlayerRemoving:Connect(function(player)
     local result = DataPersistence.onPlayerLeave(player)
     if result.success then
-      print(string.format("[DataPersistence] Saved data for %s", player.Name))
+      print(string.format("[DataPersistence] Released profile for %s", player.Name))
     else
       warn(
         string.format(
-          "[DataPersistence] Failed to save data for %s: %s",
+          "[DataPersistence] Failed to release profile for %s: %s",
           player.Name,
           result.message
         )
@@ -422,26 +387,26 @@ function DataPersistence.setupPlayerConnections(): ()
     end
   end)
 
-  -- Handle server shutdown
+  -- Handle server shutdown - release all profiles
   game:BindToClose(function()
-    print("[DataPersistence] Server shutting down, saving all player data...")
-    DataPersistence.saveAll()
-    task.wait(2) -- Give time for saves to complete
+    print("[DataPersistence] Server shutting down, releasing all profiles...")
+    for userId, profile in pairs(profiles) do
+      if profile:IsActive() then
+        profile:Release()
+      end
+    end
+    -- Wait for ProfileService to finish saving
+    task.wait(2)
   end)
 end
 
 -- Initialize everything and start the persistence system
 function DataPersistence.start(): boolean
-  local initSuccess = DataPersistence.init()
-  if not initSuccess then
-    warn("[DataPersistence] Failed to initialize, running in offline mode")
-  end
-
+  DataPersistence.init()
   DataPersistence.setupPlayerConnections()
-  DataPersistence.startAutoSave()
 
-  print("[DataPersistence] Data persistence system started")
-  return initSuccess
+  print("[DataPersistence] ProfileService-based persistence system started")
+  return true
 end
 
 -- Get configuration values (for testing/UI)
@@ -452,10 +417,10 @@ function DataPersistence.getConfig(): {
   maxRetryAttempts: number,
 }
   return {
-    autoSaveInterval = AUTO_SAVE_INTERVAL,
+    autoSaveInterval = 30, -- ProfileService default
     maxOfflineHours = MAX_OFFLINE_HOURS,
     offlineEarningsRate = OFFLINE_EARNINGS_RATE,
-    maxRetryAttempts = MAX_RETRY_ATTEMPTS,
+    maxRetryAttempts = 3,
   }
 end
 
@@ -473,9 +438,9 @@ function DataPersistence.getCachedPlayerCount(): number
   return count
 end
 
--- Check if auto-save is running
+-- Check if auto-save is running (always true with ProfileService)
 function DataPersistence.isAutoSaveRunning(): boolean
-  return autoSaveConnection ~= nil
+  return true
 end
 
 -- Get global chicken counts across all players (placed + inventory)
@@ -502,6 +467,17 @@ function DataPersistence.getGlobalChickenCounts(): { [string]: number }
   end
 
   return counts
+end
+
+-- Get the active profile for a user (for advanced usage)
+function DataPersistence.getProfile(userId: number): any?
+  return profiles[userId]
+end
+
+-- Check if a profile is active
+function DataPersistence.isProfileActive(userId: number): boolean
+  local profile = profiles[userId]
+  return profile ~= nil and profile:IsActive()
 end
 
 return DataPersistence

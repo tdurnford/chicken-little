@@ -1259,7 +1259,7 @@ if buyItemWithRobuxFunc then
       if result.success then
         -- Give the weapon Tool to player's Backpack
         WeaponTool.giveToPlayer(player, itemId)
-        DataPersistence.save(player)
+        DataPersistence.save(player.UserId)
         local playerDataChangedEvent = RemoteSetup.getEvent("PlayerDataChanged")
         if playerDataChangedEvent then
           playerDataChangedEvent:FireClient(player, playerData)
@@ -1298,7 +1298,7 @@ if buyItemWithRobuxFunc then
 
       local result = Store.buyTrapWithRobux(playerData, itemId)
       if result.success then
-        DataPersistence.save(player)
+        DataPersistence.save(player.UserId)
         local playerDataChangedEvent = RemoteSetup.getEvent("PlayerDataChanged")
         if playerDataChangedEvent then
           playerDataChangedEvent:FireClient(player, playerData)
@@ -1352,7 +1352,7 @@ if buyItemWithRobuxFunc then
 
       if result.success then
         -- Save player data
-        DataPersistence.save(player)
+        DataPersistence.save(player.UserId)
         -- Notify client of data change
         local playerDataChangedEvent = RemoteSetup.getEvent("PlayerDataChanged")
         if playerDataChangedEvent then
@@ -1428,7 +1428,7 @@ if buyPowerUpFunc then
       PlayerData.addPowerUp(playerData, powerUpId, powerUpConfigData.durationSeconds)
 
       -- Save player data
-      DataPersistence.save(player)
+      DataPersistence.save(player.UserId)
 
       -- Notify client of data change
       local playerDataChangedEvent = RemoteSetup.getEvent("PlayerDataChanged")
@@ -1594,7 +1594,7 @@ MarketplaceService.ProcessReceipt = function(receiptInfo: { [string]: any })
 
             if result.success then
               -- Save player data
-              DataPersistence.save(player)
+              DataPersistence.save(player.UserId)
               -- Notify client of data change
               local playerDataChangedEvent = RemoteSetup.getEvent("PlayerDataChanged")
               if playerDataChangedEvent then
@@ -1635,7 +1635,7 @@ MarketplaceService.ProcessReceipt = function(receiptInfo: { [string]: any })
               PlayerData.addPowerUp(playerData, powerUpId, powerUpConfigData.durationSeconds)
 
               -- Save player data
-              DataPersistence.save(player)
+              DataPersistence.save(player.UserId)
 
               -- Notify client of data change
               local playerDataChangedEvent = RemoteSetup.getEvent("PlayerDataChanged")

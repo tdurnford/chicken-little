@@ -8,6 +8,11 @@ version = "3.4.0"
 dependencies = []
 
 [[package]]
+name = "brittonfischer/profileservice"
+version = "2.1.5"
+dependencies = []
+
+[[package]]
 name = "yourname/mygame"
 version = "0.1.0"
-dependencies = [["TopbarPlus", "1foreverhd/topbarplus@3.4.0"]]
+dependencies = [["ProfileService", "brittonfischer/profileservice@2.1.5"], ["TopbarPlus", "1foreverhd/topbarplus@3.4.0"]]
