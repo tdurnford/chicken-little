@@ -10,7 +10,8 @@ build/
 dist/
 
 # Wally packages (installed via wally install)
-Packages/
+# Note: Packages/Knit.lua is tracked as a stub - will be replaced by wally install
+Packages/_Index/
 
 # Tooling caches
 .aftman/

@@ -11,7 +11,28 @@
       }
     },
     "ServerScriptService": {
-      "$path": "src/server"
+      "$className": "ServerScriptService",
+      "Main.server": {
+        "$path": "src/server/Main.server.lua"
+      },
+      "KnitServer.server": {
+        "$path": "src/server/KnitServer.server.lua"
+      },
+      "Services": {
+        "$path": "src/server/Services"
+      },
+      "RemoteSetup": {
+        "$path": "src/server/RemoteSetup.lua"
+      },
+      "DataPersistence": {
+        "$path": "src/server/DataPersistence.lua"
+      },
+      "AdminCommands": {
+        "$path": "src/server/AdminCommands.lua"
+      },
+      "SectionLabels": {
+        "$path": "src/server/SectionLabels.lua"
+      }
     },
     "StarterPlayer": {
       "StarterPlayerScripts": {
