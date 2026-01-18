@@ -20,6 +20,9 @@ local LevelConfig = require(Shared:WaitForChild("LevelConfig"))
 local Packages = ReplicatedStorage:WaitForChild("Packages")
 local Icon = require(Packages:WaitForChild("TopbarPlus"))
 
+-- UI Signals for local event communication
+local UISignals = require(Shared:WaitForChild("UISignals"))
+
 -- Type definitions
 export type HUDConfig = {
   anchorPoint: Vector2?,
@@ -174,8 +177,11 @@ local function createInventoryIcon(): any
     :setImageScale(0.85) -- Make the icon larger
     :setOrder(1)
 
-  -- Wire click to callback
+  -- Wire click to signal and callback
   icon.selected:Connect(function()
+    -- Fire the signal for signal-based consumers
+    UISignals.InventoryClicked:Fire()
+    -- Also call legacy callback for backward compatibility
     if state.onInventoryClick then
       state.onInventoryClick()
     end

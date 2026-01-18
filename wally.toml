@@ -6,5 +6,6 @@ realm = "shared"
 
 [dependencies]
 TopbarPlus = "1foreverhd/topbarplus@3.4.0"
+GoodSignal = "stravant/goodsignal@0.3.1"
 # Example (uncomment when you want):
 # Promise = "evaera/promise@4.0.0"

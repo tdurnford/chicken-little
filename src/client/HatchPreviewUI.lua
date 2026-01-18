@@ -17,6 +17,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local EggConfig = require(Shared:WaitForChild("EggConfig"))
 local ChickenConfig = require(Shared:WaitForChild("ChickenConfig"))
 local EggHatching = require(Shared:WaitForChild("EggHatching"))
+local UISignals = require(Shared:WaitForChild("UISignals"))
 
 -- Type definitions
 export type PreviewConfig = {
@@ -578,7 +579,9 @@ function HatchPreviewUI.confirmHatch()
   local eggId = state.currentEggId
   local eggType = state.currentEggType
 
-  -- Call callback before hiding
+  -- Fire signal for signal-based consumers
+  UISignals.HatchConfirmed:Fire(eggId, eggType)
+  -- Also call legacy callback for backward compatibility
   if state.onHatch then
     state.onHatch(eggId, eggType)
   end
@@ -589,6 +592,9 @@ end
 
 -- Cancel without hatching
 function HatchPreviewUI.cancel()
+  -- Fire signal for signal-based consumers
+  UISignals.HatchCancelled:Fire()
+  -- Also call legacy callback for backward compatibility
   if state.onCancel then
     state.onCancel()
   end

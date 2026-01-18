@@ -18,6 +18,7 @@ local EggConfig = require(Shared:WaitForChild("EggConfig"))
 local ChickenConfig = require(Shared:WaitForChild("ChickenConfig"))
 local TrapConfig = require(Shared:WaitForChild("TrapConfig"))
 local MoneyScaling = require(Shared:WaitForChild("MoneyScaling"))
+local UISignals = require(Shared:WaitForChild("UISignals"))
 
 -- Type definitions
 export type InventoryConfig = {
@@ -268,8 +269,13 @@ local function createActionButton(
   corner.Parent = button
 
   button.MouseButton1Click:Connect(function()
-    if state.selectedItem and state.onAction then
-      state.onAction(actionType, state.selectedItem)
+    if state.selectedItem then
+      -- Fire signal for signal-based consumers
+      UISignals.ItemAction:Fire(actionType, state.selectedItem)
+      -- Also call legacy callback for backward compatibility
+      if state.onAction then
+        state.onAction(actionType, state.selectedItem)
+      end
     end
   end)
 
@@ -964,6 +970,9 @@ function InventoryUI.selectItem(
   updateSelectionVisual()
   updateActionButtons()
 
+  -- Fire signal for signal-based consumers
+  UISignals.ItemSelected:Fire(state.selectedItem)
+  -- Also call legacy callback for backward compatibility
   if state.onItemSelected then
     state.onItemSelected(state.selectedItem)
   end
@@ -981,6 +990,9 @@ function InventoryUI.clearSelection()
   updateSelectionVisual()
   updateActionButtons()
 
+  -- Fire signal for signal-based consumers
+  UISignals.ItemSelected:Fire(nil)
+  -- Also call legacy callback for backward compatibility
   if state.onItemSelected then
     state.onItemSelected(nil)
   end
@@ -998,6 +1010,9 @@ function InventoryUI.setVisible(visible: boolean)
   if visible and cachedPlayerData then
     InventoryUI.updateFromPlayerData(cachedPlayerData)
   end
+  -- Fire signal for signal-based consumers
+  UISignals.InventoryVisibilityChanged:Fire(visible)
+  -- Also call legacy callback for backward compatibility
   if onVisibilityChanged then
     onVisibilityChanged(visible)
   end

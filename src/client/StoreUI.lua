@@ -21,6 +21,7 @@ local PowerUpConfig = require(Shared:WaitForChild("PowerUpConfig"))
 local TrapConfig = require(Shared:WaitForChild("TrapConfig"))
 local WeaponConfig = require(Shared:WaitForChild("WeaponConfig"))
 local MoneyScaling = require(Shared:WaitForChild("MoneyScaling"))
+local UISignals = require(Shared:WaitForChild("UISignals"))
 
 -- Rarity colors for visual distinction
 local RARITY_COLORS: { [string]: Color3 } = {
@@ -503,13 +504,21 @@ local function createItemCard(
   buyButton.MouseButton1Click:Connect(function()
     local canAfford = cachedPlayerMoney >= (card:GetAttribute("Price") or price)
     local soldOut = (card:GetAttribute("Stock") or stock) <= 0
-    if not soldOut and canAfford and itemType == "egg" and onEggPurchaseCallback then
-      onEggPurchaseCallback(itemId, 1)
+    if not soldOut and canAfford and itemType == "egg" then
+      -- Fire signal for signal-based consumers
+      UISignals.EggPurchase:Fire(itemId, 1)
+      -- Also call legacy callback for backward compatibility
+      if onEggPurchaseCallback then
+        onEggPurchaseCallback(itemId, 1)
+      end
     end
   end)
 
   -- Connect Robux button (always available)
   robuxButton.MouseButton1Click:Connect(function()
+    -- Fire signal for signal-based consumers
+    UISignals.RobuxPurchase:Fire(itemType, itemId)
+    -- Also call legacy callback for backward compatibility
     if onRobuxPurchaseCallback then
       onRobuxPurchaseCallback(itemType, itemId)
     end
@@ -773,6 +782,9 @@ local function createPowerUpCard(
 
   -- Connect buy button
   buyButton.MouseButton1Click:Connect(function()
+    -- Fire signal for signal-based consumers
+    UISignals.PowerUpPurchase:Fire(powerUpId)
+    -- Also call legacy callback for backward compatibility
     if onPowerUpPurchaseCallback then
       onPowerUpPurchaseCallback(powerUpId)
     end
@@ -1004,13 +1016,18 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
   -- Connect cash buy button (only if can afford)
   buyButton.MouseButton1Click:Connect(function()
     print("[StoreUI] Trap buy button clicked for:", supplyItem.id)
-    if cachedPlayerMoney >= supplyItem.price and onTrapPurchaseCallback then
-      print("[StoreUI] Calling onTrapPurchaseCallback")
-      onTrapPurchaseCallback(supplyItem.id)
-    elseif cachedPlayerMoney < supplyItem.price then
-      print("[StoreUI] Cannot afford trap:", supplyItem.id)
+    if cachedPlayerMoney >= supplyItem.price then
+      -- Fire signal for signal-based consumers
+      UISignals.TrapPurchase:Fire(supplyItem.id)
+      -- Also call legacy callback for backward compatibility
+      if onTrapPurchaseCallback then
+        print("[StoreUI] Calling onTrapPurchaseCallback")
+        onTrapPurchaseCallback(supplyItem.id)
+      else
+        warn("[StoreUI] onTrapPurchaseCallback is nil!")
+      end
     else
-      warn("[StoreUI] onTrapPurchaseCallback is nil!")
+      print("[StoreUI] Cannot afford trap:", supplyItem.id)
     end
   end)
 
@@ -1086,6 +1103,9 @@ local function createSupplyCard(supplyItem: Store.SupplyItem, parent: Frame, ind
 
   -- Connect Robux button
   robuxButton.MouseButton1Click:Connect(function()
+    -- Fire signal for signal-based consumers
+    UISignals.RobuxPurchase:Fire("trap", supplyItem.id)
+    -- Also call legacy callback for backward compatibility
     if onRobuxPurchaseCallback then
       onRobuxPurchaseCallback("trap", supplyItem.id)
     end
@@ -1340,8 +1360,13 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
     end)
 
     buyButton.MouseButton1Click:Connect(function()
-      if onWeaponPurchaseCallback and cachedPlayerMoney >= weaponItem.price then
-        onWeaponPurchaseCallback(weaponItem.id)
+      if cachedPlayerMoney >= weaponItem.price then
+        -- Fire signal for signal-based consumers
+        UISignals.WeaponPurchase:Fire(weaponItem.id)
+        -- Also call legacy callback for backward compatibility
+        if onWeaponPurchaseCallback then
+          onWeaponPurchaseCallback(weaponItem.id)
+        end
       end
     end)
 
@@ -1416,6 +1441,9 @@ local function createWeaponCard(weaponItem: Store.WeaponItem, parent: Frame, ind
     end)
 
     robuxButton.MouseButton1Click:Connect(function()
+      -- Fire signal for signal-based consumers
+      UISignals.RobuxPurchase:Fire("weapon", weaponItem.id)
+      -- Also call legacy callback for backward compatibility
       if onRobuxPurchaseCallback then
         onRobuxPurchaseCallback("weapon", weaponItem.id)
       end
@@ -2117,6 +2145,9 @@ function StoreUI.create()
     if confirmationFrame then
       confirmationFrame.Visible = false
     end
+    -- Fire signal for signal-based consumers
+    UISignals.StoreReplenish:Fire()
+    -- Also call legacy callback for backward compatibility
     if onReplenishCallback then
       onReplenishCallback()
     end

@@ -10,6 +10,11 @@ local ShieldUI = {}
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Get shared modules
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local UISignals = require(Shared:WaitForChild("UISignals"))
 
 -- Type definitions
 export type ShieldUIState = {
@@ -202,8 +207,13 @@ local function createShieldButton(
 
   -- Wire click handler
   button.MouseButton1Click:Connect(function()
-    if state.onActivateCallback and not state.isActive and not state.isOnCooldown then
-      state.onActivateCallback()
+    if not state.isActive and not state.isOnCooldown then
+      -- Fire signal for signal-based consumers
+      UISignals.ShieldActivate:Fire()
+      -- Also call legacy callback for backward compatibility
+      if state.onActivateCallback then
+        state.onActivateCallback()
+      end
     end
   end)
 
