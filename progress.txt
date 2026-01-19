@@ -2189,3 +2189,77 @@ local isNight = State.Game.IsNight
 - Access player data: `State.Player.Money`, `State.Player.Level`, etc.
 - Access game state: `State.Game.IsNight`, `State.Game.TimeOfDay`, etc.
 - All remaining UI work items (#23-29) can now use this state system
+
+
+---
+
+## Session: 2026-01-19 (Work Item #23)
+
+### Completed: Refactor MainHUD with Fusion
+
+#### What Was Done
+Rewrote the MainHUD module using Fusion and the reactive state system. The new component uses Fusion's Spring animations for smooth money counting and XP progress bar updates.
+
+**Created Files:**
+
+1. **src/client/UI/Components/MainHUD.lua** (~480 lines)
+   - Fusion-based HUD component with reactive state bindings
+   - Money display with Spring animation for smooth counting
+   - Level/XP display with animated progress bar
+   - Chicken count display (placed + inventory total)
+   - TopbarPlus inventory icon integration
+   - Notification methods: showNotification, showLevelUp, showXPGain, showBankruptcyAssistance
+
+2. **src/client/UI/Components/MainHUD.spec.lua** (~200 lines)
+   - TestEZ tests for creation/destruction lifecycle
+   - Tests for visibility management
+   - Tests for HUD structure verification
+   - Tests for notification error handling
+
+**Deleted Files:**
+- `src/client/MainHUD.lua` - Legacy imperative implementation (~1100 lines)
+
+### Key Improvements
+- **Reactive Updates**: Money, level, and chicken counts update automatically via State bindings
+- **Smooth Animations**: Spring-based animations for money counting and XP bar
+- **Cleaner Code**: ~480 lines vs ~1100 lines (56% reduction)
+- **Automatic Cleanup**: Fusion scope handles all instance cleanup
+
+### API Compatibility
+The new MainHUD maintains the same public API:
+- `create(props?)` - Create the HUD
+- `destroy()` - Destroy and cleanup
+- `isCreated()`, `isVisible()`, `setVisible()`
+- `getScreenGui()`
+- `showNotification()`, `showLevelUp()`, `showXPGain()`, `showBankruptcyAssistance()`
+
+### Usage Example
+```lua
+local MainHUD = require(script.Parent.UI.Components.MainHUD)
+
+-- After State.initialize() is called
+MainHUD.create({
+  onInventoryClick = function()
+    -- Open inventory UI
+  end,
+})
+```
+
+### Acceptance Criteria Met
+- ✅ HUD displays correctly (money, level, chicken count)
+- ✅ Updates reactively via Fusion state
+- ✅ Build succeeds with rojo build
+- ✅ Legacy MainHUD.lua deleted
+
+### Files Changed
+- `src/client/UI/Components/MainHUD.lua` - NEW
+- `src/client/UI/Components/MainHUD.spec.lua` - NEW
+- `src/client/MainHUD.lua` - DELETED
+- `plans/refactor-prd.json` - MODIFIED: Marked work item #23 as completed
+
+### Notes for Next Developer
+- Work Item #24 (Refactor InventoryUI with Fusion) is the logical next step
+- MainHUD relies on State.initialize() being called first
+- Import with: `local MainHUD = require(script.Parent.UI.Components.MainHUD)`
+- The HUD automatically reacts to State.Player.Money, State.Player.Level, etc.
+- TopbarPlus inventory icon is created separately from the ScreenGui

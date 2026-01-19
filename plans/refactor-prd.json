@@ -676,7 +676,7 @@
       "category": "Fusion UI",
       "title": "Refactor MainHUD with Fusion",
       "description": "Rewrite MainHUD using Fusion and OnyxUI.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create src/client/UI/Components/MainHUD.lua using Fusion",
         "Connect to PlayerState for reactive money/level display",
