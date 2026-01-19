@@ -1,0 +1,1102 @@
+{
+  "project": {
+    "name": "Chicken Coop Tycoon - Architecture Refactor",
+    "description": "A comprehensive refactor to modernize the codebase architecture. Each work item is focused and narrow in scope.",
+    "version": "2.0.0",
+    "created": "2026-01-19",
+    "status": "not-started"
+  },
+  "goals": [
+    "Replace manual RemoteEvent/RemoteFunction handling with Knit services and controllers",
+    "Implement GoodSignal for all client-side event communication",
+    "Refactor all UI components to use Fusion with OnyxUI design system",
+    "Migrate from current DataStore implementation to ProfileService",
+    "Replace monolithic IntegrationTests.lua with co-located TestEZ test files",
+    "Clean up legacy code and unused modules"
+  ],
+  "dependencies": {
+    "reference": [
+      {
+        "name": "Knit",
+        "package": "sleitnick/knit@1.6.3",
+        "purpose": "Service-based architecture for server-client communication"
+      },
+      {
+        "name": "GoodSignal",
+        "package": "stravant/goodsignal@0.2.0",
+        "purpose": "Efficient signal implementation for event-driven communication"
+      },
+      {
+        "name": "Fusion",
+        "package": "elttob/fusion@0.3.0",
+        "purpose": "Reactive state management and UI framework"
+      },
+      {
+        "name": "OnyxUI",
+        "package": "imavafe/onyx-ui@0.4.2",
+        "purpose": "Pre-built Fusion UI components and design system"
+      },
+      {
+        "name": "TestEZ",
+        "package": "roblox/testez@0.4.1",
+        "purpose": "BDD-style testing framework for Luau"
+      },
+      {
+        "name": "ProfileService",
+        "package": "madstudioroblox/profileservice@1.4.0",
+        "purpose": "Robust data persistence with session locking"
+      },
+      {
+        "name": "Promise",
+        "package": "evaera/promise@4.0.0",
+        "purpose": "Promise implementation for async operations (Knit dependency)"
+      }
+    ]
+  },
+  "workItems": [
+    {
+      "id": 1,
+      "category": "Data Persistence",
+      "title": "Install ProfileService and Create ProfileManager",
+      "description": "Install ProfileService via Wally and create the ProfileManager wrapper module with basic session locking.",
+      "completed": true,
+      "dependencies": {
+        "install": [
+          "madstudioroblox/profileservice@1.4.0"
+        ]
+      },
+      "steps": [
+        "Add ProfileService to wally.toml and run wally install",
+        "Update default.project.json to include ProfileService package path",
+        "Create src/server/ProfileManager.lua with ProfileService wrapper",
+        "Implement session locking and basic data loading",
+        "Implement graceful shutdown handling with game:BindToClose()"
+      ],
+      "acceptanceCriteria": [
+        "ProfileService is installed and accessible",
+        "ProfileManager can load and release player profiles",
+        "Session locking prevents data duplication"
+      ],
+      "files": {
+        "create": [
+          "src/server/ProfileManager.lua"
+        ],
+        "modify": [
+          "wally.toml",
+          "default.project.json"
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "category": "Data Persistence",
+      "title": "Migrate Data Schema to ProfileService",
+      "description": "Migrate the player data schema and offline earnings calculation to work with ProfileManager.",
+      "completed": false,
+      "steps": [
+        "Define ProfileService data template matching PlayerData schema",
+        "Implement data migration logic for existing player data format",
+        "Integrate OfflineEarnings calculation on profile load",
+        "Implement auto-save functionality"
+      ],
+      "acceptanceCriteria": [
+        "Player data schema works with ProfileService",
+        "Existing player data migrates correctly",
+        "Offline earnings calculated on rejoin"
+      ],
+      "files": {
+        "modify": [
+          "src/server/ProfileManager.lua",
+          "src/shared/PlayerData.lua"
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "category": "Data Persistence",
+      "title": "Replace DataPersistence Usage and Delete Legacy Code",
+      "description": "Update all modules to use ProfileManager instead of DataPersistence, then delete the legacy file.",
+      "completed": false,
+      "steps": [
+        "Update Main.server.lua to initialize ProfileManager",
+        "Update all server modules that reference DataPersistence",
+        "Remove any direct DataStore references from codebase",
+        "Delete src/server/DataPersistence.lua",
+        "Create ProfileManager.spec.lua with tests"
+      ],
+      "acceptanceCriteria": [
+        "No references to DataPersistence remain",
+        "All data operations use ProfileManager",
+        "DataPersistence.lua is deleted",
+        "Tests pass"
+      ],
+      "files": {
+        "create": [
+          "src/server/ProfileManager.spec.lua"
+        ],
+        "modify": [
+          "src/server/Main.server.lua"
+        ],
+        "delete": [
+          "src/server/DataPersistence.lua"
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "category": "Knit Server",
+      "title": "Install Knit and Create Server Bootstrap",
+      "description": "Install Knit, Promise, and GoodSignal. Create the server-side Knit bootstrap structure.",
+      "completed": false,
+      "dependencies": {
+        "install": [
+          "sleitnick/knit@1.6.3",
+          "evaera/promise@4.0.0",
+          "stravant/goodsignal@0.2.0"
+        ]
+      },
+      "steps": [
+        "Add Knit, Promise, and GoodSignal to wally.toml",
+        "Run wally install",
+        "Update default.project.json to include new package paths",
+        "Create src/server/Services/ directory",
+        "Create src/server/KnitServer.lua bootstrap file"
+      ],
+      "acceptanceCriteria": [
+        "All packages installed and accessible",
+        "Knit server starts without errors",
+        "Services directory structure exists"
+      ],
+      "files": {
+        "create": [
+          "src/server/KnitServer.lua",
+          "src/server/Services/.gitkeep"
+        ],
+        "modify": [
+          "wally.toml",
+          "default.project.json"
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "category": "Knit Server",
+      "title": "Create PlayerDataService",
+      "description": "Create the PlayerDataService that wraps ProfileManager and exposes data to clients.",
+      "completed": false,
+      "steps": [
+        "Create src/server/Services/PlayerDataService.lua",
+        "Wrap ProfileManager methods for Knit",
+        "Expose client methods: GetData, GetMoney, GetInventory",
+        "Create signals for data change notifications",
+        "Create PlayerDataService.spec.lua"
+      ],
+      "acceptanceCriteria": [
+        "Service registers with Knit",
+        "Client can request player data via Knit",
+        "Data changes trigger signals"
+      ],
+      "files": {
+        "create": [
+          "src/server/Services/PlayerDataService.lua",
+          "src/server/Services/PlayerDataService.spec.lua"
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "category": "Knit Server",
+      "title": "Create ChickenService",
+      "description": "Create the ChickenService that handles all chicken-related server logic.",
+      "completed": false,
+      "steps": [
+        "Create src/server/Services/ChickenService.lua",
+        "Migrate chicken placement logic from Main.server.lua",
+        "Migrate chicken pickup and selling logic",
+        "Migrate egg laying and money generation",
+        "Expose client methods: PlaceChicken, PickupChicken, SellChicken, CollectMoney",
+        "Create ChickenService.spec.lua"
+      ],
+      "acceptanceCriteria": [
+        "All chicken operations work through ChickenService",
+        "Client can interact with chickens via Knit",
+        "Tests pass"
+      ],
+      "files": {
+        "create": [
+          "src/server/Services/ChickenService.lua",
+          "src/server/Services/ChickenService.spec.lua"
+        ]
+      }
+    },
+    {
+      "id": 7,
+      "category": "Knit Server",
+      "title": "Create EggService",
+      "description": "Create the EggService that handles all egg-related server logic.",
+      "completed": false,
+      "steps": [
+        "Create src/server/Services/EggService.lua",
+        "Migrate egg hatching logic from Main.server.lua",
+        "Migrate world egg spawning and collection",
+        "Migrate egg purchase logic",
+        "Expose client methods: HatchEgg, CollectWorldEgg, BuyEgg",
+        "Create EggService.spec.lua"
+      ],
+      "acceptanceCriteria": [
+        "All egg operations work through EggService",
+        "Egg hatching produces correct chicken distribution",
+        "Tests pass"
+      ],
+      "files": {
+        "create": [
+          "src/server/Services/EggService.lua",
+          "src/server/Services/EggService.spec.lua"
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "category": "Knit Server",
+      "title": "Create PredatorService",
+      "description": "Create the PredatorService that handles predator spawning, AI, and combat.",
+      "completed": false,
+      "steps": [
+        "Create src/server/Services/PredatorService.lua",
+        "Migrate predator spawning logic",
+        "Migrate predator AI and targeting",
+        "Migrate predator combat and defeat handling",
+        "Expose client methods: AttackPredator, GetActivePredators",
+        "Create PredatorService.spec.lua"
+      ],
+      "acceptanceCriteria": [
+        "Predators spawn and behave correctly",
+        "Combat works through service",
+        "Tests pass"
+      ],
+      "files": {
+        "create": [
+          "src/server/Services/PredatorService.lua",
+          "src/server/Services/PredatorService.spec.lua"
+        ]
+      }
+    },
+    {
+      "id": 9,
+      "category": "Knit Server",
+      "title": "Create StoreService",
+      "description": "Create the StoreService that handles store inventory and transactions.",
+      "completed": false,
+      "steps": [
+        "Create src/server/Services/StoreService.lua",
+        "Migrate store inventory management",
+        "Migrate buy/sell operations",
+        "Migrate restocking logic",
+        "Expose client methods: BuyItem, SellItem, GetStoreInventory",
+        "Create StoreService.spec.lua"
+      ],
+      "acceptanceCriteria": [
+        "Store operations work through StoreService",
+        "Buy/sell validates funds and inventory",
+        "Tests pass"
+      ],
+      "files": {
+        "create": [
+          "src/server/Services/StoreService.lua",
+          "src/server/Services/StoreService.spec.lua"
+        ]
+      }
+    },
+    {
+      "id": 10,
+      "category": "Knit Server",
+      "title": "Create TrapService",
+      "description": "Create the TrapService that handles trap placement and catching.",
+      "completed": false,
+      "steps": [
+        "Create src/server/Services/TrapService.lua",
+        "Migrate trap placement logic",
+        "Migrate trap catching mechanics",
+        "Expose client methods: PlaceTrap, CollectTrap",
+        "Create TrapService.spec.lua"
+      ],
+      "acceptanceCriteria": [
+        "Trap operations work through TrapService",
+        "Traps catch predators correctly",
+        "Tests pass"
+      ],
+      "files": {
+        "create": [
+          "src/server/Services/TrapService.lua",
+          "src/server/Services/TrapService.spec.lua"
+        ]
+      }
+    },
+    {
+      "id": 11,
+      "category": "Knit Server",
+      "title": "Create CombatService",
+      "description": "Create the CombatService that handles weapons, damage, and shields.",
+      "completed": false,
+      "steps": [
+        "Create src/server/Services/CombatService.lua",
+        "Migrate weapon equipping logic",
+        "Migrate damage and knockback mechanics",
+        "Migrate shield activation",
+        "Expose client methods: EquipWeapon, Attack, ActivateShield",
+        "Create CombatService.spec.lua"
+      ],
+      "acceptanceCriteria": [
+        "Combat operations work through CombatService",
+        "Damage calculations are correct",
+        "Tests pass"
+      ],
+      "files": {
+        "create": [
+          "src/server/Services/CombatService.lua",
+          "src/server/Services/CombatService.spec.lua"
+        ]
+      }
+    },
+    {
+      "id": 12,
+      "category": "Knit Server",
+      "title": "Create TradeService",
+      "description": "Create the TradeService that handles player trading.",
+      "completed": false,
+      "steps": [
+        "Create src/server/Services/TradeService.lua",
+        "Migrate trade request handling",
+        "Migrate offer/accept/decline logic",
+        "Migrate trade completion with item transfer",
+        "Expose client methods: RequestTrade, UpdateOffer, AcceptTrade, DeclineTrade",
+        "Create TradeService.spec.lua"
+      ],
+      "acceptanceCriteria": [
+        "Trading works through TradeService",
+        "Item transfer is atomic and correct",
+        "Tests pass"
+      ],
+      "files": {
+        "create": [
+          "src/server/Services/TradeService.lua",
+          "src/server/Services/TradeService.spec.lua"
+        ]
+      }
+    },
+    {
+      "id": 13,
+      "category": "Knit Server",
+      "title": "Create LevelService and GameStateService",
+      "description": "Create services for XP/leveling and game state management.",
+      "completed": false,
+      "steps": [
+        "Create src/server/Services/LevelService.lua for XP and leveling",
+        "Create src/server/Services/GameStateService.lua for day/night and sections",
+        "Migrate relevant logic from Main.server.lua",
+        "Create spec files for both services"
+      ],
+      "acceptanceCriteria": [
+        "XP and leveling work through LevelService",
+        "Day/night cycle works through GameStateService",
+        "Tests pass"
+      ],
+      "files": {
+        "create": [
+          "src/server/Services/LevelService.lua",
+          "src/server/Services/LevelService.spec.lua",
+          "src/server/Services/GameStateService.lua",
+          "src/server/Services/GameStateService.spec.lua"
+        ]
+      }
+    },
+    {
+      "id": 14,
+      "category": "Knit Server",
+      "title": "Refactor Main.server.lua and Delete RemoteSetup",
+      "description": "Update Main.server.lua to only bootstrap Knit and delete RemoteSetup.lua.",
+      "completed": false,
+      "steps": [
+        "Remove all game logic from Main.server.lua",
+        "Update Main.server.lua to only bootstrap Knit",
+        "Register all services in KnitServer.lua",
+        "Delete src/server/RemoteSetup.lua",
+        "Remove all direct RemoteEvent/RemoteFunction usage"
+      ],
+      "acceptanceCriteria": [
+        "Main.server.lua only contains Knit bootstrap",
+        "RemoteSetup.lua is deleted",
+        "No direct Remote usage remains"
+      ],
+      "files": {
+        "modify": [
+          "src/server/Main.server.lua",
+          "src/server/KnitServer.lua"
+        ],
+        "delete": [
+          "src/server/RemoteSetup.lua"
+        ]
+      }
+    },
+    {
+      "id": 15,
+      "category": "Knit Client",
+      "title": "Create Client Bootstrap and Controllers Directory",
+      "description": "Create the client-side Knit bootstrap and controller structure.",
+      "completed": false,
+      "steps": [
+        "Create src/client/Controllers/ directory",
+        "Create src/client/KnitClient.lua bootstrap file",
+        "Update Main.client.lua to bootstrap Knit"
+      ],
+      "acceptanceCriteria": [
+        "Knit client starts without errors",
+        "Controllers directory structure exists"
+      ],
+      "files": {
+        "create": [
+          "src/client/KnitClient.lua",
+          "src/client/Controllers/.gitkeep"
+        ],
+        "modify": [
+          "src/client/Main.client.lua"
+        ]
+      }
+    },
+    {
+      "id": 16,
+      "category": "Knit Client",
+      "title": "Create PlayerDataController",
+      "description": "Create the PlayerDataController with GoodSignal events for data changes.",
+      "completed": false,
+      "steps": [
+        "Create src/client/Controllers/PlayerDataController.lua",
+        "Connect to PlayerDataService via Knit",
+        "Implement local data caching",
+        "Create GoodSignal events: DataChanged, MoneyChanged, InventoryChanged",
+        "Create PlayerDataController.spec.lua"
+      ],
+      "acceptanceCriteria": [
+        "Controller receives data from server",
+        "GoodSignal events fire on changes",
+        "Tests pass"
+      ],
+      "files": {
+        "create": [
+          "src/client/Controllers/PlayerDataController.lua",
+          "src/client/Controllers/PlayerDataController.spec.lua"
+        ]
+      }
+    },
+    {
+      "id": 17,
+      "category": "Knit Client",
+      "title": "Create ChickenController and EggController",
+      "description": "Create controllers for chicken and egg client-side interactions.",
+      "completed": false,
+      "steps": [
+        "Create src/client/Controllers/ChickenController.lua",
+        "Create src/client/Controllers/EggController.lua",
+        "Connect to respective services via Knit",
+        "Create GoodSignal events for updates",
+        "Create spec files"
+      ],
+      "acceptanceCriteria": [
+        "Controllers can request operations from services",
+        "GoodSignal events fire correctly",
+        "Tests pass"
+      ],
+      "files": {
+        "create": [
+          "src/client/Controllers/ChickenController.lua",
+          "src/client/Controllers/ChickenController.spec.lua",
+          "src/client/Controllers/EggController.lua",
+          "src/client/Controllers/EggController.spec.lua"
+        ]
+      }
+    },
+    {
+      "id": 18,
+      "category": "Knit Client",
+      "title": "Create PredatorController and CombatController",
+      "description": "Create controllers for predator and combat client-side interactions.",
+      "completed": false,
+      "steps": [
+        "Create src/client/Controllers/PredatorController.lua",
+        "Create src/client/Controllers/CombatController.lua",
+        "Connect to respective services via Knit",
+        "Create GoodSignal events for updates",
+        "Create spec files"
+      ],
+      "acceptanceCriteria": [
+        "Controllers receive predator and combat updates",
+        "GoodSignal events fire correctly",
+        "Tests pass"
+      ],
+      "files": {
+        "create": [
+          "src/client/Controllers/PredatorController.lua",
+          "src/client/Controllers/PredatorController.spec.lua",
+          "src/client/Controllers/CombatController.lua",
+          "src/client/Controllers/CombatController.spec.lua"
+        ]
+      }
+    },
+    {
+      "id": 19,
+      "category": "Knit Client",
+      "title": "Create Remaining Controllers",
+      "description": "Create controllers for store, trap, trade, and game state.",
+      "completed": false,
+      "steps": [
+        "Create StoreController.lua",
+        "Create TrapController.lua",
+        "Create TradeController.lua",
+        "Create GameStateController.lua",
+        "Connect to respective services and add GoodSignal events",
+        "Create spec files"
+      ],
+      "acceptanceCriteria": [
+        "All controllers operational",
+        "All client operations go through controllers",
+        "Tests pass"
+      ],
+      "files": {
+        "create": [
+          "src/client/Controllers/StoreController.lua",
+          "src/client/Controllers/StoreController.spec.lua",
+          "src/client/Controllers/TrapController.lua",
+          "src/client/Controllers/TrapController.spec.lua",
+          "src/client/Controllers/TradeController.lua",
+          "src/client/Controllers/TradeController.spec.lua",
+          "src/client/Controllers/GameStateController.lua",
+          "src/client/Controllers/GameStateController.spec.lua"
+        ]
+      }
+    },
+    {
+      "id": 20,
+      "category": "Knit Client",
+      "title": "Migrate Client Modules to Use Controllers",
+      "description": "Update all client modules to use controllers instead of direct remote calls.",
+      "completed": false,
+      "steps": [
+        "Update all client UI modules to use controllers",
+        "Update all client visual modules to use controllers",
+        "Remove all direct RemoteEvent connections from client code",
+        "Refactor Main.client.lua to only bootstrap Knit"
+      ],
+      "acceptanceCriteria": [
+        "No direct RemoteEvent usage in client code",
+        "All client modules use controllers",
+        "Main.client.lua only contains Knit bootstrap"
+      ],
+      "files": {
+        "modify": [
+          "src/client/Main.client.lua",
+          "src/client/*.lua"
+        ]
+      }
+    },
+    {
+      "id": 21,
+      "category": "Fusion UI",
+      "title": "Install Fusion/OnyxUI and Create Theme",
+      "description": "Install Fusion and OnyxUI, create the theme configuration.",
+      "completed": false,
+      "dependencies": {
+        "install": [
+          "elttob/fusion@0.3.0",
+          "imavafe/onyx-ui@0.4.2"
+        ]
+      },
+      "steps": [
+        "Add Fusion and OnyxUI to wally.toml",
+        "Run wally install",
+        "Update default.project.json",
+        "Create src/client/UI/ directory structure",
+        "Create src/client/UI/Theme/Theme.lua with color palette and typography"
+      ],
+      "acceptanceCriteria": [
+        "Fusion and OnyxUI are installed",
+        "Theme configuration exists",
+        "Theme matches game aesthetic"
+      ],
+      "files": {
+        "create": [
+          "src/client/UI/Theme/Theme.lua",
+          "src/client/UI/Theme/init.lua"
+        ],
+        "modify": [
+          "wally.toml",
+          "default.project.json"
+        ]
+      }
+    },
+    {
+      "id": 22,
+      "category": "Fusion UI",
+      "title": "Create Fusion State Management",
+      "description": "Create the centralized Fusion state that connects to controller signals.",
+      "completed": false,
+      "steps": [
+        "Create src/client/UI/State/PlayerState.lua with Fusion Value objects",
+        "Create src/client/UI/State/GameState.lua with Fusion Value objects",
+        "Create src/client/UI/State/init.lua to connect to controller signals",
+        "Wire up GoodSignal events to update Fusion state"
+      ],
+      "acceptanceCriteria": [
+        "Fusion state updates from controller signals",
+        "UI components can observe state changes",
+        "State is reactive"
+      ],
+      "files": {
+        "create": [
+          "src/client/UI/State/PlayerState.lua",
+          "src/client/UI/State/GameState.lua",
+          "src/client/UI/State/init.lua"
+        ]
+      }
+    },
+    {
+      "id": 23,
+      "category": "Fusion UI",
+      "title": "Refactor MainHUD with Fusion",
+      "description": "Rewrite MainHUD using Fusion and OnyxUI.",
+      "completed": false,
+      "steps": [
+        "Create src/client/UI/Components/MainHUD.lua using Fusion",
+        "Connect to PlayerState for reactive money/level display",
+        "Implement responsive layout for mobile",
+        "Create MainHUD.spec.lua",
+        "Delete legacy src/client/MainHUD.lua"
+      ],
+      "acceptanceCriteria": [
+        "HUD displays correctly",
+        "Updates reactively",
+        "Works on all screen sizes"
+      ],
+      "files": {
+        "create": [
+          "src/client/UI/Components/MainHUD.lua",
+          "src/client/UI/Components/MainHUD.spec.lua"
+        ],
+        "delete": [
+          "src/client/MainHUD.lua"
+        ]
+      }
+    },
+    {
+      "id": 24,
+      "category": "Fusion UI",
+      "title": "Refactor InventoryUI with Fusion",
+      "description": "Rewrite InventoryUI using Fusion and OnyxUI.",
+      "completed": false,
+      "steps": [
+        "Create src/client/UI/Components/InventoryUI.lua using Fusion",
+        "Connect to PlayerState for reactive inventory display",
+        "Implement item selection and actions",
+        "Create InventoryUI.spec.lua",
+        "Delete legacy src/client/InventoryUI.lua"
+      ],
+      "acceptanceCriteria": [
+        "Inventory displays all items",
+        "Updates reactively",
+        "Item actions work correctly"
+      ],
+      "files": {
+        "create": [
+          "src/client/UI/Components/InventoryUI.lua",
+          "src/client/UI/Components/InventoryUI.spec.lua"
+        ],
+        "delete": [
+          "src/client/InventoryUI.lua"
+        ]
+      }
+    },
+    {
+      "id": 25,
+      "category": "Fusion UI",
+      "title": "Refactor StoreUI with Fusion",
+      "description": "Rewrite StoreUI using Fusion and OnyxUI.",
+      "completed": false,
+      "steps": [
+        "Create src/client/UI/Components/StoreUI.lua using Fusion",
+        "Connect to StoreController for operations",
+        "Implement buy/sell buttons with proper disabled states",
+        "Create StoreUI.spec.lua",
+        "Delete legacy src/client/StoreUI.lua"
+      ],
+      "acceptanceCriteria": [
+        "Store displays items with prices",
+        "Buy/sell buttons work correctly",
+        "Disabled states show correctly"
+      ],
+      "files": {
+        "create": [
+          "src/client/UI/Components/StoreUI.lua",
+          "src/client/UI/Components/StoreUI.spec.lua"
+        ],
+        "delete": [
+          "src/client/StoreUI.lua"
+        ]
+      }
+    },
+    {
+      "id": 26,
+      "category": "Fusion UI",
+      "title": "Refactor HatchPreviewUI and TradeUI with Fusion",
+      "description": "Rewrite HatchPreviewUI and TradeUI using Fusion and OnyxUI.",
+      "completed": false,
+      "steps": [
+        "Create src/client/UI/Components/HatchPreviewUI.lua using Fusion",
+        "Create src/client/UI/Components/TradeUI.lua using Fusion",
+        "Create spec files for both",
+        "Delete legacy files"
+      ],
+      "acceptanceCriteria": [
+        "Both UIs work correctly with Fusion",
+        "Reactive updates work",
+        "Legacy files deleted"
+      ],
+      "files": {
+        "create": [
+          "src/client/UI/Components/HatchPreviewUI.lua",
+          "src/client/UI/Components/HatchPreviewUI.spec.lua",
+          "src/client/UI/Components/TradeUI.lua",
+          "src/client/UI/Components/TradeUI.spec.lua"
+        ],
+        "delete": [
+          "src/client/HatchPreviewUI.lua",
+          "src/client/TradeUI.lua"
+        ]
+      }
+    },
+    {
+      "id": 27,
+      "category": "Fusion UI",
+      "title": "Refactor Combat UI Components with Fusion",
+      "description": "Rewrite ShieldUI, DamageUI, and health bars using Fusion.",
+      "completed": false,
+      "steps": [
+        "Create src/client/UI/Components/ShieldUI.lua using Fusion",
+        "Create src/client/UI/Components/DamageUI.lua using Fusion",
+        "Create src/client/UI/Components/ChickenHealthBar.lua using Fusion",
+        "Create src/client/UI/Components/PredatorHealthBar.lua using Fusion",
+        "Create spec files and delete legacy files"
+      ],
+      "acceptanceCriteria": [
+        "All combat UI works with Fusion",
+        "Health bars update reactively",
+        "Legacy files deleted"
+      ],
+      "files": {
+        "create": [
+          "src/client/UI/Components/ShieldUI.lua",
+          "src/client/UI/Components/DamageUI.lua",
+          "src/client/UI/Components/ChickenHealthBar.lua",
+          "src/client/UI/Components/PredatorHealthBar.lua"
+        ],
+        "delete": [
+          "src/client/ShieldUI.lua",
+          "src/client/DamageUI.lua",
+          "src/client/ChickenHealthBar.lua",
+          "src/client/PredatorHealthBar.lua"
+        ]
+      }
+    },
+    {
+      "id": 28,
+      "category": "Fusion UI",
+      "title": "Refactor Remaining UI Components with Fusion",
+      "description": "Rewrite OfflineEarningsUI, Tutorial, and PredatorWarning using Fusion.",
+      "completed": false,
+      "steps": [
+        "Create src/client/UI/Components/OfflineEarningsUI.lua using Fusion",
+        "Create src/client/UI/Components/Tutorial.lua using Fusion",
+        "Create src/client/UI/Components/PredatorWarning.lua using Fusion",
+        "Create spec files and delete legacy files"
+      ],
+      "acceptanceCriteria": [
+        "All remaining UI works with Fusion",
+        "Legacy files deleted"
+      ],
+      "files": {
+        "create": [
+          "src/client/UI/Components/OfflineEarningsUI.lua",
+          "src/client/UI/Components/Tutorial.lua",
+          "src/client/UI/Components/PredatorWarning.lua"
+        ],
+        "delete": [
+          "src/client/OfflineEarningsUI.lua",
+          "src/client/Tutorial.lua",
+          "src/client/PredatorWarning.lua"
+        ]
+      }
+    },
+    {
+      "id": 29,
+      "category": "Fusion UI",
+      "title": "Create UI Initialization Module",
+      "description": "Create the entry point that mounts all Fusion UI components.",
+      "completed": false,
+      "steps": [
+        "Create src/client/UI/init.lua as entry point",
+        "Mount all UI components",
+        "Handle screen size changes",
+        "Implement cleanup on player leave",
+        "Update Main.client.lua to initialize UI system"
+      ],
+      "acceptanceCriteria": [
+        "All UI components mount correctly",
+        "UI responds to screen size changes",
+        "Proper cleanup prevents memory leaks"
+      ],
+      "files": {
+        "create": [
+          "src/client/UI/init.lua"
+        ],
+        "modify": [
+          "src/client/Main.client.lua"
+        ]
+      }
+    },
+    {
+      "id": 30,
+      "category": "Testing",
+      "title": "Install TestEZ and Create Test Runner",
+      "description": "Install TestEZ and create the test infrastructure.",
+      "completed": false,
+      "dependencies": {
+        "install": [
+          "roblox/testez@0.4.1"
+        ]
+      },
+      "steps": [
+        "Add TestEZ to wally.toml and run wally install",
+        "Update default.project.json",
+        "Create src/shared/Testing/TestRunner.lua",
+        "Create src/shared/Testing/TestUtilities.lua",
+        "Create src/shared/Testing/Mocks/init.lua"
+      ],
+      "acceptanceCriteria": [
+        "TestEZ is installed",
+        "Test runner discovers .spec.lua files",
+        "Test utilities available"
+      ],
+      "files": {
+        "create": [
+          "src/shared/Testing/TestRunner.lua",
+          "src/shared/Testing/TestUtilities.lua",
+          "src/shared/Testing/Mocks/init.lua"
+        ],
+        "modify": [
+          "wally.toml",
+          "default.project.json"
+        ]
+      }
+    },
+    {
+      "id": 31,
+      "category": "Testing",
+      "title": "Create Config Module Tests",
+      "description": "Create TestEZ spec files for all configuration modules.",
+      "completed": false,
+      "steps": [
+        "Create ChickenConfig.spec.lua",
+        "Create EggConfig.spec.lua",
+        "Create PredatorConfig.spec.lua",
+        "Create TrapConfig.spec.lua",
+        "Create WeaponConfig.spec.lua"
+      ],
+      "acceptanceCriteria": [
+        "All config modules have spec files",
+        "Tests verify config validity",
+        "Tests pass"
+      ],
+      "files": {
+        "create": [
+          "src/shared/ChickenConfig.spec.lua",
+          "src/shared/EggConfig.spec.lua",
+          "src/shared/PredatorConfig.spec.lua",
+          "src/shared/TrapConfig.spec.lua",
+          "src/shared/WeaponConfig.spec.lua"
+        ]
+      }
+    },
+    {
+      "id": 32,
+      "category": "Testing",
+      "title": "Create Additional Config Tests",
+      "description": "Create TestEZ spec files for remaining configuration modules.",
+      "completed": false,
+      "steps": [
+        "Create LevelConfig.spec.lua",
+        "Create XPConfig.spec.lua",
+        "Create BalanceConfig.spec.lua",
+        "Create PowerUpConfig.spec.lua"
+      ],
+      "acceptanceCriteria": [
+        "All config modules have spec files",
+        "Tests pass"
+      ],
+      "files": {
+        "create": [
+          "src/shared/LevelConfig.spec.lua",
+          "src/shared/XPConfig.spec.lua",
+          "src/shared/BalanceConfig.spec.lua",
+          "src/shared/PowerUpConfig.spec.lua"
+        ]
+      }
+    },
+    {
+      "id": 33,
+      "category": "Testing",
+      "title": "Create Shared Logic Module Tests",
+      "description": "Create TestEZ spec files for shared game logic modules.",
+      "completed": false,
+      "steps": [
+        "Create PlayerData.spec.lua",
+        "Create EggHatching.spec.lua",
+        "Create MoneyCollection.spec.lua",
+        "Create ChickenPlacement.spec.lua"
+      ],
+      "acceptanceCriteria": [
+        "Logic modules have spec files",
+        "Tests cover happy path and edge cases",
+        "Tests pass"
+      ],
+      "files": {
+        "create": [
+          "src/shared/PlayerData.spec.lua",
+          "src/shared/EggHatching.spec.lua",
+          "src/shared/MoneyCollection.spec.lua",
+          "src/shared/ChickenPlacement.spec.lua"
+        ]
+      }
+    },
+    {
+      "id": 34,
+      "category": "Testing",
+      "title": "Create Remaining Logic Module Tests",
+      "description": "Create TestEZ spec files for remaining shared logic modules.",
+      "completed": false,
+      "steps": [
+        "Create TrapPlacement.spec.lua",
+        "Create OfflineEarnings.spec.lua",
+        "Create CageUpgrades.spec.lua",
+        "Create TradeExchange.spec.lua",
+        "Create Util.spec.lua"
+      ],
+      "acceptanceCriteria": [
+        "All logic modules have spec files",
+        "Tests pass"
+      ],
+      "files": {
+        "create": [
+          "src/shared/TrapPlacement.spec.lua",
+          "src/shared/OfflineEarnings.spec.lua",
+          "src/shared/CageUpgrades.spec.lua",
+          "src/shared/TradeExchange.spec.lua",
+          "src/shared/Util.spec.lua"
+        ]
+      }
+    },
+    {
+      "id": 35,
+      "category": "Testing",
+      "title": "Migrate and Delete IntegrationTests.lua",
+      "description": "Ensure all tests from IntegrationTests.lua are migrated, then delete it.",
+      "completed": false,
+      "steps": [
+        "Review IntegrationTests.lua for any unmigrated tests",
+        "Migrate remaining tests to appropriate spec files",
+        "Verify all tests pass",
+        "Delete src/shared/IntegrationTests.lua"
+      ],
+      "acceptanceCriteria": [
+        "All tests from IntegrationTests.lua exist in spec files",
+        "All tests pass",
+        "IntegrationTests.lua is deleted"
+      ],
+      "files": {
+        "delete": [
+          "src/shared/IntegrationTests.lua"
+        ]
+      }
+    },
+    {
+      "id": 36,
+      "category": "Cleanup",
+      "title": "Audit and Remove Unused Code",
+      "description": "Audit shared modules and remove unused functions and dead code.",
+      "completed": false,
+      "steps": [
+        "Audit all shared modules for usage",
+        "Remove unused functions",
+        "Consolidate duplicate logic",
+        "Update type definitions for consistency"
+      ],
+      "acceptanceCriteria": [
+        "No unused code in shared modules",
+        "No duplicate logic",
+        "Type definitions consistent"
+      ],
+      "files": {
+        "modify": [
+          "src/shared/*.lua"
+        ]
+      }
+    },
+    {
+      "id": 37,
+      "category": "Cleanup",
+      "title": "Create Architecture Documentation",
+      "description": "Document the new architecture patterns and conventions.",
+      "completed": false,
+      "steps": [
+        "Create ARCHITECTURE.md",
+        "Document Knit service/controller patterns",
+        "Document Fusion state management approach",
+        "Document testing conventions",
+        "Document folder structure",
+        "Update README.md with architecture overview"
+      ],
+      "acceptanceCriteria": [
+        "ARCHITECTURE.md exists",
+        "Documentation is comprehensive",
+        "README.md updated"
+      ],
+      "files": {
+        "create": [
+          "ARCHITECTURE.md"
+        ],
+        "modify": [
+          "README.md"
+        ]
+      }
+    }
+  ],
+  "risks": [
+    {
+      "risk": "Data migration could corrupt existing player data",
+      "mitigation": "Implement data versioning and migration scripts, test thoroughly in staging"
+    },
+    {
+      "risk": "ProfileService session locking may cause issues during development",
+      "mitigation": "Use mock profiles during development, only use real ProfileService in production"
+    },
+    {
+      "risk": "Knit migration is large and could introduce many bugs",
+      "mitigation": "Migrate one service at a time, test thoroughly after each migration"
+    },
+    {
+      "risk": "Fusion learning curve may slow UI development",
+      "mitigation": "Start with simpler components, use OnyxUI for complex patterns"
+    },
+    {
+      "risk": "Breaking changes during migration could affect players",
+      "mitigation": "Implement feature flags to gradually roll out changes"
+    }
+  ]
+}
