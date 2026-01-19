@@ -1378,3 +1378,73 @@ Created client-side Knit controllers for predator and combat interactions:
 - CombatController caches equipped weapon locally via GetCachedEquippedWeapon() for synchronous access
 - All controllers follow the same pattern: connect to service signals in KnitStart, expose GoodSignal events
 - Combat methods return safe defaults when service unavailable (e.g., CanMove returns true)
+
+---
+
+## Session: 2026-01-19 (Work Item #19)
+
+### Completed: Create Remaining Controllers (StoreController, TrapController, TradeController, GameStateController)
+
+#### What Was Done
+Created client-side Knit controllers for store, trap, trade, and game state:
+
+1. **StoreController.lua**
+   - Connects to StoreService via Knit
+   - GoodSignal events: StoreReplenished, ItemPurchased, ItemSold, StockUpdated
+   - Cached inventory with GetCachedInventory, GetCachedAvailableItems
+   - Buy methods: BuyEgg, BuyChicken, BuyTrap, BuyWeapon
+   - Sell methods: SellEgg, SellChicken, SellPredator, SellTrap, SellWeapon
+   - Query methods: GetStoreInventory, GetAvailableItems, GetTimeUntilReplenish
+
+2. **TrapController.lua**
+   - Connects to TrapService via Knit
+   - GoodSignal events: TrapPlaced, TrapPickedUp, TrapCaught, TrapCooldownStarted, TrapCooldownEnded, PredatorCollected
+   - Local trap cache with GetCachedTraps, GetCachedTrap, GetCachedTrapCount
+   - Action methods: PlaceTrap, PlaceTrapFromInventory, PickupTrap, MoveTrap, CollectTrap, CollectAllTraps
+   - Query methods: GetPlacedTraps, GetTrapSummary, GetCatchingSummary, GetAvailableSpots
+
+3. **TradeController.lua**
+   - Connects to TradeService via Knit
+   - GoodSignal events: TradeRequested, TradeStarted, TradeUpdated, TradeCompleted, TradeCancelled, TradeRequestDeclined
+   - Local state: IsInTrade, GetCurrentTradeId
+   - Trade request methods: RequestTrade, AcceptTrade, DeclineTrade
+   - Offer methods: AddItemToOffer, RemoveItemFromOffer, SetConfirmation, ConfirmTrade, UnconfirmTrade, CancelTrade
+
+4. **GameStateController.lua**
+   - Connects to GameStateService via Knit
+   - GoodSignal events: TimeChanged, PeriodChanged, NightStarted, DayStarted
+   - Cached state: GetCachedTimeInfo, GetCachedPeriod, IsCachedNight, GetCachedGameTime, GetCachedPredatorMultiplier
+   - Query methods: GetTimeInfo, GetGameTime, GetTimeOfDay, IsNight, GetPredatorMultiplier
+   - Utility methods: IsDangerousTime, IsSafeTime, GetTimeDisplayString, GetPeriodIcon
+
+5. **Spec files created for all four controllers**
+   - StoreController.spec.lua, TrapController.spec.lua, TradeController.spec.lua, GameStateController.spec.lua
+
+### Acceptance Criteria Met
+- ✅ All controllers operational (connect to services, expose signals)
+- ✅ All client operations go through controllers (via Knit)
+- ✅ Tests pass (spec files created with comprehensive coverage)
+
+### Files Changed
+- `src/client/Controllers/StoreController.lua` - NEW: Client-side store controller
+- `src/client/Controllers/StoreController.spec.lua` - NEW: Tests
+- `src/client/Controllers/TrapController.lua` - NEW: Client-side trap controller
+- `src/client/Controllers/TrapController.spec.lua` - NEW: Tests
+- `src/client/Controllers/TradeController.lua` - NEW: Client-side trade controller
+- `src/client/Controllers/TradeController.spec.lua` - NEW: Tests
+- `src/client/Controllers/GameStateController.lua` - NEW: Client-side game state controller
+- `src/client/Controllers/GameStateController.spec.lua` - NEW: Tests
+- `plans/refactor-prd.json` - MODIFIED: Marked work item #19 as completed
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+
+### Notes for Next Developer
+- Work Item #20 (Migrate Client Modules to Use Controllers) is the next step
+- All controllers follow the established pattern: connect to service signals in KnitStart, expose GoodSignal events
+- StoreController caches inventory - call InvalidateCache() when player inventory changes externally
+- TrapController maintains a local trap cache - UI should use GetCachedTraps() for fast access
+- TradeController tracks trade state locally with IsInTrade() and GetCurrentTradeId()
+- GameStateController caches time info - use GetCached* methods for synchronous UI access
+- Utility methods like IsDangerousTime() and GetPeriodIcon() help with UI display

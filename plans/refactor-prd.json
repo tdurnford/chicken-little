@@ -557,7 +557,7 @@
       "category": "Knit Client",
       "title": "Create Remaining Controllers",
       "description": "Create controllers for store, trap, trade, and game state.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create StoreController.lua",
         "Create TrapController.lua",
