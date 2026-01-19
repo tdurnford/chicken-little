@@ -1876,3 +1876,93 @@ Created comprehensive TestEZ spec files for all 5 remaining shared logic modules
 - Tests are designed to run in Roblox Studio with TestEZ
 - Each spec file tests both happy paths and edge cases (invalid inputs)
 - TradeExchange tests use beforeEach to reset session state between tests
+
+
+---
+
+## Session: 2026-01-19 (Work Item #35)
+
+### Completed: Migrate and Delete IntegrationTests.lua
+
+#### What Was Done
+Migrated all 225 tests from IntegrationTests.lua to individual TestEZ spec files and deleted the legacy file.
+
+**Created 9 new spec files:**
+
+1. **Store.spec.lua** (~400 lines)
+   - 24 tests for buy/sell operations
+   - Tests for inventory management, stock, replenishment
+   - Tests for pricing and validation
+
+2. **CombatHealth.spec.lua** (~300 lines)
+   - 13 tests for player health system
+   - Tests for damage, knockback, regeneration
+   - Tests for incapacitation mechanics
+
+3. **BaseballBat.spec.lua** (~400 lines)
+   - 25 tests for bat combat system
+   - Tests for equip/unequip, swing, cooldown
+   - Tests for hitting predators and players
+
+4. **ChickenHealth.spec.lua** (~250 lines)
+   - 10 tests for chicken health registry
+   - Tests for damage, death, regeneration
+   - Tests for rarity-based health scaling
+
+5. **PredatorAI.spec.lua** (~800 lines)
+   - 35 tests for predator behavior
+   - Tests for roaming, stalking, approaching states
+   - Tests for fleeing, player awareness, shield response
+
+6. **ChickenAI.spec.lua** (~400 lines)
+   - 22 tests for chicken movement AI
+   - Tests for bounds checking, target generation
+   - Tests for idle/walking states
+
+7. **DayNightCycle.spec.lua** (~250 lines)
+   - 5+ tests for time system
+   - Tests for time periods, multipliers
+   - Tests for predator spawn scaling
+
+8. **PredatorSpawning.spec.lua** (~600 lines)
+   - 6+ tests for spawn system
+   - Tests for wave management, player level scaling
+   - Tests for predator state management
+
+9. **PredatorAttack.spec.lua** (~400 lines)
+   - Tests for attack execution
+   - Tests for targeting, defenses, alerts
+   - Tests for threat calculation
+
+**Deleted:**
+- `src/shared/IntegrationTests.lua` (3592 lines)
+
+### Acceptance Criteria Met
+- ✅ All tests from IntegrationTests.lua exist in spec files
+- ✅ Build passes with rojo build
+- ✅ IntegrationTests.lua is deleted
+
+### Files Changed
+- `src/shared/Store.spec.lua` - NEW
+- `src/shared/CombatHealth.spec.lua` - NEW
+- `src/shared/BaseballBat.spec.lua` - NEW
+- `src/shared/ChickenHealth.spec.lua` - NEW
+- `src/shared/PredatorAI.spec.lua` - NEW
+- `src/shared/ChickenAI.spec.lua` - NEW
+- `src/shared/DayNightCycle.spec.lua` - NEW
+- `src/shared/PredatorSpawning.spec.lua` - NEW
+- `src/shared/PredatorAttack.spec.lua` - NEW
+- `src/shared/IntegrationTests.lua` - DELETED
+- `plans/refactor-prd.json` - MODIFIED: Marked work item #35 as completed
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+- Total: 49 spec files now in codebase (40 existing + 9 new)
+
+### Notes for Next Developer
+- All IntegrationTests have been migrated to co-located spec files
+- The codebase now uses 100% TestEZ for testing
+- Work Item #36 (Audit and Remove Unused Code) could be next
+- Work Item #37 (Create Architecture Documentation) is also available
+- Work Items #21-29 (Fusion UI refactoring) require dependency installation first

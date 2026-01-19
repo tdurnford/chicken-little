@@ -1023,7 +1023,8 @@
       "category": "Testing",
       "title": "Migrate and Delete IntegrationTests.lua",
       "description": "Ensure all tests from IntegrationTests.lua are migrated, then delete it.",
-      "completed": false,
+      "completed": true,
+      "status": "complete",
       "steps": [
         "Review IntegrationTests.lua for any unmigrated tests",
         "Migrate remaining tests to appropriate spec files",
