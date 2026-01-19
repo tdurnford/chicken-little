@@ -1073,7 +1073,7 @@
       "category": "Cleanup",
       "title": "Create Architecture Documentation",
       "description": "Document the new architecture patterns and conventions.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create ARCHITECTURE.md",
         "Document Knit service/controller patterns",

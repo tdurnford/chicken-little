@@ -1,13 +1,24 @@
-# Roblox Game (Git + Rojo) — Starter Repo
+# Chicken Coop Tycoon
 
-A production-grade, **ready-to-clone** Roblox project template using:
+A Roblox tycoon game with modern architecture built on:
 
+- **Knit** for service-based server-client communication
+- **ProfileService** for robust data persistence with session locking
+- **GoodSignal** for efficient event-driven communication
+- **TestEZ** for BDD-style testing
 - **Rojo** for filesystem ↔ Studio sync
-- **Git**-friendly source layout (`src/`)
-- **Selene** for linting
-- **StyLua** for formatting
+- **Selene** for linting, **StyLua** for formatting
 - **GitHub Actions** CI (lint + format check + build)
-- **Aftman** toolchain pinning (one-command setup)
+
+## Architecture Overview
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed documentation.
+
+**Key Patterns:**
+- **Services** (`src/server/Services/`) - Server-side business logic with Knit
+- **Controllers** (`src/client/Controllers/`) - Client-side state management with Knit
+- **ProfileManager** (`src/server/ProfileManager.lua`) - Data persistence layer
+- **Co-located Tests** (`*.spec.lua`) - TestEZ specs alongside source files
 
 ## Quick start
 

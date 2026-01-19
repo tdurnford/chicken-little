@@ -2018,3 +2018,49 @@ Additional unused functions were identified but NOT removed as they serve as int
 - Work Items #21-29 (Fusion UI refactoring) require Fusion/OnyxUI dependency installation first
 - Some modules (PlayerSection, MapGeneration) have helper functions that appear unused but may be for planned features
 - Consider similar cleanup for client-side modules in future work items
+
+
+---
+
+## Session: 2026-01-19 (Work Item #37)
+
+### Completed: Create Architecture Documentation
+
+#### What Was Done
+Created comprehensive ARCHITECTURE.md documenting all patterns and conventions, and updated README.md with architecture overview.
+
+**Created Files:**
+- `ARCHITECTURE.md` - Complete architecture documentation (~250 lines)
+
+**Modified Files:**
+- `README.md` - Updated with architecture overview and link to ARCHITECTURE.md
+
+### Documentation Includes
+
+1. **Overview** - Service-oriented architecture summary
+2. **Dependencies Table** - All Wally packages with versions and purposes
+3. **Folder Structure** - Complete directory layout with descriptions
+4. **Knit Services Pattern** - Full example with conventions and services list
+5. **Knit Controllers Pattern** - Full example with conventions and controllers list
+6. **Data Persistence** - ProfileManager usage and data schema
+7. **Testing (TestEZ)** - Pattern and conventions for spec files
+8. **Signal Communication** - GoodSignal and Knit signals usage
+9. **Bootstrap Flow** - Server and client initialization sequence
+10. **Best Practices** - General guidelines and data flow patterns
+
+### Acceptance Criteria Met
+- ✅ ARCHITECTURE.md exists
+- ✅ Documentation is comprehensive
+- ✅ README.md updated with architecture overview
+- ✅ Build passes
+
+### Files Changed
+- `ARCHITECTURE.md` - NEW
+- `README.md` - MODIFIED
+- `plans/refactor-prd.json` - MODIFIED: Marked work item #37 as completed
+
+### Notes for Next Developer
+- Work Items #21-29 (Fusion UI refactoring) remain - these require Fusion/OnyxUI installation first
+- Work Item #21 (Install Fusion/OnyxUI) is the logical next step
+- Architecture documentation can be expanded when Fusion UI is implemented
+- All other work items (1-20, 30-36) have been completed
