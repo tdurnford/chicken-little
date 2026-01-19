@@ -73,38 +73,4 @@ function AdminConfig.getPermissions(userId: number): { AdminPermission }
   return result
 end
 
--- Get admin name by userId
-function AdminConfig.getAdminName(userId: number): string?
-  for _, entry in ipairs(ADMIN_ENTRIES) do
-    if entry.userId == userId then
-      return entry.name
-    end
-  end
-  return nil
-end
-
--- Get count of configured admins
-function AdminConfig.getAdminCount(): number
-  return #ADMIN_ENTRIES
-end
-
--- Get all admin entries (for display purposes)
-function AdminConfig.getAdminEntries(): { AdminEntry }
-  return table.clone(ADMIN_ENTRIES)
-end
-
--- Validate that an admin entry is properly configured
-function AdminConfig.validateEntry(entry: AdminEntry): boolean
-  if type(entry.userId) ~= "number" or entry.userId <= 0 then
-    return false
-  end
-  if type(entry.name) ~= "string" or #entry.name == 0 then
-    return false
-  end
-  if type(entry.permissions) ~= "table" or #entry.permissions == 0 then
-    return false
-  end
-  return true
-end
-
 return AdminConfig

@@ -1047,7 +1047,7 @@
       "category": "Cleanup",
       "title": "Audit and Remove Unused Code",
       "description": "Audit shared modules and remove unused functions and dead code.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Audit all shared modules for usage",
         "Remove unused functions",
@@ -1062,6 +1062,9 @@
       "files": {
         "modify": [
           "src/shared/*.lua"
+        ],
+        "delete": [
+          "src/shared/ModuleLoader.lua"
         ]
       }
     },

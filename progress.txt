@@ -1966,3 +1966,55 @@ Migrated all 225 tests from IntegrationTests.lua to individual TestEZ spec files
 - Work Item #36 (Audit and Remove Unused Code) could be next
 - Work Item #37 (Create Architecture Documentation) is also available
 - Work Items #21-29 (Fusion UI refactoring) require dependency installation first
+
+
+---
+
+## Session: 2026-01-19 (Work Item #36)
+
+### Completed: Audit and Remove Unused Code
+
+#### What Was Done
+Audited all shared modules for usage patterns and removed unused functions and an entirely unused module.
+
+**Deleted Files:**
+- `src/shared/ModuleLoader.lua` - Utility module that was never imported anywhere
+
+**Modified Files:**
+
+1. **MoneyScaling.lua** - Removed 7 unused functions (~100 lines):
+   - `estimateTimeToTarget()` - duplicate of BalanceConfig
+   - `formatTime()` - duplicate (ShieldUI/MainHUD have local versions)
+   - `getProgressionStage()` - duplicate of BalanceConfig
+   - `getUpgradeTiers()` - never called externally
+   - `getMaxUpgradeTier()` - never called externally
+   - `canAfford()` - never called externally
+   - `subtractCost()` - never called externally
+
+2. **AdminConfig.lua** - Removed 4 unused functions (~30 lines):
+   - `getAdminName()` - never called
+   - `getAdminCount()` - never called
+   - `getAdminEntries()` - never called
+   - `validateEntry()` - never called
+
+### Analysis Notes
+Additional unused functions were identified but NOT removed as they serve as internal helpers or are used only within their module:
+- PlayerSection.lua has helper functions for trap spots that may be used in future features
+- MapGeneration.lua has some functions only tested but not used in production (getSummary)
+
+### Acceptance Criteria Met
+- ✅ Unused code audited and removed from shared modules
+- ✅ No duplicate logic remains (MoneyScaling duplicates removed)
+- ✅ Type definitions remain consistent
+
+### Files Changed
+- `src/shared/ModuleLoader.lua` - DELETED
+- `src/shared/MoneyScaling.lua` - MODIFIED: Removed 7 unused functions
+- `src/shared/AdminConfig.lua` - MODIFIED: Removed 4 unused functions
+- `plans/refactor-prd.json` - MODIFIED: Marked work item #36 as completed
+
+### Notes for Next Developer
+- Work Item #37 (Create Architecture Documentation) is available
+- Work Items #21-29 (Fusion UI refactoring) require Fusion/OnyxUI dependency installation first
+- Some modules (PlayerSection, MapGeneration) have helper functions that appear unused but may be for planned features
+- Consider similar cleanup for client-side modules in future work items
