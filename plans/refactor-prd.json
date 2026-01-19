@@ -825,7 +825,7 @@
       "category": "Fusion UI",
       "title": "Refactor Remaining UI Components with Fusion",
       "description": "Rewrite OfflineEarningsUI, Tutorial, and PredatorWarning using Fusion.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create src/client/UI/Components/OfflineEarningsUI.lua using Fusion",
         "Create src/client/UI/Components/Tutorial.lua using Fusion",

@@ -2638,3 +2638,122 @@ Rewrote all four combat UI components using Fusion reactive state. All component
 - Import with: `local ChickenHealthBar = require(UIComponents:WaitForChild("ChickenHealthBar"))`
 - Import with: `local PredatorHealthBar = require(UIComponents:WaitForChild("PredatorHealthBar"))`
 - Health bars use Fusion.Spring for smooth animated health transitions
+
+---
+
+## Work Item #28: Refactor Remaining UI Components with Fusion
+**Date**: 2026-01-19
+**Status**: Completed
+
+### Summary
+Refactored the remaining three UI components (OfflineEarningsUI, Tutorial, PredatorWarning) from legacy imperative style to Fusion reactive state management.
+
+### New Files Created
+
+1. **src/client/UI/Components/OfflineEarningsUI.lua** (~350 lines)
+   - Fusion-based "Welcome Back" popup for offline earnings
+   - Reactive state for money, eggs, time away
+   - Spring-animated scale-in/out effects
+   - Maintains full API compatibility with legacy module
+
+2. **src/client/UI/Components/OfflineEarningsUI.spec.lua** (~190 lines)
+   - TestEZ tests for creation/destruction
+   - Tests for show/hide/claim/dismiss functionality
+   - Tests for callback handling
+
+3. **src/client/UI/Components/Tutorial.lua** (~580 lines)
+   - Fusion-based tutorial with progress tracking
+   - Reactive state for current step and visibility
+   - 3D arrow indicator pointing to objectives
+   - Spring-animated slide-in/out frame
+   - Maintains full API compatibility with legacy module
+
+4. **src/client/UI/Components/Tutorial.spec.lua** (~270 lines)
+   - TestEZ tests for creation/destruction
+   - Tests for start/skip/complete flow
+   - Tests for step advancement
+   - Tests for shouldShowTutorial logic
+
+5. **src/client/UI/Components/PredatorWarning.lua** (~420 lines)
+   - Fusion-based predator warning system
+   - Reactive state for threat level, flash, arrow direction
+   - Multiple active warning tracking
+   - Spring-animated screen flash and edge indicators
+   - Maintains full API compatibility with legacy module
+
+6. **src/client/UI/Components/PredatorWarning.spec.lua** (~250 lines)
+   - TestEZ tests for initialization/cleanup
+   - Tests for show/clear/clearAll functionality
+   - Tests for position tracking
+
+### Deleted Files
+- `src/client/OfflineEarningsUI.lua` - Legacy imperative implementation (~548 lines)
+- `src/client/Tutorial.lua` - Legacy imperative implementation (~911 lines)
+- `src/client/PredatorWarning.lua` - Legacy imperative implementation (~587 lines)
+
+### Modified Files
+- `src/client/Main.client.lua` - Updated imports for Fusion UI components
+- `plans/refactor-prd.json` - Marked work item #28 as completed
+
+### Key Improvements
+- **Reactive Updates**: All UI components auto-update from Fusion state changes
+- **Cleaner Code**: Combined ~2046 lines legacy -> ~1600 lines Fusion with better organization
+- **Consistent Pattern**: Follow same architecture as other Fusion UI components
+- **Automatic Cleanup**: Fusion scope handles all instance cleanup
+- **Spring Animations**: Smooth animated transitions for popups and indicators
+
+### API Compatibility - OfflineEarningsUI
+- `create(config?)` / `destroy()`
+- `isCreated()` / `isVisible()`
+- `show(money, eggs, timeAway)` / `hide()`
+- `showFromResult(result)` / `showFromPreview(preview)`
+- `claim()` / `dismiss()`
+- `onClaim(callback)` / `onDismiss(callback)`
+- `getDisplayedEarnings()` / `getScreenGui()`
+- `getDefaultConfig()`
+
+### API Compatibility - Tutorial
+- `create(config?)` / `destroy()`
+- `isCreated()` / `isActive()` / `isPaused()`
+- `start()` / `skip()` / `complete()`
+- `nextStep()` / `completeStep(stepId)`
+- `pause()` / `resume()`
+- `getCurrentStep()` / `getCurrentStepIndex()` / `getTotalSteps()`
+- `onComplete(callback)` / `onSkip(callback)` / `onStepComplete(callback)`
+- `shouldShowTutorial(playerData)`
+- `getDefaultSteps()` / `getDefaultConfig()`
+
+### API Compatibility - PredatorWarning
+- `initialize()` / `cleanup()`
+- `show(predatorId, predatorType, threatLevel, position)`
+- `updatePosition(predatorId, position)`
+- `clear(predatorId)` / `clearAll()`
+- `hasActiveWarnings()` / `getActiveCount()`
+- `getActiveWarnings()` / `getSummary()`
+
+### Acceptance Criteria Met
+- ✅ All remaining UI works with Fusion
+- ✅ Reactive state management for all components
+- ✅ Build succeeds with rojo build
+- ✅ Legacy files deleted
+
+### Files Changed
+- `src/client/UI/Components/OfflineEarningsUI.lua` - NEW
+- `src/client/UI/Components/OfflineEarningsUI.spec.lua` - NEW
+- `src/client/UI/Components/Tutorial.lua` - NEW
+- `src/client/UI/Components/Tutorial.spec.lua` - NEW
+- `src/client/UI/Components/PredatorWarning.lua` - NEW
+- `src/client/UI/Components/PredatorWarning.spec.lua` - NEW
+- `src/client/OfflineEarningsUI.lua` - DELETED
+- `src/client/Tutorial.lua` - DELETED
+- `src/client/PredatorWarning.lua` - DELETED
+- `src/client/Main.client.lua` - MODIFIED: Updated imports
+- `plans/refactor-prd.json` - MODIFIED: Marked work item #28 as completed
+
+### Notes for Next Developer
+- Work Item #29 (Create UI Initialization Module) is the only remaining Fusion UI work item
+- All UI components now use Fusion reactive state
+- Import with: `local OfflineEarningsUI = require(UIComponents:WaitForChild("OfflineEarningsUI"))`
+- Import with: `local Tutorial = require(UIComponents:WaitForChild("Tutorial"))`
+- Import with: `local PredatorWarning = require(UIComponents:WaitForChild("PredatorWarning"))`
+- Components use Fusion.Spring for smooth animated transitions

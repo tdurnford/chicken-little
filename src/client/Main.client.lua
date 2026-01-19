@@ -31,7 +31,6 @@ local EggVisuals = require(ClientModules:WaitForChild("EggVisuals"))
 local ChickenSelling = require(ClientModules:WaitForChild("ChickenSelling"))
 local MobileTouchControls = require(ClientModules:WaitForChild("MobileTouchControls"))
 local SectionVisuals = require(ClientModules:WaitForChild("SectionVisuals"))
-local PredatorWarning = require(ClientModules:WaitForChild("PredatorWarning"))
 local TrapVisuals = require(ClientModules:WaitForChild("TrapVisuals"))
 
 -- Load Fusion UI components
@@ -45,6 +44,9 @@ local ShieldUI = require(UIComponents:WaitForChild("ShieldUI"))
 local DamageUI = require(UIComponents:WaitForChild("DamageUI"))
 local ChickenHealthBar = require(UIComponents:WaitForChild("ChickenHealthBar"))
 local PredatorHealthBar = require(UIComponents:WaitForChild("PredatorHealthBar"))
+local OfflineEarningsUI = require(UIComponents:WaitForChild("OfflineEarningsUI"))
+local Tutorial = require(UIComponents:WaitForChild("Tutorial"))
+local PredatorWarning = require(UIComponents:WaitForChild("PredatorWarning"))
 
 -- Load the event relay for bridging server events to visual modules
 local ClientEventRelay = require(ClientModules:WaitForChild("ClientEventRelay"))
