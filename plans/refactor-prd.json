@@ -453,7 +453,7 @@
       "category": "Knit Client",
       "title": "Create Client Bootstrap and Controllers Directory",
       "description": "Create the client-side Knit bootstrap and controller structure.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create src/client/Controllers/ directory",
         "Create src/client/KnitClient.lua bootstrap file",

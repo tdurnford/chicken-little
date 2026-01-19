@@ -1179,3 +1179,48 @@ Refactored Main.server.lua to only bootstrap Knit and deleted RemoteSetup.lua. C
 - MapService handles all map/section/spawning logic previously in Main.server.lua
 - GameLoopService coordinates the main game loop - services should implement Update(deltaTime) if they need per-frame updates
 - The legacy RemoteEvent handlers are gone - clients must use Knit controllers
+
+---
+
+## Session: 2026-01-19 (Work Item #15)
+
+### Completed: Create Client Bootstrap and Controllers Directory
+
+#### What Was Done
+Created the client-side Knit bootstrap infrastructure to mirror the server-side architecture:
+
+1. **Created Controllers directory structure**
+   - `src/client/Controllers/` - Directory for Knit controllers
+   - `src/client/Controllers/.gitkeep` - Placeholder to track empty directory
+
+2. **Created KnitClient.lua**
+   - Bootstrap module that mirrors KnitServer.lua pattern
+   - Auto-loads all controllers from Controllers directory
+   - Excludes .spec files from controller loading
+   - Provides `start()`, `isStarted()`, `getKnit()`, and `getService()` methods
+   - Uses Promise-based initialization with error handling
+
+3. **Updated Main.client.lua**
+   - Added KnitClient bootstrap at start of initialization
+   - Added documentation note about Knit controllers vs legacy code
+   - Legacy RemoteEvent code remains functional during incremental migration
+
+### Acceptance Criteria Met
+- ✅ Knit client starts without errors (builds successfully)
+- ✅ Controllers directory structure exists
+
+### Files Changed
+- `src/client/KnitClient.lua` - NEW: Client-side Knit bootstrap
+- `src/client/Controllers/.gitkeep` - NEW: Directory placeholder
+- `src/client/Main.client.lua` - MODIFIED: Added KnitClient bootstrap
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+
+### Notes for Next Developer
+- The client-side Knit infrastructure is now ready
+- Work Item #16 (Create PlayerDataController) should be the next step
+- Controllers should follow the Knit CreateController pattern
+- Use `KnitClient.getService("ServiceName")` to access server services
+- Legacy RemoteEvent handlers in Main.client.lua will be migrated incrementally

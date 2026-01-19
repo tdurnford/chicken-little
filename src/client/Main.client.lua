@@ -2,6 +2,9 @@
 	Main Client Script
 	Wires up all RemoteEvent listeners and initializes client-side systems.
 	Handles server event responses and updates local state/visuals accordingly.
+	
+	Note: Knit controllers are loaded via KnitClient for new client-side logic.
+	Legacy code below will be migrated to controllers incrementally.
 ]]
 
 -- Services
@@ -13,6 +16,11 @@ local TweenService = game:GetService("TweenService")
 
 -- Get client modules
 local ClientModules = script.Parent
+
+-- Start Knit client (loads and starts all controllers)
+local KnitClient = require(ClientModules:WaitForChild("KnitClient"))
+KnitClient.start()
+print("[Client] KnitClient started")
 local SoundEffects = require(ClientModules:WaitForChild("SoundEffects"))
 local ChickenVisuals = require(ClientModules:WaitForChild("ChickenVisuals"))
 local PredatorVisuals = require(ClientModules:WaitForChild("PredatorVisuals"))
@@ -1234,7 +1242,12 @@ ChickenVisuals.setOnSellPromptTriggered(function(chickenId: string)
   local visualState = ChickenVisuals.get(chickenId)
   if visualState then
     -- Trigger sell directly (starts confirmation flow)
-    ChickenSelling.startSell(chickenId, visualState.chickenType, visualState.rarity, visualState.accumulatedMoney)
+    ChickenSelling.startSell(
+      chickenId,
+      visualState.chickenType,
+      visualState.rarity,
+      visualState.accumulatedMoney
+    )
   end
 end)
 
