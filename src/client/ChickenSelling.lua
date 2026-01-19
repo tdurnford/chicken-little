@@ -535,7 +535,12 @@ function ChickenSelling.destroy()
 end
 
 -- Start selling a specific chicken directly (used by ProximityPrompt)
-function ChickenSelling.startSell(chickenId: string, chickenType: string?, rarity: string?, accumulatedMoney: number?): SellResult
+function ChickenSelling.startSell(
+  chickenId: string,
+  chickenType: string?,
+  rarity: string?,
+  accumulatedMoney: number?
+): SellResult
   if state.isConfirming then
     return {
       success = false,

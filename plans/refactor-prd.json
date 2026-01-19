@@ -704,7 +704,8 @@
       "category": "Fusion UI",
       "title": "Refactor InventoryUI with Fusion",
       "description": "Rewrite InventoryUI using Fusion and OnyxUI.",
-      "completed": false,
+      "completed": true,
+      "status": "done",
       "steps": [
         "Create src/client/UI/Components/InventoryUI.lua using Fusion",
         "Connect to PlayerState for reactive inventory display",

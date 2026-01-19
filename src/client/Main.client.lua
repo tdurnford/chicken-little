@@ -29,10 +29,8 @@ local ChickenVisuals = require(ClientModules:WaitForChild("ChickenVisuals"))
 local PredatorVisuals = require(ClientModules:WaitForChild("PredatorVisuals"))
 local PredatorHealthBar = require(ClientModules:WaitForChild("PredatorHealthBar"))
 local EggVisuals = require(ClientModules:WaitForChild("EggVisuals"))
-local MainHUD = require(ClientModules:WaitForChild("MainHUD"))
 local ChickenSelling = require(ClientModules:WaitForChild("ChickenSelling"))
 local MobileTouchControls = require(ClientModules:WaitForChild("MobileTouchControls"))
-local InventoryUI = require(ClientModules:WaitForChild("InventoryUI"))
 local HatchPreviewUI = require(ClientModules:WaitForChild("HatchPreviewUI"))
 local SectionVisuals = require(ClientModules:WaitForChild("SectionVisuals"))
 local StoreUI = require(ClientModules:WaitForChild("StoreUI"))
@@ -41,6 +39,11 @@ local ChickenHealthBar = require(ClientModules:WaitForChild("ChickenHealthBar"))
 local PredatorWarning = require(ClientModules:WaitForChild("PredatorWarning"))
 local ShieldUI = require(ClientModules:WaitForChild("ShieldUI"))
 local TrapVisuals = require(ClientModules:WaitForChild("TrapVisuals"))
+
+-- Load Fusion UI components
+local UIComponents = ClientModules:WaitForChild("UI"):WaitForChild("Components")
+local MainHUD = require(UIComponents:WaitForChild("MainHUD"))
+local InventoryUI = require(UIComponents:WaitForChild("InventoryUI"))
 
 -- Load the event relay for bridging server events to visual modules
 local ClientEventRelay = require(ClientModules:WaitForChild("ClientEventRelay"))

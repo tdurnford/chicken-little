@@ -618,4 +618,27 @@ function MainHUD.showBankruptcyAssistance(data: { moneyAwarded: number, message:
   end)
 end
 
+--[[
+	Legacy compatibility methods.
+	These are no-ops since Fusion uses reactive state.
+]]
+
+function MainHUD.updateFromPlayerData(_data: any)
+  -- No-op: Fusion version auto-updates from State.Player
+end
+
+function MainHUD.setInventoryItemCount(_count: number)
+  -- No-op: Inventory count is managed by TopbarPlus icon badge
+end
+
+function MainHUD.setChickenCount(_placed: number, _max: number)
+  -- No-op: Chicken count is reactive from State.Player.TotalChickens
+end
+
+function MainHUD.isAtChickenLimit(): boolean
+  -- Check against the reactive state
+  local total = State.Player.TotalChickens:get()
+  return total >= 15
+end
+
 return MainHUD
