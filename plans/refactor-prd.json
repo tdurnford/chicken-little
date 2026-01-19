@@ -419,7 +419,8 @@
       "category": "Knit Server",
       "title": "Refactor Main.server.lua and Delete RemoteSetup",
       "description": "Update Main.server.lua to only bootstrap Knit and delete RemoteSetup.lua.",
-      "completed": false,
+      "completed": true,
+      "status": "done",
       "steps": [
         "Remove all game logic from Main.server.lua",
         "Update Main.server.lua to only bootstrap Knit",
@@ -433,9 +434,14 @@
         "No direct Remote usage remains"
       ],
       "files": {
+        "create": [
+          "src/server/Services/MapService.lua",
+          "src/server/Services/MapService.spec.lua",
+          "src/server/Services/GameLoopService.lua",
+          "src/server/Services/GameLoopService.spec.lua"
+        ],
         "modify": [
-          "src/server/Main.server.lua",
-          "src/server/KnitServer.lua"
+          "src/server/Main.server.lua"
         ],
         "delete": [
           "src/server/RemoteSetup.lua"

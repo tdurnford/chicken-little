@@ -1086,3 +1086,96 @@ Created the LevelService and GameStateService Knit services that wrap XP/levelin
 - The existing XP award logic in Main.server.lua still works in parallel
 - ID #14 (Refactor Main.server.lua) is the next step to complete server-side Knit migration
 - Once all services are integrated (ID #14), the RemoteSetup handlers and legacy game loop code will be removed
+
+
+---
+
+## 2026-01-19 - Refactor Main.server.lua and Delete RemoteSetup (ID #14)
+
+### Summary
+Refactored Main.server.lua to only bootstrap Knit and deleted RemoteSetup.lua. Created two new services to handle the migrated functionality.
+
+### Features Implemented
+
+#### MapService (`src/server/Services/MapService.lua`)
+1. **Map State Management**
+   - Creates and manages MapGeneration.MapState internally
+   - Initializes SectionLabels for player name displays
+   - Exposes GetMapState() for other services
+
+2. **Player Section Assignment**
+   - Handles PlayerAdded/PlayerRemoving events
+   - Assigns sections on join, releases on leave
+   - Updates SectionLabels when players join/leave
+
+3. **Player Spawning**
+   - Sets up character spawning/respawning to section
+   - Tracks spawn points per player
+   - Handles teleportation to section spawn point
+
+4. **New Player Protection**
+   - Tracks join times for 2-minute protection period
+   - Exposes IsPlayerProtected(userId), GetProtectionRemaining(userId)
+   - Fires ProtectionStatusChanged client signal
+
+5. **Client Methods**
+   - `GetPlayerSection` - Returns player's assigned section
+   - `GetSectionPosition` - Returns section center position
+   - `IsPlayerProtected` - Returns protection status
+   - `GetMapState` - Returns summary of map state
+
+6. **Signals**
+   - Client: `SectionAssigned`, `ProtectionStatusChanged`
+   - Server: `PlayerSectionAssigned`, `MapStateChanged`
+
+#### GameLoopService (`src/server/Services/GameLoopService.lua`)
+1. **Main Game Loop Coordination**
+   - Runs Heartbeat-based update loop
+   - Coordinates calls to other services' Update methods
+   - Throttled store updates (every 1 second)
+
+2. **Service Integration**
+   - Gets references to all game services on start
+   - Calls Update(deltaTime) on services that have it
+   - Fires PreUpdate/PostUpdate signals for coordination
+
+3. **Loop Control**
+   - `StartLoop()` - Starts the game loop
+   - `StopLoop()` - Stops the game loop
+   - `IsRunning()` - Returns loop running state
+
+#### Main.server.lua (Refactored)
+- Now only ~35 lines
+- Initializes ProfileManager for data persistence
+- Starts KnitServer which loads all services
+- All game logic moved to Knit services
+
+#### RemoteSetup.lua (Deleted)
+- All RemoteEvent/RemoteFunction handling replaced by Knit
+- Services use Knit.CreateSignal() for client events
+- Services expose Client methods for RPC calls
+
+### Acceptance Criteria Met
+- ✅ Main.server.lua only contains Knit bootstrap
+- ✅ RemoteSetup.lua is deleted
+- ✅ No direct Remote usage remains (in active code)
+
+### Files Changed
+- `src/server/Main.server.lua` - Refactored to minimal Knit bootstrap
+- `src/server/Services/MapService.lua` - NEW: Map state, sections, spawning
+- `src/server/Services/MapService.spec.lua` - NEW: Tests for MapService
+- `src/server/Services/GameLoopService.lua` - NEW: Main game loop coordination
+- `src/server/Services/GameLoopService.spec.lua` - NEW: Tests for GameLoopService
+- `src/server/RemoteSetup.lua` - DELETED
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+
+### Notes for Next Developer
+- The server-side Knit migration is now COMPLETE
+- All services are auto-loaded by KnitServer from Services/ directory
+- ID #15 (Create Client Bootstrap) is the next step for client-side Knit
+- MapService handles all map/section/spawning logic previously in Main.server.lua
+- GameLoopService coordinates the main game loop - services should implement Update(deltaTime) if they need per-frame updates
+- The legacy RemoteEvent handlers are gone - clients must use Knit controllers
