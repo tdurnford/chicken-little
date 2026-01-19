@@ -792,7 +792,7 @@
       "category": "Fusion UI",
       "title": "Refactor Combat UI Components with Fusion",
       "description": "Rewrite ShieldUI, DamageUI, and health bars using Fusion.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create src/client/UI/Components/ShieldUI.lua using Fusion",
         "Create src/client/UI/Components/DamageUI.lua using Fusion",

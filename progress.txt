@@ -2505,3 +2505,136 @@ Rewrote both HatchPreviewUI and TradeUI modules using Fusion reactive state. Bot
 - Import with: `local TradeUI = require(UIComponents:WaitForChild("TradeUI"))`
 - HatchPreviewUI has E key binding for quick hatch confirmation
 - TradeUI uses confirmation status indicators (green = confirmed)
+
+---
+
+## Session: 2026-01-19 (Work Item #27)
+
+### Completed: Refactor Combat UI Components with Fusion
+
+#### What Was Done
+Rewrote all four combat UI components using Fusion reactive state. All components maintain full API compatibility with their legacy counterparts.
+
+**Created Files:**
+
+1. **src/client/UI/Components/ShieldUI.lua** (~370 lines)
+   - Fusion-based shield button UI with reactive state
+   - Progress bar, status label, timer display
+   - Tooltip on hover
+   - Maintains full API compatibility with legacy module
+
+2. **src/client/UI/Components/ShieldUI.spec.lua** (~220 lines)
+   - TestEZ tests for creation/destruction lifecycle
+   - Tests for visibility and status updates
+   - Tests for UI structure
+
+3. **src/client/UI/Components/DamageUI.lua** (~480 lines)
+   - Fusion-based damage UI with reactive health bar
+   - Floating damage/money loss numbers
+   - Knockback and incapacitation overlays
+   - Maintains full API compatibility with legacy module
+
+4. **src/client/UI/Components/DamageUI.spec.lua** (~290 lines)
+   - TestEZ tests for creation/cleanup lifecycle
+   - Tests for damage/knockback/incapacitation effects
+   - Tests for health bar updates
+
+5. **src/client/UI/Components/ChickenHealthBar.lua** (~260 lines)
+   - Fusion-based billboard health bar for chickens
+   - Reactive health percentage and color
+   - Auto-visibility based on health state
+   - Maintains full API compatibility with legacy module
+
+6. **src/client/UI/Components/ChickenHealthBar.spec.lua** (~260 lines)
+   - TestEZ tests for creation/destruction
+   - Tests for health updates and visibility
+   - Tests for summary/count functions
+
+7. **src/client/UI/Components/PredatorHealthBar.lua** (~350 lines)
+   - Fusion-based billboard health bar for predators
+   - Threat level colors, predator name display
+   - Floating damage numbers
+   - Maintains full API compatibility with legacy module
+
+8. **src/client/UI/Components/PredatorHealthBar.spec.lua** (~270 lines)
+   - TestEZ tests for creation/destruction
+   - Tests for health/damage updates
+   - Tests for damage number display
+
+**Deleted Files:**
+- `src/client/ShieldUI.lua` - Legacy imperative implementation (~413 lines)
+- `src/client/DamageUI.lua` - Legacy imperative implementation (~479 lines)
+- `src/client/ChickenHealthBar.lua` - Legacy imperative implementation (~285 lines)
+- `src/client/PredatorHealthBar.lua` - Legacy imperative implementation (~361 lines)
+
+**Modified Files:**
+- `src/client/Main.client.lua` - Updated imports for Fusion UI components
+- `plans/refactor-prd.json` - Marked work item #27 as completed
+
+### Key Improvements
+- **Reactive Updates**: All health bars auto-update from Fusion state changes
+- **Cleaner Code**: Combined ~1538 lines legacy -> ~1460 lines Fusion with better organization
+- **Consistent Pattern**: Follow same architecture as other Fusion UI components
+- **Automatic Cleanup**: Fusion scope handles all instance cleanup
+- **Spring Animations**: Health bars use Spring for smooth animated transitions
+
+### API Compatibility - ShieldUI
+- `create(props?)` / `destroy()`
+- `isCreated()` / `setVisible(visible)`
+- `updateStatus(data)` / `onActivate(callback)`
+- `showActivationFeedback(success, message)`
+- `getButtonFrame()` / `getScreenGui()`
+
+### API Compatibility - DamageUI
+- `initialize(props?)` / `cleanup()`
+- `isCreated()` / `getScreenGui()`
+- `showDamageNumber(damage, source?)` / `showMoneyLoss(amount, source?)`
+- `showKnockback(duration, source?)` / `showIncapacitation(duration, attackerName?)`
+- `updateHealthBar(health, max, showBar?)` / `hideHealthBar()`
+- `update()` (no-op for compatibility)
+- `onPlayerDamaged(data)` / `onPlayerKnockback(data)` / `onPlayerHealthChanged(data)`
+- `onPlayerIncapacitated(data)` / `onMoneyLost(data)`
+
+### API Compatibility - ChickenHealthBar
+- `create(chickenId, chickenType, model)` / `destroy(chickenId)`
+- `updateHealth(chickenId, health)` / `setMaxHealth(chickenId, maxHealth)`
+- `get(chickenId)` / `getAll()` / `getActiveCount()` / `getVisibleCount()`
+- `cleanup()` / `getSummary()`
+
+### API Compatibility - PredatorHealthBar
+- `create(predatorId, predatorType, threatLevel, model)` / `destroy(predatorId)`
+- `updateHealth(predatorId, health)` / `applyDamage(predatorId, damage)`
+- `showDamageNumber(predatorId, damage)`
+- `get(predatorId)` / `getAll()` / `getActiveCount()`
+- `cleanup()` / `getSummary()`
+
+### Acceptance Criteria Met
+- ✅ All combat UI works with Fusion
+- ✅ Health bars update reactively (Fusion Value/Computed/Spring)
+- ✅ Build succeeds with rojo build
+- ✅ Legacy files deleted
+
+### Files Changed
+- `src/client/UI/Components/ShieldUI.lua` - NEW
+- `src/client/UI/Components/ShieldUI.spec.lua` - NEW
+- `src/client/UI/Components/DamageUI.lua` - NEW
+- `src/client/UI/Components/DamageUI.spec.lua` - NEW
+- `src/client/UI/Components/ChickenHealthBar.lua` - NEW
+- `src/client/UI/Components/ChickenHealthBar.spec.lua` - NEW
+- `src/client/UI/Components/PredatorHealthBar.lua` - NEW
+- `src/client/UI/Components/PredatorHealthBar.spec.lua` - NEW
+- `src/client/ShieldUI.lua` - DELETED
+- `src/client/DamageUI.lua` - DELETED
+- `src/client/ChickenHealthBar.lua` - DELETED
+- `src/client/PredatorHealthBar.lua` - DELETED
+- `src/client/Main.client.lua` - MODIFIED: Updated imports
+- `plans/refactor-prd.json` - MODIFIED: Marked work item #27 as completed
+
+### Notes for Next Developer
+- Work Item #28 (Refactor Remaining UI Components with Fusion) is the logical next step
+- All combat UI components rely on Theme module for consistent styling
+- Import with: `local ShieldUI = require(UIComponents:WaitForChild("ShieldUI"))`
+- Import with: `local DamageUI = require(UIComponents:WaitForChild("DamageUI"))`
+- Import with: `local ChickenHealthBar = require(UIComponents:WaitForChild("ChickenHealthBar"))`
+- Import with: `local PredatorHealthBar = require(UIComponents:WaitForChild("PredatorHealthBar"))`
+- Health bars use Fusion.Spring for smooth animated health transitions
