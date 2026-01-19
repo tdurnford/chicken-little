@@ -784,3 +784,75 @@ Created the StoreService Knit service that wraps all store-related server logic,
 - Use `StoreService:GetAvailableItems()` to get all purchasable items with stock info
 - ID #10 (TrapService) is the next logical step to continue the Knit migration
 - Once all services are migrated (ID #14), the RemoteSetup handlers will be removed
+
+
+
+---
+
+## 2026-01-19 - Create TrapService (ID #10)
+
+### Summary
+Created the TrapService Knit service that wraps all trap-related server logic, migrating functionality from Main.server.lua into a clean service-based architecture.
+
+### Features Implemented
+1. **TrapService Module** (`src/server/Services/TrapService.lua`)
+   - Knit service wrapping TrapPlacement and TrapCatching modules
+   - Client-exposed methods: `PlaceTrap`, `PlaceTrapFromInventory`, `PickupTrap`, `MoveTrap`, `CollectTrap`, `CollectAllTraps`, `GetPlacedTraps`, `GetTrapSummary`, `GetCatchingSummary`, `GetAvailableSpots`, `GetPendingReward`, `GetTrapConfig`, `GetAllTrapConfigs`, `GetCatchProbability`, `CanPlaceMoreOfType`
+   - Client signals: `TrapPlaced`, `TrapPickedUp`, `TrapCaught`, `TrapCooldownStarted`, `TrapCooldownEnded`, `PredatorCollected`
+   - Server-only methods: `GetPlacedTraps`, `GetTrapState`, `GetTrapSummary`, `GetCatchingSummary`, `GetAvailableSpots`, `GetOccupiedSpots`, `IsSpotAvailable`, `GetTrapAtSpot`, `CanPlaceMoreOfType`, `GetRemainingSlots`, `GetReadyTraps`, `GetTrapsWithPredators`, `GetTrapsOnCooldown`, `CanCatchPredator`, `GetCatchProbability`, `GetCombinedCatchProbability`, `GetBestTrapForPredator`, `GetTotalCaughtReward`, `PlaceTrap`, `PlaceTrapFromInventory`, `PickupTrap`, `MoveTrap`, `AttemptCatch`, `AttemptCatchWithAllTraps`, `CollectCaughtPredator`, `CollectAllCaughtPredators`, `FindTrap`, `GetTrapInfo`
+   - Server signals: `TrapPlacedSignal`, `TrapRemovedSignal`, `PredatorCaughtSignal`, `PredatorCollectedSignal`
+
+2. **Trap Placement Operations**
+   - Place new traps at spots (with purchase)
+   - Place existing traps from inventory
+   - Pick up (sell) traps with refund
+   - Move traps between spots
+   - Validates spot availability and placement limits
+
+3. **Trap Catching Mechanics**
+   - Attempt catch with specific trap
+   - Attempt catch with all available traps
+   - Catch probability calculations based on trap tier vs predator difficulty
+   - Cooldown management on failed catches
+   - Predator storage in traps
+
+4. **Predator Collection**
+   - Collect reward from individual trapped predators
+   - Collect all trapped predators at once
+   - Automatic money reward on collection
+   - Event broadcasting for UI sync
+
+5. **Integration with PlayerDataService**
+   - Uses `PlayerDataService:GetData()` to retrieve player trap data
+   - Uses `PlayerDataService:UpdateData()` for all trap mutations
+   - All operations validate player data before processing
+
+6. **Event Broadcasting**
+   - `TrapPlaced` fires to all clients for visual sync
+   - `TrapPickedUp` fires to all clients for visual removal
+   - `TrapCaught` fires to owner when predator caught
+   - `TrapCooldownStarted` fires to owner for UI cooldown display
+   - `PredatorCollected` fires to owner with reward details
+   - Server signals allow other services to react to trap events
+
+### Acceptance Criteria Met
+- ✅ Trap operations work through TrapService
+- ✅ Traps catch predators correctly (via TrapCatching wrapper)
+- ✅ Tests created (TrapService.spec.lua)
+
+### Files Changed
+- `src/server/Services/TrapService.lua` - NEW: Knit service for trap operations
+- `src/server/Services/TrapService.spec.lua` - NEW: Tests for TrapService
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+
+### Notes for Next Developer
+- TrapService is ready but NOT integrated into Main.server.lua yet (that's ID #14)
+- The legacy RemoteEvent handlers in Main.server.lua still work in parallel
+- Call `TrapService:AttemptCatchWithAllTraps()` when predator enters trap range
+- Use `TrapService:CollectAllCaughtPredators()` for batch collection
+- The service integrates with PredatorService for predator type validation
+- ID #11 (CombatService) is the next logical step to continue the Knit migration
+- Once all services are migrated (ID #14), the RemoteSetup handlers will be removed

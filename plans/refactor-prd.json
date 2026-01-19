@@ -314,7 +314,7 @@
       "category": "Knit Server",
       "title": "Create TrapService",
       "description": "Create the TrapService that handles trap placement and catching.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create src/server/Services/TrapService.lua",
         "Migrate trap placement logic",
