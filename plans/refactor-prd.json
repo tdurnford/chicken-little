@@ -969,7 +969,7 @@
       "category": "Testing",
       "title": "Create Shared Logic Module Tests",
       "description": "Create TestEZ spec files for shared game logic modules.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create PlayerData.spec.lua",
         "Create EggHatching.spec.lua",
