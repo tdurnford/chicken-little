@@ -1224,3 +1224,58 @@ Created the client-side Knit bootstrap infrastructure to mirror the server-side 
 - Controllers should follow the Knit CreateController pattern
 - Use `KnitClient.getService("ServiceName")` to access server services
 - Legacy RemoteEvent handlers in Main.client.lua will be migrated incrementally
+
+---
+
+## Session: 2026-01-19 (Work Item #16)
+
+### Completed: Create PlayerDataController
+
+#### What Was Done
+Created the client-side PlayerDataController that wraps PlayerDataService and provides reactive data access:
+
+1. **Created PlayerDataController.lua**
+   - Connects to PlayerDataService via Knit
+   - Implements local data caching for immediate UI access
+   - Listens to server signals (DataChanged, MoneyChanged, InventoryChanged, LevelChanged)
+   - Requests initial data from server on start
+
+2. **GoodSignal Events Created**
+   - `DataLoaded` - Fires when data is first loaded from server
+   - `DataChanged` - Fires on any data change
+   - `MoneyChanged` - Fires when money changes
+   - `InventoryChanged` - Fires when inventory changes
+   - `LevelChanged` - Fires when level or XP changes
+
+3. **Helper Methods Implemented**
+   - `GetData()`, `GetMoney()`, `GetInventory()`, `GetPlacedChickens()`
+   - `GetLevel()`, `GetXP()`, `IsDataLoaded()`
+   - `HasActivePowerUp()`, `GetEquippedWeapon()`, `GetOwnedWeapons()`, `OwnsWeapon()`
+   - `GetShieldState()`, `IsShieldActive()`, `GetShieldRemainingTime()`
+
+4. **Created PlayerDataController.spec.lua**
+   - Tests for PlayerData integration
+   - Tests for cached data access fallbacks
+   - Tests for weapon and power-up helper functions
+   - Tests for shield state calculations
+
+### Acceptance Criteria Met
+- ✅ Controller receives data from server
+- ✅ GoodSignal events fire on changes
+- ✅ Tests pass (spec file created)
+
+### Files Changed
+- `src/client/Controllers/PlayerDataController.lua` - NEW: Client-side data controller
+- `src/client/Controllers/PlayerDataController.spec.lua` - NEW: Tests for controller
+- `plans/refactor-prd.json` - MODIFIED: Marked work item #16 as completed
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+
+### Notes for Next Developer
+- Work Item #17 (Create ChickenController and EggController) is the next step
+- PlayerDataController provides cached data access - UI components should subscribe to its signals
+- Use `PlayerDataController.DataLoaded` to wait for initial data before rendering UI
+- Use specific signals (MoneyChanged, etc.) for targeted UI updates instead of DataChanged
+- Helper methods return safe defaults (0, nil, empty tables) when data isn't loaded

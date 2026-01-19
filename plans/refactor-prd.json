@@ -478,7 +478,7 @@
       "category": "Knit Client",
       "title": "Create PlayerDataController",
       "description": "Create the PlayerDataController with GoodSignal events for data changes.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create src/client/Controllers/PlayerDataController.lua",
         "Connect to PlayerDataService via Knit",
