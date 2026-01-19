@@ -733,7 +733,7 @@
       "category": "Fusion UI",
       "title": "Refactor StoreUI with Fusion",
       "description": "Rewrite StoreUI using Fusion and OnyxUI.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create src/client/UI/Components/StoreUI.lua using Fusion",
         "Connect to StoreController for operations",

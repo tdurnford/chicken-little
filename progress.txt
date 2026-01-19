@@ -2334,3 +2334,74 @@ The new InventoryUI maintains full API compatibility:
 - Tab selection clears the current item selection
 - Traps tab is ready but requires PlayerState.Traps to be implemented
 
+
+
+---
+
+## Session: 2026-01-19 (Work Item #25)
+
+### Completed: Refactor StoreUI with Fusion
+
+#### What Was Done
+Rewrote the StoreUI module using Fusion reactive state. The new component displays eggs, traps, power-ups, and weapons with automatic updates from PlayerState.
+
+**Created Files:**
+
+1. **src/client/UI/Components/StoreUI.lua** (~1100 lines)
+   - Fusion-based store panel with reactive state bindings
+   - Four tabs: Eggs, Traps (Supplies), Power-ups (Boosts), Weapons
+   - Card components for each item type with buy buttons
+   - Restock timer updates automatically
+   - Maintains full API compatibility with legacy module
+
+2. **src/client/UI/Components/StoreUI.spec.lua** (~230 lines)
+   - TestEZ tests for creation/destruction lifecycle
+   - Tests for visibility and tab management
+   - Tests for data updates (weapons, power-ups)
+   - Tests for legacy callback setters
+
+**Deleted Files:**
+- `src/client/StoreUI.lua` - Legacy imperative implementation (~2393 lines)
+
+**Modified Files:**
+- `src/client/Main.client.lua` - Updated import paths for Fusion UI components
+- `plans/refactor-prd.json` - Marked work item #25 as completed
+
+### Key Improvements
+- **Reactive Updates**: Store auto-updates from State.Player.Money for affordability
+- **Cleaner Code**: ~1100 lines vs ~2393 lines (54% reduction)
+- **Automatic Timer**: Restock timer uses RunService.Heartbeat for smooth updates
+- **Automatic Cleanup**: Fusion scope handles all instance cleanup
+
+### API Compatibility
+The new StoreUI maintains full API compatibility:
+- `create(props?)` / `destroy()`
+- `isCreated()` / `isOpen()` / `isVisible()`
+- `open()` / `close()` / `toggle()` / `setVisible()`
+- `setTab()` / `getCurrentTab()`
+- `updateMoney()` (no-op, uses reactive state)
+- `updateOwnedWeapons()` / `updateActivePowerUps()`
+- `refreshInventory()` / `updateItemStock()`
+- `onPurchase()` / `onReplenish()` / `onRobuxPurchase()`
+- `onPowerUpPurchase()` / `onTrapPurchase()` / `onWeaponPurchase()`
+
+### Acceptance Criteria Met
+- ✅ Store displays items with prices
+- ✅ Buy/sell buttons work correctly
+- ✅ Disabled states show correctly (sold out, can't afford, already owned)
+- ✅ Build succeeds with rojo build
+- ✅ Legacy StoreUI.lua deleted
+
+### Files Changed
+- `src/client/UI/Components/StoreUI.lua` - NEW
+- `src/client/UI/Components/StoreUI.spec.lua` - NEW
+- `src/client/StoreUI.lua` - DELETED
+- `src/client/Main.client.lua` - MODIFIED: Updated import paths
+- `plans/refactor-prd.json` - MODIFIED: Marked work item #25 as completed
+
+### Notes for Next Developer
+- Work Item #26 (Refactor HatchPreviewUI and TradeUI with Fusion) is the logical next step
+- StoreUI relies on State.initialize() being called first
+- Import with: `local StoreUI = require(UIComponents:WaitForChild("StoreUI"))`
+- The Store automatically reacts to State.Player.Money for affordability
+- Power-up and weapon ownership data needs to be updated via updateActivePowerUps() and updateOwnedWeapons()
