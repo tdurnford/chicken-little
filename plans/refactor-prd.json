@@ -761,7 +761,8 @@
       "category": "Fusion UI",
       "title": "Refactor HatchPreviewUI and TradeUI with Fusion",
       "description": "Rewrite HatchPreviewUI and TradeUI using Fusion and OnyxUI.",
-      "completed": false,
+      "completed": true,
+      "status": "done",
       "steps": [
         "Create src/client/UI/Components/HatchPreviewUI.lua using Fusion",
         "Create src/client/UI/Components/TradeUI.lua using Fusion",

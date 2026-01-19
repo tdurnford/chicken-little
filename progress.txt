@@ -2405,3 +2405,103 @@ The new StoreUI maintains full API compatibility:
 - Import with: `local StoreUI = require(UIComponents:WaitForChild("StoreUI"))`
 - The Store automatically reacts to State.Player.Money for affordability
 - Power-up and weapon ownership data needs to be updated via updateActivePowerUps() and updateOwnedWeapons()
+
+
+---
+
+## Session: 2026-01-19 (Work Item #26)
+
+### Completed: Refactor HatchPreviewUI and TradeUI with Fusion
+
+#### What Was Done
+Rewrote both HatchPreviewUI and TradeUI modules using Fusion reactive state. Both components maintain full API compatibility with their legacy counterparts.
+
+**Created Files:**
+
+1. **src/client/UI/Components/HatchPreviewUI.lua** (~630 lines)
+   - Fusion-based hatch preview popup with reactive state
+   - Shows possible chicken outcomes with probabilities
+   - Displays hatch result with celebratory animation
+   - E key binding for quick hatching
+   - Maintains full API compatibility with legacy module
+
+2. **src/client/UI/Components/HatchPreviewUI.spec.lua** (~180 lines)
+   - TestEZ tests for creation/destruction lifecycle
+   - Tests for visibility and egg preview tracking
+   - Tests for callbacks (onHatch, onCancel)
+   - Tests for result display
+
+3. **src/client/UI/Components/TradeUI.lua** (~780 lines)
+   - Fusion-based trading UI with reactive state
+   - Trade request notifications
+   - Local/partner offer management with item slots
+   - Confirmation flow with status indicators
+   - Maintains full API compatibility with legacy module
+
+4. **src/client/UI/Components/TradeUI.spec.lua** (~260 lines)
+   - TestEZ tests for creation/destruction lifecycle
+   - Tests for trade state management
+   - Tests for offer manipulation (add/remove items)
+   - Tests for confirmation checks
+   - Tests for trade requests
+
+**Deleted Files:**
+- `src/client/HatchPreviewUI.lua` - Legacy imperative implementation (~870 lines)
+- `src/client/TradeUI.lua` - Legacy imperative implementation (~914 lines)
+
+**Modified Files:**
+- `src/client/Main.client.lua` - Updated imports for Fusion UI components
+- `plans/refactor-prd.json` - Marked work item #26 as completed
+
+### Key Improvements
+- **Reactive Updates**: Both UIs auto-update from Fusion state changes
+- **Cleaner Code**: Combined ~1784 lines legacy -> ~1410 lines Fusion (21% reduction)
+- **Consistent Pattern**: Follow same architecture as InventoryUI and StoreUI
+- **Automatic Cleanup**: Fusion scope handles all instance cleanup
+
+### API Compatibility - HatchPreviewUI
+- `create(props?)` / `destroy()`
+- `isCreated()` / `isVisible()`
+- `show(eggId, eggType)` / `hide()` / `cancel()`
+- `confirmHatch()` / `showResult(chickenType, rarity)`
+- `getCurrentEgg()` / `getPreviewData(eggType)`
+- `onHatch(callback)` / `onCancel(callback)`
+- `getRarityColors()` / `getDefaultConfig()` / `getScreenGui()`
+
+### API Compatibility - TradeUI
+- `create(props?)` / `destroy()`
+- `isCreated()` / `isVisible()` / `isTradeActive()`
+- `show()` / `hide()` / `toggle()`
+- `startTrade(partnerId, partnerName)` / `endTrade(status)`
+- `addItemToOffer(item)` / `removeItemFromOffer(itemId)`
+- `updatePartnerOffer(items, confirmed)`
+- `confirmOffer()` / `unconfirmOffer()` / `areBothConfirmed()`
+- `showTradeRequest()` / `hideTradeRequest()` / `clearPendingRequests()`
+- `getTradeState()` / `getLocalOffer()` / `getPartnerOffer()` / `getPartnerInfo()`
+- `setOnTradeRequest/Accept/Decline()` / `setOnAddItem/RemoveItem()` / `setOnConfirm/Cancel()`
+- `getPendingRequests()` / `getScreenGui()` / `resetTradeState()` / `updateDisplay()`
+
+### Acceptance Criteria Met
+- ✅ HatchPreviewUI works correctly with Fusion
+- ✅ TradeUI works correctly with Fusion
+- ✅ Reactive updates work (Fusion Value/Computed)
+- ✅ Build succeeds with rojo build
+- ✅ Legacy files deleted
+
+### Files Changed
+- `src/client/UI/Components/HatchPreviewUI.lua` - NEW
+- `src/client/UI/Components/HatchPreviewUI.spec.lua` - NEW
+- `src/client/UI/Components/TradeUI.lua` - NEW
+- `src/client/UI/Components/TradeUI.spec.lua` - NEW
+- `src/client/HatchPreviewUI.lua` - DELETED
+- `src/client/TradeUI.lua` - DELETED
+- `src/client/Main.client.lua` - MODIFIED: Updated imports
+- `plans/refactor-prd.json` - MODIFIED: Marked work item #26 as completed
+
+### Notes for Next Developer
+- Work Item #27 (Refactor Combat UI Components with Fusion) is the logical next step
+- HatchPreviewUI and TradeUI rely on State.initialize() being called first for full functionality
+- Import with: `local HatchPreviewUI = require(UIComponents:WaitForChild("HatchPreviewUI"))`
+- Import with: `local TradeUI = require(UIComponents:WaitForChild("TradeUI"))`
+- HatchPreviewUI has E key binding for quick hatch confirmation
+- TradeUI uses confirmation status indicators (green = confirmed)

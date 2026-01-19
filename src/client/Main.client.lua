@@ -31,7 +31,6 @@ local PredatorHealthBar = require(ClientModules:WaitForChild("PredatorHealthBar"
 local EggVisuals = require(ClientModules:WaitForChild("EggVisuals"))
 local ChickenSelling = require(ClientModules:WaitForChild("ChickenSelling"))
 local MobileTouchControls = require(ClientModules:WaitForChild("MobileTouchControls"))
-local HatchPreviewUI = require(ClientModules:WaitForChild("HatchPreviewUI"))
 local SectionVisuals = require(ClientModules:WaitForChild("SectionVisuals"))
 local DamageUI = require(ClientModules:WaitForChild("DamageUI"))
 local ChickenHealthBar = require(ClientModules:WaitForChild("ChickenHealthBar"))
@@ -44,6 +43,8 @@ local UIComponents = ClientModules:WaitForChild("UI"):WaitForChild("Components")
 local MainHUD = require(UIComponents:WaitForChild("MainHUD"))
 local InventoryUI = require(UIComponents:WaitForChild("InventoryUI"))
 local StoreUI = require(UIComponents:WaitForChild("StoreUI"))
+local HatchPreviewUI = require(UIComponents:WaitForChild("HatchPreviewUI"))
+local TradeUI = require(UIComponents:WaitForChild("TradeUI"))
 
 -- Load the event relay for bridging server events to visual modules
 local ClientEventRelay = require(ClientModules:WaitForChild("ClientEventRelay"))
