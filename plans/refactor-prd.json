@@ -943,7 +943,8 @@
       "category": "Testing",
       "title": "Create Additional Config Tests",
       "description": "Create TestEZ spec files for remaining configuration modules.",
-      "completed": false,
+      "completed": true,
+      "status": "done",
       "steps": [
         "Create LevelConfig.spec.lua",
         "Create XPConfig.spec.lua",
