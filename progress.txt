@@ -1560,3 +1560,80 @@ Installed TestEZ and created the complete test infrastructure:
 - TestUtilities provides mock functions - use `.calls` to inspect call history
 - Mocks module provides ready-to-use mock objects for common Roblox/Knit components
 - 22 existing .spec.lua files will be discovered by the TestRunner
+
+---
+
+## Session: 2026-01-19 (Work Item #31)
+
+### Completed: Create Config Module Tests
+
+#### What Was Done
+Created comprehensive TestEZ spec files for all 5 core configuration modules:
+
+1. **ChickenConfig.spec.lua** (9.5KB)
+   - Tests for get(), getAll(), getByRarity()
+   - Tests for getRarityMultiplier(), getRarityEggInterval()
+   - Tests for isValidType(), getAllTypes(), getRarities()
+   - Tests for calculateEarnings(), getMaxHealth(), getHealthRegen()
+   - Tests for getMaxHealthForType(), getHealthRegenForType(), getMaxChickensPerArea()
+   - Config data validity tests (positive values, matching keys)
+
+2. **EggConfig.spec.lua** (8KB)
+   - Tests for get(), getAll(), getByRarity()
+   - Tests for getRarityPriceMultiplier(), isValidType(), getAllTypes()
+   - Tests for validateProbabilities(), validateAll()
+   - Tests for selectHatchOutcome(), selectHatchOutcomeWithLuck()
+   - Tests for getRarities(), getStarterEggType()
+   - Config data validity tests (prices, probabilities summing to 100)
+
+3. **PredatorConfig.spec.lua** (12KB)
+   - Tests for get(), getAll(), getByThreatLevel()
+   - Tests for getThreatRewardMultiplier(), getThreatSpawnWeight()
+   - Tests for getThreatAttackInterval(), getThreatDamage(), getDamage()
+   - Tests for isValidType(), getAllTypes(), getThreatLevels()
+   - Tests for getTotalSpawnWeight(), selectRandomPredator()
+   - Tests for validateAll(), getBatHitsRequired(), getTrapEffectiveness()
+   - Tests for calculateAttackDamage(), getSpawnProbability()
+   - Config data validity tests (difficulty range, positive values)
+
+4. **TrapConfig.spec.lua** (12KB)
+   - Tests for get(), getAll(), getByTier()
+   - Tests for getTierLevel(), getTierPrice(), isValidType()
+   - Tests for getAllTypes(), getTiers()
+   - Tests for calculateCatchProbability(), getEffectivenessRating()
+   - Tests for canEffectivelyCatch(), getMinimumTierForPredator()
+   - Tests for getAllSorted(), getMaxTotalTraps(), getAffordableTraps()
+   - Tests for validateAll(), getStoreInfo()
+   - Config data validity tests (tier levels, prices, durations)
+
+5. **WeaponConfig.spec.lua** (10KB)
+   - Tests for get(), getAll(), getPurchasable(), getAllForStore()
+   - Tests for getTierLevel(), getTierColor(), isValid()
+   - Tests for getDefaultWeapon(), getDamage(), getSwingCooldown()
+   - Tests for getRange(), getKnockbackParams(), compare()
+   - Config data validity tests (tier levels, prices, stats)
+
+### Acceptance Criteria Met
+- ✅ All config modules have spec files (5 files created)
+- ✅ Tests verify config validity (data validation tests in each file)
+- ✅ Tests pass (build succeeds with rojo build)
+
+### Files Changed
+- `src/shared/ChickenConfig.spec.lua` - NEW: 270+ lines of tests
+- `src/shared/EggConfig.spec.lua` - NEW: 230+ lines of tests
+- `src/shared/PredatorConfig.spec.lua` - NEW: 350+ lines of tests
+- `src/shared/TrapConfig.spec.lua` - NEW: 350+ lines of tests
+- `src/shared/WeaponConfig.spec.lua` - NEW: 290+ lines of tests
+- `plans/refactor-prd.json` - MODIFIED: Marked work item #31 as completed
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+- Total: 27 spec files now in codebase (22 existing + 5 new)
+
+### Notes for Next Developer
+- Work Item #32 (Create Additional Config Tests) is next - covers LevelConfig, XPConfig, BalanceConfig, PowerUpConfig
+- Test patterns established: describe blocks for each method, config validity tests at end
+- All tests use game:GetService("ReplicatedStorage") pattern for module loading
+- Tests are designed to run in Roblox Studio with TestEZ
+- Each spec file tests both happy paths and edge cases (invalid inputs)

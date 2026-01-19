@@ -915,7 +915,7 @@
       "category": "Testing",
       "title": "Create Config Module Tests",
       "description": "Create TestEZ spec files for all configuration modules.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create ChickenConfig.spec.lua",
         "Create EggConfig.spec.lua",
