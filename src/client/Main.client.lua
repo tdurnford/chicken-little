@@ -1,10 +1,11 @@
 --[[
 	Main Client Script
-	Wires up all RemoteEvent listeners and initializes client-side systems.
-	Handles server event responses and updates local state/visuals accordingly.
+	Bootstraps Knit controllers and initializes client-side UI systems.
 	
-	Note: Knit controllers are loaded via KnitClient for new client-side logic.
-	Legacy code below will be migrated to controllers incrementally.
+	Architecture:
+	- KnitClient loads and starts all controllers (handle state/server communication)
+	- ClientEventRelay handles server RemoteEvents -> visual module updates
+	- UI modules handle rendering and user interaction
 ]]
 
 -- Services
@@ -17,10 +18,12 @@ local TweenService = game:GetService("TweenService")
 -- Get client modules
 local ClientModules = script.Parent
 
--- Start Knit client (loads and starts all controllers)
+-- Start Knit client first (loads and starts all controllers)
 local KnitClient = require(ClientModules:WaitForChild("KnitClient"))
 KnitClient.start()
 print("[Client] KnitClient started")
+
+-- Load visual/UI modules
 local SoundEffects = require(ClientModules:WaitForChild("SoundEffects"))
 local ChickenVisuals = require(ClientModules:WaitForChild("ChickenVisuals"))
 local PredatorVisuals = require(ClientModules:WaitForChild("PredatorVisuals"))
@@ -39,50 +42,23 @@ local PredatorWarning = require(ClientModules:WaitForChild("PredatorWarning"))
 local ShieldUI = require(ClientModules:WaitForChild("ShieldUI"))
 local TrapVisuals = require(ClientModules:WaitForChild("TrapVisuals"))
 
+-- Load the event relay for bridging server events to visual modules
+local ClientEventRelay = require(ClientModules:WaitForChild("ClientEventRelay"))
+
+-- Get Knit for accessing controllers
+local Packages = ReplicatedStorage:WaitForChild("Packages")
+local Knit = require(Packages:WaitForChild("Knit"))
+
 -- Get shared modules for position calculations
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local MapGeneration = require(Shared:WaitForChild("MapGeneration"))
 local PlayerSection = require(Shared:WaitForChild("PlayerSection"))
 local BaseballBat = require(Shared:WaitForChild("BaseballBat"))
 local AreaShield = require(Shared:WaitForChild("AreaShield"))
-local WorldEgg = require(Shared:WaitForChild("WorldEgg"))
 local TrapPlacement = require(Shared:WaitForChild("TrapPlacement"))
 
 -- Local player reference
 local localPlayer = Players.LocalPlayer
-
--- Local state cache for player data
-local playerDataCache: { [string]: any } = {}
-
--- Track world eggs with their visual models and proximity prompts
-local worldEggVisuals: { [string]: { model: Model, prompt: ProximityPrompt } } = {}
-
--- Wait for Remotes folder from server
-local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
-if not Remotes then
-  warn("[Client] Remotes folder not found in ReplicatedStorage")
-  return
-end
-
--- Helper to get RemoteEvent safely
-local function getEvent(name: string): RemoteEvent?
-  local event = Remotes:FindFirstChild(name)
-  if event and event:IsA("RemoteEvent") then
-    return event :: RemoteEvent
-  end
-  warn("[Client] RemoteEvent not found:", name)
-  return nil
-end
-
--- Helper to get RemoteFunction safely
-local function getFunction(name: string): RemoteFunction?
-  local func = Remotes:FindFirstChild(name)
-  if func and func:IsA("RemoteFunction") then
-    return func :: RemoteFunction
-  end
-  warn("[Client] RemoteFunction not found:", name)
-  return nil
-end
 
 -- Initialize client systems
 SoundEffects.initialize()
@@ -124,1016 +100,195 @@ else
   warn("[Client] Cannot create ShieldUI - no MainHUD ScreenGui")
 end
 
+-- Configure and start the event relay (bridges server events to visual modules)
+ClientEventRelay.configure({
+  soundEffects = SoundEffects,
+  chickenVisuals = ChickenVisuals,
+  chickenHealthBar = ChickenHealthBar,
+  predatorVisuals = PredatorVisuals,
+  predatorHealthBar = PredatorHealthBar,
+  predatorWarning = PredatorWarning,
+  eggVisuals = EggVisuals,
+  trapVisuals = TrapVisuals,
+  damageUI = DamageUI,
+  shieldUI = ShieldUI,
+  mainHUD = MainHUD,
+  storeUI = StoreUI,
+  sectionVisuals = SectionVisuals,
+})
+ClientEventRelay.start()
+print("[Client] ClientEventRelay started")
+
+-- Get controllers for state management
+local PlayerDataController = Knit.GetController("PlayerDataController")
+
 -- Track placed egg for hatching flow
 local placedEggData: { id: string, eggType: string }? = nil
 
--- Request initial player data from server
-local getPlayerDataFunc = getFunction("GetPlayerData")
-if getPlayerDataFunc then
-  local initialData = getPlayerDataFunc:InvokeServer()
-  if initialData then
-    playerDataCache = initialData
-    MainHUD.updateFromPlayerData(initialData)
-    InventoryUI.updateFromPlayerData(initialData)
-    -- Update inventory item count badge on MainHUD
-    if initialData.inventory then
-      local eggCount = initialData.inventory.eggs and #initialData.inventory.eggs or 0
-      local chickenCount = initialData.inventory.chickens and #initialData.inventory.chickens or 0
-      MainHUD.setInventoryItemCount(eggCount + chickenCount)
-    end
+-- Helper to get RemoteFunction safely (used by UI callbacks)
+local function getFunction(name: string): RemoteFunction?
+  return ClientEventRelay.getFunction(name)
+end
 
-    print("[Client] Got initial data, sectionIndex =", initialData.sectionIndex)
+-- Connect to PlayerDataController for reactive UI updates
+PlayerDataController.DataLoaded:Connect(function(data)
+  MainHUD.updateFromPlayerData(data)
+  InventoryUI.updateFromPlayerData(data)
+  StoreUI.updateMoney(data.money or 0)
 
-    -- Build section visuals for player's assigned section
-    if initialData.sectionIndex then
-      SectionVisuals.buildSection(initialData.sectionIndex, {})
-      print("[Client] Section visuals built for section", initialData.sectionIndex)
-
-      -- Build the central store (shared by all players)
-      SectionVisuals.buildCentralStore()
-
-      -- Create visuals for already-placed traps
-      if initialData.traps then
-        local sectionCenter = MapGeneration.getSectionPosition(initialData.sectionIndex)
-        if sectionCenter then
-          for _, trap in ipairs(initialData.traps) do
-            -- Only create visuals for placed traps (spotIndex 1-8)
-            if trap.spotIndex and trap.spotIndex >= 1 and trap.spotIndex <= 8 then
-              local spotPos = PlayerSection.getTrapSpotPosition(trap.spotIndex, sectionCenter)
-              if spotPos then
-                local position = Vector3.new(spotPos.x, spotPos.y, spotPos.z)
-                TrapVisuals.create(trap.id, trap.trapType, position, trap.spotIndex)
-                print("[Client] Restored trap visual:", trap.id, "at spot", trap.spotIndex)
-              end
-            end
-          end
-        end
-      end
-    else
-      warn("[Client] No sectionIndex in player data - cannot build section visuals")
-    end
-
-    -- Note: Initial chicken visuals are created when ChickenPositionUpdated events arrive
-    -- from the server with position data from the ChickenAI system
-
-    print("[Client] Initial player data loaded")
-
-    -- Update StoreUI with initial money
-    StoreUI.updateMoney(initialData.money or 0)
+  -- Update inventory item count badge on MainHUD
+  if data.inventory then
+    local eggCount = data.inventory.eggs and #data.inventory.eggs or 0
+    local chickenCount = data.inventory.chickens and #data.inventory.chickens or 0
+    MainHUD.setInventoryItemCount(eggCount + chickenCount)
   end
-end
 
---[[ RemoteEvent Listeners ]]
+  -- Update chicken count display on MainHUD
+  if data.placedChickens then
+    MainHUD.setChickenCount(#data.placedChickens, 15)
+  end
 
--- PlayerDataChanged: Update local player data cache, HUD, inventory, and chicken money indicators
-local playerDataChangedEvent = getEvent("PlayerDataChanged")
-if playerDataChangedEvent then
-  playerDataChangedEvent.OnClientEvent:Connect(function(data: { [string]: any })
-    playerDataCache = data
-    -- Update MainHUD with new money data
-    MainHUD.updateFromPlayerData(data)
-    -- Update InventoryUI with new inventory data
-    InventoryUI.updateFromPlayerData(data)
-    -- Update StoreUI with money balance
-    StoreUI.updateMoney(data.money or 0)
-    -- Update inventory item count badge on MainHUD
-    if data.inventory then
-      local eggCount = data.inventory.eggs and #data.inventory.eggs or 0
-      local chickenCount = data.inventory.chickens and #data.inventory.chickens or 0
-      MainHUD.setInventoryItemCount(eggCount + chickenCount)
-    end
+  -- Build section visuals for player's assigned section
+  if data.sectionIndex then
+    SectionVisuals.buildSection(data.sectionIndex, {})
+    print("[Client] Section visuals built for section", data.sectionIndex)
 
-    -- Update chicken count display on MainHUD
-    if data.placedChickens then
-      MainHUD.setChickenCount(#data.placedChickens, 15)
-    end
+    -- Build the central store (shared by all players)
+    SectionVisuals.buildCentralStore()
 
-    -- Update StoreUI with active power-ups
-    if data.activePowerUps then
-      local activePowerUpsMap: { [string]: number } = {}
-      local currentTime = os.time()
-      for _, powerUp in ipairs(data.activePowerUps) do
-        if currentTime < powerUp.expiresAt then
-          -- Get power-up type from ID
-          local powerUpType = nil
-          if string.find(powerUp.powerUpId, "HatchLuck") then
-            powerUpType = "HatchLuck"
-          elseif string.find(powerUp.powerUpId, "EggQuality") then
-            powerUpType = "EggQuality"
-          end
-          if powerUpType then
-            activePowerUpsMap[powerUpType] = powerUp.expiresAt
+    -- Create visuals for already-placed traps
+    if data.traps then
+      local sectionCenter = MapGeneration.getSectionPosition(data.sectionIndex)
+      if sectionCenter then
+        for _, trap in ipairs(data.traps) do
+          if trap.spotIndex and trap.spotIndex >= 1 and trap.spotIndex <= 8 then
+            local spotPos = PlayerSection.getTrapSpotPosition(trap.spotIndex, sectionCenter)
+            if spotPos then
+              local position = Vector3.new(spotPos.x, spotPos.y, spotPos.z)
+              TrapVisuals.create(trap.id, trap.trapType, position, trap.spotIndex)
+              print("[Client] Restored trap visual:", trap.id, "at spot", trap.spotIndex)
+            end
           end
         end
       end
-      StoreUI.updateActivePowerUps(activePowerUpsMap)
     end
+  end
 
-    -- Update owned weapons in StoreUI
-    if data.ownedWeapons then
-      StoreUI.updateOwnedWeapons(data.ownedWeapons)
-    end
+  -- Update ShieldUI with current shield state
+  if data.shieldState then
+    local status = AreaShield.getStatus(data.shieldState, os.time())
+    ShieldUI.updateStatus(status)
+  end
 
-    -- Update ShieldUI with current shield state
-    if data.shieldState then
-      local status = AreaShield.getStatus(data.shieldState, os.time())
-      ShieldUI.updateStatus(status)
-    end
+  -- Update owned weapons in StoreUI
+  if data.ownedWeapons then
+    StoreUI.updateOwnedWeapons(data.ownedWeapons)
+  end
 
-    -- Build section visuals if we have a section index but haven't built yet
-    if data.sectionIndex and not SectionVisuals.getCurrentSection() then
-      SectionVisuals.buildSection(data.sectionIndex, {})
-      print("[Client] Section visuals built from PlayerDataChanged for section", data.sectionIndex)
+  print("[Client] Initial player data loaded via controller")
+end)
 
-      -- Build the central store (shared by all players)
-      SectionVisuals.buildCentralStore()
-    end
+PlayerDataController.DataChanged:Connect(function(data)
+  -- Update MainHUD with new money data
+  MainHUD.updateFromPlayerData(data)
+  -- Update InventoryUI with new inventory data
+  InventoryUI.updateFromPlayerData(data)
+  -- Update StoreUI with money balance
+  StoreUI.updateMoney(data.money or 0)
 
-    -- Update chicken money indicators from placed chickens
-    if data.placedChickens then
-      for _, chicken in ipairs(data.placedChickens) do
-        ChickenVisuals.updateMoney(chicken.id, chicken.accumulatedMoney or 0)
+  -- Update inventory item count badge on MainHUD
+  if data.inventory then
+    local eggCount = data.inventory.eggs and #data.inventory.eggs or 0
+    local chickenCount = data.inventory.chickens and #data.inventory.chickens or 0
+    MainHUD.setInventoryItemCount(eggCount + chickenCount)
+  end
+
+  -- Update chicken count display on MainHUD
+  if data.placedChickens then
+    MainHUD.setChickenCount(#data.placedChickens, 15)
+  end
+
+  -- Update StoreUI with active power-ups
+  if data.activePowerUps then
+    local activePowerUpsMap: { [string]: number } = {}
+    local currentTime = os.time()
+    for _, powerUp in ipairs(data.activePowerUps) do
+      if currentTime < powerUp.expiresAt then
+        local powerUpType = nil
+        if string.find(powerUp.powerUpId, "HatchLuck") then
+          powerUpType = "HatchLuck"
+        elseif string.find(powerUp.powerUpId, "EggQuality") then
+          powerUpType = "EggQuality"
+        end
+        if powerUpType then
+          activePowerUpsMap[powerUpType] = powerUp.expiresAt
+        end
       end
     end
-  end)
-end
-
--- ChickenPlaced: Create chicken visual at position (free-roaming)
-local chickenPlacedEvent = getEvent("ChickenPlaced")
-if chickenPlacedEvent then
-  chickenPlacedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
-    local chicken = eventData.chicken
-    if not chicken then
-      warn("[Client] ChickenPlaced: Invalid event data - missing chicken")
-      return
-    end
-
-    -- Get position from event data or use section center as fallback
-    local position: Vector3
-    if eventData.position then
-      local pos = eventData.position
-      position = Vector3.new(pos.X or pos.x or 0, pos.Y or pos.y or 0, pos.Z or pos.z or 0)
-    else
-      -- Use section center as fallback
-      local sectionIndex = playerDataCache.sectionIndex or 1
-      local sectionCenter = MapGeneration.getSectionPosition(sectionIndex)
-      position = sectionCenter or Vector3.new(0, 5, 0)
-    end
-
-    local visualState = ChickenVisuals.create(chicken.id, chicken.chickenType, position, true)
-    SoundEffects.play("chickenPlace")
-
-    -- Create health bar for the chicken
-    if visualState and visualState.model then
-      ChickenHealthBar.create(chicken.id, chicken.chickenType, visualState.model)
-    end
-
-    print("[Client] Chicken placed:", chicken.id)
-  end)
-end
-
--- ChickenPickedUp: Remove chicken visual
-local chickenPickedUpEvent = getEvent("ChickenPickedUp")
-if chickenPickedUpEvent then
-  chickenPickedUpEvent.OnClientEvent:Connect(function(data: any)
-    -- Handle both formats: string (chickenId) or table ({ chickenId, ... })
-    local chickenId: string
-
-    if type(data) == "string" then
-      chickenId = data
-    elseif type(data) == "table" then
-      chickenId = data.chickenId
-    else
-      warn("[Client] ChickenPickedUp: Invalid data format")
-      return
-    end
-
-    ChickenVisuals.destroy(chickenId)
-    ChickenHealthBar.destroy(chickenId)
-    SoundEffects.play("chickenPickup")
-    print("[Client] Chicken picked up:", chickenId)
-  end)
-end
-
--- ChickenSold: Remove chicken visual and play sell sound
-local chickenSoldEvent = getEvent("ChickenSold")
-if chickenSoldEvent then
-  chickenSoldEvent.OnClientEvent:Connect(function(chickenId: string, sellPrice: number)
-    ChickenVisuals.destroy(chickenId)
-    ChickenHealthBar.destroy(chickenId)
-    SoundEffects.playMoneyCollect(sellPrice)
-    print("[Client] Chicken sold:", chickenId, "for", sellPrice)
-  end)
-end
-
--- ChickenDamaged: Update chicken health bar and visual when damaged by predator
-local chickenDamagedEvent = getEvent("ChickenDamaged")
-if chickenDamagedEvent then
-  chickenDamagedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
-    local chickenId = eventData.chickenId
-    local newHealth = eventData.newHealth
-    local maxHealth = eventData.maxHealth
-
-    if chickenId and newHealth then
-      ChickenHealthBar.updateHealth(chickenId, newHealth)
-
-      -- Update visual state to show reduced income indicator
-      if maxHealth and maxHealth > 0 then
-        local healthPercent = newHealth / maxHealth
-        ChickenVisuals.updateHealthState(chickenId, healthPercent)
-      end
-    end
-  end)
-end
-
--- ChickenHealthChanged: Update chicken health bar and visual (regeneration)
-local chickenHealthChangedEvent = getEvent("ChickenHealthChanged")
-if chickenHealthChangedEvent then
-  chickenHealthChangedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
-    local chickenId = eventData.chickenId
-    local newHealth = eventData.newHealth
-    local maxHealth = eventData.maxHealth
-
-    if chickenId and newHealth then
-      ChickenHealthBar.updateHealth(chickenId, newHealth)
-
-      -- Update visual state to restore color as health regenerates
-      if maxHealth and maxHealth > 0 then
-        local healthPercent = newHealth / maxHealth
-        ChickenVisuals.updateHealthState(chickenId, healthPercent)
-      end
-    end
-  end)
-end
-
--- ChickenDied: Remove chicken visual and health bar when killed by predator
-local chickenDiedEvent = getEvent("ChickenDied")
-if chickenDiedEvent then
-  chickenDiedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
-    local chickenId = eventData.chickenId
-    local killedBy = eventData.killedBy
-
-    if chickenId then
-      ChickenVisuals.destroy(chickenId)
-      ChickenHealthBar.destroy(chickenId)
-      SoundEffects.play("chickenPickup") -- Use pickup sound for death too
-      print("[Client] Chicken killed by", killedBy or "predator", ":", chickenId)
-    end
-  end)
-end
-
--- EggHatched: Show hatch animation and result
-local eggHatchedEvent = getEvent("EggHatched")
-if eggHatchedEvent then
-  eggHatchedEvent.OnClientEvent:Connect(function(eggId: string, chickenType: string, rarity: string)
-    EggVisuals.playHatchAnimation(eggId)
-    SoundEffects.playEggHatch(rarity)
-    print("[Client] Egg hatched:", eggId, "->", chickenType, rarity)
-  end)
-end
-
--- EggSpawned: Create collectible egg visual with proximity prompt
-local eggSpawnedEvent = getEvent("EggSpawned")
-if eggSpawnedEvent then
-  eggSpawnedEvent.OnClientEvent:Connect(function(eggData: { [string]: any })
-    local eggId = eggData.id
-    local eggType = eggData.eggType
-    local _eggRarity = eggData.rarity
-    local chickenId = eggData.chickenId
-    local position = eggData.position
-
-    -- Play laying animation on the chicken
-    if chickenId then
-      ChickenVisuals.playLayingAnimation(chickenId)
-    end
-
-    -- Create egg visual in world
-    local eggPosition = Vector3.new(position.x, position.y, position.z)
-    local eggVisualState = EggVisuals.create(eggId, eggType, eggPosition)
-
-    if eggVisualState and eggVisualState.model then
-      -- Add proximity prompt for collection
-      local primaryPart = eggVisualState.model.PrimaryPart
-      if primaryPart then
-        local prompt = Instance.new("ProximityPrompt")
-        prompt.ObjectText = "Egg"
-        prompt.ActionText = "Collect"
-        prompt.HoldDuration = 0
-        prompt.MaxActivationDistance = 8
-        prompt.RequiresLineOfSight = false
-        prompt.Parent = primaryPart
-
-        -- Handle collection
-        prompt.Triggered:Connect(function(playerWhoTriggered: Player)
-          if playerWhoTriggered == localPlayer then
-            local collectFunc = getFunction("CollectWorldEgg")
-            if collectFunc then
-              local result = collectFunc:InvokeServer(eggId)
-              if result and result.success then
-                SoundEffects.play("eggCollect")
-                print("[Client] Collected egg:", eggId)
-              else
-                warn(
-                  "[Client] Failed to collect egg:",
-                  result and result.message or "Unknown error"
-                )
-              end
-            end
-          end
-        end)
-
-        -- Store reference for cleanup
-        worldEggVisuals[eggId] = {
-          model = eggVisualState.model,
-          prompt = prompt,
-        }
-      end
-    end
-
-    SoundEffects.play("eggPlace")
-    print("[Client] Egg spawned:", eggId, "from chicken", chickenId)
-  end)
-end
-
--- EggCollected: Clean up egg visual when collected
-local eggCollectedEvent = getEvent("EggCollected")
-if eggCollectedEvent then
-  eggCollectedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
-    local eggId = eventData.eggId
-
-    -- Remove egg visual
-    local eggVisual = worldEggVisuals[eggId]
-    if eggVisual then
-      if eggVisual.prompt then
-        eggVisual.prompt:Destroy()
-      end
-      EggVisuals.destroy(eggId)
-      worldEggVisuals[eggId] = nil
-    end
-
-    print("[Client] Egg collected and added to inventory:", eggId)
-  end)
-end
-
--- EggDespawned: Clean up egg visual when despawned (expired)
-local eggDespawnedEvent = getEvent("EggDespawned")
-if eggDespawnedEvent then
-  eggDespawnedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
-    local eggId = eventData.eggId
-    local reason = eventData.reason
-
-    -- Remove egg visual
-    local eggVisual = worldEggVisuals[eggId]
-    if eggVisual then
-      if eggVisual.prompt then
-        eggVisual.prompt:Destroy()
-      end
-      EggVisuals.destroy(eggId)
-      worldEggVisuals[eggId] = nil
-    end
-
-    print("[Client] Egg despawned:", eggId, "reason:", reason)
-  end)
-end
-
--- MoneyCollected: Play money collection effects
-local moneyCollectedEvent = getEvent("MoneyCollected")
-if moneyCollectedEvent then
-  moneyCollectedEvent.OnClientEvent:Connect(function(amount: number, position: Vector3?)
-    SoundEffects.playMoneyCollect(amount)
-    if position then
-      ChickenVisuals.createMoneyPopEffect({
-        amount = amount,
-        position = position,
-        isLarge = amount >= 1000,
-      })
-    end
-    print("[Client] Money collected:", amount)
-  end)
-end
-
--- TrapPlaced: Visual feedback for trap placement
-local trapPlacedEvent = getEvent("TrapPlaced")
-if trapPlacedEvent then
-  trapPlacedEvent.OnClientEvent:Connect(
-    function(trapId: string, trapType: string, position: Vector3, spotIndex: number?)
-      -- Create trap visual in the world
-      local trapState = TrapVisuals.create(trapId, trapType, position, spotIndex or 1)
-      if trapState then
-        SoundEffects.play("trapPlace")
-        print("[Client] Trap placed:", trapId, trapType, "at", position)
-      else
-        warn("[Client] Failed to create trap visual for:", trapId)
-      end
-    end
-  )
-end
-
--- TrapCaught: Update trap visual to show caught predator
-local trapCaughtEvent = getEvent("TrapCaught")
-if trapCaughtEvent then
-  trapCaughtEvent.OnClientEvent:Connect(function(trapId: string, predatorId: string)
-    -- Update trap visual to show caught state
-    TrapVisuals.updateStatus(trapId, false, true)
-    TrapVisuals.playCaughtAnimation(trapId)
-    PredatorVisuals.playTrappedAnimation(predatorId)
-    SoundEffects.play("trapCatch")
-    print("[Client] Trap caught predator:", trapId, predatorId)
-  end)
-end
-
--- PredatorSpawned: Create predator visual and health bar
--- Now receives predators from all sections (sectionIndex indicates which coop is being targeted)
-local predatorSpawnedEvent = getEvent("PredatorSpawned")
-if predatorSpawnedEvent then
-  predatorSpawnedEvent.OnClientEvent:Connect(
-    function(
-      predatorId: string,
-      predatorType: string,
-      threatLevel: string,
-      position: Vector3,
-      sectionIndex: number?,
-      targetChickenId: string?
-    )
-      local visualState = PredatorVisuals.create(predatorId, predatorType, threatLevel, position)
-      -- Create health bar if visual was created successfully
-      if visualState and visualState.model then
-        PredatorHealthBar.create(predatorId, predatorType, threatLevel, visualState.model)
-      end
-      -- Start walking animation (predators now walk towards coop)
-      PredatorVisuals.setAnimation(predatorId, "walking")
-      -- Show predator warning with directional indicator and message
-      PredatorWarning.show(predatorId, predatorType, threatLevel, position)
-      SoundEffects.playPredatorAlert(threatLevel == "Deadly" or threatLevel == "Catastrophic")
-      -- Target indicator removed per UI cleanup (remove-predator-target-bar)
-      print(
-        "[Client] Predator spawned:",
-        predatorId,
-        predatorType,
-        threatLevel,
-        "section:",
-        sectionIndex or "unknown",
-        "targeting:",
-        targetChickenId or "none"
-      )
-    end
-  )
-end
-
--- PredatorPositionUpdated: Update predator visual position as it walks towards coop
-local predatorPositionUpdatedEvent = getEvent("PredatorPositionUpdated")
-if predatorPositionUpdatedEvent then
-  predatorPositionUpdatedEvent.OnClientEvent:Connect(
-    function(predatorId: string, newPosition: Vector3, hasReachedCoop: boolean)
-      -- Update visual position
-      PredatorVisuals.updatePosition(predatorId, newPosition)
-
-      -- Update warning arrow direction
-      PredatorWarning.updatePosition(predatorId, newPosition)
-
-      -- Switch to attacking animation when reaching coop
-      if hasReachedCoop then
-        PredatorVisuals.setAnimation(predatorId, "attacking")
-      end
-    end
-  )
-end
-
--- PredatorHealthUpdated: Broadcast predator health changes to all clients
--- This ensures all players see health bar updates when any player hits a predator
-local predatorHealthUpdatedEvent = getEvent("PredatorHealthUpdated")
-if predatorHealthUpdatedEvent then
-  predatorHealthUpdatedEvent.OnClientEvent:Connect(
-    function(predatorId: string, currentHealth: number, maxHealth: number, damage: number)
-      -- Update health bar for this predator
-      PredatorHealthBar.updateHealth(predatorId, currentHealth)
-      -- Show floating damage number
-      if damage and damage > 0 then
-        PredatorHealthBar.showDamageNumber(predatorId, damage)
-      end
-    end
-  )
-end
-
--- PredatorDefeated: Play defeated animation, remove visual and health bar
-local predatorDefeatedEvent = getEvent("PredatorDefeated")
-if predatorDefeatedEvent then
-  predatorDefeatedEvent.OnClientEvent:Connect(function(predatorId: string, byPlayer: boolean)
-    PredatorHealthBar.destroy(predatorId)
-    PredatorVisuals.playDefeatedAnimation(predatorId)
-    -- Clear predator warning when defeated
-    PredatorWarning.clear(predatorId)
-    -- Target indicator removed per UI cleanup (remove-predator-target-bar)
-    if byPlayer then
-      SoundEffects.playBatSwing("predator")
-    end
-    print("[Client] Predator defeated:", predatorId)
-  end)
-end
-
--- PredatorTargetChanged: Update target indicator when predator switches targets
-local predatorTargetChangedEvent = getEvent("PredatorTargetChanged")
-if predatorTargetChangedEvent then
-  predatorTargetChangedEvent.OnClientEvent:Connect(
-    function(predatorId: string, newTargetChickenId: string?)
-      -- Target indicator removed per UI cleanup (remove-predator-target-bar)
-      print("[Client] Predator", predatorId, "now targeting:", newTargetChickenId or "none")
-    end
-  )
-end
-
--- LockActivated: Visual/audio feedback for cage lock
-local lockActivatedEvent = getEvent("LockActivated")
-if lockActivatedEvent then
-  lockActivatedEvent.OnClientEvent:Connect(function(cageId: string, lockDuration: number)
-    SoundEffects.play("lockActivate")
-    print("[Client] Lock activated:", cageId, "for", lockDuration, "seconds")
-  end)
-end
-
--- TradeRequested: Notification for incoming trade request
-local tradeRequestedEvent = getEvent("TradeRequested")
-if tradeRequestedEvent then
-  tradeRequestedEvent.OnClientEvent:Connect(function(fromPlayer: Player, tradeId: string)
-    SoundEffects.play("uiNotification")
-    print("[Client] Trade requested from:", fromPlayer.Name, tradeId)
-  end)
-end
-
--- TradeUpdated: Update trade UI state
-local tradeUpdatedEvent = getEvent("TradeUpdated")
-if tradeUpdatedEvent then
-  tradeUpdatedEvent.OnClientEvent:Connect(function(tradeId: string, tradeData: { [string]: any })
-    print("[Client] Trade updated:", tradeId, tradeData)
-  end)
-end
-
--- TradeCompleted: Trade finished successfully
-local tradeCompletedEvent = getEvent("TradeCompleted")
-if tradeCompletedEvent then
-  tradeCompletedEvent.OnClientEvent:Connect(function(tradeId: string, success: boolean)
-    if success then
-      SoundEffects.play("tradeComplete")
-    else
-      SoundEffects.play("uiError")
-    end
-    print("[Client] Trade completed:", tradeId, success)
-  end)
-end
-
--- RandomChickenSpawned: Show notification for random chicken
-local randomChickenSpawnedEvent = getEvent("RandomChickenSpawned")
-if randomChickenSpawnedEvent then
-  randomChickenSpawnedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
-    local chicken = eventData.chicken
-    if not chicken then
-      warn("[Client] RandomChickenSpawned: Invalid event data")
-      return
-    end
-
-    SoundEffects.play("uiNotification")
-    local pos = chicken.position
-    local position = Vector3.new(pos.x, pos.y, pos.z)
-    ChickenVisuals.create(chicken.id, chicken.chickenType, position, false)
-    print("[Client] Random chicken spawned:", chicken.id, chicken.chickenType, chicken.rarity)
-  end)
-end
-
--- RandomChickenClaimed: Player claimed the random chicken
-local randomChickenClaimedEvent = getEvent("RandomChickenClaimed")
-if randomChickenClaimedEvent then
-  randomChickenClaimedEvent.OnClientEvent:Connect(function(chickenId: string, claimedBy: Player)
-    local chicken = ChickenVisuals.get(chickenId)
-    if chicken then
-      ChickenVisuals.playCelebrationAnimation(chickenId)
-      -- Destroy after a short delay for animation to play
-      task.delay(0.5, function()
-        ChickenVisuals.destroy(chickenId)
-      end)
-    end
-    if claimedBy == localPlayer then
-      SoundEffects.play("chickenClaim")
-    end
-    print("[Client] Random chicken claimed:", chickenId, "by", claimedBy.Name)
-  end)
-end
-
--- RandomChickenDespawned: Chicken timed out and despawned
-local randomChickenDespawnedEvent = getEvent("RandomChickenDespawned")
-if randomChickenDespawnedEvent then
-  randomChickenDespawnedEvent.OnClientEvent:Connect(function(eventData: { [string]: any })
-    local chickenId = eventData.chickenId
-    if not chickenId then
-      warn("[Client] RandomChickenDespawned: Invalid event data")
-      return
-    end
-
-    -- Destroy the visual (which also removes the ProximityPrompt)
-    ChickenVisuals.destroy(chickenId)
-
-    print("[Client] Random chicken despawned:", chickenId)
-  end)
-end
-
--- RandomChickenPositionUpdated: Update random chicken position for walking animation
--- Now receives target position and walk speed for smooth client-side movement
-local randomChickenPositionEvent = getEvent("RandomChickenPositionUpdated")
-if randomChickenPositionEvent then
-  randomChickenPositionEvent.OnClientEvent:Connect(function(data: any)
-    if not data or not data.id then
-      return
-    end
-    local position = Vector3.new(data.position.x, data.position.y, data.position.z)
-    local targetPosition = if data.targetPosition
-      then Vector3.new(data.targetPosition.x, data.targetPosition.y, data.targetPosition.z)
-      else nil
-    local facingDirection =
-      Vector3.new(data.facingDirection.x, data.facingDirection.y, data.facingDirection.z)
-    ChickenVisuals.updatePosition(
-      data.id,
-      position,
-      targetPosition,
-      facingDirection,
-      data.walkSpeed,
-      data.isIdle
-    )
-  end)
-end
-
--- ChickenPositionUpdated: Update player-owned chicken positions for walking animation (batched)
--- Now receives target position and walk speed for smooth client-side movement
-local chickenPositionEvent = getEvent("ChickenPositionUpdated")
-if chickenPositionEvent then
-  chickenPositionEvent.OnClientEvent:Connect(function(data: any)
-    if not data or not data.chickens then
-      return
-    end
-    -- Process batched chicken position updates
-    for _, chickenData in ipairs(data.chickens) do
-      if chickenData.chickenId and chickenData.position and chickenData.facingDirection then
-        local position =
-          Vector3.new(chickenData.position.X, chickenData.position.Y, chickenData.position.Z)
-        local targetPosition = if chickenData.targetPosition
-          then Vector3.new(
-            chickenData.targetPosition.X,
-            chickenData.targetPosition.Y,
-            chickenData.targetPosition.Z
-          )
-          else nil
-        local facingDirection = Vector3.new(
-          chickenData.facingDirection.X,
-          chickenData.facingDirection.Y,
-          chickenData.facingDirection.Z
-        )
-        ChickenVisuals.updatePosition(
-          chickenData.chickenId,
-          position,
-          targetPosition,
-          facingDirection,
-          chickenData.walkSpeed,
-          chickenData.isIdle
-        )
-      end
-    end
-  end)
-end
-
--- AlertTriggered: Play alert sound
-local alertTriggeredEvent = getEvent("AlertTriggered")
-if alertTriggeredEvent then
-  alertTriggeredEvent.OnClientEvent:Connect(function(alertType: string, urgent: boolean)
-    SoundEffects.playPredatorAlert(urgent)
-    print("[Client] Alert triggered:", alertType, urgent)
-  end)
-end
-
--- StoreReplenished: Update store inventory display
-local storeReplenishedEvent = getEvent("StoreReplenished")
-if storeReplenishedEvent then
-  storeReplenishedEvent.OnClientEvent:Connect(function(newInventory: any)
-    -- Update local store inventory cache
-    local Store = require(Shared:WaitForChild("Store"))
-    Store.setStoreInventory(newInventory)
-    -- Refresh the store UI if open
-    StoreUI.refreshInventory()
-    print("[Client] Store inventory replenished")
-  end)
-end
-
--- StoreInventoryUpdated: Update store UI after individual purchases
-local storeInventoryUpdatedEvent = getEvent("StoreInventoryUpdated")
-if storeInventoryUpdatedEvent then
-  storeInventoryUpdatedEvent.OnClientEvent:Connect(function(data: any)
-    -- Update item stock display after purchase
-    if data.itemType and data.itemId and data.newStock ~= nil then
-      StoreUI.updateItemStock(data.itemType, data.itemId, data.newStock)
-    end
-    -- Refresh full inventory if provided
-    if data.inventory then
-      local Store = require(Shared:WaitForChild("Store"))
-      Store.setStoreInventory(data.inventory)
-      StoreUI.refreshInventory()
-    end
-    print("[Client] Store inventory updated:", data.itemType, data.itemId, "stock:", data.newStock)
-  end)
-end
-
--- PlayerDamaged: Show damage number and update health bar
-local playerDamagedEvent = getEvent("PlayerDamaged")
-if playerDamagedEvent then
-  playerDamagedEvent.OnClientEvent:Connect(function(data: any)
-    DamageUI.onPlayerDamaged(data)
-    SoundEffects.playHurt()
-    print("[Client] Player damaged:", data.damage, "from", data.source)
-  end)
-end
-
--- PlayerKnockback: Show knockback effect and stun visuals
-local playerKnockbackEvent = getEvent("PlayerKnockback")
-if playerKnockbackEvent then
-  playerKnockbackEvent.OnClientEvent:Connect(function(data: any)
-    DamageUI.onPlayerKnockback(data)
-    print("[Client] Player knocked back for", data.duration, "seconds")
-  end)
-end
-
--- MoneyLost: Show money loss visual when predator knocks back player
-local moneyLostEvent = getEvent("MoneyLost")
-if moneyLostEvent then
-  moneyLostEvent.OnClientEvent:Connect(function(data: any)
-    DamageUI.onMoneyLost(data)
-    print("[Client] Lost $" .. data.amount .. " from predator attack")
-  end)
-end
-
--- PlayerHealthChanged: Update health bar during regeneration
-local playerHealthChangedEvent = getEvent("PlayerHealthChanged")
-if playerHealthChangedEvent then
-  playerHealthChangedEvent.OnClientEvent:Connect(function(data: any)
-    DamageUI.onPlayerHealthChanged(data)
-  end)
-end
-
--- ProtectionStatusChanged: Update protection timer display
-local protectionStatusChangedEvent = getEvent("ProtectionStatusChanged")
-if protectionStatusChangedEvent then
-  protectionStatusChangedEvent.OnClientEvent:Connect(function(data: any)
-    MainHUD.setProtectionStatus(data)
-    if data.isProtected then
-      print("[Client] Protection status: Protected for", data.remainingSeconds, "seconds")
-    else
-      print("[Client] Protection status: Protection expired")
-    end
-  end)
-end
-
--- BankruptcyAssistance: Handle receiving assistance money when broke
-local bankruptcyAssistanceEvent = getEvent("BankruptcyAssistance")
-if bankruptcyAssistanceEvent then
-  bankruptcyAssistanceEvent.OnClientEvent:Connect(function(data: any)
-    SoundEffects.play("uiNotification")
-    print("[Client] Bankruptcy assistance received: $" .. tostring(data.moneyAwarded))
-    -- Show notification via MainHUD
-    MainHUD.showBankruptcyAssistance(data)
-  end)
-end
-
--- ShieldActivated: Handle shield activation by any player
-local shieldActivatedEvent = getEvent("ShieldActivated")
-if shieldActivatedEvent then
-  shieldActivatedEvent.OnClientEvent:Connect(
-    function(userId: number, sectionIndex: number, shieldData: any)
-      -- Update ShieldUI if this is our shield
-      if userId == localPlayer.UserId then
-        local status = AreaShield.getStatus({
-          isActive = true,
-          activatedTime = os.time(),
-          expiresAt = shieldData.expiresAt,
-          cooldownEndTime = shieldData.expiresAt + AreaShield.getConstants().shieldCooldown,
-        }, os.time())
-        ShieldUI.updateStatus(status)
-        ShieldUI.showActivationFeedback(true, "Shield activated!")
-        SoundEffects.play("uiNotification")
-      end
-      -- Visual effect for shield could be added here for all players to see
-      print("[Client] Shield activated for user", userId, "in section", sectionIndex)
-    end
-  )
-end
-
--- ShieldDeactivated: Handle shield expiration
-local shieldDeactivatedEvent = getEvent("ShieldDeactivated")
-if shieldDeactivatedEvent then
-  shieldDeactivatedEvent.OnClientEvent:Connect(function(userId: number, sectionIndex: number)
-    -- Update ShieldUI if this is our shield
-    if userId == localPlayer.UserId then
-      -- Shield expired, update to show cooldown state
-      local cachedData = playerDataCache
-      if cachedData and cachedData.shieldState then
-        local status = AreaShield.getStatus(cachedData.shieldState, os.time())
-        ShieldUI.updateStatus(status)
-      end
-    end
-    print("[Client] Shield deactivated for user", userId, "in section", sectionIndex)
-  end)
-end
-
--- Wire ShieldUI activation callback to server
-local activateShieldFunc = getFunction("ActivateShield")
-ShieldUI.onActivate(function()
-  if activateShieldFunc then
-    local result = activateShieldFunc:InvokeServer()
-    if result then
-      if result.success then
-        print("[Client] Shield activation successful:", result.message)
-      else
-        ShieldUI.showActivationFeedback(false, result.message)
-        print("[Client] Shield activation failed:", result.message)
-      end
+    StoreUI.updateActivePowerUps(activePowerUpsMap)
+  end
+
+  -- Update owned weapons in StoreUI
+  if data.ownedWeapons then
+    StoreUI.updateOwnedWeapons(data.ownedWeapons)
+  end
+
+  -- Update ShieldUI with current shield state
+  if data.shieldState then
+    local status = AreaShield.getStatus(data.shieldState, os.time())
+    ShieldUI.updateStatus(status)
+  end
+
+  -- Build section visuals if we have a section index but haven't built yet
+  if data.sectionIndex and not SectionVisuals.getCurrentSection() then
+    SectionVisuals.buildSection(data.sectionIndex, {})
+    print("[Client] Section visuals built from DataChanged for section", data.sectionIndex)
+    SectionVisuals.buildCentralStore()
+  end
+
+  -- Update chicken money indicators from placed chickens
+  if data.placedChickens then
+    for _, chicken in ipairs(data.placedChickens) do
+      ChickenVisuals.updateMoney(chicken.id, chicken.accumulatedMoney or 0)
     end
   end
 end)
 
--- Track incapacitation state for movement control
-local isIncapacitated = false
-local incapacitatedEndTime = 0
-
--- PlayerIncapacitated: Handle being hit by another player's bat
-local playerIncapacitatedEvent = getEvent("PlayerIncapacitated")
-if playerIncapacitatedEvent then
-  playerIncapacitatedEvent.OnClientEvent:Connect(function(data: any)
-    DamageUI.onPlayerIncapacitated(data)
-    SoundEffects.playKnockback()
-
-    -- Disable player movement
-    local character = localPlayer.Character
-    if character then
-      local humanoid = character:FindFirstChild("Humanoid") :: Humanoid?
-      if humanoid then
-        humanoid.WalkSpeed = 0
-        humanoid.JumpPower = 0
-      end
-
-      -- Apply knockback force (throw player backward)
-      local rootPart = character:FindFirstChild("HumanoidRootPart") :: BasePart?
-      if rootPart then
-        -- Calculate knockback direction (backward from current look direction)
-        local knockbackDirection = -rootPart.CFrame.LookVector
-        local knockbackForce = 50 -- studs per second
-
-        -- Create BodyVelocity for throw effect
-        local bodyVelocity = Instance.new("BodyVelocity")
-        bodyVelocity.Name = "IncapKnockback"
-        bodyVelocity.MaxForce = Vector3.new(100000, 0, 100000)
-        bodyVelocity.Velocity = knockbackDirection * knockbackForce + Vector3.new(0, 20, 0)
-        bodyVelocity.Parent = rootPart
-
-        -- Remove BodyVelocity after short duration
-        task.delay(0.3, function()
-          if bodyVelocity and bodyVelocity.Parent then
-            bodyVelocity:Destroy()
-          end
-        end)
-      end
-    end
-
-    -- Set incapacitated state
-    isIncapacitated = true
-    incapacitatedEndTime = os.clock() + data.duration
-
-    -- Re-enable movement after duration
-    task.delay(data.duration, function()
-      isIncapacitated = false
-      local char = localPlayer.Character
-      if char then
-        local hum = char:FindFirstChild("Humanoid") :: Humanoid?
-        if hum then
-          hum.WalkSpeed = 16 -- Default walk speed
-          hum.JumpPower = 50 -- Default jump power
-        end
-      end
-    end)
-
-    print("[Client] Player incapacitated for", data.duration, "seconds by", data.attackerName)
-  end)
-end
-
--- NightfallWarning: Show warning when transitioning to dusk/night
-local nightfallWarningEvent = getEvent("NightfallWarning")
-if nightfallWarningEvent then
-  nightfallWarningEvent.OnClientEvent:Connect(function(data: any)
-    local timeOfDay = data.timeOfDay
-    local message = data.message
-    local spawnMultiplier = data.spawnMultiplier
-
-    -- Play appropriate sound based on danger level
-    if timeOfDay == "night" then
-      SoundEffects.playPredatorAlert(true) -- Urgent alert for night
-    elseif timeOfDay == "dusk" then
-      SoundEffects.playPredatorAlert(false) -- Standard alert for dusk
-    else
-      SoundEffects.play("uiNotification") -- Soft notification for dawn
-    end
-
-    -- Show notification via MainHUD
-    if MainHUD.showNotification then
-      local color = Color3.fromRGB(255, 200, 100) -- Default amber
-      if timeOfDay == "night" then
-        color = Color3.fromRGB(255, 80, 80) -- Red for night danger
-      elseif timeOfDay == "dawn" then
-        color = Color3.fromRGB(150, 200, 255) -- Blue for dawn safety
-      end
-      MainHUD.showNotification(message, color, 4)
-    end
-
-    print("[Client] Nightfall warning:", timeOfDay, message, "multiplier:", spawnMultiplier)
-  end)
-end
-
--- XPGained: Show XP gain floating text
-local xpGainedEvent = getEvent("XPGained")
-if xpGainedEvent then
-  xpGainedEvent.OnClientEvent:Connect(function(amount: number, reason: string)
-    MainHUD.showXPGain(amount)
-    SoundEffects.play("xpGain")
-    print("[Client] XP gained:", amount, "for", reason)
-  end)
-end
-
--- LevelUp: Show level up celebration
-local levelUpEvent = getEvent("LevelUp")
-if levelUpEvent then
-  levelUpEvent.OnClientEvent:Connect(function(newLevel: number, unlocks: { string })
-    MainHUD.showLevelUp(newLevel, unlocks)
-    SoundEffects.play("levelUp")
-    print("[Client] Level up! Now level", newLevel, "Unlocks:", table.concat(unlocks, ", "))
-  end)
-end
-
---[[ Utility Functions for other modules ]]
-
--- Expose player data cache getter
-local function getPlayerData(): { [string]: any }
-  return playerDataCache
-end
-
--- Expose remote function invoker
-local function invokeServer(funcName: string, ...: any): any
-  local func = getFunction(funcName)
-  if func then
-    return func:InvokeServer(...)
-  end
-  return nil
-end
-
--- Module exports for other client scripts
-local ClientMain = {
-  getPlayerData = getPlayerData,
-  invokeServer = invokeServer,
-  getEvent = getEvent,
-  getFunction = getFunction,
-}
-
--- Store in ReplicatedStorage for other client modules to access
-local clientMainValue = Instance.new("ObjectValue")
-clientMainValue.Name = "ClientMainRef"
-clientMainValue.Parent = localPlayer
-
 --[[ Client Game Loop ]]
 
 -- Configuration for game loop updates
-local PROXIMITY_CHECK_INTERVAL = 0.1 -- How often to check proximity (seconds)
-local LOCK_TIMER_UPDATE_INTERVAL = 1.0 -- How often to update lock timer display
-local MONEY_COLLECTION_COOLDOWN = 0.5 -- Cooldown between collections from same chicken
+local PROXIMITY_CHECK_INTERVAL = 0.1
+local LOCK_TIMER_UPDATE_INTERVAL = 1.0
+local MONEY_COLLECTION_COOLDOWN = 0.5
 
 -- Tracking variables
 local lastProximityCheckTime = 0
 local lastLockTimerUpdateTime = 0
 local isNearChicken = false
-local lastCollectedChickenTimes: { [string]: number } = {} -- Track when each chicken was last collected
+local nearestChickenId: string? = nil
+local nearestChickenType: string? = nil
+local lastCollectedChickenTimes: { [string]: number } = {}
 
 -- Store interaction state
-local STORE_INTERACTION_RANGE = 12 -- studs, matches ProximityPrompt MaxActivationDistance
+local STORE_INTERACTION_RANGE = 12
 local isNearStore = false
+local CHICKEN_INTERACTION_RANGE = 10
 
 --[[
 	Helper function to find the nearest placed chicken within interaction range.
-	Returns chickenId, chickenType, rarity, accumulatedMoney or nil.
 ]]
-local CHICKEN_INTERACTION_RANGE = 10 -- Range for selling chickens
-
 local function findNearbyPlacedChicken(
   playerPosition: Vector3
 ): (string?, string?, string?, number?)
-  if not playerDataCache or not playerDataCache.placedChickens then
+  local playerData = PlayerDataController:GetData()
+  if not playerData or not playerData.placedChickens then
     return nil, nil, nil, nil
   end
 
   local nearestDistance = CHICKEN_INTERACTION_RANGE
   local nearestChicken = nil
 
-  for _, chicken in ipairs(playerDataCache.placedChickens) do
-    -- Get position from the visual state (updated by ChickenPositionUpdated events)
+  for _, chicken in ipairs(playerData.placedChickens) do
     local visualState = ChickenVisuals.get(chicken.id)
     if visualState and visualState.position then
       local distance = (playerPosition - visualState.position).Magnitude
@@ -1145,7 +300,6 @@ local function findNearbyPlacedChicken(
   end
 
   if nearestChicken then
-    -- Get real-time accumulated money from ChickenVisuals, not stale cache
     local realTimeAccumulatedMoney = ChickenVisuals.getAccumulatedMoney(nearestChicken.id)
     return nearestChicken.id,
       nearestChicken.chickenType,
@@ -1158,15 +312,14 @@ end
 
 --[[
 	Helper function to find an available trap spot for the player.
-	Returns the nearest available spot index, or nil if all spots are occupied.
-	Traps can be placed from anywhere - we just pick the nearest available spot.
 ]]
 local function findNearbyAvailableTrapSpot(playerPosition: Vector3): number?
-  if not playerDataCache then
+  local playerData = PlayerDataController:GetData()
+  if not playerData then
     return nil
   end
 
-  local sectionIndex = playerDataCache.sectionIndex
+  local sectionIndex = playerData.sectionIndex
   if not sectionIndex then
     return nil
   end
@@ -1176,13 +329,11 @@ local function findNearbyAvailableTrapSpot(playerPosition: Vector3): number?
     return nil
   end
 
-  -- Get available trap spots
-  local availableSpots = TrapPlacement.getAvailableSpots(playerDataCache)
+  local availableSpots = TrapPlacement.getAvailableSpots(playerData)
   if #availableSpots == 0 then
     return nil
   end
 
-  -- Find the nearest available spot (no distance limit - player can place from anywhere)
   local nearestSpot: number? = nil
   local nearestDistance = math.huge
 
@@ -1201,18 +352,16 @@ local function findNearbyAvailableTrapSpot(playerPosition: Vector3): number?
   return nearestSpot
 end
 
--- ChickenPickup functionality removed - players can only sell chickens now
--- The old pickup callbacks have been removed as part of the sell-only feature
-
 -- Wire up ChickenSelling callbacks for proximity checking
 ChickenSelling.create()
 ChickenSelling.setGetNearbyChicken(function(position: Vector3)
   local chickenId, chickenType, rarity, accumulatedMoney = findNearbyPlacedChicken(position)
-  return chickenId, nil, chickenType, rarity, accumulatedMoney -- nil for spotIndex (deprecated)
+  return chickenId, nil, chickenType, rarity, accumulatedMoney
 end)
 ChickenSelling.setGetPlayerData(function()
-  return playerDataCache
+  return PlayerDataController:GetData()
 end)
+
 -- Wire up server-side sale via SellChicken RemoteFunction
 ChickenSelling.setPerformServerSale(function(chickenId: string)
   local sellChickenFunc = getFunction("SellChicken")
@@ -1222,26 +371,17 @@ ChickenSelling.setPerformServerSale(function(chickenId: string)
   local result = sellChickenFunc:InvokeServer(chickenId)
   if result and result.success then
     SoundEffects.playMoneyCollect(result.sellPrice or 0)
-    return {
-      success = true,
-      message = result.message,
-      sellPrice = result.sellPrice,
-    }
+    return { success = true, message = result.message, sellPrice = result.sellPrice }
   else
     SoundEffects.play("uiError")
-    return {
-      success = false,
-      error = result and result.message or "Unknown error",
-    }
+    return { success = false, error = result and result.message or "Unknown error" }
   end
 end)
 
 -- Wire up ChickenVisuals sell prompt to trigger ChickenSelling confirmation
 ChickenVisuals.setOnSellPromptTriggered(function(chickenId: string)
-  -- Find the chicken to get its details
   local visualState = ChickenVisuals.get(chickenId)
   if visualState then
-    -- Trigger sell directly (starts confirmation flow)
     ChickenSelling.startSell(
       chickenId,
       visualState.chickenType,
@@ -1253,25 +393,13 @@ end)
 
 -- Wire up ChickenVisuals claim prompt to handle collecting random chickens
 ChickenVisuals.setOnClaimPromptTriggered(function(chickenId: string)
-  -- Claim the random chicken via server
   local claimFunc = getFunction("ClaimRandomChicken")
   if claimFunc then
     task.spawn(function()
       local result = claimFunc:InvokeServer()
       if result and result.success then
-        -- Play success sound
         SoundEffects.play("chickenClaim")
-
-        -- Destroy the visual (server will also fire RandomChickenClaimed to handle this)
         ChickenVisuals.destroy(chickenId)
-
-        -- Update local cache and UI with returned player data (immediate sync)
-        if result.playerData then
-          playerDataCache = result.playerData
-          MainHUD.updateFromPlayerData(result.playerData)
-          InventoryUI.updateFromPlayerData(result.playerData)
-        end
-
         print("[Client] Claimed random chicken:", result.chicken and result.chicken.chickenType)
       else
         SoundEffects.play("uiError")
@@ -1294,11 +422,11 @@ MobileTouchControls.setAction("sell", function()
   ChickenSelling.touchSell()
 end)
 MobileTouchControls.setAction("confirm", function()
-  ChickenSelling.touchSell() -- Same action - confirm when in confirmation mode
+  ChickenSelling.touchSell()
 end)
 print("[Client] MobileTouchControls initialized")
 
--- Wire InventoryUI callbacks for item actions (after helper functions are defined)
+-- Wire InventoryUI callbacks for item actions
 InventoryUI.onItemSelected(function(selectedItem)
   if selectedItem then
     print("[Client] Inventory item selected:", selectedItem.itemType, selectedItem.itemId)
@@ -1309,11 +437,11 @@ end)
 
 InventoryUI.onAction(function(actionType: string, selectedItem)
   print("[Client] Inventory action:", actionType, selectedItem.itemType, selectedItem.itemId)
+  local playerData = PlayerDataController:GetData()
 
   if selectedItem.itemType == "egg" then
     if actionType == "place" then
-      -- Check if player is in their own area before allowing hatching
-      local sectionIndex = playerDataCache.sectionIndex
+      local sectionIndex = playerData and playerData.sectionIndex
       if not sectionIndex then
         SoundEffects.play("uiError")
         warn("[Client] Cannot hatch egg: No section assigned")
@@ -1332,22 +460,16 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
       local isInOwnArea = PlayerSection.isPositionInSection(rootPart.Position, sectionCenter)
       if not isInOwnArea then
         SoundEffects.play("uiError")
-        warn("[Client] Cannot hatch egg: You must be in your own area to hatch eggs")
+        warn("[Client] Cannot hatch egg: You must be in your own area")
         return
       end
 
-      -- Show hatch preview for the egg (free-roaming, no spot needed)
-      placedEggData = {
-        id = selectedItem.itemId,
-        eggType = selectedItem.itemData.eggType,
-      }
-      -- Show hatch preview UI
+      placedEggData = { id = selectedItem.itemId, eggType = selectedItem.itemData.eggType }
       HatchPreviewUI.show(selectedItem.itemId, selectedItem.itemData.eggType)
       SoundEffects.play("eggPlace")
       InventoryUI.clearSelection()
       print("[Client] Egg placed, showing hatch preview")
     elseif actionType == "sell" then
-      -- Sell egg via server
       local sellEggFunc = getFunction("SellEgg")
       if sellEggFunc then
         local result = sellEggFunc:InvokeServer(selectedItem.itemId)
@@ -1362,17 +484,15 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
     end
   elseif selectedItem.itemType == "chicken" then
     if actionType == "place" then
-      -- Check chicken limit before attempting to place
       if MainHUD.isAtChickenLimit() then
         SoundEffects.play("uiError")
         warn("[Client] Cannot place chicken: Area is at maximum capacity (15 chickens)")
         return
       end
 
-      -- Place chicken from inventory (free-roaming, no spot needed)
       local placeChickenFunc = getFunction("PlaceChicken")
       if placeChickenFunc then
-        local result = placeChickenFunc:InvokeServer(selectedItem.itemId, nil) -- nil spotIndex = free-roaming
+        local result = placeChickenFunc:InvokeServer(selectedItem.itemId, nil)
         if result and result.success then
           SoundEffects.play("chickenPlace")
           InventoryUI.clearSelection()
@@ -1385,10 +505,9 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
         end
       end
     elseif actionType == "sell" then
-      -- Sell chicken from inventory via server
       local sellChickenFunc = getFunction("SellChicken")
       if sellChickenFunc then
-        local result = sellChickenFunc:InvokeServer(selectedItem.itemId, true) -- true = from inventory
+        local result = sellChickenFunc:InvokeServer(selectedItem.itemId, true)
         if result and result.success then
           SoundEffects.playMoneyCollect(result.sellPrice or 0)
           InventoryUI.clearSelection()
@@ -1400,17 +519,14 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
     end
   elseif selectedItem.itemType == "trap" then
     if actionType == "place" then
-      -- Check if trap is already placed
       if selectedItem.itemData.spotIndex and selectedItem.itemData.spotIndex > 0 then
         SoundEffects.play("uiError")
         warn("[Client] Trap is already placed at spot", selectedItem.itemData.spotIndex)
         return
       end
 
-      -- Place trap from inventory to trap spot
       local placeTrapFunc = getFunction("PlaceTrap")
       if placeTrapFunc then
-        -- Find available trap spot near player
         local character = localPlayer.Character
         if character then
           local rootPart = character:FindFirstChild("HumanoidRootPart") :: BasePart?
@@ -1434,8 +550,6 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
         end
       end
     elseif actionType == "sell" then
-      -- Sell trap via SellPredator remote (traps with caught predators return sell value)
-      -- For unplaced traps, we just remove them without payment for now
       warn("[Client] Trap selling not implemented yet")
       SoundEffects.play("uiError")
     end
@@ -1452,7 +566,6 @@ HatchPreviewUI.onHatch(function(eggId: string, eggType: string)
     return
   end
 
-  -- Check chicken limit before attempting to hatch with placement
   if MainHUD.isAtChickenLimit() then
     SoundEffects.play("uiError")
     warn("[Client] Cannot hatch egg: Area is at maximum capacity (15 chickens)")
@@ -1461,7 +574,6 @@ HatchPreviewUI.onHatch(function(eggId: string, eggType: string)
     return
   end
 
-  -- Get player's current position for spawning chicken nearby
   local playerPosition = nil
   local character = localPlayer.Character
   if character then
@@ -1472,15 +584,12 @@ HatchPreviewUI.onHatch(function(eggId: string, eggType: string)
     end
   end
 
-  -- Hatch egg via server (pass placement hint and player position)
   local hatchEggFunc = getFunction("HatchEgg")
   if hatchEggFunc then
-    local result = hatchEggFunc:InvokeServer(eggId, 1, playerPosition) -- Pass position for nearby spawn
+    local result = hatchEggFunc:InvokeServer(eggId, 1, playerPosition)
     if result and result.success then
       SoundEffects.playEggHatch(result.rarity or "Common")
       print("[Client] Egg hatched successfully:", result.chickenType, result.rarity)
-
-      -- Show the result screen with what they got
       HatchPreviewUI.showResult(result.chickenType, result.rarity)
     elseif result and result.atLimit then
       SoundEffects.play("uiError")
@@ -1491,13 +600,11 @@ HatchPreviewUI.onHatch(function(eggId: string, eggType: string)
     end
   end
 
-  -- Clear placed egg data
   placedEggData = nil
 end)
 
 HatchPreviewUI.onCancel(function()
   print("[Client] Hatch cancelled")
-  -- Clear placed egg data
   placedEggData = nil
 end)
 print("[Client] HatchPreviewUI callbacks wired")
@@ -1526,16 +633,11 @@ end)
 print("[Client] MainHUD inventory button wired")
 
 --[[
-  Weapon Tool Handling
-  Uses Roblox's native Tool system for weapon equipping.
-  Weapons appear in the player's Backpack/Hotbar and are equipped by clicking or pressing number keys.
-  Tool.Activated is used to trigger swings.
+	Weapon Tool Handling
 ]]
 
--- Track currently equipped weapon tool
 local equippedWeaponTool: Tool? = nil
 
--- Find the nearest predator targeting this player within weapon range
 local function findNearbyPredator(): (string?, number?)
   local character = localPlayer.Character
   if not character then
@@ -1552,7 +654,6 @@ local function findNearbyPredator(): (string?, number?)
   local bestDistance = batConfig.swingRangeStuds
   local bestPredatorId: string? = nil
 
-  -- Look for predator models in workspace
   local predatorsFolder = game.Workspace:FindFirstChild("Predators")
   if predatorsFolder then
     for _, predator in ipairs(predatorsFolder:GetChildren()) do
@@ -1569,12 +670,10 @@ local function findNearbyPredator(): (string?, number?)
   return bestPredatorId, bestDistance
 end
 
--- Swing animation constants
-local SWING_DURATION = 0.15 -- Fast swing
-local SWING_ANGLE = math.rad(80) -- 80 degree swing arc
+local SWING_DURATION = 0.15
+local SWING_ANGLE = math.rad(80)
 local isSwinging = false
 
--- Play swing animation on the weapon tool
 local function playSwingAnimation(tool: Tool): ()
   if isSwinging then
     return
@@ -1585,19 +684,16 @@ local function playSwingAnimation(tool: Tool): ()
     return
   end
 
-  -- Find the character's right arm/grip to animate from
   local character = localPlayer.Character
   if not character then
     return
   end
 
-  -- Use Motor6D for R15/R6 compatible animation
   local rightHand = character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm")
   if not rightHand then
     return
   end
 
-  -- Find the RightGrip weld that attaches the tool to the hand
   local grip = rightHand:FindFirstChild("RightGrip") :: Motor6D?
   if not grip or not grip:IsA("Motor6D") then
     return
@@ -1605,13 +701,9 @@ local function playSwingAnimation(tool: Tool): ()
 
   isSwinging = true
 
-  -- Store original C1 offset
   local originalC1 = grip.C1
-
-  -- Create swing animation by rotating the grip
   local swingC1 = originalC1 * CFrame.Angles(SWING_ANGLE, 0, 0)
 
-  -- Swing forward
   local swingTween = TweenService:Create(
     grip,
     TweenInfo.new(SWING_DURATION, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -1620,7 +712,6 @@ local function playSwingAnimation(tool: Tool): ()
   swingTween:Play()
   swingTween.Completed:Wait()
 
-  -- Swing back (return)
   local returnTween = TweenService:Create(
     grip,
     TweenInfo.new(SWING_DURATION * 0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
@@ -1632,7 +723,6 @@ local function playSwingAnimation(tool: Tool): ()
   isSwinging = false
 end
 
--- Handle weapon swing when Tool is activated (clicked)
 local function onWeaponActivated(tool: Tool)
   local swingBatFunc = getFunction("SwingBat")
   if not swingBatFunc then
@@ -1640,24 +730,18 @@ local function onWeaponActivated(tool: Tool)
     return
   end
 
-  -- Play swing sound immediately for responsiveness
   SoundEffects.playBatSwing("miss")
-
-  -- Play swing animation asynchronously (doesn't block server call)
   task.spawn(playSwingAnimation, tool)
 
-  -- Check for nearby predator targets
   local predatorId, _ = findNearbyPredator()
 
   local result
   if predatorId then
     result = swingBatFunc:InvokeServer("swing", "predator", predatorId)
     if result and result.success then
-      -- Update health bar with remaining health
       if result.remainingHealth ~= nil then
         PredatorHealthBar.updateHealth(predatorId, result.remainingHealth)
       end
-      -- Show floating damage number above predator
       if result.damage and result.damage > 0 then
         PredatorHealthBar.showDamageNumber(predatorId, result.damage)
       end
@@ -1670,7 +754,6 @@ local function onWeaponActivated(tool: Tool)
       end
     end
   else
-    -- Swing and miss
     result = swingBatFunc:InvokeServer("swing", nil, nil)
     if result and result.success then
       SoundEffects.playBatSwing("miss")
@@ -1678,7 +761,6 @@ local function onWeaponActivated(tool: Tool)
   end
 end
 
--- Handle weapon equipped (via Roblox Tool system)
 local function onWeaponEquipped(tool: Tool)
   equippedWeaponTool = tool
   local weaponType = tool:GetAttribute("WeaponType") or tool.Name
@@ -1686,7 +768,6 @@ local function onWeaponEquipped(tool: Tool)
   SoundEffects.playBatSwing("swing")
 end
 
--- Handle weapon unequipped (via Roblox Tool system)
 local function onWeaponUnequipped(tool: Tool)
   if equippedWeaponTool == tool then
     equippedWeaponTool = nil
@@ -1695,9 +776,7 @@ local function onWeaponUnequipped(tool: Tool)
   print("[Client] Weapon unequipped:", weaponType)
 end
 
--- Setup handlers for a weapon Tool
 local function setupWeaponTool(tool: Tool)
-  -- Only setup if it's a weapon tool (has WeaponType attribute)
   if not tool:GetAttribute("WeaponType") then
     return
   end
@@ -1717,7 +796,6 @@ local function setupWeaponTool(tool: Tool)
   print("[Client] Weapon tool setup:", tool.Name)
 end
 
--- Watch for new weapon Tools added to Backpack
 local function setupBackpackWatcher()
   local backpack = localPlayer:WaitForChild("Backpack", 10)
   if not backpack then
@@ -1725,14 +803,12 @@ local function setupBackpackWatcher()
     return
   end
 
-  -- Setup existing tools
   for _, child in ipairs(backpack:GetChildren()) do
     if child:IsA("Tool") then
       setupWeaponTool(child)
     end
   end
 
-  -- Watch for new tools
   backpack.ChildAdded:Connect(function(child)
     if child:IsA("Tool") then
       setupWeaponTool(child)
@@ -1742,17 +818,14 @@ local function setupBackpackWatcher()
   print("[Client] Backpack weapon watcher set up")
 end
 
--- Also watch character for equipped tools (respawn handling)
 local function setupCharacterToolWatcher()
   local function watchCharacter(character: Model)
-    -- Setup existing equipped tools
     for _, child in ipairs(character:GetChildren()) do
       if child:IsA("Tool") then
         setupWeaponTool(child)
       end
     end
 
-    -- Watch for newly equipped tools
     character.ChildAdded:Connect(function(child)
       if child:IsA("Tool") then
         setupWeaponTool(child)
@@ -1766,34 +839,29 @@ local function setupCharacterToolWatcher()
 
   localPlayer.CharacterAdded:Connect(function(character)
     watchCharacter(character)
-    -- Re-setup backpack watcher on respawn
     task.defer(setupBackpackWatcher)
   end)
 end
 
--- Initialize weapon tool system
 setupBackpackWatcher()
 setupCharacterToolWatcher()
 print("[Client] Weapon Tool system initialized")
 
 --[[
 	Updates lock timer display on the HUD if player has an active lock.
-	Calculates remaining time from lockEndTime in player data.
 ]]
 local function updateLockTimerDisplay()
-  if not playerDataCache or not playerDataCache.lockEndTime then
+  local playerData = PlayerDataController:GetData()
+  if not playerData or not playerData.lockEndTime then
     return
   end
 
   local currentTime = os.time()
-  local lockEndTime = playerDataCache.lockEndTime
+  local lockEndTime = playerData.lockEndTime
 
   if currentTime < lockEndTime then
     local remainingSeconds = lockEndTime - currentTime
-    -- MainHUD could have a setLockTimer function - log for now
-    -- TODO: MainHUD.setLockTimer(remainingSeconds) when MainHUD supports it
     if remainingSeconds > 0 and remainingSeconds % 10 == 0 then
-      -- Log every 10 seconds to avoid spam
       print("[Client] Lock timer:", remainingSeconds, "seconds remaining")
     end
   end
@@ -1801,8 +869,6 @@ end
 
 --[[
 	Updates proximity-based prompts based on player position.
-	Shows sell prompt when near a placed chicken (via ProximityPrompt on chicken model).
-	Also handles mobile touch controls and random chicken claiming.
 ]]
 local function updateProximityPrompts()
   local character = localPlayer.Character
@@ -1817,13 +883,11 @@ local function updateProximityPrompts()
 
   local playerPosition = rootPart.Position
 
-  -- Check if in sell confirmation mode
   if ChickenSelling.isConfirming() then
     MobileTouchControls.showSellConfirmContext()
     return
   end
 
-  -- Check for nearby chickens (for auto-collect and mobile controls)
   local chickenId, chickenType, _, accumulatedMoney = findNearbyPlacedChicken(playerPosition)
 
   if chickenId then
@@ -1831,19 +895,15 @@ local function updateProximityPrompts()
     nearestChickenId = chickenId
     nearestChickenType = chickenType
 
-    -- Auto-collect money when near a chicken with at least $1 accumulated
     if accumulatedMoney and accumulatedMoney >= 1 then
       local currentTime = os.clock()
       local lastCollectTime = lastCollectedChickenTimes[chickenId] or 0
 
-      -- Check cooldown to prevent spam
       if currentTime - lastCollectTime >= MONEY_COLLECTION_COOLDOWN then
         lastCollectedChickenTimes[chickenId] = currentTime
 
-        -- Call server to collect money from this specific chicken
         local collectMoneyFunc = getFunction("CollectMoney")
         if collectMoneyFunc then
-          -- Run in a separate thread to not block the game loop
           task.spawn(function()
             local result = collectMoneyFunc:InvokeServer(chickenId)
             if
@@ -1852,12 +912,8 @@ local function updateProximityPrompts()
               and result.amountCollected
               and result.amountCollected > 0
             then
-              -- Reset client-side accumulated money to the remainder
               ChickenVisuals.resetAccumulatedMoney(chickenId, result.remainder or 0)
-
-              -- Play collection sound and show visual effect
               SoundEffects.playMoneyCollect(result.amountCollected)
-              -- Get position from visual state
               local visualState = ChickenVisuals.get(chickenId)
               if visualState and visualState.position then
                 ChickenVisuals.createMoneyPopEffect({
@@ -1866,8 +922,6 @@ local function updateProximityPrompts()
                   isLarge = result.amountCollected >= 1000,
                 })
               end
-
-              -- Update the sell prompt price after money collection
               ChickenVisuals.updateSellPromptPrice(chickenId)
             end
           end)
@@ -1875,12 +929,9 @@ local function updateProximityPrompts()
       end
     end
 
-    -- ProximityPrompt handles the sell UI now (shows on chicken model)
-    -- Show mobile touch controls for sell only (pickup removed)
     MobileTouchControls.showSellContext()
   else
     if isNearChicken then
-      -- Was near, now not - hide mobile controls
       MobileTouchControls.hideAllButtons()
     end
     isNearChicken = false
@@ -1888,7 +939,6 @@ local function updateProximityPrompts()
     nearestChickenType = nil
   end
 
-  -- Check distance to store for fallback E key handling
   local store = SectionVisuals.getStore()
   if store then
     local storePart = store:FindFirstChildWhichIsA("BasePart", true)
@@ -1901,18 +951,15 @@ end
 
 --[[
 	Client game loop - runs every frame via Heartbeat.
-	Handles periodic updates that need to be smooth or responsive.
 ]]
 RunService.Heartbeat:Connect(function(deltaTime: number)
   local currentTime = os.clock()
 
-  -- Proximity check for prompts (throttled for performance)
   if currentTime - lastProximityCheckTime >= PROXIMITY_CHECK_INTERVAL then
     lastProximityCheckTime = currentTime
     updateProximityPrompts()
   end
 
-  -- Lock timer display update (less frequent)
   if currentTime - lastLockTimerUpdateTime >= LOCK_TIMER_UPDATE_INTERVAL then
     lastLockTimerUpdateTime = currentTime
     updateLockTimerDisplay()
@@ -1922,23 +969,18 @@ end)
 print("[Client] Client game loop started")
 
 --[[
-  Store Interaction Setup
-  Wires the store proximity prompt to open the store UI.
+	Store Interaction Setup
 ]]
 
--- Wire up store prompt triggered event
 local function setupStoreInteraction()
   local store = SectionVisuals.getStore()
   if not store then
-    -- Store might not be built yet, wait and retry
     task.delay(1, setupStoreInteraction)
     return
   end
 
-  -- Find the StorePrompt in the store model
   local prompt = store:FindFirstChild("StorePrompt", true)
   if prompt and prompt:IsA("ProximityPrompt") then
-    -- Connect the Triggered event (fires when player activates the prompt)
     prompt.Triggered:Connect(function(playerWhoTriggered)
       if playerWhoTriggered == localPlayer then
         StoreUI.toggle()
@@ -1946,7 +988,6 @@ local function setupStoreInteraction()
       end
     end)
 
-    -- Track when prompt becomes visible/hidden for fallback E key handling
     prompt.PromptShown:Connect(function(playerToShowTo)
       if playerToShowTo == localPlayer then
         isNearStore = true
@@ -1959,14 +1000,12 @@ local function setupStoreInteraction()
       end
     end)
 
-    storePromptConnected = true
-    print("[Client] Store prompt connected with Triggered, PromptShown, and PromptHidden events")
+    print("[Client] Store prompt connected")
   else
     warn("[Client] StorePrompt not found in store model")
   end
 end
 
--- Setup store interaction after a delay to ensure store is built
 task.delay(0.5, setupStoreInteraction)
 
 -- Wire up store purchase callback
@@ -2022,7 +1061,6 @@ StoreUI.onRobuxPurchase(function(itemType: string, itemId: string)
     if result.success then
       SoundEffects.play("purchase")
       print("[Client] Robux item purchase initiated:", result.message)
-      -- Refresh inventory to show new item
       StoreUI.refreshInventory()
     else
       SoundEffects.play("uiError")
@@ -2044,7 +1082,6 @@ StoreUI.onPowerUpPurchase(function(powerUpId: string)
     if result.success then
       SoundEffects.play("purchase")
       print("[Client] Power-up purchase initiated:", result.message)
-      -- Refresh store to show active status
       StoreUI.refreshInventory()
     else
       SoundEffects.play("uiError")
@@ -2068,7 +1105,6 @@ StoreUI.onTrapPurchase(function(trapType: string)
     if result.success then
       SoundEffects.play("purchase")
       print("[Client] Trap purchased:", result.message)
-      -- Refresh store UI
       StoreUI.refreshInventory()
     else
       SoundEffects.play("uiError")
@@ -2089,7 +1125,6 @@ StoreUI.onWeaponPurchase(function(weaponType: string)
     if result.success then
       SoundEffects.play("purchase")
       print("[Client] Weapon purchased:", result.message)
-      -- Refresh store UI
       StoreUI.refreshInventory()
     else
       SoundEffects.play("uiError")
@@ -2098,9 +1133,24 @@ StoreUI.onWeaponPurchase(function(weaponType: string)
   end
 end)
 
+-- Wire ShieldUI activation callback to server
+local activateShieldFunc = getFunction("ActivateShield")
+ShieldUI.onActivate(function()
+  if activateShieldFunc then
+    local result = activateShieldFunc:InvokeServer()
+    if result then
+      if result.success then
+        print("[Client] Shield activation successful:", result.message)
+      else
+        ShieldUI.showActivationFeedback(false, result.message)
+        print("[Client] Shield activation failed:", result.message)
+      end
+    end
+  end
+end)
+
 --[[
-  Fallback E key handler for store interaction.
-  Random chicken claiming is now handled via ProximityPrompt on the chicken model.
+	Fallback E key handler for store interaction.
 ]]
 UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
   if gameProcessed then
@@ -2108,7 +1158,6 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
   end
 
   if input.KeyCode == Enum.KeyCode.E then
-    -- Fallback: If near store and ProximityPrompt didn't handle it, toggle store manually
     if isNearStore and not isNearChicken then
       StoreUI.toggle()
       print("[Client] Store opened via fallback E key handler")

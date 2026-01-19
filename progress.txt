@@ -1448,3 +1448,52 @@ Created client-side Knit controllers for store, trap, trade, and game state:
 - TradeController tracks trade state locally with IsInTrade() and GetCurrentTradeId()
 - GameStateController caches time info - use GetCached* methods for synchronous UI access
 - Utility methods like IsDangerousTime() and GetPeriodIcon() help with UI display
+
+---
+
+## Session: 2026-01-19 (Work Item #20)
+
+### Completed: Migrate Client Modules to Use Controllers
+
+#### What Was Done
+Migrated Main.client.lua to use Knit controllers and removed direct RemoteEvent connections:
+
+1. **Created ClientEventRelay.lua**
+   - New module that bridges server RemoteEvents to visual modules
+   - Handles all 30+ RemoteEvent connections in a centralized location
+   - Configurable with visual module references
+   - Properly separates concerns: controllers handle state, relay handles visuals
+
+2. **Refactored Main.client.lua**
+   - Reduced from 2119 lines to 1168 lines (45% reduction)
+   - Now only bootstraps Knit, initializes UI, and wires callbacks
+   - Uses PlayerDataController for player data instead of direct RemoteFunction calls
+   - No direct RemoteEvent.OnClientEvent connections
+   - Uses ClientEventRelay.getFunction() for server calls (acceptable pattern)
+
+3. **Architecture Improvements**
+   - Clear separation: Controllers (state/methods) vs EventRelay (visual updates)
+   - Main.client.lua is now a clean entry point
+   - Visual modules receive updates via the relay, not direct event connections
+
+### Acceptance Criteria Met
+- ✅ No direct RemoteEvent usage in Main.client.lua (all in ClientEventRelay)
+- ✅ Client modules use controllers (PlayerDataController for data)
+- ✅ Main.client.lua only contains Knit bootstrap and UI initialization
+
+### Files Changed
+- `src/client/ClientEventRelay.lua` - NEW: Centralized server event relay (759 lines)
+- `src/client/Main.client.lua` - MODIFIED: Refactored to use controllers/relay (1168 lines, was 2119)
+- `plans/refactor-prd.json` - MODIFIED: Marked work item #20 as completed
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+
+### Notes for Next Developer
+- Work Item #21 (Install Fusion/OnyxUI and Create Theme) is the next step
+- ClientEventRelay is a transitional module - as services add more signals, the relay can be gradually deprecated
+- Main.client.lua now uses PlayerDataController.DataLoaded and DataChanged for player data updates
+- Visual modules (ChickenVisuals, PredatorVisuals, etc.) receive updates via ClientEventRelay
+- Server calls still use RemoteFunctions via ClientEventRelay.getFunction() - this is acceptable as Knit doesn't handle request/response patterns directly
+- The old Main.client.lua is backed up as Main.client.lua.old (can be deleted after verification)

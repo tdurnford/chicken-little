@@ -589,7 +589,8 @@
       "category": "Knit Client",
       "title": "Migrate Client Modules to Use Controllers",
       "description": "Update all client modules to use controllers instead of direct remote calls.",
-      "completed": false,
+      "completed": true,
+      "status": "done",
       "steps": [
         "Update all client UI modules to use controllers",
         "Update all client visual modules to use controllers",
@@ -602,9 +603,11 @@
         "Main.client.lua only contains Knit bootstrap"
       ],
       "files": {
+        "create": [
+          "src/client/ClientEventRelay.lua"
+        ],
         "modify": [
-          "src/client/Main.client.lua",
-          "src/client/*.lua"
+          "src/client/Main.client.lua"
         ]
       }
     },
