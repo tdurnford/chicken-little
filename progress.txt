@@ -606,3 +606,57 @@ Created the ChickenService Knit service that wraps all chicken-related server lo
 - Use `ChickenService:RegisterChicken(userId, chicken)` when loading saved chickens
 - ID #7 (EggService) is the next logical step to continue the Knit migration
 - Once all services are migrated (ID #14), the RemoteSetup handlers in Main.server.lua will be removed
+
+
+---
+
+## 2026-01-19 - Create EggService (ID #7)
+
+### Summary
+Created the EggService Knit service that wraps all egg-related server logic, migrating functionality from Main.server.lua into a clean service-based architecture.
+
+### Features Implemented
+1. **EggService Module** (`src/server/Services/EggService.lua`)
+   - Knit service wrapping EggHatching, EggConfig, WorldEgg, and Store modules
+   - Client-exposed methods: `HatchEgg`, `CollectWorldEgg`, `BuyEgg`, `SellEgg`
+   - Client signals: `EggHatched`, `EggSpawned`, `EggCollected`, `EggDespawned`, `EggPurchased`, `EggSold`, `StockUpdated`
+   - Server-only methods: `SpawnWorldEgg`, `UpdateWorldEggs`, `GetWorldEggs`, `GetWorldEggCount`, `GetHatchPreview`, `GetAllEggTypes`, `GetEggConfig`, `GetWorldEggRegistry`
+   - Server signals: `EggLaid`, `EggHatchedSignal`, `XPAwarded`
+
+2. **Per-Player State Management**
+   - Tracks `WorldEggRegistry` per player for world eggs laid by chickens
+   - Auto-initializes on PlayerAdded, cleans up on PlayerRemoving
+
+3. **Integration with PlayerDataService**
+   - Uses `PlayerDataService:GetData()` to retrieve player data
+   - Uses `PlayerDataService:UpdateData()` to persist changes and notify clients
+
+4. **XP Integration**
+   - Awards XP for hatching chickens (via `XPConfig.calculateChickenHatchXP`)
+   - Awards XP for collecting eggs (via `XPConfig.calculateEggCollectedXP`)
+   - Fires `XPAwarded` signal for other services to listen to
+
+5. **Event Broadcasting**
+   - All egg operations fire to owning player for visual sync
+   - Server signals allow other services to react to egg events
+
+### Acceptance Criteria Met
+- ✅ All egg operations work through EggService
+- ✅ Egg hatching produces correct chicken distribution (uses EggHatching module)
+- ✅ Tests created (EggService.spec.lua)
+
+### Files Changed
+- `src/server/Services/EggService.lua` - NEW: Knit service for egg operations
+- `src/server/Services/EggService.spec.lua` - NEW: Tests for EggService
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+
+### Notes for Next Developer
+- EggService is ready but NOT integrated into Main.server.lua yet (that's ID #14)
+- The legacy RemoteFunction handlers in Main.server.lua still work in parallel
+- Other services should use `EggService:GetWorldEggRegistry(userId)` for world egg access
+- Call `EggService:SpawnWorldEgg()` when chickens lay eggs
+- Call `EggService:UpdateWorldEggs()` periodically to handle despawns
+- ID #8 (PredatorService) is the next logical step to continue the Knit migration

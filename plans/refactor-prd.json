@@ -234,7 +234,7 @@
       "category": "Knit Server",
       "title": "Create EggService",
       "description": "Create the EggService that handles all egg-related server logic.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create src/server/Services/EggService.lua",
         "Migrate egg hatching logic from Main.server.lua",
@@ -253,7 +253,8 @@
           "src/server/Services/EggService.lua",
           "src/server/Services/EggService.spec.lua"
         ]
-      }
+      },
+      "status": "done"
     },
     {
       "id": 8,
