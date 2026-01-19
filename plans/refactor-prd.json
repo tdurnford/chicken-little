@@ -503,7 +503,7 @@
       "category": "Knit Client",
       "title": "Create ChickenController and EggController",
       "description": "Create controllers for chicken and egg client-side interactions.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create src/client/Controllers/ChickenController.lua",
         "Create src/client/Controllers/EggController.lua",

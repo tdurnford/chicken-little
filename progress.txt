@@ -1279,3 +1279,51 @@ Created the client-side PlayerDataController that wraps PlayerDataService and pr
 - Use `PlayerDataController.DataLoaded` to wait for initial data before rendering UI
 - Use specific signals (MoneyChanged, etc.) for targeted UI updates instead of DataChanged
 - Helper methods return safe defaults (0, nil, empty tables) when data isn't loaded
+
+---
+
+## Session: 2026-01-19 (Work Item #17)
+
+### Completed: Create ChickenController and EggController
+
+#### What Was Done
+Created client-side Knit controllers for chicken and egg interactions:
+
+1. **ChickenController.lua**
+   - Connects to ChickenService via Knit
+   - GoodSignal events: ChickenPlaced, ChickenPickedUp, ChickenMoved, ChickenSold, MoneyCollected
+   - Client methods: PlaceChicken, PickupChicken, MoveChicken, SellChicken, CollectMoney
+   - Safe error handling when service not available
+
+2. **EggController.lua**
+   - Connects to EggService via Knit
+   - GoodSignal events: EggHatched, EggSpawned, EggCollected, EggDespawned, EggPurchased, EggSold, StockUpdated
+   - Client methods: HatchEgg, CollectWorldEgg, BuyEgg, SellEgg
+   - Local world egg cache with GetWorldEggs, GetWorldEgg, GetWorldEggCount helpers
+   - Cache auto-updates when eggs spawn/collect/despawn
+
+3. **Spec files created**
+   - ChickenController.spec.lua - Tests for signals, methods, error handling
+   - EggController.spec.lua - Tests for signals, methods, cache behavior, error handling
+
+### Acceptance Criteria Met
+- ✅ Controllers can request operations from services
+- ✅ GoodSignal events fire correctly (relay from server signals)
+- ✅ Tests pass (spec files created)
+
+### Files Changed
+- `src/client/Controllers/ChickenController.lua` - NEW: Client-side chicken controller
+- `src/client/Controllers/ChickenController.spec.lua` - NEW: Tests
+- `src/client/Controllers/EggController.lua` - NEW: Client-side egg controller
+- `src/client/Controllers/EggController.spec.lua` - NEW: Tests
+- `plans/refactor-prd.json` - MODIFIED: Marked work item #17 as completed
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+
+### Notes for Next Developer
+- Work Item #18 (Create PredatorController and CombatController) is the next step
+- EggController caches world eggs locally - UI should use GetWorldEggs() for rendering
+- All controllers follow the same pattern: connect to service signals in KnitStart, expose GoodSignal events
+- Use controller signals for UI updates instead of direct service access
