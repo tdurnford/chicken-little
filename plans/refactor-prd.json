@@ -392,7 +392,8 @@
       "category": "Knit Server",
       "title": "Create LevelService and GameStateService",
       "description": "Create services for XP/leveling and game state management.",
-      "completed": false,
+      "completed": true,
+      "status": "done",
       "steps": [
         "Create src/server/Services/LevelService.lua for XP and leveling",
         "Create src/server/Services/GameStateService.lua for day/night and sections",

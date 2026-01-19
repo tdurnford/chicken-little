@@ -997,3 +997,92 @@ Created the TradeService Knit service that wraps all player trading server logic
 - The service integrates with PlayerDataService for data access/updates
 - ID #13 (LevelService and GameStateService) is the next logical step to continue the Knit migration
 - Once all services are migrated (ID #14), the RemoteSetup handlers will be removed
+
+
+---
+
+## 2026-01-19 - Create LevelService and GameStateService (ID #13)
+
+### Summary
+Created the LevelService and GameStateService Knit services that wrap XP/leveling and day/night cycle logic respectively.
+
+### Features Implemented
+
+#### LevelService (`src/server/Services/LevelService.lua`)
+1. **XP Awarding System**
+   - `AwardXP(userId, amount, reason)` - Generic XP award with notifications
+   - `AwardPredatorKillXP(userId, predatorType)` - XP for killing predators
+   - `AwardChickenHatchXP(userId, chickenRarity)` - XP for hatching chickens
+   - `AwardRandomChickenXP(userId, chickenRarity)` - XP for catching wild chickens
+   - `AwardEggCollectedXP(userId, eggRarity)` - XP for collecting eggs
+   - `AwardTrapCatchXP(userId, predatorType)` - XP for trapping predators
+   - `AwardDayNightCycleXP(userId)` - XP for surviving night
+
+2. **Level Querying**
+   - `GetLevel(userId)` - Get player's current level
+   - `GetMaxPredators(userId)` - Get max simultaneous predators allowed
+   - `GetThreatMultiplier(userId)` - Get difficulty multiplier
+   - `IsThreatUnlocked(userId, threatLevel)` - Check threat level access
+   - `GetMaxThreatLevel(userId)` - Get highest unlocked threat
+
+3. **Client Methods**
+   - `GetLevelInfo` - Returns level and XP
+   - `GetLevelProgress` - Returns 0-1 progress to next level
+   - `GetXPToNextLevel` - Returns XP needed for next level
+   - `GetLevelData` - Returns full level data object
+   - `GetMaxThreatLevel` - Returns highest unlocked threat
+   - `GetUnlockedThreatLevels` - Returns list of unlocked threats
+
+4. **Signals**
+   - Client: `XPGained`, `LevelUp`
+   - Server: `XPAwardedSignal`, `LevelUpSignal`, `ThreatUnlockedSignal`
+
+#### GameStateService (`src/server/Services/GameStateService.lua`)
+1. **Day/Night Cycle Management**
+   - Wraps DayNightCycle module for lighting updates
+   - Automatic lighting transitions via Heartbeat
+   - Period change detection (dawn/day/dusk/night)
+
+2. **Time Querying**
+   - `GetGameTime()` - Returns 0-24 hour value
+   - `GetTimeOfDay()` - Returns current period string
+   - `IsNight()`, `IsDawn()`, `IsDusk()`, `IsDay()` - Period checks
+   - `GetPredatorSpawnMultiplier()` - 0.5 (day) to 2.0 (night)
+   - `GetTimeInfo()` - Full time info object
+   - `GetNightCycleNumber()` - Count of completed night cycles
+
+3. **Client Methods**
+   - `GetGameTime`, `GetTimeOfDay`, `IsNight`
+   - `GetPredatorMultiplier`, `GetTimeInfo`
+
+4. **Automatic Night Survival XP**
+   - Tracks night cycle completions
+   - Awards XP via LevelService when night ends
+   - Per-player tracking to prevent double awards
+
+5. **Signals**
+   - Client: `TimeChanged`, `PeriodChanged`, `NightStarted`, `DayStarted`
+   - Server: `TimeChangedSignal`, `PeriodChangedSignal`, `NightStartedSignal`, `NightEndedSignal`, `NightCycleCompleteSignal`
+
+### Acceptance Criteria Met
+- ✅ XP and leveling work through LevelService
+- ✅ Day/night cycle works through GameStateService
+- ✅ Tests created (LevelService.spec.lua, GameStateService.spec.lua)
+
+### Files Changed
+- `src/server/Services/LevelService.lua` - NEW: Knit service for XP and leveling
+- `src/server/Services/LevelService.spec.lua` - NEW: Tests for LevelService and LevelConfig/XPConfig
+- `src/server/Services/GameStateService.lua` - NEW: Knit service for day/night cycle
+- `src/server/Services/GameStateService.spec.lua` - NEW: Tests for GameStateService and DayNightCycle
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+
+### Notes for Next Developer
+- LevelService and GameStateService are ready but NOT integrated into Main.server.lua yet (that's ID #14)
+- GameStateService automatically awards night survival XP via LevelService
+- LevelService depends on PlayerDataService for data access
+- The existing XP award logic in Main.server.lua still works in parallel
+- ID #14 (Refactor Main.server.lua) is the next step to complete server-side Knit migration
+- Once all services are integrated (ID #14), the RemoteSetup handlers and legacy game loop code will be removed
