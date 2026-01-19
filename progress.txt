@@ -721,3 +721,66 @@ Created the PredatorService Knit service that wraps all predator-related server 
 - ID #9 (StoreService) is the next logical step to continue the Knit migration
 - Once all services are migrated (ID #14), the RemoteSetup handlers in Main.server.lua will be removed
 
+
+
+---
+
+## 2026-01-19 - Create StoreService (ID #9)
+
+### Summary
+Created the StoreService Knit service that wraps all store-related server logic, migrating functionality from Main.server.lua into a clean service-based architecture.
+
+### Features Implemented
+1. **StoreService Module** (`src/server/Services/StoreService.lua`)
+   - Knit service wrapping Store module functions
+   - Client-exposed methods: `GetStoreInventory`, `BuyEgg`, `BuyChicken`, `BuyTrap`, `BuyWeapon`, `SellEgg`, `SellChicken`, `SellPredator`, `SellTrap`, `SellWeapon`, `GetAvailableItems`, `GetTimeUntilReplenish`
+   - Client signals: `StoreReplenished`, `ItemPurchased`, `ItemSold`, `StockUpdated`
+   - Server-only methods: `GetStoreInventory`, `BuyEgg`, `BuyChicken`, `BuyTrap`, `BuyWeapon`, `SellEgg`, `SellChicken`, `SellPredator`, `SellTrap`, `SellWeapon`, `GetAvailableItems`, `NeedsReplenish`, `GetTimeUntilReplenish`, `ReplenishStore`, `ForceReplenish`, `UpdateStore`, `GetStock`, `IsInStock`, `GetInventoryValue`, `GetEggPrice`, `GetChickenPrice`, `GetChickenValue`, `GetPredatorValue`
+   - Server signals: `PurchaseCompleted`, `SaleCompleted`, `StoreRestocked`
+
+2. **Store Inventory Management**
+   - Initializes store inventory on service init via `Store.initializeInventory()`
+   - Tracks stock levels for eggs and chickens based on rarity
+   - Automatic replenishment detection via `NeedsReplenish()` and `UpdateStore()`
+   - Broadcasts `StoreReplenished` to all clients when restocked
+
+3. **Integration with PlayerDataService**
+   - Uses `PlayerDataService:GetData()` to retrieve player data for transactions
+   - Uses `PlayerDataService:UpdateData()` to persist changes after purchases/sales
+   - All transaction methods validate player data before processing
+
+4. **Complete Buy/Sell Operations**
+   - Egg purchases with stock tracking
+   - Chicken purchases with stock tracking
+   - Trap purchases with placement limit validation
+   - Weapon purchases with ownership validation
+   - Egg, chicken, predator, trap, and weapon sales
+   - All operations fire appropriate client events for UI sync
+
+5. **Event Broadcasting**
+   - `ItemPurchased` fires to owner with purchase details
+   - `ItemSold` fires to owner with sale details
+   - `StockUpdated` fires when inventory stock changes
+   - `StoreReplenished` fires to all players when store restocks
+   - Server signals allow other services to react to store events
+
+### Acceptance Criteria Met
+- ✅ Store operations work through StoreService
+- ✅ Buy/sell validates funds and inventory
+- ✅ Tests created (StoreService.spec.lua)
+
+### Files Changed
+- `src/server/Services/StoreService.lua` - NEW: Knit service for store operations
+- `src/server/Services/StoreService.spec.lua` - NEW: Tests for StoreService
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+
+### Notes for Next Developer
+- StoreService is ready but NOT integrated into Main.server.lua yet (that's ID #14)
+- The legacy RemoteFunction handlers in Main.server.lua still work in parallel
+- Call `StoreService:UpdateStore()` periodically from game loop to auto-replenish
+- Use `StoreService:GetAvailableItems()` to get all purchasable items with stock info
+- ID #10 (TrapService) is the next logical step to continue the Knit migration
+- Once all services are migrated (ID #14), the RemoteSetup handlers will be removed

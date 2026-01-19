@@ -288,7 +288,7 @@
       "category": "Knit Server",
       "title": "Create StoreService",
       "description": "Create the StoreService that handles store inventory and transactions.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create src/server/Services/StoreService.lua",
         "Migrate store inventory management",
