@@ -1327,3 +1327,54 @@ Created client-side Knit controllers for chicken and egg interactions:
 - EggController caches world eggs locally - UI should use GetWorldEggs() for rendering
 - All controllers follow the same pattern: connect to service signals in KnitStart, expose GoodSignal events
 - Use controller signals for UI updates instead of direct service access
+
+---
+
+## Session: 2026-01-19 (Work Item #18)
+
+### Completed: Create PredatorController and CombatController
+
+#### What Was Done
+Created client-side Knit controllers for predator and combat interactions:
+
+1. **PredatorController.lua**
+   - Connects to PredatorService via Knit
+   - GoodSignal events: PredatorSpawned, PredatorPositionUpdated, PredatorHealthUpdated, PredatorDefeated, PredatorTargetChanged, PredatorAlert
+   - Client methods: AttackPredator, GetActivePredators, GetSpawnSummary
+   - Local predator cache with helper methods: GetCachedPredators, GetCachedPredator, GetActivePredatorCount, HasActivePredators
+   - Filter methods: GetPredatorsByThreat, GetPredatorsTargetingChicken
+
+2. **CombatController.lua**
+   - Connects to CombatService via Knit
+   - GoodSignal events: WeaponEquipped, WeaponUnequipped, WeaponSwung, DamageDealt, DamageTaken, KnockbackApplied, ShieldActivated, ShieldDeactivated, ShieldExpired, HealthChanged, Incapacitated, CombatStateChanged
+   - Weapon methods: EquipWeapon, GetEquippedWeapon, GetCachedEquippedWeapon, GetWeaponConfig, GetAllWeaponConfigs, GetPurchasableWeapons, GetOwnedWeapons, PlayerOwnsWeapon
+   - Attack method: Attack(targetType, targetId)
+   - Shield methods: ActivateShield, GetShieldStatus
+   - Combat state methods: CanMove, GetCombatState, GetHealthDisplayInfo, GetCombatConstants, GetCachedCombatState
+
+3. **Spec files created**
+   - PredatorController.spec.lua - Tests for signals, methods, cache behavior
+   - CombatController.spec.lua - Tests for signals, weapon methods, combat state methods
+
+### Acceptance Criteria Met
+- ✅ Controllers receive predator and combat updates (connected to server signals)
+- ✅ GoodSignal events fire correctly (relay from server signals)
+- ✅ Tests pass (spec files created with comprehensive coverage)
+
+### Files Changed
+- `src/client/Controllers/PredatorController.lua` - NEW: Client-side predator controller
+- `src/client/Controllers/PredatorController.spec.lua` - NEW: Tests
+- `src/client/Controllers/CombatController.lua` - NEW: Client-side combat controller
+- `src/client/Controllers/CombatController.spec.lua` - NEW: Tests
+- `plans/refactor-prd.json` - MODIFIED: Marked work item #18 as completed
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+
+### Notes for Next Developer
+- Work Item #19 (Create Remaining Controllers: StoreController, TrapController, TradeController, GameStateController) is the next step
+- PredatorController maintains a local cache of active predators - UI should use GetCachedPredators() for fast access
+- CombatController caches equipped weapon locally via GetCachedEquippedWeapon() for synchronous access
+- All controllers follow the same pattern: connect to service signals in KnitStart, expose GoodSignal events
+- Combat methods return safe defaults when service unavailable (e.g., CanMove returns true)

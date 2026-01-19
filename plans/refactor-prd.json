@@ -530,7 +530,7 @@
       "category": "Knit Client",
       "title": "Create PredatorController and CombatController",
       "description": "Create controllers for predator and combat client-side interactions.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create src/client/Controllers/PredatorController.lua",
         "Create src/client/Controllers/CombatController.lua",
