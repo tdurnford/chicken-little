@@ -7,3 +7,7 @@ realm = "shared"
 [dependencies]
 TopbarPlus = "1foreverhd/topbarplus@3.4.0"
 ProfileService = "brittonfischer/profileservice@2.1.5"
+Knit = "sleitnick/knit@1.6.3"
+Promise = "evaera/promise@4.0.0"
+GoodSignal = "stravant/goodsignal@0.2.0"
+  

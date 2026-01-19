@@ -460,3 +460,52 @@ Completed migration from legacy DataPersistence module to ProfileManager, fully 
 - Call `ProfileManager.updateData(userId, data)` after modifying player data to sync to the profile
 - The legacy DataStore data migration happens automatically for existing players
 - ID #4 (Install Knit) is the next logical step to continue the architecture refactor
+
+---
+
+## 2026-01-19 - Install Knit and Create Server Bootstrap (ID #4)
+
+### Summary
+Installed Knit framework, Promise, and GoodSignal via Wally. Created the server-side Knit bootstrap structure with Services directory and KnitServer.lua module.
+
+### Features Implemented
+1. **Package Installation**
+   - Added `sleitnick/knit@1.6.3` to wally.toml (installed 1.7.0)
+   - Added `evaera/promise@4.0.0` to wally.toml
+   - Added `stravant/goodsignal@0.2.0` to wally.toml (installed 0.2.1)
+   - All packages and dependencies installed to Packages directory
+
+2. **Services Directory Structure**
+   - Created `src/server/Services/` directory for Knit services
+   - Added `.gitkeep` to preserve empty directory in git
+
+3. **KnitServer Bootstrap Module** (`src/server/KnitServer.lua`)
+   - `loadServices()` - Automatically loads all service modules from Services directory
+   - `start()` - Initializes and starts Knit server
+   - `isStarted()` - Returns whether Knit has been started
+   - `getKnit()` - Returns Knit module for service creation
+   - Excludes `.spec` files from service loading
+   - Comprehensive error handling and logging
+
+### Acceptance Criteria Met
+- ✅ All packages installed and accessible (Knit, Promise, GoodSignal)
+- ✅ Knit server bootstrap ready to start
+- ✅ Services directory structure exists
+
+### Files Changed
+- `wally.toml` - Added Knit, Promise, GoodSignal dependencies
+- `wally.lock` - Updated with new packages and dependencies
+- `Packages/` - Contains all installed packages (Knit.lua, Promise.lua, GoodSignal.lua)
+- `src/server/Services/.gitkeep` - NEW: Empty placeholder for services directory
+- `src/server/KnitServer.lua` - NEW: Server-side Knit bootstrap module
+
+### Testing
+- Build passes with `rojo build`
+- Format check passes with `stylua`
+
+### Notes for Next Developer
+- KnitServer is ready but NOT yet integrated into Main.server.lua (will happen in ID #14)
+- Create services in `src/server/Services/` using `Knit.CreateService()` pattern
+- Services should NOT end with `.spec` (those are test files)
+- Next step: ID #5 "Create PlayerDataService" to wrap ProfileManager with Knit
+- The `default.project.json` already includes Packages path, no update needed

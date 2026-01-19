@@ -147,7 +147,7 @@
       "category": "Knit Server",
       "title": "Install Knit and Create Server Bootstrap",
       "description": "Install Knit, Promise, and GoodSignal. Create the server-side Knit bootstrap structure.",
-      "completed": false,
+      "completed": true,
       "dependencies": {
         "install": [
           "sleitnick/knit@1.6.3",
