@@ -651,7 +651,7 @@
       "category": "Fusion UI",
       "title": "Create Fusion State Management",
       "description": "Create the centralized Fusion state that connects to controller signals.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create src/client/UI/State/PlayerState.lua with Fusion Value objects",
         "Create src/client/UI/State/GameState.lua with Fusion Value objects",
