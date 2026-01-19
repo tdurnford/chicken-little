@@ -660,3 +660,64 @@ Created the EggService Knit service that wraps all egg-related server logic, mig
 - Call `EggService:SpawnWorldEgg()` when chickens lay eggs
 - Call `EggService:UpdateWorldEggs()` periodically to handle despawns
 - ID #8 (PredatorService) is the next logical step to continue the Knit migration
+
+
+---
+
+## 2026-01-19 - Create PredatorService (ID #8)
+
+### Summary
+Created the PredatorService Knit service that wraps all predator-related server logic, migrating functionality from Main.server.lua into a clean service-based architecture.
+
+### Features Implemented
+1. **PredatorService Module** (`src/server/Services/PredatorService.lua`)
+   - Knit service wrapping PredatorSpawning, PredatorConfig, PredatorAI, and PredatorAttack modules
+   - Client-exposed methods: `AttackPredator`, `GetActivePredators`, `GetSpawnSummary`
+   - Client signals: `PredatorSpawned`, `PredatorPositionUpdated`, `PredatorHealthUpdated`, `PredatorDefeated`, `PredatorTargetChanged`, `PredatorAlert`
+   - Server-only methods: `GetSpawnState`, `GetAIState`, `SpawnPredator`, `ForceSpawnPredator`, `UpdatePredatorPositions`, `MarkPredatorCaught`, `MarkPredatorEscaped`, `UpdatePredatorTarget`, `CleanupInactivePredators`, `FindPredator`, etc.
+   - Server signals: `PredatorSpawnedSignal`, `PredatorDefeatedSignal`, `PredatorEscapedSignal`, `ChickenDamaged`, `XPAwarded`
+
+2. **Per-Player State Management**
+   - Tracks `spawnState` (PredatorSpawning) per player for wave management
+   - Tracks `aiState` (PredatorAI) per player for movement/targeting
+   - Tracks `dayNightState` for time-based spawn multipliers
+   - Auto-initializes on PlayerAdded, cleans up on PlayerRemoving
+
+3. **Integration with PlayerDataService**
+   - Uses `PlayerDataService:GetData()` to retrieve player level
+   - Uses `PlayerDataService:UpdateData()` for rewarding money on predator defeat
+   - Respects the existing data flow pattern
+
+4. **Combat System**
+   - `AttackPredator` client method for bat hits
+   - Health tracking with `PredatorHealthUpdated` signal
+   - Automatic reward distribution and XP on defeat
+   - Proper cleanup via AI unregistration
+
+5. **Event Broadcasting**
+   - All predator events fire to all clients for visual sync
+   - Alerts fire only to owning player
+   - Server signals allow other services to react to predator events
+
+### Acceptance Criteria Met
+- ✅ Predators spawn and behave correctly (via PredatorSpawning/PredatorAI wrappers)
+- ✅ Combat works through service (AttackPredator method)
+- ✅ Tests created (PredatorService.spec.lua)
+
+### Files Changed
+- `src/server/Services/PredatorService.lua` - NEW: Knit service for predator operations
+- `src/server/Services/PredatorService.spec.lua` - NEW: Tests for PredatorService
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+
+### Notes for Next Developer
+- PredatorService is ready but NOT integrated into Main.server.lua yet (that's ID #14)
+- The legacy RemoteEvent handlers in Main.server.lua still work in parallel
+- Other services should use `PredatorService:GetSpawnState(userId)` for predator access
+- Call `PredatorService:SpawnPredator()` from game loop for wave spawning
+- Call `PredatorService:UpdatePredatorPositions()` each frame for AI movement
+- ID #9 (StoreService) is the next logical step to continue the Knit migration
+- Once all services are migrated (ID #14), the RemoteSetup handlers in Main.server.lua will be removed
+

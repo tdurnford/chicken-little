@@ -261,7 +261,8 @@
       "category": "Knit Server",
       "title": "Create PredatorService",
       "description": "Create the PredatorService that handles predator spawning, AI, and combat.",
-      "completed": false,
+      "completed": true,
+      "status": "done",
       "steps": [
         "Create src/server/Services/PredatorService.lua",
         "Migrate predator spawning logic",
