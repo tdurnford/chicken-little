@@ -208,7 +208,7 @@
       "category": "Knit Server",
       "title": "Create ChickenService",
       "description": "Create the ChickenService that handles all chicken-related server logic.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create src/server/Services/ChickenService.lua",
         "Migrate chicken placement logic from Main.server.lua",

@@ -555,3 +555,54 @@ Created the PlayerDataService Knit service that wraps ProfileManager and exposes
 - Call `PlayerDataService:UpdateData(userId, data)` to save changes and notify clients
 - Use `PlayerDataService.DataUpdated:Connect(fn)` to listen for data changes server-side
 - ID #6 (ChickenService) is the next logical step to continue the Knit migration
+
+---
+
+## 2026-01-19 - Create ChickenService (ID #6)
+
+### Summary
+Created the ChickenService Knit service that wraps all chicken-related server logic, migrating functionality from Main.server.lua into a clean service-based architecture.
+
+### Features Implemented
+1. **ChickenService Module** (`src/server/Services/ChickenService.lua`)
+   - Knit service wrapping ChickenPlacement, MoneyCollection, and Store modules
+   - Client-exposed methods: `PlaceChicken`, `PickupChicken`, `MoveChicken`, `SellChicken`, `CollectMoney`
+   - Client signals: `ChickenPlaced`, `ChickenPickedUp`, `ChickenMoved`, `ChickenSold`, `MoneyCollected`
+   - Server-only methods: `GetPlayerState`, `GetHealthRegistry`, `GetAIState`, `RegisterChicken`, `UnregisterChicken`, `InitializeAIState`
+   - Server signals: `ChickenAdded`, `ChickenRemoved`, `MoneyGenerated`
+
+2. **Per-Player State Management**
+   - Tracks `healthRegistry` (ChickenHealth) per player
+   - Tracks `aiState` (ChickenAI) per player for free-roaming behavior
+   - Auto-initializes on PlayerAdded, cleans up on PlayerRemoving
+
+3. **Integration with PlayerDataService**
+   - Uses `PlayerDataService:GetData()` to retrieve player data
+   - Uses `PlayerDataService:UpdateData()` to persist changes and notify clients
+   - Respects the existing data flow pattern
+
+4. **Event Broadcasting**
+   - All placement/pickup/move operations fire to all clients for visual sync
+   - Sell and money collection fire only to the owning player
+   - Server signals allow other services to react to chicken changes
+
+### Acceptance Criteria Met
+- ✅ All chicken operations work through ChickenService
+- ✅ Client can interact with chickens via Knit (PlaceChicken, PickupChicken, etc.)
+- ✅ Tests created (ChickenService.spec.lua)
+
+### Files Changed
+- `src/server/Services/ChickenService.lua` - NEW: Knit service for chicken operations
+- `src/server/Services/ChickenService.spec.lua` - NEW: Tests for ChickenService
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+
+### Notes for Next Developer
+- ChickenService is ready but NOT integrated into Main.server.lua yet (that's ID #14)
+- The legacy RemoteFunction handlers in Main.server.lua still work in parallel
+- Other services should use `ChickenService:GetHealthRegistry(userId)` to damage chickens
+- Use `ChickenService:RegisterChicken(userId, chicken)` when loading saved chickens
+- ID #7 (EggService) is the next logical step to continue the Knit migration
+- Once all services are migrated (ID #14), the RemoteSetup handlers in Main.server.lua will be removed
