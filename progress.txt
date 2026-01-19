@@ -2064,3 +2064,61 @@ Created comprehensive ARCHITECTURE.md documenting all patterns and conventions, 
 - Work Item #21 (Install Fusion/OnyxUI) is the logical next step
 - Architecture documentation can be expanded when Fusion UI is implemented
 - All other work items (1-20, 30-36) have been completed
+
+
+---
+
+## Session: 2026-01-19 (Work Item #21)
+
+### Completed: Install Fusion/OnyxUI and Create Theme
+
+#### What Was Done
+Installed Fusion and OnyxUI dependencies via Wally and created the Theme configuration module with game-consistent styling.
+
+**Modified Files:**
+- `wally.toml` - Added Fusion@0.3.0 and OnyxUI@0.4.2 dependencies
+
+**Created Files:**
+- `src/client/UI/Theme/Theme.lua` - Theme configuration with:
+  - Color palette (Primary, Secondary, Background, Surface, Text, Status colors)
+  - Typography settings (fonts, sizes, line heights)
+  - Spacing scale
+  - Corner radius presets
+  - Border/stroke settings
+  - Animation durations and easing
+  - Z-index layers
+  - Transparency values
+  - OnyxUI theme creation function
+- `src/client/UI/Theme/init.lua` - Module index re-export
+
+**Package Installation:**
+- Fusion@0.3.0 - Reactive UI framework
+- OnyxUI@0.4.3 - UI component library (auto-upgraded from 0.4.2)
+- ColourUtils@1.4.1 - OnyxUI dependency
+
+### Design Decisions
+- Colors based on existing game aesthetic (MainHUD's money green #85BB65)
+- Dark background theme (30, 30, 40 RGB) consistent with current UI
+- Typography uses GothamSSm font family already in use
+- Added game-specific colors for Shield, XP, Health
+- Included flash colors for money gain/loss animations
+
+### Acceptance Criteria Met
+- ✅ Fusion and OnyxUI are installed
+- ✅ Theme configuration exists
+- ✅ Theme matches game aesthetic
+- ✅ Rojo build succeeds
+
+### Files Changed
+- `wally.toml` - MODIFIED
+- `wally.lock` - AUTO-UPDATED
+- `Packages/` - AUTO-UPDATED (new packages installed)
+- `src/client/UI/Theme/Theme.lua` - NEW
+- `src/client/UI/Theme/init.lua` - NEW
+- `plans/refactor-prd.json` - MODIFIED: Marked work item #21 as completed
+
+### Notes for Next Developer
+- Work Item #22 (Create Fusion State Management) is the logical next step
+- Theme can be imported with: `local Theme = require(script.Parent.UI.Theme)`
+- OnyxUI theme can be created with: `Theme.createOnyxTheme()`
+- All remaining work items (#22-29) are now unblocked

@@ -11,4 +11,6 @@ Knit = "sleitnick/knit@1.6.3"
 Promise = "evaera/promise@4.0.0"
 GoodSignal = "stravant/goodsignal@0.2.0"
 TestEZ = "roblox/testez@0.4.1"
+Fusion = "elttob/fusion@0.3.0"
+OnyxUI = "imavafe/onyx-ui@0.4.2"
   

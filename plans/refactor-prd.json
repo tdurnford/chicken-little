@@ -616,7 +616,7 @@
       "category": "Fusion UI",
       "title": "Install Fusion/OnyxUI and Create Theme",
       "description": "Install Fusion and OnyxUI, create the theme configuration.",
-      "completed": false,
+      "completed": true,
       "dependencies": {
         "install": [
           "elttob/fusion@0.3.0",

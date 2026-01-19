@@ -13,9 +13,24 @@ version = "2.1.5"
 dependencies = []
 
 [[package]]
+name = "csqrl/colour-utils"
+version = "1.4.1"
+dependencies = []
+
+[[package]]
+name = "elttob/fusion"
+version = "0.3.0"
+dependencies = []
+
+[[package]]
 name = "evaera/promise"
 version = "4.0.0"
 dependencies = []
+
+[[package]]
+name = "imavafe/onyx-ui"
+version = "0.4.3"
+dependencies = [["ColorUtils", "csqrl/colour-utils@1.4.1"], ["Fusion", "elttob/fusion@0.3.0"]]
 
 [[package]]
 name = "roblox/testez"
@@ -50,4 +65,4 @@ dependencies = []
 [[package]]
 name = "yourname/mygame"
 version = "0.1.0"
-dependencies = [["GoodSignal", "stravant/goodsignal@0.2.1"], ["Knit", "sleitnick/knit@1.7.0"], ["ProfileService", "brittonfischer/profileservice@2.1.5"], ["Promise", "evaera/promise@4.0.0"], ["TestEZ", "roblox/testez@0.4.1"], ["TopbarPlus", "1foreverhd/topbarplus@3.4.0"]]
+dependencies = [["Fusion", "elttob/fusion@0.3.0"], ["GoodSignal", "stravant/goodsignal@0.2.1"], ["Knit", "sleitnick/knit@1.7.0"], ["OnyxUI", "imavafe/onyx-ui@0.4.3"], ["ProfileService", "brittonfischer/profileservice@2.1.5"], ["Promise", "evaera/promise@4.0.0"], ["TestEZ", "roblox/testez@0.4.1"], ["TopbarPlus", "1foreverhd/topbarplus@3.4.0"]]
