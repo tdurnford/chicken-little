@@ -7,7 +7,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 
 local RemoteSetup = require(ServerScriptService:WaitForChild("RemoteSetup"))
-local DataPersistence = require(ServerScriptService:WaitForChild("DataPersistence"))
+local ProfileManager = require(ServerScriptService:WaitForChild("ProfileManager"))
 local MapGeneration = require(Shared:WaitForChild("MapGeneration"))
 local PlayerSection = require(Shared:WaitForChild("PlayerSection"))
 
@@ -195,7 +195,7 @@ local function syncPlayerData(player: Player, data: { [string]: any }?, forceSyn
   end
 
   -- Get data from cache if not provided
-  local syncData = data or DataPersistence.getData(userId)
+  local syncData = data or ProfileManager.getData(userId)
   if not syncData then
     return
   end
@@ -271,7 +271,7 @@ if getPlayerDataFunc then
   getPlayerDataFunc.OnServerInvoke = function(player: Player)
     local userId = player.UserId
     local playerId = tostring(userId)
-    local data = DataPersistence.getData(userId)
+    local data = ProfileManager.getData(userId)
 
     -- Ensure section index is included from mapState
     if data and not data.sectionIndex then
@@ -289,7 +289,7 @@ end
 local getGlobalChickenCountsFunc = RemoteSetup.getFunction("GetGlobalChickenCounts")
 if getGlobalChickenCountsFunc then
   getGlobalChickenCountsFunc.OnServerInvoke = function(_player: Player)
-    return DataPersistence.getGlobalChickenCounts()
+    return ProfileManager.getGlobalChickenCounts()
   end
 end
 
@@ -304,7 +304,7 @@ local buyEggFunc = RemoteSetup.getFunction("BuyEgg")
 if buyEggFunc then
   buyEggFunc.OnServerInvoke = function(player: Player, eggType: string, quantity: number?)
     local userId = player.UserId
-    local playerData = DataPersistence.getData(userId)
+    local playerData = ProfileManager.getData(userId)
     if not playerData then
       return { success = false, message = "Player data not found" }
     end
@@ -333,7 +333,7 @@ local buyChickenFunc = RemoteSetup.getFunction("BuyChicken")
 if buyChickenFunc then
   buyChickenFunc.OnServerInvoke = function(player: Player, chickenType: string, quantity: number?)
     local userId = player.UserId
-    local playerData = DataPersistence.getData(userId)
+    local playerData = ProfileManager.getData(userId)
     if not playerData then
       return { success = false, message = "Player data not found" }
     end
@@ -362,7 +362,7 @@ local sellChickenFunc = RemoteSetup.getFunction("SellChicken")
 if sellChickenFunc then
   sellChickenFunc.OnServerInvoke = function(player: Player, chickenId: string)
     local userId = player.UserId
-    local playerData = DataPersistence.getData(userId)
+    local playerData = ProfileManager.getData(userId)
     if not playerData then
       return { success = false, message = "Player data not found" }
     end
@@ -386,7 +386,7 @@ if buyTrapFunc then
   buyTrapFunc.OnServerInvoke = function(player: Player, trapType: string)
     print("[Server] BuyTrap invoked by", player.Name, "for trapType:", trapType)
     local userId = player.UserId
-    local playerData = DataPersistence.getData(userId)
+    local playerData = ProfileManager.getData(userId)
     if not playerData then
       return { success = false, message = "Player data not found" }
     end
@@ -405,7 +405,7 @@ local buyWeaponFunc = RemoteSetup.getFunction("BuyWeapon")
 if buyWeaponFunc then
   buyWeaponFunc.OnServerInvoke = function(player: Player, weaponType: string)
     local userId = player.UserId
-    local playerData = DataPersistence.getData(userId)
+    local playerData = ProfileManager.getData(userId)
     if not playerData then
       return { success = false, message = "Player data not found" }
     end
@@ -425,7 +425,7 @@ local activateShieldFunc = RemoteSetup.getFunction("ActivateShield")
 if activateShieldFunc then
   activateShieldFunc.OnServerInvoke = function(player: Player)
     local userId = player.UserId
-    local playerData = DataPersistence.getData(userId)
+    local playerData = ProfileManager.getData(userId)
     if not playerData then
       return { success = false, message = "Player data not found" }
     end
@@ -462,7 +462,7 @@ local sellEggFunc = RemoteSetup.getFunction("SellEgg")
 if sellEggFunc then
   sellEggFunc.OnServerInvoke = function(player: Player, eggId: string)
     local userId = player.UserId
-    local playerData = DataPersistence.getData(userId)
+    local playerData = ProfileManager.getData(userId)
     if not playerData then
       return { success = false, message = "Player data not found" }
     end
@@ -480,7 +480,7 @@ local sellPredatorFunc = RemoteSetup.getFunction("SellPredator")
 if sellPredatorFunc then
   sellPredatorFunc.OnServerInvoke = function(player: Player, trapId: string)
     local userId = player.UserId
-    local playerData = DataPersistence.getData(userId)
+    local playerData = ProfileManager.getData(userId)
     if not playerData then
       return { success = false, message = "Player data not found" }
     end
@@ -528,7 +528,7 @@ local placeChickenFunc = RemoteSetup.getFunction("PlaceChicken")
 if placeChickenFunc then
   placeChickenFunc.OnServerInvoke = function(player: Player, chickenId: string, _spotIndex: number?)
     local userId = player.UserId
-    local playerData = DataPersistence.getData(userId)
+    local playerData = ProfileManager.getData(userId)
     if not playerData then
       return { success = false, message = "Player data not found" }
     end
@@ -603,7 +603,7 @@ local pickupChickenFunc = RemoteSetup.getFunction("PickupChicken")
 if pickupChickenFunc then
   pickupChickenFunc.OnServerInvoke = function(player: Player, chickenId: string)
     local userId = player.UserId
-    local playerData = DataPersistence.getData(userId)
+    local playerData = ProfileManager.getData(userId)
     if not playerData then
       return { success = false, message = "Player data not found" }
     end
@@ -645,7 +645,7 @@ local moveChickenFunc = RemoteSetup.getFunction("MoveChicken")
 if moveChickenFunc then
   moveChickenFunc.OnServerInvoke = function(player: Player, chickenId: string, newSpotIndex: number)
     local userId = player.UserId
-    local playerData = DataPersistence.getData(userId)
+    local playerData = ProfileManager.getData(userId)
     if not playerData then
       return { success = false, message = "Player data not found" }
     end
@@ -684,7 +684,7 @@ local placeTrapFunc = RemoteSetup.getFunction("PlaceTrap")
 if placeTrapFunc then
   placeTrapFunc.OnServerInvoke = function(player: Player, trapId: string, spotIndex: number)
     local userId = player.UserId
-    local playerData = DataPersistence.getData(userId)
+    local playerData = ProfileManager.getData(userId)
     if not playerData then
       return { success = false, message = "Player data not found" }
     end
@@ -738,7 +738,7 @@ if hatchEggFunc then
     playerPosition: { x: number, y: number, z: number }?
   )
     local userId = player.UserId
-    local playerData = DataPersistence.getData(userId)
+    local playerData = ProfileManager.getData(userId)
     if not playerData then
       return { success = false, message = "Player data not found" }
     end
@@ -864,7 +864,7 @@ local collectWorldEggFunc = RemoteSetup.getFunction("CollectWorldEgg")
 if collectWorldEggFunc then
   collectWorldEggFunc.OnServerInvoke = function(player: Player, eggId: string)
     local userId = player.UserId
-    local playerData = DataPersistence.getData(userId)
+    local playerData = ProfileManager.getData(userId)
     if not playerData then
       return { success = false, message = "Player data not found" }
     end
@@ -911,7 +911,7 @@ local collectMoneyFunc = RemoteSetup.getFunction("CollectMoney")
 if collectMoneyFunc then
   collectMoneyFunc.OnServerInvoke = function(player: Player, chickenId: string?)
     local userId = player.UserId
-    local playerData = DataPersistence.getData(userId)
+    local playerData = ProfileManager.getData(userId)
     if not playerData then
       return { success = false, message = "Player data not found" }
     end
@@ -982,7 +982,7 @@ if swingBatFunc then
 
       -- Handle predator swing
       if targetType == "predator" and targetId then
-        local playerData = DataPersistence.getData(userId)
+        local playerData = ProfileManager.getData(userId)
         if not playerData then
           return { success = false, message = "Player data not found" }
         end
@@ -1084,7 +1084,7 @@ local claimRandomChickenFunc = RemoteSetup.getFunction("ClaimRandomChicken")
 if claimRandomChickenFunc then
   claimRandomChickenFunc.OnServerInvoke = function(player: Player)
     local userId = player.UserId
-    local playerData = DataPersistence.getData(userId)
+    local playerData = ProfileManager.getData(userId)
     if not playerData then
       return { success = false, message = "Player data not found" }
     end
@@ -1247,7 +1247,7 @@ if buyItemWithRobuxFunc then
 
       -- For testing: deliver item for free when product ID not set
       -- In production, this would prompt for Robux purchase
-      local playerData = DataPersistence.get(player)
+      local playerData = ProfileManager.getData(player.UserId)
       if not playerData then
         return {
           success = false,
@@ -1259,7 +1259,7 @@ if buyItemWithRobuxFunc then
       if result.success then
         -- Give the weapon Tool to player's Backpack
         WeaponTool.giveToPlayer(player, itemId)
-        DataPersistence.save(player)
+        ProfileManager.updateData(player.UserId, playerData)
         local playerDataChangedEvent = RemoteSetup.getEvent("PlayerDataChanged")
         if playerDataChangedEvent then
           playerDataChangedEvent:FireClient(player, playerData)
@@ -1288,7 +1288,7 @@ if buyItemWithRobuxFunc then
 
       -- For testing: deliver item for free when product ID not set
       -- In production, this would prompt for Robux purchase
-      local playerData = DataPersistence.get(player)
+      local playerData = ProfileManager.getData(player.UserId)
       if not playerData then
         return {
           success = false,
@@ -1298,7 +1298,7 @@ if buyItemWithRobuxFunc then
 
       local result = Store.buyTrapWithRobux(playerData, itemId)
       if result.success then
-        DataPersistence.save(player)
+        ProfileManager.updateData(player.UserId, playerData)
         local playerDataChangedEvent = RemoteSetup.getEvent("PlayerDataChanged")
         if playerDataChangedEvent then
           playerDataChangedEvent:FireClient(player, playerData)
@@ -1335,7 +1335,7 @@ if buyItemWithRobuxFunc then
     -- Check if product ID is configured for testing
     if productId == 0 then
       -- For testing: deliver item for free when product ID not set
-      local playerData = DataPersistence.get(player)
+      local playerData = ProfileManager.getData(player.UserId)
       if not playerData then
         return {
           success = false,
@@ -1351,8 +1351,8 @@ if buyItemWithRobuxFunc then
       end
 
       if result.success then
-        -- Save player data
-        DataPersistence.save(player)
+        -- Sync player data to profile
+        ProfileManager.updateData(player.UserId, playerData)
         -- Notify client of data change
         local playerDataChangedEvent = RemoteSetup.getEvent("PlayerDataChanged")
         if playerDataChangedEvent then
@@ -1416,7 +1416,7 @@ if buyPowerUpFunc then
     local productId = POWERUP_ROBUX_PRODUCT_IDS[powerUpId]
     if not productId or productId == 0 then
       -- Product ID not configured - give power-up for free (development mode)
-      local playerData = DataPersistence.get(player)
+      local playerData = ProfileManager.getData(player.UserId)
       if not playerData then
         return {
           success = false,
@@ -1427,8 +1427,8 @@ if buyPowerUpFunc then
       -- Add power-up to player data
       PlayerData.addPowerUp(playerData, powerUpId, powerUpConfigData.durationSeconds)
 
-      -- Save player data
-      DataPersistence.save(player)
+      -- Sync player data to profile
+      ProfileManager.updateData(player.UserId, playerData)
 
       -- Notify client of data change
       local playerDataChangedEvent = RemoteSetup.getEvent("PlayerDataChanged")
@@ -1583,7 +1583,7 @@ MarketplaceService.ProcessReceipt = function(receiptInfo: { [string]: any })
       if pendingPurchase and pendingPurchase.rarity == rarity then
         -- Deliver the item
         if player then
-          local playerData = DataPersistence.get(player)
+          local playerData = ProfileManager.getData(player.UserId)
           if playerData then
             local result
             if pendingPurchase.itemType == "egg" then
@@ -1593,8 +1593,8 @@ MarketplaceService.ProcessReceipt = function(receiptInfo: { [string]: any })
             end
 
             if result.success then
-              -- Save player data
-              DataPersistence.save(player)
+              -- Sync player data to profile
+              ProfileManager.updateData(player.UserId, playerData)
               -- Notify client of data change
               local playerDataChangedEvent = RemoteSetup.getEvent("PlayerDataChanged")
               if playerDataChangedEvent then
@@ -1627,15 +1627,15 @@ MarketplaceService.ProcessReceipt = function(receiptInfo: { [string]: any })
       if pendingPowerUpId == powerUpId then
         -- Deliver the power-up
         if player then
-          local playerData = DataPersistence.get(player)
+          local playerData = ProfileManager.getData(player.UserId)
           if playerData then
             local powerUpConfigData = PowerUpConfig.get(powerUpId)
             if powerUpConfigData then
               -- Add power-up to player data
               PlayerData.addPowerUp(playerData, powerUpId, powerUpConfigData.durationSeconds)
 
-              -- Save player data
-              DataPersistence.save(player)
+              -- Sync player data to profile
+              ProfileManager.updateData(player.UserId, playerData)
 
               -- Notify client of data change
               local playerDataChangedEvent = RemoteSetup.getEvent("PlayerDataChanged")
@@ -1668,15 +1668,15 @@ MarketplaceService.ProcessReceipt = function(receiptInfo: { [string]: any })
   -- Unknown product - grant anyway to avoid issues
   return Enum.ProductPurchaseDecision.PurchaseGranted
 end
-local dataPersistenceStarted = DataPersistence.start()
-if dataPersistenceStarted then
-  print("[Main.server] DataPersistence initialized successfully")
+local profileManagerStarted = ProfileManager.start()
+if profileManagerStarted then
+  print("[Main.server] ProfileManager initialized successfully")
 else
-  warn("[Main.server] DataPersistence failed to initialize DataStore - running in offline mode")
+  warn("[Main.server] ProfileManager failed to initialize ProfileService - running in offline mode")
 end
 
--- Initialize Admin Commands with DataPersistence reference
-AdminCommands.init(DataPersistence)
+-- Initialize Admin Commands with ProfileManager reference
+AdminCommands.init(ProfileManager)
 print("[Main.server] AdminCommands initialized")
 
 -- Initialize Map Generation system
@@ -1760,7 +1760,7 @@ local function checkAndApplyBankruptcyAssistance(player: Player)
   local userId = player.UserId
 
   -- Get player data
-  local playerData = DataPersistence.getData(userId)
+  local playerData = ProfileManager.getData(userId)
   if not playerData then
     return
   end
@@ -1850,7 +1850,7 @@ local function setupCharacterSpawning(
 
     -- Give owned weapon tools to player's Backpack
     task.defer(function()
-      local playerData = DataPersistence.getData(player.UserId)
+      local playerData = ProfileManager.getData(player.UserId)
       if playerData and playerData.ownedWeapons then
         local weaponCount = WeaponTool.restoreOwnedWeapons(player, playerData.ownedWeapons)
         if weaponCount > 0 then
@@ -1924,10 +1924,10 @@ Players.PlayerAdded:Connect(function(player)
     )
   end
 
-  -- Sync player data to client after DataPersistence has loaded it
-  -- Use task.defer to ensure DataPersistence.PlayerAdded completes first
+  -- Sync player data to client after ProfileManager has loaded it
+  -- Use task.defer to ensure ProfileManager.PlayerAdded completes first
   task.defer(function()
-    local data = DataPersistence.getData(player.UserId)
+    local data = ProfileManager.getData(player.UserId)
     if data then
       -- Store section index in player data so client can build visuals
       if sectionIndex then
@@ -2093,7 +2093,7 @@ local completeTutorialEvent = RemoteSetup.getEvent("CompleteTutorial")
 if completeTutorialEvent then
   completeTutorialEvent.OnServerEvent:Connect(function(player: Player)
     local userId = player.UserId
-    local playerData = DataPersistence.getData(userId)
+    local playerData = ProfileManager.getData(userId)
     if not playerData then
       return
     end
@@ -2142,7 +2142,7 @@ local function runGameLoop(deltaTime: number)
       if lastCycle < currentNightCycleNumber then
         playerNightCycleCount[userId] = currentNightCycleNumber
 
-        local playerData = DataPersistence.getData(userId)
+        local playerData = ProfileManager.getData(userId)
         if playerData then
           local xpAmount = XPConfig.calculateDayNightCycleXP()
           awardXP(player, playerData, xpAmount, "Survived the night")
@@ -2163,7 +2163,7 @@ local function runGameLoop(deltaTime: number)
   if #players > 0 then
     local minPlayTime = math.huge
     for _, player in ipairs(players) do
-      local playerData = DataPersistence.getData(player.UserId)
+      local playerData = ProfileManager.getData(player.UserId)
       if playerData and playerData.totalPlayTime then
         minPlayTime = math.min(minPlayTime, playerData.totalPlayTime)
       else
@@ -2291,7 +2291,7 @@ local function runGameLoop(deltaTime: number)
   -- Update each player's game systems
   for _, player in ipairs(players) do
     local userId = player.UserId
-    local playerData = DataPersistence.getData(userId)
+    local playerData = ProfileManager.getData(userId)
     if not playerData then
       continue
     end

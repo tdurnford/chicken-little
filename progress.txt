@@ -411,3 +411,52 @@ Added data migration logic to ProfileManager to seamlessly migrate player data f
 - Legacy data is NOT deleted from the old DataStore (safe rollback possible)
 - The migration only triggers for profiles where `totalPlayTime == 0` (appears to be new)
 
+
+---
+
+## 2026-01-19 - Replace DataPersistence with ProfileManager (ID #3)
+
+### Summary
+Completed migration from legacy DataPersistence module to ProfileManager, fully integrating ProfileService for player data persistence with session locking.
+
+### Changes Made
+1. **Main.server.lua Updates**
+   - Replaced `DataPersistence` import with `ProfileManager`
+   - Replaced all `DataPersistence.getData(userId)` calls with `ProfileManager.getData(userId)`
+   - Replaced all `DataPersistence.get(player)` calls (which were bugs) with `ProfileManager.getData(player.UserId)`
+   - Replaced `DataPersistence.save(player)` calls with `ProfileManager.updateData(userId, data)` since ProfileService auto-saves
+   - Replaced `DataPersistence.start()` with `ProfileManager.start()`
+   - Replaced `DataPersistence.getGlobalChickenCounts()` with `ProfileManager.getGlobalChickenCounts()`
+   - Updated initialization logging from "DataPersistence" to "ProfileManager"
+
+2. **AdminCommands.lua Updates**
+   - Renamed internal `DataPersistence` variable to `ProfileManager`
+   - Updated `init()` function parameter name from `dataPersistence` to `profileManager`
+   - Updated `resetData()` function to use ProfileManager (removed explicit save call since ProfileService auto-saves)
+   - Updated `giveMoney()` function to use ProfileManager
+
+3. **Deleted Files**
+   - Removed `src/server/DataPersistence.lua` (legacy module no longer needed)
+
+4. **Created Tests**
+   - Created `src/server/ProfileManager.spec.lua` with TestEZ tests for:
+     - `init()` - initialization
+     - `getData()` - data retrieval
+     - `hasProfile()` - profile check
+     - `getLoadedProfileCount()` - count tracking
+     - `getGlobalChickenCounts()` - aggregation
+     - `updateData()` - data updates
+     - `releaseProfile()` - profile release
+
+### Acceptance Criteria Met
+- ✅ No references to DataPersistence remain (only in ProfileManager for legacy migration)
+- ✅ All data operations use ProfileManager
+- ✅ DataPersistence.lua is deleted
+- ✅ Format check passes with stylua
+- ✅ Build passes with rojo
+
+### Notes for Next Developer
+- ProfileService auto-saves when profiles are released, so explicit save calls are not needed
+- Call `ProfileManager.updateData(userId, data)` after modifying player data to sync to the profile
+- The legacy DataStore data migration happens automatically for existing players
+- ID #4 (Install Knit) is the next logical step to continue the architecture refactor

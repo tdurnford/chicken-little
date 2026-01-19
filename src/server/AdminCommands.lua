@@ -39,8 +39,8 @@ local MAX_LOG_ENTRIES = 1000
 -- Banned players (session-only, would need DataStore for persistence)
 local bannedUserIds: { [number]: boolean } = {}
 
--- DataPersistence reference (set via init)
-local DataPersistence: any = nil
+-- ProfileManager reference (set via init)
+local ProfileManager: any = nil
 
 -- Log an admin action
 local function logAction(
@@ -124,9 +124,9 @@ local function findPlayer(nameOrPartial: string): Player?
   return nil
 end
 
--- Initialize the module with DataPersistence reference
-function AdminCommands.init(dataPersistence: any): ()
-  DataPersistence = dataPersistence
+-- Initialize the module with ProfileManager reference
+function AdminCommands.init(profileManager: any): ()
+  ProfileManager = profileManager
   print("[AdminCommands] Initialized")
 end
 
@@ -275,14 +275,14 @@ function AdminCommands.resetData(adminPlayer: Player, targetName: string): Comma
     return { success = false, message = "Cannot reset another admin's data" }
   end
 
-  if not DataPersistence then
+  if not ProfileManager then
     logAction(
       adminPlayer.UserId,
       adminPlayer.Name,
       "resetdata",
       targetPlayer.UserId,
       targetPlayer.Name,
-      "DataPersistence not initialized",
+      "ProfileManager not initialized",
       false
     )
     return { success = false, message = "Data system not available" }
@@ -290,7 +290,7 @@ function AdminCommands.resetData(adminPlayer: Player, targetName: string): Comma
 
   -- Create fresh default data
   local newData = PlayerData.createDefault()
-  local success = DataPersistence.updateData(targetPlayer.UserId, newData)
+  local success = ProfileManager.updateData(targetPlayer.UserId, newData)
 
   if not success then
     logAction(
@@ -305,10 +305,8 @@ function AdminCommands.resetData(adminPlayer: Player, targetName: string): Comma
     return { success = false, message = "Failed to reset data" }
   end
 
-  -- Save the reset data
-  local saveResult = DataPersistence.save(targetPlayer.UserId, newData)
-
-  local details = saveResult.success and "Data reset and saved" or "Data reset but save failed"
+  -- ProfileService auto-saves on profile release, no explicit save needed
+  local details = "Data reset successfully"
   logAction(
     adminPlayer.UserId,
     adminPlayer.Name,
@@ -321,9 +319,7 @@ function AdminCommands.resetData(adminPlayer: Player, targetName: string): Comma
 
   return {
     success = true,
-    message = "Reset data for "
-      .. targetPlayer.Name
-      .. (saveResult.success and "" or " (save pending)"),
+    message = "Reset data for " .. targetPlayer.Name,
   }
 end
 
@@ -356,11 +352,11 @@ function AdminCommands.giveMoney(
     return { success = false, message = "Player not found: " .. targetName }
   end
 
-  if not DataPersistence then
+  if not ProfileManager then
     return { success = false, message = "Data system not available" }
   end
 
-  local playerData = DataPersistence.getData(targetPlayer.UserId)
+  local playerData = ProfileManager.getData(targetPlayer.UserId)
   if not playerData then
     logAction(
       adminPlayer.UserId,
@@ -375,7 +371,7 @@ function AdminCommands.giveMoney(
   end
 
   playerData.money = (playerData.money or 0) + amount
-  DataPersistence.updateData(targetPlayer.UserId, playerData)
+  ProfileManager.updateData(targetPlayer.UserId, playerData)
 
   local details = string.format("Gave $%d", amount)
   logAction(

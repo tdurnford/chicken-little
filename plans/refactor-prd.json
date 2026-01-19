@@ -116,7 +116,7 @@
       "category": "Data Persistence",
       "title": "Replace DataPersistence Usage and Delete Legacy Code",
       "description": "Update all modules to use ProfileManager instead of DataPersistence, then delete the legacy file.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Update Main.server.lua to initialize ProfileManager",
         "Update all server modules that reference DataPersistence",
