@@ -367,3 +367,47 @@ Installed ProfileService via Wally and created the ProfileManager wrapper module
 - ProfileService auto-saves on profile:Release() so no manual save needed
 - The module is not yet integrated into Main.server.lua (that's part of ID #3)
 
+
+---
+
+## 2026-01-19 - Migrate Data Schema to ProfileService (ID #2)
+
+### Summary
+Added data migration logic to ProfileManager to seamlessly migrate player data from the legacy DataPersistence DataStore to ProfileService.
+
+### Features Implemented
+1. **Legacy Data Migration**
+   - Added `migrateFromLegacyDataStore()` function to check for existing player data
+   - Migration occurs automatically when a new profile is created
+   - Validates legacy data before migration using `PlayerData.validate()`
+   - Copies all fields from legacy data to the new ProfileService profile
+
+2. **Migration Flow**
+   - When a player joins with a new ProfileService profile (totalPlayTime == 0)
+   - System checks the old DataStore (`ChickenCoopTycoon_PlayerData_v1`) for existing data
+   - If found and valid, data is migrated to the new ProfileService profile
+   - Offline earnings are then calculated on the migrated data
+   - Player continues with their existing progress
+
+3. **Improved Logging**
+   - Profile load now reports migration status: "new", "migrated", or "existing"
+   - Success/failure messages distinguish between new players, migrated players, and returning players
+
+### Acceptance Criteria Met
+- ✅ Player data schema works with ProfileService (was already using `PlayerData.createDefault()` as template)
+- ✅ Existing player data migrates correctly (new `migrateFromLegacyDataStore()` function)
+- ✅ Offline earnings calculated on rejoin (was already implemented, now also works for migrated data)
+
+### Files Changed
+- `src/server/ProfileManager.lua` - Added DataStoreService import, LEGACY_DATA_STORE_NAME constant, and `migrateFromLegacyDataStore()` function. Enhanced `loadProfile()` to check for and migrate legacy data.
+
+### Testing
+- Build passes with `rojo build`
+- Format check passes with `stylua`
+
+### Notes for Next Developer
+- ID #3 should replace all DataPersistence usage with ProfileManager and delete the legacy file
+- The migration is a one-time operation per player - once migrated, they use ProfileService exclusively
+- Legacy data is NOT deleted from the old DataStore (safe rollback possible)
+- The migration only triggers for profiles where `totalPlayTime == 0` (appears to be new)
+

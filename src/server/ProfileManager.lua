@@ -4,6 +4,7 @@
 	Implements session locking to prevent data duplication across servers.
 ]]
 
+local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -19,6 +20,7 @@ local ProfileManager = {}
 -- Configuration
 local PROFILE_STORE_NAME = "ChickenCoopTycoon_PlayerProfiles_v1"
 local PROFILE_KEY_PREFIX = "Player_"
+local LEGACY_DATA_STORE_NAME = "ChickenCoopTycoon_PlayerData_v1" -- Old DataPersistence store
 
 -- Type definitions
 export type ProfileLoadResult = {
@@ -92,6 +94,35 @@ local function processOfflineEarnings(
   return data, offlineEarnings, offlineEggs, offlineSeconds
 end
 
+-- Attempt to migrate data from legacy DataPersistence DataStore
+local function migrateFromLegacyDataStore(userId: number): PlayerData.PlayerDataSchema?
+  local success, legacyStore = pcall(function()
+    return DataStoreService:GetDataStore(LEGACY_DATA_STORE_NAME)
+  end)
+
+  if not success or not legacyStore then
+    return nil
+  end
+
+  local dataKey = PROFILE_KEY_PREFIX .. tostring(userId)
+  local loadSuccess, legacyData = pcall(function()
+    return legacyStore:GetAsync(dataKey)
+  end)
+
+  if not loadSuccess or not legacyData then
+    return nil
+  end
+
+  -- Validate the legacy data
+  if not PlayerData.validate(legacyData) then
+    warn("[ProfileManager] Legacy data validation failed for user", userId)
+    return nil
+  end
+
+  print("[ProfileManager] Successfully migrated legacy data for user", userId)
+  return legacyData :: PlayerData.PlayerDataSchema
+end
+
 -- Load a player's profile
 function ProfileManager.loadProfile(player: Player): ProfileLoadResult
   if not profileStore then
@@ -155,8 +186,24 @@ function ProfileManager.loadProfile(player: Player): ProfileLoadResult
   -- Get the data and determine if new player
   local data = profile.Data :: PlayerData.PlayerDataSchema
   local isNewPlayer = data.totalPlayTime == 0
+  local wasMigrated = false
 
-  -- Process offline earnings for returning players
+  -- If this appears to be a new player, check for legacy data to migrate
+  if isNewPlayer then
+    local legacyData = migrateFromLegacyDataStore(player.UserId)
+    if legacyData then
+      -- Migrate the data: copy all fields from legacy to profile
+      for key, value in pairs(legacyData) do
+        (profile.Data :: any)[key] = value
+      end
+      data = profile.Data :: PlayerData.PlayerDataSchema
+      isNewPlayer = false
+      wasMigrated = true
+      print("[ProfileManager] Migrated legacy data for", player.Name)
+    end
+  end
+
+  -- Process offline earnings for returning players (including migrated)
   local currentTime = os.time()
   local offlineEarnings, offlineEggs, offlineSeconds
 
@@ -169,17 +216,27 @@ function ProfileManager.loadProfile(player: Player): ProfileLoadResult
   -- Cache the data
   profileData[player.UserId] = data
 
+  local messageText
+  if wasMigrated then
+    messageText = "Profile migrated from legacy data"
+  elseif isNewPlayer then
+    messageText = "New player created"
+  else
+    messageText = "Profile loaded successfully"
+  end
+
   print(
     string.format(
-      "[ProfileManager] Loaded profile for %s (new: %s)",
+      "[ProfileManager] Loaded profile for %s (new: %s, migrated: %s)",
       player.Name,
-      tostring(isNewPlayer)
+      tostring(isNewPlayer),
+      tostring(wasMigrated)
     )
   )
 
   return {
     success = true,
-    message = isNewPlayer and "New player created" or "Profile loaded successfully",
+    message = messageText,
     data = data,
     isNewPlayer = isNewPlayer,
     offlineEarnings = offlineEarnings,

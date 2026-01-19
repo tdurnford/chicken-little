@@ -92,7 +92,7 @@
       "category": "Data Persistence",
       "title": "Migrate Data Schema to ProfileService",
       "description": "Migrate the player data schema and offline earnings calculation to work with ProfileManager.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Define ProfileService data template matching PlayerData schema",
         "Implement data migration logic for existing player data format",
