@@ -365,7 +365,8 @@
       "category": "Knit Server",
       "title": "Create TradeService",
       "description": "Create the TradeService that handles player trading.",
-      "completed": false,
+      "completed": true,
+      "status": "done",
       "steps": [
         "Create src/server/Services/TradeService.lua",
         "Migrate trade request handling",

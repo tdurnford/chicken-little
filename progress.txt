@@ -929,3 +929,71 @@ Created the CombatService Knit service that wraps all combat-related server logi
 - Use `CombatService.DamageDealtSignal` to handle predator damage in PredatorService
 - ID #12 (TradeService) is the next logical step to continue the Knit migration
 - Once all services are migrated (ID #14), the RemoteSetup handlers will be removed
+
+
+---
+
+## 2026-01-19 - Create TradeService (ID #12)
+
+### Summary
+Created the TradeService Knit service that wraps all player trading server logic, migrating functionality from Main.server.lua into a clean service-based architecture.
+
+### Features Implemented
+1. **TradeService Module** (`src/server/Services/TradeService.lua`)
+   - Knit service wrapping TradeExchange module for all trade operations
+   - Client-exposed methods: `RequestTrade`, `AcceptTrade`, `DeclineTrade`, `AddItemToOffer`, `RemoveItemFromOffer`, `SetConfirmation`, `CancelTrade`, `GetCurrentTrade`, `GetPendingRequest`, `GetTradePartnerInfo`
+   - Client signals: `TradeRequested`, `TradeStarted`, `TradeUpdated`, `TradeCompleted`, `TradeCancelled`, `TradeRequestDeclined`
+   - Server-only methods: `IsItemLocked`, `GetActiveTradeCount`, `CleanupExpiredSessions`
+   - Server signals: `TradeStartedSignal`, `TradeCompletedSignal`, `TradeCancelledSignal`, `ItemTransferredSignal`
+
+2. **Trade Request Flow**
+   - Request trade with another player
+   - 30-second request timeout
+   - Accept or decline incoming requests
+   - Validation that neither player is already in a trade
+
+3. **Offer Management**
+   - Add/remove eggs and chickens to trade offer
+   - Validates player owns items before adding
+   - Resets confirmation when offer changes
+   - Prevents duplicate items in offer
+
+4. **Confirmation & Completion**
+   - Both players must confirm for trade to complete
+   - Atomic item locking before transfer
+   - TradeExchange handles actual item transfer between inventories
+   - Player data updated via PlayerDataService
+
+5. **Error Handling**
+   - Player disconnect handling (cancels active trade)
+   - Session timeout cleanup
+   - Validation at every step
+
+6. **Event Broadcasting**
+   - `TradeRequested` fires to recipient with requester info
+   - `TradeStarted` fires to both players when trade begins
+   - `TradeUpdated` fires to both players when offer changes
+   - `TradeCompleted` fires to both players on success
+   - `TradeCancelled` fires to both players with reason
+   - Server signals allow other services to react to trade events
+
+### Acceptance Criteria Met
+- ✅ Trading works through TradeService
+- ✅ Item transfer is atomic and correct (via TradeExchange wrapper)
+- ✅ Tests created (TradeService.spec.lua)
+
+### Files Changed
+- `src/server/Services/TradeService.lua` - NEW: Knit service for trade operations
+- `src/server/Services/TradeService.spec.lua` - NEW: Tests for TradeService
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+
+### Notes for Next Developer
+- TradeService is ready but NOT integrated into Main.server.lua yet (that's ID #14)
+- The legacy RemoteEvent/RemoteFunction handlers in Main.server.lua still work in parallel
+- Call `TradeService:CleanupExpiredSessions()` periodically from game loop
+- The service integrates with PlayerDataService for data access/updates
+- ID #13 (LevelService and GameStateService) is the next logical step to continue the Knit migration
+- Once all services are migrated (ID #14), the RemoteSetup handlers will be removed
