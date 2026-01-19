@@ -1497,3 +1497,66 @@ Migrated Main.client.lua to use Knit controllers and removed direct RemoteEvent 
 - Visual modules (ChickenVisuals, PredatorVisuals, etc.) receive updates via ClientEventRelay
 - Server calls still use RemoteFunctions via ClientEventRelay.getFunction() - this is acceptable as Knit doesn't handle request/response patterns directly
 - The old Main.client.lua is backed up as Main.client.lua.old (can be deleted after verification)
+
+---
+
+## Session: 2026-01-19 (Work Item #30)
+
+### Completed: Install TestEZ and Create Test Runner
+
+#### What Was Done
+Installed TestEZ and created the complete test infrastructure:
+
+1. **Installed TestEZ**
+   - Added `TestEZ = "roblox/testez@0.4.1"` to wally.toml
+   - Ran `wally install` to download package
+
+2. **Created TestRunner.lua**
+   - Entry point for running all tests
+   - Methods: `run()`, `runServer()`, `runClient()`, `runShared()`, `runContainer()`, `runModules()`
+   - Automatically discovers all `.spec.lua` files recursively
+   - Pretty-prints results with pass/fail counts and error details
+   - Returns typed `TestResult` object for programmatic use
+
+3. **Created TestUtilities.lua**
+   - `createMockFunction()` - Creates mock functions with call tracking
+   - `createSpy()` - Wraps existing functions for call tracking
+   - `waitForCondition()` - Async test helper with timeout
+   - `waitForChange()` - Waits for value changes
+   - `deepEqual()` / `deepCopy()` / `shallowCopy()` - Table utilities
+   - `measureTime()` - Performance testing
+   - `randomString()` / `randomNumber()` - Test data generation
+   - `async()` / `nextFrame()` - Async test helpers
+
+4. **Created Mocks/init.lua**
+   - `createMockPlayer()` - Mock Player object
+   - `createMockProfile()` - Mock ProfileService profile
+   - `createMockRemoteEvent()` / `createMockRemoteFunction()` - Mock remotes
+   - `createMockSignal()` - Mock GoodSignal
+   - `createMockPlayerData()` - Mock player data structure
+   - `createMockKnitService()` / `createMockKnitController()` - Mock Knit components
+
+### Acceptance Criteria Met
+- ✅ TestEZ is installed (in wally.lock and Packages folder)
+- ✅ Test runner discovers .spec.lua files (findSpecFiles function)
+- ✅ Test utilities available (TestUtilities.lua with full API)
+
+### Files Changed
+- `wally.toml` - MODIFIED: Added TestEZ dependency
+- `wally.lock` - MODIFIED: Updated with TestEZ
+- `src/shared/Testing/TestRunner.lua` - NEW: Test runner entry point
+- `src/shared/Testing/TestUtilities.lua` - NEW: Test utilities and helpers
+- `src/shared/Testing/Mocks/init.lua` - NEW: Pre-built mock objects
+- `plans/refactor-prd.json` - MODIFIED: Marked work item #30 as completed
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+
+### Notes for Next Developer
+- Work Item #31 (Create Config Module Tests) is next
+- Use `TestRunner.run()` to run all server+shared tests
+- Use `TestRunner.runClient()` from client context for client tests
+- TestUtilities provides mock functions - use `.calls` to inspect call history
+- Mocks module provides ready-to-use mock objects for common Roblox/Knit components
+- 22 existing .spec.lua files will be discovered by the TestRunner

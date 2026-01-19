@@ -879,7 +879,8 @@
       "category": "Testing",
       "title": "Install TestEZ and Create Test Runner",
       "description": "Install TestEZ and create the test infrastructure.",
-      "completed": false,
+      "completed": true,
+      "status": "done",
       "dependencies": {
         "install": [
           "roblox/testez@0.4.1"

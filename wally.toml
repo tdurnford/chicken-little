@@ -10,4 +10,5 @@ ProfileService = "brittonfischer/profileservice@2.1.5"
 Knit = "sleitnick/knit@1.6.3"
 Promise = "evaera/promise@4.0.0"
 GoodSignal = "stravant/goodsignal@0.2.0"
+TestEZ = "roblox/testez@0.4.1"
   
