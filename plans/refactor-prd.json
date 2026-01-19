@@ -339,7 +339,7 @@
       "category": "Knit Server",
       "title": "Create CombatService",
       "description": "Create the CombatService that handles weapons, damage, and shields.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create src/server/Services/CombatService.lua",
         "Migrate weapon equipping logic",

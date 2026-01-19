@@ -856,3 +856,76 @@ Created the TrapService Knit service that wraps all trap-related server logic, m
 - The service integrates with PredatorService for predator type validation
 - ID #11 (CombatService) is the next logical step to continue the Knit migration
 - Once all services are migrated (ID #14), the RemoteSetup handlers will be removed
+
+
+
+---
+
+## 2026-01-19 - Create CombatService (ID #11)
+
+### Summary
+Created the CombatService Knit service that wraps all combat-related server logic, migrating functionality from Main.server.lua into a clean service-based architecture.
+
+### Features Implemented
+1. **CombatService Module** (`src/server/Services/CombatService.lua`)
+   - Knit service wrapping CombatHealth, WeaponConfig, WeaponTool, and AreaShield modules
+   - Client-exposed methods: `EquipWeapon`, `GetEquippedWeapon`, `Attack`, `ActivateShield`, `GetShieldStatus`, `GetCombatState`, `GetHealthDisplayInfo`, `CanMove`, `GetWeaponConfig`, `GetAllWeaponConfigs`, `GetPurchasableWeapons`, `GetOwnedWeapons`, `PlayerOwnsWeapon`, `GetCombatConstants`
+   - Client signals: `WeaponEquipped`, `WeaponUnequipped`, `WeaponSwung`, `DamageDealt`, `DamageTaken`, `KnockbackApplied`, `ShieldActivated`, `ShieldDeactivated`, `ShieldExpired`, `HealthChanged`, `Incapacitated`, `CombatStateChanged`
+   - Server-only methods: `RestoreOwnedWeapons`, `ApplyPredatorDamage`, `ApplyFixedDamage`, `UpdateCombatState`, `ResetCombatState`, `IsShieldActive`
+   - Server signals: `WeaponEquippedSignal`, `AttackPerformedSignal`, `DamageDealtSignal`, `ShieldActivatedSignal`, `ShieldDeactivatedSignal`, `PlayerIncapacitatedSignal`
+
+2. **Weapon Management**
+   - Equip weapons via Roblox native Tool/Backpack system
+   - Check weapon ownership against player inventory
+   - Restore owned weapons on join
+   - Get purchasable weapon list for store UI
+
+3. **Attack/Combat Operations**
+   - Swing weapon with cooldown validation
+   - Attack predators (damage dealt via signal for PredatorService)
+   - Attack players (incapacitation with knockback)
+   - Miss swings (no target)
+   - Per-weapon cooldown tracking
+
+4. **Shield System**
+   - Activate area shield (60s duration, 5min cooldown)
+   - Check shield status and remaining time
+   - Shield blocks predators and other players
+
+5. **Health/Damage Management**
+   - Track combat health per player
+   - Apply predator damage over time
+   - Apply fixed damage amounts
+   - Health regeneration when out of combat
+   - Knockback on health depletion
+   - Incapacitation from player attacks
+
+6. **Event Broadcasting**
+   - `WeaponEquipped` fires to owner when weapon equipped
+   - `DamageDealt` fires to attacker with damage info
+   - `DamageTaken` fires to victim with damage source
+   - `Incapacitated` fires to target when hit by player
+   - `HealthChanged` fires on any health change
+   - Server signals allow other services to react to combat events
+
+### Acceptance Criteria Met
+- ✅ Combat operations work through CombatService
+- ✅ Damage calculations are correct (wraps existing modules)
+- ✅ Tests created (CombatService.spec.lua)
+
+### Files Changed
+- `src/server/Services/CombatService.lua` - NEW: Knit service for combat operations
+- `src/server/Services/CombatService.spec.lua` - NEW: Tests for CombatService
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+
+### Notes for Next Developer
+- CombatService is ready but NOT integrated into Main.server.lua yet (that's ID #14)
+- The legacy RemoteFunction handlers in Main.server.lua still work in parallel
+- Call `CombatService:UpdateCombatState()` periodically for health regen/knockback expiry
+- Call `CombatService:RestoreOwnedWeapons()` when player joins
+- Use `CombatService.DamageDealtSignal` to handle predator damage in PredatorService
+- ID #12 (TradeService) is the next logical step to continue the Knit migration
+- Once all services are migrated (ID #14), the RemoteSetup handlers will be removed
