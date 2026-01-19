@@ -995,7 +995,7 @@
       "category": "Testing",
       "title": "Create Remaining Logic Module Tests",
       "description": "Create TestEZ spec files for remaining shared logic modules.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create TrapPlacement.spec.lua",
         "Create OfflineEarnings.spec.lua",
@@ -1015,7 +1015,8 @@
           "src/shared/TradeExchange.spec.lua",
           "src/shared/Util.spec.lua"
         ]
-      }
+      },
+      "status": "complete"
     },
     {
       "id": 35,
