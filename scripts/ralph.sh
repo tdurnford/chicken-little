@@ -1,15 +1,25 @@
 #!/usr/bin/env bash
 set -e
 
-if [ -z "$1" ]; then
-  echo "Usage: $0 <command>"
+if [ -z "$1" ] || [ -z "$2" ]; then
+  echo "Usage: $0 <iterations> <prd-file>"
+  echo "Example: $0 5 refactor-prd.json"
   exit 1
 fi
 
-for ((i = 0; i < $1; i++)); do
+ITERATIONS=$1
+PRD_FILE=$2
+
+# Check if PRD file exists
+if [ ! -f "plans/$PRD_FILE" ]; then
+  echo "Error: PRD file 'plans/$PRD_FILE' not found"
+  exit 1
+fi
+
+for ((i = 0; i < $ITERATIONS; i++)); do
   echo "Iteration $i: Executing command..."
   echo "----------------------------"
-  result=$(copilot --allow-all-tools --model claude-opus-4.5 -p "@plans/ui-polish-prd.json @progress.txt \
+  result=$(copilot --allow-all-tools --model claude-opus-4.5 -p "@plans/$PRD_FILE @progress.txt \
 1. Find the highest-priority feature to work on and work only on that feature.
 This should be the one YOU decide has the highest priority - not necessarily the first in the list. \
 2. Use the Roblox Studio MCP server to test your changes in-game:
