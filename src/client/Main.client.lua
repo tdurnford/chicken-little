@@ -23,7 +23,7 @@ local KnitClient = require(ClientModules:WaitForChild("KnitClient"))
 KnitClient.start()
 print("[Client] KnitClient started")
 
--- Load visual/UI modules
+-- Load visual modules (non-UI)
 local SoundEffects = require(ClientModules:WaitForChild("SoundEffects"))
 local ChickenVisuals = require(ClientModules:WaitForChild("ChickenVisuals"))
 local PredatorVisuals = require(ClientModules:WaitForChild("PredatorVisuals"))
@@ -33,20 +33,22 @@ local MobileTouchControls = require(ClientModules:WaitForChild("MobileTouchContr
 local SectionVisuals = require(ClientModules:WaitForChild("SectionVisuals"))
 local TrapVisuals = require(ClientModules:WaitForChild("TrapVisuals"))
 
--- Load Fusion UI components
-local UIComponents = ClientModules:WaitForChild("UI"):WaitForChild("Components")
-local MainHUD = require(UIComponents:WaitForChild("MainHUD"))
-local InventoryUI = require(UIComponents:WaitForChild("InventoryUI"))
-local StoreUI = require(UIComponents:WaitForChild("StoreUI"))
-local HatchPreviewUI = require(UIComponents:WaitForChild("HatchPreviewUI"))
-local TradeUI = require(UIComponents:WaitForChild("TradeUI"))
-local ShieldUI = require(UIComponents:WaitForChild("ShieldUI"))
-local DamageUI = require(UIComponents:WaitForChild("DamageUI"))
-local ChickenHealthBar = require(UIComponents:WaitForChild("ChickenHealthBar"))
-local PredatorHealthBar = require(UIComponents:WaitForChild("PredatorHealthBar"))
-local OfflineEarningsUI = require(UIComponents:WaitForChild("OfflineEarningsUI"))
-local Tutorial = require(UIComponents:WaitForChild("Tutorial"))
-local PredatorWarning = require(UIComponents:WaitForChild("PredatorWarning"))
+-- Load UI system (centralized initialization module)
+local UI = require(ClientModules:WaitForChild("UI"))
+
+-- Get UI components from centralized module
+local MainHUD = UI.Components.MainHUD
+local InventoryUI = UI.Components.InventoryUI
+local StoreUI = UI.Components.StoreUI
+local HatchPreviewUI = UI.Components.HatchPreviewUI
+local TradeUI = UI.Components.TradeUI
+local ShieldUI = UI.Components.ShieldUI
+local DamageUI = UI.Components.DamageUI
+local ChickenHealthBar = UI.Components.ChickenHealthBar
+local PredatorHealthBar = UI.Components.PredatorHealthBar
+local OfflineEarningsUI = UI.Components.OfflineEarningsUI
+local Tutorial = UI.Components.Tutorial
+local PredatorWarning = UI.Components.PredatorWarning
 
 -- Load the event relay for bridging server events to visual modules
 local ClientEventRelay = require(ClientModules:WaitForChild("ClientEventRelay"))
@@ -70,40 +72,12 @@ local localPlayer = Players.LocalPlayer
 SoundEffects.initialize()
 print("[Client] SoundEffects initialized")
 
--- Create Main HUD
-MainHUD.create()
-print("[Client] MainHUD created")
-
--- Create Inventory UI
-local inventoryCreated = InventoryUI.create()
-if not inventoryCreated then
-  warn("[Client] InventoryUI creation FAILED")
-end
-print("[Client] InventoryUI created")
-
--- Create Hatch Preview UI
-HatchPreviewUI.create()
-print("[Client] HatchPreviewUI created")
-
--- Create Store UI
-StoreUI.create()
-print("[Client] StoreUI created")
-
--- Create Damage UI
-DamageUI.initialize()
-print("[Client] DamageUI initialized")
-
--- Create Predator Warning UI
-PredatorWarning.initialize()
-print("[Client] PredatorWarning initialized")
-
--- Create Shield UI using MainHUD's ScreenGui
-local mainHudScreenGui = MainHUD.getScreenGui()
-if mainHudScreenGui then
-  ShieldUI.create(mainHudScreenGui)
-  print("[Client] ShieldUI created")
+-- Initialize UI system (mounts all Fusion UI components)
+local uiInitSuccess = UI.initialize()
+if uiInitSuccess then
+  print("[Client] UI system initialized successfully")
 else
-  warn("[Client] Cannot create ShieldUI - no MainHUD ScreenGui")
+  warn("[Client] UI system initialized with some failures")
 end
 
 -- Configure and start the event relay (bridges server events to visual modules)
