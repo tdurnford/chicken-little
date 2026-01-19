@@ -183,7 +183,7 @@
       "category": "Knit Server",
       "title": "Create PlayerDataService",
       "description": "Create the PlayerDataService that wraps ProfileManager and exposes data to clients.",
-      "completed": false,
+      "completed": true,
       "steps": [
         "Create src/server/Services/PlayerDataService.lua",
         "Wrap ProfileManager methods for Knit",

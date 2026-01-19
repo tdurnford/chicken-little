@@ -509,3 +509,49 @@ Installed Knit framework, Promise, and GoodSignal via Wally. Created the server-
 - Services should NOT end with `.spec` (those are test files)
 - Next step: ID #5 "Create PlayerDataService" to wrap ProfileManager with Knit
 - The `default.project.json` already includes Packages path, no update needed
+
+---
+
+## 2026-01-19 - Create PlayerDataService (ID #5)
+
+### Summary
+Created the PlayerDataService Knit service that wraps ProfileManager and exposes player data to clients via Knit's service-based architecture.
+
+### Features Implemented
+1. **PlayerDataService Module** (`src/server/Services/PlayerDataService.lua`)
+   - Knit service wrapping ProfileManager
+   - Client-exposed methods: `GetData`, `GetMoney`, `GetInventory`, `GetPlacedChickens`, `GetLevelInfo`
+   - Client signals: `DataChanged`, `MoneyChanged`, `InventoryChanged`, `LevelChanged`
+   - Server-only methods: `GetData`, `UpdateData`, `HasProfile`, `SetMoney`, `AddMoney`, `AddXP`, `GetGlobalChickenCounts`, `GetLoadedProfileCount`
+   - Server signals: `DataUpdated`, `PlayerLoaded`, `PlayerUnloading`
+
+2. **Automatic Client Notification**
+   - When `UpdateData()` is called, client receives `DataChanged` signal
+   - Specific change signals fire for money, inventory, and level changes
+   - Initial data sent to client on profile load
+
+3. **Server-Side Integration**
+   - GoodSignal events for other services to listen to data changes
+   - `PlayerLoaded` fires when profile is loaded with `isNewPlayer` flag
+   - `PlayerUnloading` fires before profile release
+
+### Acceptance Criteria Met
+- ✅ Service registers with Knit (via `Knit.CreateService`)
+- ✅ Client can request player data via Knit (`GetData`, `GetMoney`, etc.)
+- ✅ Data changes trigger signals (`DataChanged`, `MoneyChanged`, etc.)
+
+### Files Changed
+- `src/server/Services/PlayerDataService.lua` - NEW: Knit service for player data
+- `src/server/Services/PlayerDataService.spec.lua` - NEW: Tests for PlayerDataService
+
+### Testing
+- Format check passes with `stylua`
+- Build passes with `rojo build`
+
+### Notes for Next Developer
+- KnitServer auto-loads services from `src/server/Services/` that don't end in `.spec`
+- PlayerDataService is not yet integrated into Main.server.lua (that's ID #14)
+- Other services should use `PlayerDataService:GetData(userId)` instead of ProfileManager directly
+- Call `PlayerDataService:UpdateData(userId, data)` to save changes and notify clients
+- Use `PlayerDataService.DataUpdated:Connect(fn)` to listen for data changes server-side
+- ID #6 (ChickenService) is the next logical step to continue the Knit migration
