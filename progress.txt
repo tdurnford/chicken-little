@@ -2923,3 +2923,87 @@ elseif selectedItem.itemType == "traps" then
 - The remaining critical feature is `enable-predator-spawning` - no predators spawning in game
 - Be careful with string constants between UI components and handlers - always verify types match
 - InventoryUI.TabType is the canonical source: `"eggs" | "chickens" | "traps"`
+
+---
+
+## Bug Fix: Enable Predator Spawning
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+
+### Summary
+Fixed the critical bug where predators were not spawning in the game. Players now see predators approaching their section to attack their chickens.
+
+### Root Cause
+Two issues prevented predator spawning:
+
+1. **Missing Update() method in PredatorService:**
+   - `GameLoopService` calls `PredatorService:Update(deltaTime)` every frame (line 189-191)
+   - `PredatorService` had no `Update()` method - only individual methods like `ShouldSpawn()` and `SpawnPredator()`
+   - The spawn logic was never being triggered
+
+2. **No connection between PredatorController signals and PredatorVisuals:**
+   - `PredatorService` fires Knit signals (e.g., `Client.PredatorSpawned:FireAll()`)
+   - `PredatorController` receives these signals correctly
+   - BUT: `PredatorVisuals.create()` was only called from `ClientEventRelay` which listens to RemoteEvents, NOT Knit signals
+   - Result: Even if predators spawned on server, clients never saw them
+
+### Solution
+1. **Added `PredatorService:Update(deltaTime)` method:**
+   - Iterates through all players each frame
+   - Calls `ShouldSpawn(userId)` to check spawn timing
+   - Gets player section from `MapService:GetPlayerSection(userId)`
+   - Gets section center from `MapGeneration.getSectionPosition(sectionIndex)`
+   - Picks random target chicken from `playerData.placedChickens`
+   - Calls `SpawnPredator(userId, sectionCenter, targetChickenId, targetChickenPosition)`
+   - Updates predator positions via `UpdatePredatorPositions(userId, deltaTime)`
+   - Checks predator section entry via `CheckPredatorEnteredSection()`
+   - Runs periodic cleanup via `CleanupInactivePredators(userId)`
+
+2. **Wired up PredatorController signals to PredatorVisuals in Main.client.lua:**
+   - Added `local PredatorController = Knit.GetController("PredatorController")`
+   - Connected `PredatorSpawned` → Creates visual, health bar, warning, plays alert sound
+   - Connected `PredatorPositionUpdated` → Updates visual position and animation
+   - Connected `PredatorHealthUpdated` → Updates health bar
+   - Connected `PredatorDefeated` → Destroys health bar, plays defeated animation, clears warning
+   - Connected `PredatorAlert` → Plays alert sound
+
+### Modified Files
+- `src/server/Services/PredatorService.lua` - Added MapService import, MapGeneration import, Update() method (70+ lines)
+- `src/client/Main.client.lua` - Added PredatorController import and signal connections (55+ lines)
+- `plans/bug-fixes-prd.json` - Marked feature as completed
+
+### Spawn Flow After Fix
+1. Player joins game and gets assigned a section
+2. `GameLoopService` calls `PredatorService:Update(deltaTime)` every frame
+3. `Update()` checks `ShouldSpawn()` for each player based on time since last spawn
+4. If spawn conditions met (time elapsed, max predators not reached), calls `SpawnPredator()`
+5. `SpawnPredator()` creates predator, registers with AI, fires `Client.PredatorSpawned:FireAll()`
+6. `PredatorController` on client receives signal, re-fires local signals
+7. `Main.client.lua` connections receive signal, call `PredatorVisuals.create()`
+8. Predator appears in game world!
+
+### Spawn Timing (from PredatorSpawning.lua)
+- Base spawn interval: 60 seconds
+- Min spawn interval: 15 seconds (at high difficulty)
+- Interval decreases with wave number
+- Night time increases spawn rate (via timeOfDayMultiplier)
+- Max predators based on player level (via LevelConfig)
+
+### Acceptance Criteria Met
+- ✅ Predators now spawn periodically for each player
+- ✅ Predators appear visually in the game world
+- ✅ Predator health bars show when spawned
+- ✅ Predator warnings appear
+- ✅ Alert sounds play on spawn
+- ✅ Position updates animate predator movement
+- ✅ Build verification passed
+
+### Notes for Next Developer
+- High priority bugs remaining:
+  - `fix-money-flash-negative` - Money counter flashes negative
+  - `fix-store-tabs-covered` - Store tabs covered by items
+  - `fix-restock-timer-stuck` - Timer stuck on "Restocking..."
+  - `fix-tutorial-skip-button` - Skip button doesn't work
+  - `fix-cooldown-timer-display` - Shield timer display missing
+- Predator spawn rate can be adjusted in `PredatorSpawning.lua` (BASE_SPAWN_INTERVAL)
+- For testing, use `PredatorService:ForceSpawnPredator(userId, predatorType, sectionCenter)`

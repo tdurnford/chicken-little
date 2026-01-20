@@ -983,6 +983,65 @@ local ChickenController = Knit.GetController("ChickenController")
 local EggController = Knit.GetController("EggController")
 local TrapController = Knit.GetController("TrapController")
 local CombatController = Knit.GetController("CombatController")
+local PredatorController = Knit.GetController("PredatorController")
+
+-- Wire up PredatorController signals to PredatorVisuals
+PredatorController.PredatorSpawned:Connect(function(predatorId, predatorType, userId, position, targetPosition, threatLevel, health, targetChickenId)
+  if PredatorVisuals then
+    local visualState = PredatorVisuals.create(predatorId, predatorType, threatLevel, position)
+    if visualState and visualState.model and PredatorHealthBar then
+      PredatorHealthBar.create(predatorId, predatorType, threatLevel, visualState.model)
+    end
+    PredatorVisuals.setAnimation(predatorId, "walking")
+  end
+  if PredatorWarning then
+    PredatorWarning.show(predatorId, predatorType, threatLevel, position)
+  end
+  if SoundEffects then
+    SoundEffects.playPredatorAlert(threatLevel == "Deadly" or threatLevel == "Catastrophic")
+  end
+  print("[Client] Predator spawned:", predatorType, "at", position)
+end)
+
+PredatorController.PredatorPositionUpdated:Connect(function(predatorId, position, direction, behavior)
+  if PredatorVisuals then
+    PredatorVisuals.updatePosition(predatorId, position)
+    if behavior == "attacking" then
+      PredatorVisuals.setAnimation(predatorId, "attacking")
+    end
+  end
+  if PredatorWarning then
+    PredatorWarning.updatePosition(predatorId, position)
+  end
+end)
+
+PredatorController.PredatorHealthUpdated:Connect(function(predatorId, health, maxHealth)
+  if PredatorHealthBar then
+    PredatorHealthBar.updateHealth(predatorId, health)
+  end
+end)
+
+PredatorController.PredatorDefeated:Connect(function(predatorId, wasDefeated)
+  if PredatorHealthBar then
+    PredatorHealthBar.destroy(predatorId)
+  end
+  if PredatorVisuals then
+    PredatorVisuals.playDefeatedAnimation(predatorId)
+  end
+  if PredatorWarning then
+    PredatorWarning.clear(predatorId)
+  end
+  if wasDefeated and SoundEffects then
+    SoundEffects.playBatSwing("predator")
+  end
+end)
+
+PredatorController.PredatorAlert:Connect(function(alert)
+  if SoundEffects then
+    local isUrgent = alert.threatLevel == "Deadly" or alert.threatLevel == "Catastrophic"
+    SoundEffects.playPredatorAlert(isUrgent)
+  end
+end)
 
 -- Wire up store purchase callback
 StoreUI.onPurchase(function(eggType: string, quantity: number)

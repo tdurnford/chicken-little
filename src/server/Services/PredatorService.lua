@@ -25,9 +25,11 @@ local PredatorAttack = require(Shared:WaitForChild("PredatorAttack"))
 local XPConfig = require(Shared:WaitForChild("XPConfig"))
 local PlayerSection = require(Shared:WaitForChild("PlayerSection"))
 local DayNightCycle = require(Shared:WaitForChild("DayNightCycle"))
+local MapGeneration = require(Shared:WaitForChild("MapGeneration"))
 
 -- Services will be retrieved after Knit starts
 local PlayerDataService
+local MapService
 
 -- Create the service
 local PredatorService = Knit.CreateService({
@@ -82,6 +84,7 @@ end
 function PredatorService:KnitStart()
   -- Get reference to PlayerDataService
   PlayerDataService = Knit.GetService("PlayerDataService")
+  MapService = Knit.GetService("MapService")
 
   -- Setup player connections
   Players.PlayerAdded:Connect(function(player)
@@ -98,6 +101,78 @@ function PredatorService:KnitStart()
   end
 
   print("[PredatorService] Started")
+end
+
+--[[
+	Update function called by GameLoopService every frame.
+	Handles predator spawning and position updates for all players.
+	@param deltaTime number - Time since last frame
+]]
+function PredatorService:Update(deltaTime: number)
+  for _, player in ipairs(Players:GetPlayers()) do
+    local userId = player.UserId
+    local state = playerPredatorStates[userId]
+    
+    if state then
+      -- 1. Check if we should spawn a predator
+      if self:ShouldSpawn(userId) then
+        -- Get player's section for spawn position
+        local sectionIndex = MapService:GetPlayerSection(userId)
+        if sectionIndex then
+          local sectionPos = MapGeneration.getSectionPosition(sectionIndex)
+          if sectionPos then
+            local sectionCenter = Vector3.new(sectionPos.x, sectionPos.y, sectionPos.z)
+            
+            -- Get a target chicken if player has any
+            local playerData = PlayerDataService and PlayerDataService:GetData(userId)
+            local targetChickenId = nil
+            local targetChickenPosition = nil
+            
+            if playerData and playerData.placedChickens and #playerData.placedChickens > 0 then
+              -- Pick a random chicken to target
+              local randomChicken = playerData.placedChickens[math.random(1, #playerData.placedChickens)]
+              if randomChicken then
+                targetChickenId = randomChicken.id
+                -- If chicken has position data, use it
+                if randomChicken.position then
+                  targetChickenPosition = Vector3.new(
+                    randomChicken.position.x or sectionPos.x,
+                    randomChicken.position.y or sectionPos.y,
+                    randomChicken.position.z or sectionPos.z
+                  )
+                else
+                  -- Default to section center
+                  targetChickenPosition = sectionCenter
+                end
+              end
+            end
+            
+            -- Spawn the predator
+            local result = self:SpawnPredator(userId, sectionCenter, targetChickenId, targetChickenPosition)
+            if result.success then
+              print(string.format("[PredatorService] %s for player %s", result.message, player.Name))
+              
+              -- Send alert to player
+              if result.predator then
+                self:SendAlert(userId, result.predator.id, "approaching")
+              end
+            end
+          end
+        end
+      end
+      
+      -- 2. Update predator positions
+      self:UpdatePredatorPositions(userId, deltaTime)
+      
+      -- 3. Check for predators entering section and update states
+      for _, predator in ipairs(PredatorSpawning.getActivePredators(state.spawnState)) do
+        self:CheckPredatorEnteredSection(userId, predator.id)
+      end
+      
+      -- 4. Periodic cleanup
+      self:CleanupInactivePredators(userId)
+    end
+  end
 end
 
 --[[
