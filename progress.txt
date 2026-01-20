@@ -3413,3 +3413,40 @@ Updated the RestockTimer TextLabel in StoreUI.lua:
 - Uses Theme.Typography constants for consistent styling across the UI
 
 ---
+
+## Bug Fix: Remove Legacy DataStore Migration Code
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+
+### Summary
+Removed the unused legacy DataStore migration code from ProfileManager. This was dead code since this is a new game with no existing player data to migrate.
+
+### Changes Made
+1. **Removed DataStoreService import** - Only used for migration, no longer needed
+2. **Removed LEGACY_DATA_STORE_NAME constant** - Migration store name deleted
+3. **Removed migrateFromLegacyDataStore function** - Deleted ~27 lines of unused code
+4. **Simplified loadProfile function**:
+   - Removed `wasMigrated` variable tracking
+   - Removed migration code block that checked for legacy data
+   - Simplified message generation using ternary operator
+   - Updated log message format (removed migration reference)
+
+### Code Reduction
+- Lines removed: ~55 lines of migration-related code
+- The ProfileManager module is now cleaner and more focused on its core responsibilities
+
+### Modified Files
+- `src/server/ProfileManager.lua` - Removed all migration code
+- `plans/bug-fixes-prd.json` - Marked feature as completed, updated PRD status to completed
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+- Type checking: Selene unavailable due to CPU architecture, but build validates syntax
+- No breaking changes - migration was unused dead code
+
+### Notes for Next Developer
+- All features in the bug-fixes-prd.json are now completed!
+- The ProfileManager now only uses ProfileService for data persistence
+- If legacy data migration is ever needed in the future, it would need to be re-implemented
+
+---

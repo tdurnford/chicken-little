@@ -3,14 +3,14 @@
   "description": "A collection of bug fixes, code cleanup, and missing feature implementations to improve game stability and player experience.",
   "version": "1.0.0",
   "created": "2026-01-19",
-  "status": "not-started",
+  "status": "completed",
   "features": [
     {
       "id": "remove-legacy-datastore-migration",
       "title": "Remove Legacy DataStore Migration Code",
       "description": "Remove the migrateFromLegacyDataStore function and related code from ProfileManager. This is a new game with no existing player data, so migration logic is unnecessary.",
       "priority": "low",
-      "status": "not-started",
+      "status": "completed",
       "files": [
         "src/server/ProfileManager.lua"
       ],
