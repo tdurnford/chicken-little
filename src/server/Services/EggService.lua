@@ -25,6 +25,8 @@ local Store = require(Shared:WaitForChild("Store"))
 local XPConfig = require(Shared:WaitForChild("XPConfig"))
 local PlayerData = require(Shared:WaitForChild("PlayerData"))
 local LevelConfig = require(Shared:WaitForChild("LevelConfig"))
+local ChickenConfig = require(Shared:WaitForChild("ChickenConfig"))
+local ChickenAI = require(Shared:WaitForChild("ChickenAI"))
 
 -- Services will be retrieved after Knit starts
 local PlayerDataService
@@ -99,6 +101,83 @@ function EggService:KnitStart()
   end)
 
   print("[EggService] Started")
+end
+
+--[[
+	Update function called by GameLoopService every frame.
+	Handles egg laying for all placed chickens and despawns expired eggs.
+	@param deltaTime number - Time since last frame
+]]
+function EggService:Update(deltaTime: number)
+  local currentTime = os.time()
+  
+  for _, player in ipairs(Players:GetPlayers()) do
+    local userId = player.UserId
+    
+    -- Get player data to check placed chickens
+    local playerData = PlayerDataService:GetData(userId)
+    if not playerData or not playerData.placedChickens then
+      continue
+    end
+    
+    -- Get the chicken AI state for positions
+    local aiState = ChickenService:GetAIState(userId)
+    
+    -- Track if any eggs were laid to batch save
+    local dataChanged = false
+    
+    -- Check each placed chicken for egg laying
+    for _, chicken in ipairs(playerData.placedChickens) do
+      local config = ChickenConfig.get(chicken.chickenType)
+      if not config then
+        continue
+      end
+      
+      -- Check if chicken is ready to lay an egg
+      local lastEggTime = chicken.lastEggTime or 0
+      local timeSinceLastEgg = currentTime - lastEggTime
+      local eggLayInterval = config.eggLayIntervalSeconds
+      
+      if timeSinceLastEgg >= eggLayInterval then
+        -- Chicken is ready to lay an egg!
+        local eggTypes = config.eggsLaid
+        if eggTypes and #eggTypes > 0 then
+          -- Select random egg type
+          local selectedEggType = eggTypes[math.random(1, #eggTypes)]
+          
+          -- Get chicken position from AI state for egg spawn position
+          local position = { x = 0, y = 2, z = 0 }
+          if aiState then
+            local posInfo = ChickenAI.getPositionInfo(aiState, chicken.id)
+            if posInfo and posInfo.position then
+              position = {
+                x = posInfo.position.X,
+                y = posInfo.position.Y + 1, -- Spawn egg slightly above chicken
+                z = posInfo.position.Z,
+              }
+            end
+          end
+          
+          -- Spawn the world egg
+          local worldEgg = self:SpawnWorldEgg(userId, chicken.id, selectedEggType, position, chicken.spotIndex)
+          
+          if worldEgg then
+            -- Update chicken's lastEggTime
+            chicken.lastEggTime = currentTime
+            dataChanged = true
+          end
+        end
+      end
+    end
+    
+    -- Save player data once if any eggs were laid
+    if dataChanged then
+      PlayerDataService:UpdateData(userId, playerData)
+    end
+    
+    -- Update world eggs (handle despawns)
+    self:UpdateWorldEggs(userId, currentTime)
+  end
 end
 
 --[[
