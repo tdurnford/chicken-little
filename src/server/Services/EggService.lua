@@ -28,6 +28,7 @@ local LevelConfig = require(Shared:WaitForChild("LevelConfig"))
 
 -- Services will be retrieved after Knit starts
 local PlayerDataService
+local ChickenService
 
 -- Create the service
 local EggService = Knit.CreateService({
@@ -69,6 +70,9 @@ end
 function EggService:KnitStart()
   -- Get reference to PlayerDataService
   PlayerDataService = Knit.GetService("PlayerDataService")
+  
+  -- Get reference to ChickenService for auto-placing hatched chickens
+  ChickenService = Knit.GetService("ChickenService")
 
   -- Get reference to MapService for section assignment events
   local MapService = Knit.GetService("MapService")
@@ -262,6 +266,15 @@ function EggService:HatchEgg(userId: number, eggId: string): EggHatching.HatchRe
 
     -- Update player data
     PlayerDataService:UpdateData(userId, playerData)
+    
+    -- Auto-place the hatched chicken in the world
+    if ChickenService and result.chickenId then
+      local placeResult = ChickenService:PlaceChicken(userId, result.chickenId)
+      if not placeResult.success then
+        -- Chicken stays in inventory if placement fails (e.g., area full)
+        print(string.format("[EggService] Could not auto-place chicken: %s", placeResult.message or "unknown"))
+      end
+    end
 
     -- Fire server signal
     self.EggHatchedSignal:Fire(userId, result)
