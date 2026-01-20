@@ -31,6 +31,7 @@ local MapGeneration = require(Shared:WaitForChild("MapGeneration"))
 local PlayerDataService
 local MapService
 local CombatService
+local ChickenService
 
 -- Create the service
 local PredatorService = Knit.CreateService({
@@ -89,6 +90,7 @@ function PredatorService:KnitStart()
   PlayerDataService = Knit.GetService("PlayerDataService")
   MapService = Knit.GetService("MapService")
   CombatService = Knit.GetService("CombatService")
+  ChickenService = Knit.GetService("ChickenService")
 
   -- Setup player connections
   Players.PlayerAdded:Connect(function(player)
@@ -849,6 +851,21 @@ function PredatorService:ExecutePredatorAttacks(userId: number, currentTime: num
               data.placedChickens = playerData.placedChickens
               return data
             end)
+
+            -- Unregister killed chickens from health/AI systems and notify clients to destroy visuals
+            if ChickenService then
+              for _, chickenId in ipairs(attackResult.chickenIds) do
+                -- Unregister from health and AI systems
+                ChickenService:UnregisterChicken(userId, chickenId, "predator_kill")
+                
+                -- Fire ChickenPickedUp event to all clients so visuals are destroyed
+                ChickenService.Client.ChickenPickedUp:FireAll({
+                  playerId = userId,
+                  chickenId = chickenId,
+                  spotIndex = nil,
+                })
+              end
+            end
 
             -- Send alert to player about the attack
             self:SendAlert(userId, predator.id, "attacking")

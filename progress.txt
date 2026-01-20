@@ -4500,3 +4500,77 @@ Tutorial.completeStep("place_egg")  -- Added this line
 - When adding new tutorial steps with `waitForAction=true`, ensure the corresponding game action calls `Tutorial.completeStep()`
 - The Tutorial module reference is already available at the top of Main.client.lua
 
+
+---
+
+## Bug Fix: Fix Chicken Not Disappearing When Killed by Predator
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-4.json
+
+### Summary
+Fixed the issue where chicken models remained visible on the map after being killed by predators. The predator attack correctly removed chickens from the server-side `playerData.placedChickens` array, but failed to notify clients to destroy the visual representations.
+
+### Root Cause
+When `PredatorAttack.executeAttack()` ran successfully:
+1. It removed chickens from `playerData.placedChickens` (server-side data) ✓
+2. `PredatorService` fired `ChickensLost` event to the client ✓
+3. BUT **it never called `ChickenService:UnregisterChicken()`** to clean up health/AI state
+4. AND **it never fired `ChickenPickedUp` event** to clients to destroy visuals
+
+The client already had code to destroy chicken visuals when receiving `ChickenPickedUp` events (in `Main.client.lua` line 1125), but this event was never fired for predator kills.
+
+### Fix Applied
+
+**1. Added ChickenService reference to PredatorService (line 34):**
+```lua
+local ChickenService
+```
+
+**2. Added ChickenService initialization in KnitStart (line 92):**
+```lua
+ChickenService = Knit.GetService("ChickenService")
+```
+
+**3. Added chicken cleanup and client notification after successful predator attack (lines 855-868):**
+```lua
+-- Unregister killed chickens from health/AI systems and notify clients to destroy visuals
+if ChickenService then
+  for _, chickenId in ipairs(attackResult.chickenIds) do
+    -- Unregister from health and AI systems
+    ChickenService:UnregisterChicken(userId, chickenId, "predator_kill")
+    
+    -- Fire ChickenPickedUp event to all clients so visuals are destroyed
+    ChickenService.Client.ChickenPickedUp:FireAll({
+      playerId = userId,
+      chickenId = chickenId,
+      spotIndex = nil,
+    })
+  end
+end
+```
+
+### How It Works Now
+1. Predator attacks and `executeAttack()` removes chickens from player data
+2. PredatorService calls `ChickenService:UnregisterChicken()` for each killed chicken
+   - Unregisters chicken from health system
+   - Unregisters chicken from AI system
+   - Fires `ChickenRemoved` server signal
+3. PredatorService fires `ChickenPickedUp` event to all clients
+   - Clients receive event in `Main.client.lua`
+   - `ChickenVisuals.destroy(chickenId)` removes the model from workspace
+
+### Modified Files
+- `src/server/Services/PredatorService.lua` - Added ChickenService reference and chicken cleanup logic
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- PRD-4 remaining bugs (prioritized):
+  - `fix-store-buttons-disabled-when-sold-out` - Buy buttons still clickable when sold out
+  - `fix-tutorial-skip-animation` - Tutorial skip animation incorrect
+  - `add-chicken-money-collection-cap` - Money cap feature
+- The `ChickenPickedUp` event is now used for both manual pickup and predator kills
+- Death animation/effect could be added in the future by modifying `ChickenVisuals.destroy()` to play an animation before destruction
+- The `predator_kill` reason is passed to `UnregisterChicken` for tracking/analytics purposes
