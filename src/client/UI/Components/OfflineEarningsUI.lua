@@ -24,6 +24,7 @@ local OnEvent = Fusion.OnEvent
 local Computed = Fusion.Computed
 local Value = Fusion.Value
 local Spring = Fusion.Spring
+local peek = Fusion.peek
 
 -- Types
 export type PopupConfig = {
@@ -363,19 +364,19 @@ function OfflineEarningsUI.show(money: number, eggs: number, timeAway: number)
 
 	-- Update reactive state
 	if moneyEarned then
-		(moneyEarned :: any):set(money)
+		moneyEarned:set(money)
 	end
 	if eggsCollected then
-		(eggsCollected :: any):set(eggs)
+		eggsCollected:set(eggs)
 	end
 	if timeAwaySeconds then
-		(timeAwaySeconds :: any):set(timeAway)
+		timeAwaySeconds:set(timeAway)
 	end
 
 	-- Show the popup
 	screenGui.Enabled = true
 	if isVisible then
-		(isVisible :: any):set(true)
+		isVisible:set(true)
 	end
 end
 
@@ -407,11 +408,11 @@ function OfflineEarningsUI.hide()
 		return
 	end
 
-	(isVisible :: any):set(false)
+	isVisible:set(false)
 
 	-- Delay disabling ScreenGui to allow animation
 	task.delay(0.3, function()
-		if screenGui and not (isVisible :: any):get() then
+		if screenGui and not peek(isVisible) then
 			screenGui.Enabled = false
 		end
 	end)
@@ -419,8 +420,8 @@ end
 
 -- Claim the rewards and close
 function OfflineEarningsUI.claim()
-	local money = moneyEarned and (moneyEarned :: any):get() or 0
-	local eggs = eggsCollected and (eggsCollected :: any):get() or 0
+	local money = moneyEarned and peek(moneyEarned) or 0
+	local eggs = eggsCollected and peek(eggsCollected) or 0
 
 	-- Call callback before hiding
 	if onClaimCallback then
@@ -441,7 +442,7 @@ end
 
 -- Check if popup is visible
 function OfflineEarningsUI.isVisible(): boolean
-	return isVisible ~= nil and (isVisible :: any):get()
+	return isVisible ~= nil and peek(isVisible) == true
 end
 
 -- Check if popup is created
@@ -462,9 +463,9 @@ end
 -- Get current earnings being displayed
 function OfflineEarningsUI.getDisplayedEarnings(): { money: number, eggs: number, timeAway: number }
 	return {
-		money = moneyEarned and (moneyEarned :: any):get() or 0,
-		eggs = eggsCollected and (eggsCollected :: any):get() or 0,
-		timeAway = timeAwaySeconds and (timeAwaySeconds :: any):get() or 0,
+		money = moneyEarned and peek(moneyEarned) or 0,
+		eggs = eggsCollected and peek(eggsCollected) or 0,
+		timeAway = timeAwaySeconds and peek(timeAwaySeconds) or 0,
 	}
 end
 

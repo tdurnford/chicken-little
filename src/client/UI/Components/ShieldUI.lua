@@ -21,6 +21,7 @@ local Computed = Fusion.Computed
 local Value = Fusion.Value
 local Spring = Fusion.Spring
 local Cleanup = Fusion.Cleanup
+local peek = Fusion.peek
 
 -- Types
 export type ShieldUIProps = {
@@ -280,8 +281,8 @@ local function createShieldButton(scope: Fusion.Scope, position: UDim2)
 				AutoButtonColor = true,
 
 				[OnEvent("MouseButton1Click")] = function()
-					local active = isActive and (isActive :: any):get() or false
-					local onCooldown = isOnCooldown and (isOnCooldown :: any):get() or false
+					local active = isActive and peek(isActive) or false
+					local onCooldown = isOnCooldown and peek(isOnCooldown) or false
 					if onActivateCallback and not active and not onCooldown then
 						onActivateCallback()
 					end
@@ -399,22 +400,22 @@ end
 -- Update shield status from server
 function ShieldUI.updateStatus(data: ShieldStatusData)
 	if isActive then
-		(isActive :: any):set(data.isActive)
+		isActive:set(data.isActive)
 	end
 	if isOnCooldown then
-		(isOnCooldown :: any):set(data.isOnCooldown)
+		isOnCooldown:set(data.isOnCooldown)
 	end
 	if remainingDuration then
-		(remainingDuration :: any):set(data.remainingDuration)
+		remainingDuration:set(data.remainingDuration)
 	end
 	if remainingCooldown then
-		(remainingCooldown :: any):set(data.remainingCooldown)
+		remainingCooldown:set(data.remainingCooldown)
 	end
 	if durationTotal then
-		(durationTotal :: any):set(data.durationTotal)
+		durationTotal:set(data.durationTotal)
 	end
 	if cooldownTotal then
-		(cooldownTotal :: any):set(data.cooldownTotal)
+		cooldownTotal:set(data.cooldownTotal)
 	end
 end
 

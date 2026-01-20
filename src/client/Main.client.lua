@@ -102,10 +102,26 @@ print("[Client] ClientEventRelay started")
 -- Get controllers for state management
 local PlayerDataController = Knit.GetController("PlayerDataController")
 
+-- Get MapService for section assignment
+local MapService = Knit.GetService("MapService")
+
+-- Listen to MapService's SectionAssigned signal directly
+-- This ensures section visuals are built even if profile data is delayed
+MapService.SectionAssigned:Connect(function(sectionIndex: number)
+  print("[Client] Received SectionAssigned signal for section", sectionIndex)
+  if not SectionVisuals.getCurrentSection() then
+    SectionVisuals.buildSection(sectionIndex, {})
+    print("[Client] Section visuals built from SectionAssigned for section", sectionIndex)
+    SectionVisuals.buildCentralStore()
+    print("[Client] Central store built")
+  end
+end)
+
 -- Track placed egg for hatching flow
 local placedEggData: { id: string, eggType: string }? = nil
 
--- Helper to get RemoteFunction safely (used by UI callbacks)
+-- Helper to get RemoteFunction safely (used for legacy/unimplemented features)
+-- TODO: Remove once all features are migrated to Knit services
 local function getFunction(name: string): RemoteFunction?
   return ClientEventRelay.getFunction(name)
 end
@@ -342,13 +358,9 @@ ChickenSelling.setGetPlayerData(function()
   return PlayerDataController:GetData()
 end)
 
--- Wire up server-side sale via SellChicken RemoteFunction
+-- Wire up server-side sale via ChickenController
 ChickenSelling.setPerformServerSale(function(chickenId: string)
-  local sellChickenFunc = getFunction("SellChicken")
-  if not sellChickenFunc then
-    return { success = false, error = "SellChicken function not available" }
-  end
-  local result = sellChickenFunc:InvokeServer(chickenId)
+  local result = ChickenController:SellChicken(chickenId)
   if result and result.success then
     SoundEffects.playMoneyCollect(result.sellPrice or 0)
     return { success = true, message = result.message, sellPrice = result.sellPrice }
@@ -372,6 +384,7 @@ ChickenVisuals.setOnSellPromptTriggered(function(chickenId: string)
 end)
 
 -- Wire up ChickenVisuals claim prompt to handle collecting random chickens
+-- TODO: Add ClaimRandomChicken to ChickenController when implemented on server
 ChickenVisuals.setOnClaimPromptTriggered(function(chickenId: string)
   local claimFunc = getFunction("ClaimRandomChicken")
   if claimFunc then
@@ -450,16 +463,13 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
       InventoryUI.clearSelection()
       print("[Client] Egg placed, showing hatch preview")
     elseif actionType == "sell" then
-      local sellEggFunc = getFunction("SellEgg")
-      if sellEggFunc then
-        local result = sellEggFunc:InvokeServer(selectedItem.itemId)
-        if result and result.success then
-          SoundEffects.playMoneyCollect(result.sellPrice or 0)
-          InventoryUI.clearSelection()
-        else
-          SoundEffects.play("uiError")
-          warn("[Client] Egg sell failed:", result and result.error or "Unknown error")
-        end
+      local result = EggController:SellEgg(selectedItem.itemId)
+      if result and result.success then
+        SoundEffects.playMoneyCollect(result.sellPrice or 0)
+        InventoryUI.clearSelection()
+      else
+        SoundEffects.play("uiError")
+        warn("[Client] Egg sell failed:", result and result.error or "Unknown error")
       end
     end
   elseif selectedItem.itemType == "chicken" then
@@ -470,31 +480,25 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
         return
       end
 
-      local placeChickenFunc = getFunction("PlaceChicken")
-      if placeChickenFunc then
-        local result = placeChickenFunc:InvokeServer(selectedItem.itemId, nil)
-        if result and result.success then
-          SoundEffects.play("chickenPlace")
-          InventoryUI.clearSelection()
-        elseif result and result.atLimit then
-          SoundEffects.play("uiError")
-          warn("[Client] Cannot place chicken:", result.message)
-        else
-          SoundEffects.play("uiError")
-          warn("[Client] Place failed:", result and result.message or "Unknown error")
-        end
+      local result = ChickenController:PlaceChicken(selectedItem.itemId)
+      if result and result.success then
+        SoundEffects.play("chickenPlace")
+        InventoryUI.clearSelection()
+      elseif result and result.atLimit then
+        SoundEffects.play("uiError")
+        warn("[Client] Cannot place chicken:", result.message)
+      else
+        SoundEffects.play("uiError")
+        warn("[Client] Place failed:", result and result.message or "Unknown error")
       end
     elseif actionType == "sell" then
-      local sellChickenFunc = getFunction("SellChicken")
-      if sellChickenFunc then
-        local result = sellChickenFunc:InvokeServer(selectedItem.itemId, true)
-        if result and result.success then
-          SoundEffects.playMoneyCollect(result.sellPrice or 0)
-          InventoryUI.clearSelection()
-        else
-          SoundEffects.play("uiError")
-          warn("[Client] Sell failed:", result and result.error or "Unknown error")
-        end
+      local result = ChickenController:SellChicken(selectedItem.itemId)
+      if result and result.success then
+        SoundEffects.playMoneyCollect(result.sellPrice or 0)
+        InventoryUI.clearSelection()
+      else
+        SoundEffects.play("uiError")
+        warn("[Client] Sell failed:", result and result.error or "Unknown error")
       end
     end
   elseif selectedItem.itemType == "trap" then
@@ -505,27 +509,24 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
         return
       end
 
-      local placeTrapFunc = getFunction("PlaceTrap")
-      if placeTrapFunc then
-        local character = localPlayer.Character
-        if character then
-          local rootPart = character:FindFirstChild("HumanoidRootPart") :: BasePart?
-          if rootPart then
-            local spotIndex = findNearbyAvailableTrapSpot(rootPart.Position)
-            if spotIndex then
-              local result = placeTrapFunc:InvokeServer(selectedItem.itemId, spotIndex)
-              if result and result.success then
-                SoundEffects.play("trapPlace")
-                InventoryUI.clearSelection()
-                print("[Client] Trap placed at spot:", spotIndex)
-              else
-                SoundEffects.play("uiError")
-                warn("[Client] Trap place failed:", result and result.message or "Unknown error")
-              end
+      local character = localPlayer.Character
+      if character then
+        local rootPart = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+        if rootPart then
+          local spotIndex = findNearbyAvailableTrapSpot(rootPart.Position)
+          if spotIndex then
+            local result = TrapController:PlaceTrapFromInventory(selectedItem.itemId, spotIndex)
+            if result and result.success then
+              SoundEffects.play("trapPlace")
+              InventoryUI.clearSelection()
+              print("[Client] Trap placed at spot:", spotIndex)
             else
               SoundEffects.play("uiError")
-              warn("[Client] All trap spots are occupied (max 8 traps)")
+              warn("[Client] Trap place failed:", result and result.message or "Unknown error")
             end
+          else
+            SoundEffects.play("uiError")
+            warn("[Client] All trap spots are occupied (max 8 traps)")
           end
         end
       end
@@ -564,20 +565,17 @@ HatchPreviewUI.onHatch(function(eggId: string, eggType: string)
     end
   end
 
-  local hatchEggFunc = getFunction("HatchEgg")
-  if hatchEggFunc then
-    local result = hatchEggFunc:InvokeServer(eggId, 1, playerPosition)
-    if result and result.success then
-      SoundEffects.playEggHatch(result.rarity or "Common")
-      print("[Client] Egg hatched successfully:", result.chickenType, result.rarity)
-      HatchPreviewUI.showResult(result.chickenType, result.rarity)
-    elseif result and result.atLimit then
-      SoundEffects.play("uiError")
-      warn("[Client] Cannot hatch egg:", result.message)
-    else
-      SoundEffects.play("uiError")
-      warn("[Client] Hatch failed:", result and result.message or "Unknown error")
-    end
+  local result = EggController:HatchEgg(eggId)
+  if result and result.success then
+    SoundEffects.playEggHatch(result.rarity or "Common")
+    print("[Client] Egg hatched successfully:", result.chickenType, result.rarity)
+    HatchPreviewUI.showResult(result.chickenType, result.rarity)
+  elseif result and result.atLimit then
+    SoundEffects.play("uiError")
+    warn("[Client] Cannot hatch egg:", result.message)
+  else
+    SoundEffects.play("uiError")
+    warn("[Client] Hatch failed:", result and result.message or "Unknown error")
   end
 
   placedEggData = nil
@@ -704,12 +702,6 @@ local function playSwingAnimation(tool: Tool): ()
 end
 
 local function onWeaponActivated(tool: Tool)
-  local swingBatFunc = getFunction("SwingBat")
-  if not swingBatFunc then
-    warn("[Client] SwingBat RemoteFunction not found")
-    return
-  end
-
   SoundEffects.playBatSwing("miss")
   task.spawn(playSwingAnimation, tool)
 
@@ -717,7 +709,7 @@ local function onWeaponActivated(tool: Tool)
 
   local result
   if predatorId then
-    result = swingBatFunc:InvokeServer("swing", "predator", predatorId)
+    result = CombatController:Attack("predator", predatorId)
     if result and result.success then
       if result.remainingHealth ~= nil then
         PredatorHealthBar.updateHealth(predatorId, result.remainingHealth)
@@ -734,7 +726,7 @@ local function onWeaponActivated(tool: Tool)
       end
     end
   else
-    result = swingBatFunc:InvokeServer("swing", nil, nil)
+    result = CombatController:Attack(nil, nil)
     if result and result.success then
       SoundEffects.playBatSwing("miss")
     end
@@ -882,30 +874,27 @@ local function updateProximityPrompts()
       if currentTime - lastCollectTime >= MONEY_COLLECTION_COOLDOWN then
         lastCollectedChickenTimes[chickenId] = currentTime
 
-        local collectMoneyFunc = getFunction("CollectMoney")
-        if collectMoneyFunc then
-          task.spawn(function()
-            local result = collectMoneyFunc:InvokeServer(chickenId)
-            if
-              result
-              and result.success
-              and result.amountCollected
-              and result.amountCollected > 0
-            then
-              ChickenVisuals.resetAccumulatedMoney(chickenId, result.remainder or 0)
-              SoundEffects.playMoneyCollect(result.amountCollected)
-              local visualState = ChickenVisuals.get(chickenId)
-              if visualState and visualState.position then
-                ChickenVisuals.createMoneyPopEffect({
-                  amount = result.amountCollected,
-                  position = visualState.position + Vector3.new(0, 2, 0),
-                  isLarge = result.amountCollected >= 1000,
-                })
-              end
-              ChickenVisuals.updateSellPromptPrice(chickenId)
+        task.spawn(function()
+          local result = ChickenController:CollectMoney(chickenId)
+          if
+            result
+            and result.success
+            and result.amountCollected
+            and result.amountCollected > 0
+          then
+            ChickenVisuals.resetAccumulatedMoney(chickenId, result.remainder or 0)
+            SoundEffects.playMoneyCollect(result.amountCollected)
+            local visualState = ChickenVisuals.get(chickenId)
+            if visualState and visualState.position then
+              ChickenVisuals.createMoneyPopEffect({
+                amount = result.amountCollected,
+                position = visualState.position + Vector3.new(0, 2, 0),
+                isLarge = result.amountCollected >= 1000,
+              })
             end
-          end)
-        end
+            ChickenVisuals.updateSellPromptPrice(chickenId)
+          end
+        end)
       end
     end
 
@@ -988,15 +977,16 @@ end
 
 task.delay(0.5, setupStoreInteraction)
 
+-- Get controllers for store/game operations (uses Knit's built-in communication)
+local StoreController = Knit.GetController("StoreController")
+local ChickenController = Knit.GetController("ChickenController")
+local EggController = Knit.GetController("EggController")
+local TrapController = Knit.GetController("TrapController")
+local CombatController = Knit.GetController("CombatController")
+
 -- Wire up store purchase callback
 StoreUI.onPurchase(function(eggType: string, quantity: number)
-  local buyEggFunc = getFunction("BuyEgg")
-  if not buyEggFunc then
-    warn("[Client] BuyEgg RemoteFunction not found")
-    return
-  end
-
-  local result = buyEggFunc:InvokeServer(eggType, quantity)
+  local result = StoreController:BuyEgg(eggType, quantity)
   if result then
     if result.success then
       SoundEffects.play("purchase")
@@ -1009,6 +999,7 @@ StoreUI.onPurchase(function(eggType: string, quantity: number)
 end)
 
 -- Wire up store Robux replenish callback
+-- TODO: Add ReplenishStoreWithRobux to StoreController/StoreService when implemented
 StoreUI.onReplenish(function()
   local replenishFunc = getFunction("ReplenishStoreWithRobux")
   if not replenishFunc then
@@ -1029,6 +1020,7 @@ StoreUI.onReplenish(function()
 end)
 
 -- Wire up store Robux item purchase callback
+-- TODO: Add BuyItemWithRobux to StoreController/StoreService when implemented
 StoreUI.onRobuxPurchase(function(itemType: string, itemId: string)
   local buyItemFunc = getFunction("BuyItemWithRobux")
   if not buyItemFunc then
@@ -1050,6 +1042,7 @@ StoreUI.onRobuxPurchase(function(itemType: string, itemId: string)
 end)
 
 -- Wire up store power-up purchase callback
+-- TODO: Add BuyPowerUp to StoreController/StoreService when implemented
 StoreUI.onPowerUpPurchase(function(powerUpId: string)
   local buyPowerUpFunc = getFunction("BuyPowerUp")
   if not buyPowerUpFunc then
@@ -1073,14 +1066,7 @@ end)
 -- Wire up store trap/supply purchase callback
 StoreUI.onTrapPurchase(function(trapType: string)
   print("[Client] onTrapPurchase callback invoked with trapType:", trapType)
-  local buyTrapFunc = getFunction("BuyTrap")
-  if not buyTrapFunc then
-    warn("[Client] BuyTrap RemoteFunction not found")
-    return
-  end
-
-  print("[Client] Invoking BuyTrap RemoteFunction")
-  local result = buyTrapFunc:InvokeServer(trapType)
+  local result = StoreController:BuyTrap(trapType)
   if result then
     if result.success then
       SoundEffects.play("purchase")
@@ -1094,13 +1080,7 @@ StoreUI.onTrapPurchase(function(trapType: string)
 end)
 
 StoreUI.onWeaponPurchase(function(weaponType: string)
-  local buyWeaponFunc = getFunction("BuyWeapon")
-  if not buyWeaponFunc then
-    warn("[Client] BuyWeapon RemoteFunction not found")
-    return
-  end
-
-  local result = buyWeaponFunc:InvokeServer(weaponType)
+  local result = StoreController:BuyWeapon(weaponType)
   if result then
     if result.success then
       SoundEffects.play("purchase")
@@ -1114,17 +1094,14 @@ StoreUI.onWeaponPurchase(function(weaponType: string)
 end)
 
 -- Wire ShieldUI activation callback to server
-local activateShieldFunc = getFunction("ActivateShield")
 ShieldUI.onActivate(function()
-  if activateShieldFunc then
-    local result = activateShieldFunc:InvokeServer()
-    if result then
-      if result.success then
-        print("[Client] Shield activation successful:", result.message)
-      else
-        ShieldUI.showActivationFeedback(false, result.message)
-        print("[Client] Shield activation failed:", result.message)
-      end
+  local result = CombatController:ActivateShield()
+  if result then
+    if result.success then
+      print("[Client] Shield activation successful:", result.message)
+    else
+      ShieldUI.showActivationFeedback(false, result.message)
+      print("[Client] Shield activation failed:", result.message)
     end
   end
 end)

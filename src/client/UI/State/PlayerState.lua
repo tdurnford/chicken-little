@@ -12,9 +12,8 @@ local Fusion = require(Packages:WaitForChild("Fusion"))
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local PlayerData = require(Shared:WaitForChild("PlayerData"))
 
--- Fusion constructors
-local Value = Fusion.Value
-local Computed = Fusion.Computed
+-- Create a persistent scope for state values
+local scope = Fusion.scoped(Fusion)
 
 -- Type exports for consumers
 export type PlayerStateType = {
@@ -48,35 +47,35 @@ export type PlayerStateType = {
 local PlayerState = {} :: PlayerStateType
 
 -- Core data values
-PlayerState.Money = Value(0)
-PlayerState.Level = Value(1)
-PlayerState.XP = Value(0)
-PlayerState.IsDataLoaded = Value(false)
+PlayerState.Money = scope:Value(0)
+PlayerState.Level = scope:Value(1)
+PlayerState.XP = scope:Value(0)
+PlayerState.IsDataLoaded = scope:Value(false)
 
 -- Inventory state
-PlayerState.Eggs = Value({} :: { PlayerData.EggData })
-PlayerState.InventoryChickens = Value({} :: { PlayerData.ChickenData })
-PlayerState.PlacedChickens = Value({} :: { PlayerData.ChickenData })
+PlayerState.Eggs = scope:Value({} :: { PlayerData.EggData })
+PlayerState.InventoryChickens = scope:Value({} :: { PlayerData.ChickenData })
+PlayerState.PlacedChickens = scope:Value({} :: { PlayerData.ChickenData })
 
 -- Combat state
-PlayerState.EquippedWeapon = Value("BaseballBat")
-PlayerState.OwnedWeapons = Value({ "BaseballBat" } :: { string })
-PlayerState.ShieldActive = Value(false)
-PlayerState.ShieldExpiresAt = Value(nil :: number?)
-PlayerState.ShieldCooldownEnd = Value(nil :: number?)
+PlayerState.EquippedWeapon = scope:Value("BaseballBat")
+PlayerState.OwnedWeapons = scope:Value({ "BaseballBat" } :: { string })
+PlayerState.ShieldActive = scope:Value(false)
+PlayerState.ShieldExpiresAt = scope:Value(nil :: number?)
+PlayerState.ShieldCooldownEnd = scope:Value(nil :: number?)
 
 -- Computed values
-PlayerState.TotalChickens = Computed(function(use)
+PlayerState.TotalChickens = scope:Computed(function(use)
   local inventoryCount = #use(PlayerState.InventoryChickens)
   local placedCount = #use(PlayerState.PlacedChickens)
   return inventoryCount + placedCount
 end)
 
-PlayerState.TotalEggs = Computed(function(use)
+PlayerState.TotalEggs = scope:Computed(function(use)
   return #use(PlayerState.Eggs)
 end)
 
-PlayerState.CanActivateShield = Computed(function(use)
+PlayerState.CanActivateShield = scope:Computed(function(use)
   local isActive = use(PlayerState.ShieldActive)
   local cooldownEnd = use(PlayerState.ShieldCooldownEnd)
 

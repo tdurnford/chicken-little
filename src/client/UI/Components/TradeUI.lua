@@ -356,7 +356,7 @@ local function createTradeFrame(scope: Fusion.Scope): Frame
     [Children] = {
       New(scope, "UICorner")({ CornerRadius = UDim.new(0, 12) }),
       New(scope, "UIStroke")({
-        Color = Theme.Colors.Borders.ColorLight,
+        Color = Theme.Borders.ColorLight,
         Thickness = 2,
       }),
 

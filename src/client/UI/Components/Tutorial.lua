@@ -29,6 +29,7 @@ local OnEvent = Fusion.OnEvent
 local Computed = Fusion.Computed
 local Value = Fusion.Value
 local Spring = Fusion.Spring
+local peek = Fusion.peek
 
 -- Types
 export type TutorialStep = {
@@ -239,14 +240,14 @@ local function startArrowUpdates()
 	end
 
 	arrowUpdateConnection = RunService.Heartbeat:Connect(function()
-		if not isActive or not (isActive :: any):get() then
+		if not isActive or not peek(isActive) then
 			return
 		end
-		if isPaused and (isPaused :: any):get() then
+		if isPaused and peek(isPaused) then
 			return
 		end
 
-		local stepIndex = currentStepIndex and (currentStepIndex :: any):get() or 0
+		local stepIndex = currentStepIndex and peek(currentStepIndex) or 0
 		local step = currentConfig.steps[stepIndex]
 		if step and step.targetPosition then
 			updateArrowPosition(step.targetPosition)
@@ -503,10 +504,10 @@ local function setupAutoAdvance(duration: number)
 
 	local startTime = tick()
 	advanceConnection = RunService.Heartbeat:Connect(function()
-		if not isActive or not (isActive :: any):get() then
+		if not isActive or not peek(isActive) then
 			return
 		end
-		if isPaused and (isPaused :: any):get() then
+		if isPaused and peek(isPaused) then
 			return
 		end
 
@@ -593,14 +594,14 @@ function Tutorial.start()
 		return
 	end
 
-	if (isActive :: any):get() then
+	if peek(isActive) then
 		return
 	end
 
-	(isActive :: any):set(true)
-	(isPaused :: any):set(false)
-	(currentStepIndex :: any):set(1)
-	(frameVisible :: any):set(true)
+	if isActive then isActive:set(true) end
+	if isPaused then isPaused:set(false) end
+	if currentStepIndex then currentStepIndex:set(1) end
+	if frameVisible then frameVisible:set(true) end
 
 	-- Start arrow updates
 	startArrowUpdates()
@@ -619,14 +620,14 @@ end
 
 -- Go to next step
 function Tutorial.nextStep()
-	if not isActive or not (isActive :: any):get() then
+	if not isActive or not peek(isActive) then
 		return
 	end
-	if isPaused and (isPaused :: any):get() then
+	if isPaused and peek(isPaused) then
 		return
 	end
 
-	local stepIndex = (currentStepIndex :: any):get()
+	local stepIndex = peek(currentStepIndex) or 0
 	local currentStep = currentConfig.steps[stepIndex]
 
 	-- Notify step completion
@@ -635,7 +636,7 @@ function Tutorial.nextStep()
 	end
 
 	stepIndex = stepIndex + 1
-	(currentStepIndex :: any):set(stepIndex)
+	if currentStepIndex then currentStepIndex:set(stepIndex) end
 
 	if stepIndex > #currentConfig.steps then
 		Tutorial.complete()
@@ -664,14 +665,14 @@ end
 
 -- Complete a specific step (for external triggers)
 function Tutorial.completeStep(stepId: string)
-	if not isActive or not (isActive :: any):get() then
+	if not isActive or not peek(isActive) then
 		return
 	end
-	if isPaused and (isPaused :: any):get() then
+	if isPaused and peek(isPaused) then
 		return
 	end
 
-	local stepIndex = (currentStepIndex :: any):get()
+	local stepIndex = peek(currentStepIndex) or 0
 	local currentStep = currentConfig.steps[stepIndex]
 	if currentStep and currentStep.id == stepId and currentStep.waitForAction then
 		Tutorial.nextStep()
@@ -680,11 +681,11 @@ end
 
 -- Skip the tutorial
 function Tutorial.skip()
-	if not isActive or not (isActive :: any):get() then
+	if not isActive or not peek(isActive) then
 		return
 	end
 
-	(isActive :: any):set(false)
+	if isActive then isActive:set(false) end
 
 	if advanceConnection then
 		advanceConnection:Disconnect()
@@ -693,7 +694,7 @@ function Tutorial.skip()
 
 	stopArrowUpdates()
 
-	(frameVisible :: any):set(false)
+	if frameVisible then frameVisible:set(false) end
 
 	task.delay(0.3, function()
 		if onSkipCallback then
@@ -704,11 +705,11 @@ end
 
 -- Complete the tutorial
 function Tutorial.complete()
-	if not isActive or not (isActive :: any):get() then
+	if not isActive or not peek(isActive) then
 		return
 	end
 
-	(isActive :: any):set(false)
+	if isActive then isActive:set(false) end
 
 	if advanceConnection then
 		advanceConnection:Disconnect()
@@ -717,7 +718,7 @@ function Tutorial.complete()
 
 	stopArrowUpdates()
 
-	(frameVisible :: any):set(false)
+	if frameVisible then frameVisible:set(false) end
 
 	task.delay(0.3, function()
 		if onCompleteCallback then
@@ -729,25 +730,25 @@ end
 -- Pause the tutorial
 function Tutorial.pause()
 	if isPaused then
-		(isPaused :: any):set(true)
+		isPaused:set(true)
 	end
 end
 
 -- Resume the tutorial
 function Tutorial.resume()
 	if isPaused then
-		(isPaused :: any):set(false)
+		isPaused:set(false)
 	end
 end
 
 -- Check if tutorial is active
 function Tutorial.isActive(): boolean
-	return isActive ~= nil and (isActive :: any):get()
+	return isActive ~= nil and peek(isActive) == true
 end
 
 -- Check if tutorial is paused
 function Tutorial.isPaused(): boolean
-	return isPaused ~= nil and (isPaused :: any):get()
+	return isPaused ~= nil and peek(isPaused) == true
 end
 
 -- Check if tutorial is created
@@ -757,12 +758,12 @@ end
 
 -- Get current step index
 function Tutorial.getCurrentStepIndex(): number
-	return currentStepIndex and (currentStepIndex :: any):get() or 0
+	return currentStepIndex and peek(currentStepIndex) or 0
 end
 
 -- Get current step
 function Tutorial.getCurrentStep(): TutorialStep?
-	local stepIndex = currentStepIndex and (currentStepIndex :: any):get() or 0
+	local stepIndex = currentStepIndex and peek(currentStepIndex) or 0
 	if stepIndex > 0 and stepIndex <= #currentConfig.steps then
 		return currentConfig.steps[stepIndex]
 	end

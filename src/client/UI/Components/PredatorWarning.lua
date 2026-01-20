@@ -24,6 +24,7 @@ local Children = Fusion.Children
 local Computed = Fusion.Computed
 local Value = Fusion.Value
 local Spring = Fusion.Spring
+local peek = Fusion.peek
 
 -- Types
 export type WarningState = {
@@ -263,7 +264,7 @@ local function updateDirectionArrow()
 	end
 
 	if not targetPosition then
-		(arrowVisible :: any):set(false)
+		if arrowVisible then arrowVisible:set(false) end
 		return
 	end
 
@@ -288,7 +289,7 @@ local function updateDirectionArrow()
 	local screenPos, onScreen = camera:WorldToScreenPoint(targetPosition)
 
 	if onScreen then
-		(arrowVisible :: any):set(false)
+		if arrowVisible then arrowVisible:set(false) end
 		return
 	end
 
@@ -319,10 +320,10 @@ local function updateDirectionArrow()
 	arrowY = math.clamp(arrowY, edgeOffset, screenSize.Y - edgeOffset)
 
 	-- Update arrow state
-	(arrowPositionX :: any):set(arrowX)
-	(arrowPositionY :: any):set(arrowY)
-	(arrowRotation :: any):set(math.deg(angle))
-	(arrowVisible :: any):set(true)
+	if arrowPositionX then arrowPositionX:set(arrowX) end
+	if arrowPositionY then arrowPositionY:set(arrowY) end
+	if arrowRotation then arrowRotation:set(math.deg(angle)) end
+	if arrowVisible then arrowVisible:set(true) end
 end
 
 -- Start the update loop for direction arrow
@@ -417,31 +418,31 @@ function PredatorWarning.show(
 
 	-- Update reactive state
 	if hasActiveWarning then
-		(hasActiveWarning :: any):set(true)
+		hasActiveWarning:set(true)
 	end
 	if currentThreatLevel then
-		(currentThreatLevel :: any):set(threatLevel)
+		currentThreatLevel:set(threatLevel)
 	end
 	if currentPredatorType then
-		(currentPredatorType :: any):set(predatorType)
+		currentPredatorType:set(predatorType)
 	end
 
 	-- Show flash
 	if showFlash then
-		(showFlash :: any):set(true)
+		showFlash:set(true)
 		task.delay(0.5, function()
 			if showFlash then
-				(showFlash :: any):set(false)
+				showFlash:set(false)
 			end
 		end)
 	end
 
 	-- Show message
 	if showMessage then
-		(showMessage :: any):set(true)
+		showMessage:set(true)
 		task.delay(WARNING_MESSAGE_DURATION, function()
 			if showMessage then
-				(showMessage :: any):set(false)
+				showMessage:set(false)
 			end
 		end)
 	end
@@ -481,10 +482,10 @@ function PredatorWarning.clear(predatorId: string)
 
 	-- Update state
 	if hasActiveWarning then
-		(hasActiveWarning :: any):set(hasActive)
+		hasActiveWarning:set(hasActive)
 	end
 	if arrowVisible and not hasActive then
-		(arrowVisible :: any):set(false)
+		arrowVisible:set(false)
 	end
 	if not hasActive then
 		stopUpdateLoop()

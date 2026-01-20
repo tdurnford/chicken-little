@@ -20,6 +20,7 @@ local Children = Fusion.Children
 local Computed = Fusion.Computed
 local Value = Fusion.Value
 local Spring = Fusion.Spring
+local peek = Fusion.peek
 
 -- Types
 export type DamageUIProps = {
@@ -477,15 +478,15 @@ end
 -- Update health bar display
 function DamageUI.updateHealthBar(health: number, max: number, showBar: boolean?)
 	if currentHealth then
-		(currentHealth :: any):set(health)
+		currentHealth:set(health)
 	end
 	if maxHealth then
-		(maxHealth :: any):set(max)
+		maxHealth:set(max)
 	end
 
 	if showBar ~= false then
 		if isHealthBarVisible then
-			(isHealthBarVisible :: any):set(true)
+			isHealthBarVisible:set(true)
 		end
 
 		-- Cancel existing hide task
@@ -496,7 +497,7 @@ function DamageUI.updateHealthBar(health: number, max: number, showBar: boolean?
 		-- Schedule hide
 		healthBarHideTask = task.delay(HEALTH_BAR_VISIBLE_DURATION, function()
 			if isHealthBarVisible then
-				(isHealthBarVisible :: any):set(false)
+				isHealthBarVisible:set(false)
 			end
 			healthBarHideTask = nil
 		end)
@@ -506,7 +507,7 @@ end
 -- Hide health bar
 function DamageUI.hideHealthBar()
 	if isHealthBarVisible then
-		(isHealthBarVisible :: any):set(false)
+		isHealthBarVisible:set(false)
 	end
 end
 

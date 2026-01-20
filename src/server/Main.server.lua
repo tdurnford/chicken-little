@@ -25,7 +25,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 -- Initialize ProfileManager first (handles player data loading/saving)
 local ProfileManager = require(ServerScriptService:WaitForChild("ProfileManager"))
-ProfileManager.initialize()
+ProfileManager.start()
 print("[Main.server] ProfileManager initialized")
 
 -- Start Knit server (loads and starts all services)

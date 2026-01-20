@@ -9,9 +9,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Packages = ReplicatedStorage:WaitForChild("Packages")
 local Fusion = require(Packages:WaitForChild("Fusion"))
 
--- Fusion constructors
-local Value = Fusion.Value
-local Computed = Fusion.Computed
+-- Create a persistent scope for state values
+local scope = Fusion.scoped(Fusion)
 
 -- Type exports for consumers
 export type TimeInfo = {
@@ -41,25 +40,25 @@ export type GameStateType = {
 local GameState = {} :: GameStateType
 
 -- Time state values
-GameState.GameTime = Value(12) -- Default to noon
-GameState.TimeOfDay = Value("day")
-GameState.IsNight = Value(false)
-GameState.PredatorMultiplier = Value(1)
+GameState.GameTime = scope:Value(12) -- Default to noon
+GameState.TimeOfDay = scope:Value("day")
+GameState.IsNight = scope:Value(false)
+GameState.PredatorMultiplier = scope:Value(1)
 
 -- Computed: Is it a dangerous time (night or dusk)?
-GameState.IsDangerousTime = Computed(function(use)
+GameState.IsDangerousTime = scope:Computed(function(use)
   local period = use(GameState.TimeOfDay)
   return period == "night" or period == "dusk"
 end)
 
 -- Computed: Is it a safe time (day or dawn)?
-GameState.IsSafeTime = Computed(function(use)
+GameState.IsSafeTime = scope:Computed(function(use)
   local period = use(GameState.TimeOfDay)
   return period == "day" or period == "dawn"
 end)
 
 -- Computed: User-friendly time display string
-GameState.TimeDisplayString = Computed(function(use)
+GameState.TimeDisplayString = scope:Computed(function(use)
   local period = use(GameState.TimeOfDay)
   local periodNames = {
     day = "Day",
@@ -71,7 +70,7 @@ GameState.TimeDisplayString = Computed(function(use)
 end)
 
 -- Computed: Period icon/emoji for UI
-GameState.PeriodIcon = Computed(function(use)
+GameState.PeriodIcon = scope:Computed(function(use)
   local period = use(GameState.TimeOfDay)
   local periodIcons = {
     day = "☀️",

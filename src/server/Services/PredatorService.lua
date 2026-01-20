@@ -119,7 +119,7 @@ function PredatorService:_initializePlayerState(userId: number)
   playerPredatorStates[userId] = {
     spawnState = PredatorSpawning.createSpawnState(playerLevel),
     aiState = PredatorAI.createState(),
-    dayNightState = DayNightCycle.createState(),
+    dayNightState = DayNightCycle.init(),
     lastCleanupTime = os.time(),
   }
 end

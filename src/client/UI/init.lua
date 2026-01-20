@@ -182,15 +182,9 @@ local function mountComponents(): boolean
 	-- Initialize PredatorWarning (uses initialize pattern)
 	PredatorWarning.initialize()
 
-	-- Mount ShieldUI (requires MainHUD's ScreenGui)
-	local mainHudScreenGui = MainHUD.getScreenGui()
-	if mainHudScreenGui then
-		if not ShieldUI.create(mainHudScreenGui) then
-			warn("[UI] Failed to create ShieldUI")
-			success = false
-		end
-	else
-		warn("[UI] Cannot create ShieldUI - no MainHUD ScreenGui")
+	-- Mount ShieldUI
+	if not ShieldUI.create() then
+		warn("[UI] Failed to create ShieldUI")
 		success = false
 	end
 

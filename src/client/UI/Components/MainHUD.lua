@@ -39,6 +39,7 @@ local MainHUD = {}
 local screenGui: ScreenGui? = nil
 local hudScope: Fusion.Scope? = nil
 local inventoryIcon: any? = nil
+local storedInventoryCallback: (() -> ())? = nil
 
 -- Create formatted money display with spring animation
 local function createMoneyDisplay(scope: Fusion.Scope)
@@ -199,6 +200,11 @@ end
 
 -- Create the inventory TopbarPlus icon
 local function createInventoryIcon(onInventoryClick: (() -> ())?)
+  -- Store callback for later use
+  if onInventoryClick then
+    storedInventoryCallback = onInventoryClick
+  end
+  
   local icon = Icon.new()
     :setImage("rbxasset://textures/ui/TopBar/inventoryOn.png")
     :setImageScale(0.85)
@@ -206,8 +212,8 @@ local function createInventoryIcon(onInventoryClick: (() -> ())?)
 
   -- Wire click callback
   icon.selected:Connect(function()
-    if onInventoryClick then
-      onInventoryClick()
+    if storedInventoryCallback then
+      storedInventoryCallback()
     end
     -- Deselect immediately (act as button, not toggle)
     icon:deselect()
@@ -326,12 +332,8 @@ end
 	@param callback () -> ()
 ]]
 function MainHUD.onInventoryClick(callback: () -> ())
-  -- If icon exists, reconnect
-  if inventoryIcon then
-    -- Can't easily reconnect, store for next creation
-    -- This would require recreating the icon
-    warn("[MainHUD] onInventoryClick: Icon already created, callback stored for next create()")
-  end
+  -- Store callback - will be used by icon's click handler
+  storedInventoryCallback = callback
 end
 
 --[[

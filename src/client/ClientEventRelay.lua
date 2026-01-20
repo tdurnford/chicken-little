@@ -19,8 +19,8 @@ local Players = game:GetService("Players")
 
 local localPlayer = Players.LocalPlayer
 
--- Wait for Remotes folder from server
-local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
+-- Remotes folder reference (loaded lazily in start())
+local Remotes: Folder? = nil
 
 -- Type definitions
 export type EventRelayConfig = {
@@ -114,8 +114,13 @@ end
 	Start listening to all server events and relay to visual modules.
 ]]
 function ClientEventRelay.start()
+  -- Wait for Remotes folder if not already loaded
   if not Remotes then
-    warn("[ClientEventRelay] Remotes folder not found - cannot start relay")
+    Remotes = ReplicatedStorage:WaitForChild("Remotes", 30)
+  end
+  
+  if not Remotes then
+    warn("[ClientEventRelay] Remotes folder not found after 30s timeout - server may not have initialized remotes yet")
     return
   end
 

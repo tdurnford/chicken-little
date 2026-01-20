@@ -30,8 +30,7 @@ local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
 local Computed = Fusion.Computed
 local Value = Fusion.Value
-local ForValues = Fusion.ForValues
-local Cleanup = Fusion.Cleanup
+local peek = Fusion.peek
 
 -- Types
 export type TabType = "eggs" | "supplies" | "powerups" | "weapons"
@@ -186,7 +185,7 @@ local function createCashButton(
     },
 
     [OnEvent("MouseButton1Click")] = function()
-      if not (isSoldOut :: any):get() and (canAfford :: any):get() then
+      if not peek(isSoldOut) and peek(canAfford) then
         onClick()
       end
     end,
@@ -1303,7 +1302,7 @@ function StoreUI.updateActivePowerUps(activePowerUps: { [string]: number }?)
   if not cachedActivePowerUps then
     return
   end
-  (cachedActivePowerUps :: Fusion.Value<{ [string]: number }>):set(activePowerUps or {})
+  if cachedActivePowerUps then cachedActivePowerUps:set(activePowerUps or {}) end
 end
 
 --[[
@@ -1313,13 +1312,11 @@ end
 function StoreUI.refreshInventory()
   -- Force tab switch to refresh content
   if currentTab then
-    local tab = (currentTab :: Fusion.Value<TabType>)
-      :get()
-      -- Toggle to force re-render
-      (currentTab :: Fusion.Value<TabType>)
-      :set("eggs" :: TabType)
+    local tab = peek(currentTab)
+    -- Toggle to force re-render
+    currentTab:set("eggs" :: TabType)
     task.defer(function()
-      (currentTab :: Fusion.Value<TabType>):set(tab)
+      if currentTab then currentTab:set(tab) end
     end)
   end
 end
