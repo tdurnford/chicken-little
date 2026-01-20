@@ -78,7 +78,9 @@ function MoneyCollection.collect(
   end
 
   -- Collect the accumulated money (only whole dollars)
-  local totalAccumulated = chicken.accumulatedMoney
+  -- Cap at max capacity to ensure we don't collect more than the limit
+  local maxCapacity = ChickenConfig.getMaxMoneyCapacityForType(chicken.chickenType)
+  local totalAccumulated = math.min(chicken.accumulatedMoney, maxCapacity)
   local amountCollected = math.floor(totalAccumulated)
   local remainder = totalAccumulated - amountCollected
 
@@ -93,6 +95,7 @@ function MoneyCollection.collect(
   end
 
   -- Keep the remainder (change) in the chicken, collect only whole dollars
+  -- Reset to remainder (any excess above max capacity is lost)
   chicken.accumulatedMoney = remainder
   chicken.lastCollectTime = now -- Update timestamp for next collection calculation
   playerData.money = playerData.money + amountCollected
