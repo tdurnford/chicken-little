@@ -30,6 +30,7 @@ local MapGeneration = require(Shared:WaitForChild("MapGeneration"))
 -- Services will be retrieved after Knit starts
 local PlayerDataService
 local MapService
+local CombatService
 
 -- Create the service
 local PredatorService = Knit.CreateService({
@@ -87,6 +88,7 @@ function PredatorService:KnitStart()
   -- Get reference to PlayerDataService
   PlayerDataService = Knit.GetService("PlayerDataService")
   MapService = Knit.GetService("MapService")
+  CombatService = Knit.GetService("CombatService")
 
   -- Setup player connections
   Players.PlayerAdded:Connect(function(player)
@@ -176,7 +178,10 @@ function PredatorService:Update(deltaTime: number)
       -- 4. Execute predator attacks on chickens (when in attacking state and interval elapsed)
       self:ExecutePredatorAttacks(userId, currentTime)
       
-      -- 5. Periodic cleanup
+      -- 5. Apply predator damage to player (when predators are attacking and in range)
+      self:ApplyPredatorDamageToPlayer(userId, deltaTime)
+      
+      -- 6. Periodic cleanup
       self:CleanupInactivePredators(userId)
     end
   end
@@ -877,6 +882,77 @@ function PredatorService:ExecutePredatorAttacks(userId: number, currentTime: num
 
             -- Fire server signal
             self.PredatorEscapedSignal:Fire(userId, predator.id)
+          end
+        end
+      end
+    end
+  end
+end
+
+--[[
+	Apply predator damage to player.
+	Called during the game loop when attacking predators are within range.
+	@param userId number - The user ID
+	@param deltaTime number - Time since last frame
+]]
+function PredatorService:ApplyPredatorDamageToPlayer(userId: number, deltaTime: number)
+  local state = playerPredatorStates[userId]
+  if not state then
+    return
+  end
+
+  local player = Players:GetPlayerByUserId(userId)
+  if not player then
+    return
+  end
+
+  -- Check if CombatService is available
+  if not CombatService then
+    return
+  end
+
+  -- Check if player's shield is active (protected from damage)
+  if CombatService:IsShieldActive(userId) then
+    return
+  end
+
+  -- Get player's character position
+  local character = player.Character
+  if not character then
+    return
+  end
+  local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+  if not humanoidRootPart then
+    return
+  end
+  local playerPosition = humanoidRootPart.Position
+
+  -- Check each active predator for damage application
+  for _, predator in ipairs(PredatorSpawning.getActivePredators(state.spawnState)) do
+    -- Only process predators in attacking state
+    if predator.state == "attacking" then
+      -- Get predator position
+      local predatorPosition = PredatorAI.getPosition(state.aiState, predator.id)
+      if predatorPosition and predatorPosition.currentPosition then
+        -- Check if predator is within attack range of player
+        local distance = (playerPosition - predatorPosition.currentPosition).Magnitude
+        if distance <= PREDATOR_ATTACK_RANGE_STUDS then
+          -- Apply damage to player
+          local damageResult = CombatService:ApplyPredatorDamage(
+            userId,
+            predator.predatorType,
+            deltaTime
+          )
+
+          if damageResult.success and damageResult.damageDealt > 0 then
+            -- Log significant damage events
+            if damageResult.wasKnockedBack then
+              print(string.format(
+                "[PredatorService] Player %s knocked back by %s",
+                player.Name,
+                predator.predatorType
+              ))
+            end
           end
         end
       end

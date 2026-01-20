@@ -4177,3 +4177,80 @@ The fix:
   - `fix-unknown-sound-purchase` - Missing 'purchase' sound
 - CombatService now correctly calls PredatorService for predator damage application
 - PredatorService.Client:AttackPredator is the authoritative method for predator damage
+
+---
+
+## Bug Fix: Predators Not Dealing Damage to Players (CRITICAL)
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-4.json
+
+### Summary
+Fixed predators not dealing damage to players. When predators entered "attacking" state and approached players, no damage was being applied to player health even though `CombatService:ApplyPredatorDamage()` existed.
+
+### Root Cause
+The `CombatService:ApplyPredatorDamage()` function was fully implemented and working, but **PredatorService never called it**. The game loop in `PredatorService:Update()` handled:
+1. Predator spawning ✅
+2. Position updates ✅
+3. Section entry detection ✅
+4. Chicken attacks ✅
+5. **Player damage ❌ (missing)**
+
+### Fix Applied
+
+**Added `ApplyPredatorDamageToPlayer()` method in PredatorService:**
+```lua
+function PredatorService:ApplyPredatorDamageToPlayer(userId: number, deltaTime: number)
+  -- Check each active predator in attacking state
+  -- Check distance to player (PREDATOR_ATTACK_RANGE_STUDS = 15)
+  -- Check player shield status
+  -- Call CombatService:ApplyPredatorDamage() for damage application
+end
+```
+
+**Modified `PredatorService:Update()` game loop:**
+```lua
+-- 5. Apply predator damage to player (when predators are attacking and in range)
+self:ApplyPredatorDamageToPlayer(userId, deltaTime)
+```
+
+**Changes to PredatorService:**
+1. Added `CombatService` to service dependencies
+2. Added step 5 in game loop to apply player damage
+3. New method checks predator state, distance, and shield status before dealing damage
+
+### Damage Flow (Now Working)
+1. Predator enters "attacking" state
+2. Game loop calls `ApplyPredatorDamageToPlayer()`
+3. Checks if predator is within 15 studs of player
+4. Checks if player's shield is active (skips if protected)
+5. Calls `CombatService:ApplyPredatorDamage(userId, predatorType, deltaTime)`
+6. Damage per second based on predator threat level (5-60 DPS)
+7. DamageTaken and HealthChanged events fire to client for UI
+
+### Damage Values by Threat Level
+- Minor (Rat, Crow): 5 DPS
+- Moderate (Weasel, Raccoon): 10 DPS
+- Dangerous (Fox, Snake): 15 DPS
+- Severe (Coyote, Hawk): 25 DPS
+- Deadly (Wolf, Bobcat): 40 DPS
+- Catastrophic (Bear, Eagle): 60 DPS
+
+### Modified Files
+- `src/server/Services/PredatorService.lua` - Added `ApplyPredatorDamageToPlayer()`, CombatService dependency
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- PRD-4 remaining bugs (prioritized):
+  - `fix-new-player-protection-not-working` - New player protection not preventing spawns
+  - `fix-store-item-count-not-updating` - Store stock not updating after purchase
+  - `fix-store-buttons-disabled-when-sold-out` - Buy buttons still clickable when sold out
+  - `fix-tutorial-skip-animation` - Tutorial skip animation incorrect
+  - `fix-tutorial-not-progressing-on-egg-buy` - Tutorial doesn't advance on egg purchase
+  - `fix-unknown-sound-purchase` - Missing 'purchase' sound
+  - `add-chicken-money-collection-cap` - Money cap feature
+- Shield protection now properly prevents predator damage
+- Player health regenerates at 10 HP/second after 3 seconds out of combat
+- Knockback triggers at 0 health (1.5 second stun, restores to 25% HP after)
