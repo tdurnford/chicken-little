@@ -4798,3 +4798,75 @@ if frameVisible then frameVisible:set(false) end
 - When using Fusion Springs for hide animations, consider combining position with transparency
 - A fast transparency fade can mask awkward position animations
 - The `isSkipping` pattern allows different animation speeds for skip vs normal completion
+
+---
+
+## Feature: Add Money Collection Cap Per Chicken Type
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-4.json
+
+### Summary
+Implemented a money collection cap feature that prevents chickens from accumulating unlimited money while the player is AFK. Each chicken type now has a maximum money capacity based on its rarity tier, requiring players to actively collect money to maintain engagement.
+
+### Implementation Details
+
+**1. Added max money capacity by rarity in ChickenConfig.lua:**
+```lua
+local RARITY_MAX_MONEY_CAPACITY: { [Rarity]: number } = {
+  Common = 50,
+  Uncommon = 500,
+  Rare = 5000,
+  Epic = 50000,
+  Legendary = 500000,
+  Mythic = 5000000,
+}
+```
+
+**2. Added getter functions in ChickenConfig.lua:**
+- `ChickenConfig.getMaxMoneyCapacity(rarity)` - Get cap for a rarity
+- `ChickenConfig.getMaxMoneyCapacityForType(chickenType)` - Get cap for specific chicken type
+
+**3. Updated MoneyCollection.updateAllChickenMoney() to respect the cap:**
+- Checks if chicken is at max capacity before generating money
+- Uses `continue` to skip money generation for full chickens
+- Caps new total at maxCapacity if it would exceed
+- Added helper functions:
+  - `MoneyCollection.isAtMaxCapacity(playerData, chickenId)` - Check if at capacity
+  - `MoneyCollection.getCapacityInfo(playerData, chickenId)` - Get full capacity info
+
+**4. Updated ChickenVisuals.lua for visual feedback:**
+- Added `maxMoneyCapacity` and `isAtMaxCapacity` fields to ChickenVisualState
+- Client-side money accumulation now respects the cap
+- Money indicator shows:
+  - "FULL!" text label (red) when at capacity
+  - Rate shows "(paused)" in grey when full
+  - Money text turns gold/amber when at capacity
+- Reset capacity flag when collecting money
+
+### Capacity Values
+The caps scale with rarity to match the exponential money generation rates:
+| Rarity    | Max Capacity | Money/sec | Time to Fill |
+|-----------|--------------|-----------|--------------|
+| Common    | $50          | $1        | ~50s         |
+| Uncommon  | $500         | $10       | ~50s         |
+| Rare      | $5,000       | $100      | ~50s         |
+| Epic      | $50,000      | $1,000    | ~50s         |
+| Legendary | $500,000     | $10,000   | ~50s         |
+| Mythic    | $5,000,000   | $100,000  | ~50s         |
+
+### Modified Files
+- `src/shared/ChickenConfig.lua` - Added capacity config and getter functions
+- `src/shared/MoneyCollection.lua` - Added cap enforcement and helper functions
+- `src/client/ChickenVisuals.lua` - Added visual feedback for capacity status
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- PRD-4 is now COMPLETE! All 13 features have been implemented.
+- The capacity values are tuned so chickens fill up in ~50 seconds of AFK time
+- This encourages active gameplay while still allowing brief AFK periods
+- Visual feedback makes it clear when a chicken is full and needs collection
+- Money generation automatically resumes after collection
+

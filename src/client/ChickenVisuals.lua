@@ -46,6 +46,7 @@ export type ChickenVisualState = {
   moneyIndicator: BillboardGui?,
   accumulatedMoney: number,
   moneyPerSecond: number,
+  maxMoneyCapacity: number, -- Maximum money capacity before generation stops
   position: Vector3,
   targetPosition: Vector3?,
   targetFacingDirection: Vector3?,
@@ -54,6 +55,7 @@ export type ChickenVisualState = {
   isPlaced: boolean,
   healthPercent: number,
   isDamaged: boolean,
+  isAtMaxCapacity: boolean, -- Whether chicken is at max capacity
 }
 
 export type MoneyPopConfig = {
@@ -243,7 +245,7 @@ end
 local function createMoneyIndicator(parent: BasePart, moneyPerSecond: number): BillboardGui
   local billboard = Instance.new("BillboardGui")
   billboard.Name = "MoneyIndicator"
-  billboard.Size = UDim2.new(0, 80, 0, 50)
+  billboard.Size = UDim2.new(0, 80, 0, 60) -- Slightly taller to fit status text
   billboard.StudsOffset = Vector3.new(0, 2.5, 0)
   billboard.AlwaysOnTop = true
   billboard.Adornee = parent
@@ -262,11 +264,24 @@ local function createMoneyIndicator(parent: BasePart, moneyPerSecond: number): B
   corner.CornerRadius = UDim.new(0, 8)
   corner.Parent = bg
 
-  -- Rate text ($/s) - top portion
+  -- Status text (FULL indicator) - top portion, hidden by default
+  local statusText = Instance.new("TextLabel")
+  statusText.Name = "StatusText"
+  statusText.Size = UDim2.new(1, 0, 0.25, 0)
+  statusText.Position = UDim2.new(0, 0, 0, 0)
+  statusText.BackgroundTransparency = 1
+  statusText.Font = Enum.Font.GothamBold
+  statusText.TextSize = 11
+  statusText.TextColor3 = Color3.fromRGB(255, 100, 100)
+  statusText.Text = "FULL!"
+  statusText.Visible = false
+  statusText.Parent = bg
+
+  -- Rate text ($/s) - middle portion
   local rateText = Instance.new("TextLabel")
   rateText.Name = "RateText"
-  rateText.Size = UDim2.new(1, 0, 0.5, 0)
-  rateText.Position = UDim2.new(0, 0, 0, 0)
+  rateText.Size = UDim2.new(1, 0, 0.35, 0)
+  rateText.Position = UDim2.new(0, 0, 0.25, 0)
   rateText.BackgroundTransparency = 1
   rateText.Font = Enum.Font.GothamBold
   rateText.TextSize = 12
@@ -277,8 +292,8 @@ local function createMoneyIndicator(parent: BasePart, moneyPerSecond: number): B
   -- Money text (accumulated) - bottom portion
   local moneyText = Instance.new("TextLabel")
   moneyText.Name = "MoneyText"
-  moneyText.Size = UDim2.new(1, 0, 0.5, 0)
-  moneyText.Position = UDim2.new(0, 0, 0.5, 0)
+  moneyText.Size = UDim2.new(1, 0, 0.4, 0)
+  moneyText.Position = UDim2.new(0, 0, 0.6, 0)
   moneyText.BackgroundTransparency = 1
   moneyText.Font = Enum.Font.GothamBold
   moneyText.TextSize = 14
@@ -300,13 +315,43 @@ local function updateMoneyIndicator(state: ChickenVisualState)
     return
   end
 
+  -- Check if at max capacity
+  local wasAtMaxCapacity = state.isAtMaxCapacity
+  state.isAtMaxCapacity = state.accumulatedMoney >= state.maxMoneyCapacity
+
   local moneyText = bg:FindFirstChild("MoneyText") :: TextLabel?
+  local statusText = bg:FindFirstChild("StatusText") :: TextLabel?
+  local rateText = bg:FindFirstChild("RateText") :: TextLabel?
+
   if moneyText then
     moneyText.Text = formatMoney(state.accumulatedMoney)
 
-    -- Scale color based on amount (greener for more money)
-    local intensity = math.min(1, state.accumulatedMoney / 1000)
-    moneyText.TextColor3 = Color3.fromRGB(100 + intensity * 155, 255, 100)
+    if state.isAtMaxCapacity then
+      -- Gold/amber color when at capacity
+      moneyText.TextColor3 = Color3.fromRGB(255, 215, 0)
+    else
+      -- Scale color based on amount (greener for more money)
+      local intensity = math.min(1, state.accumulatedMoney / 1000)
+      moneyText.TextColor3 = Color3.fromRGB(100 + intensity * 155, 255, 100)
+    end
+  end
+
+  -- Show/hide FULL status indicator
+  if statusText then
+    statusText.Visible = state.isAtMaxCapacity
+  end
+
+  -- Update rate text when capacity changes
+  if rateText and state.isAtMaxCapacity ~= wasAtMaxCapacity then
+    if state.isAtMaxCapacity then
+      -- Show paused rate when full
+      rateText.Text = "(paused)"
+      rateText.TextColor3 = Color3.fromRGB(180, 180, 180)
+    else
+      -- Restore normal rate display
+      rateText.Text = formatMoneyRate(state.moneyPerSecond * state.healthPercent)
+      rateText.TextColor3 = Color3.fromRGB(255, 220, 100)
+    end
   end
 end
 
@@ -601,6 +646,7 @@ function ChickenVisuals.create(
     moneyIndicator = moneyIndicator,
     accumulatedMoney = 0,
     moneyPerSecond = config.moneyPerSecond or 1,
+    maxMoneyCapacity = ChickenConfig.getMaxMoneyCapacityForType(chickenType),
     position = position,
     targetPosition = nil,
     targetFacingDirection = nil,
@@ -609,6 +655,7 @@ function ChickenVisuals.create(
     isPlaced = chickenIsPlaced,
     healthPercent = 1.0,
     isDamaged = false,
+    isAtMaxCapacity = false,
   }
 
   activeChickens[chickenId] = state
@@ -625,10 +672,14 @@ function ChickenVisuals.create(
         end
         -- Client-side money accumulation for smooth counter (only for placed chickens)
         -- Apply health multiplier to money generation rate
+        -- Stop accumulation if at max capacity
         if chickenState.moneyPerSecond > 0 and chickenState.isPlaced then
-          local effectiveMoneyPerSecond = chickenState.moneyPerSecond * chickenState.healthPercent
-          chickenState.accumulatedMoney = chickenState.accumulatedMoney
-            + (effectiveMoneyPerSecond * deltaTime)
+          if chickenState.accumulatedMoney < chickenState.maxMoneyCapacity then
+            local effectiveMoneyPerSecond = chickenState.moneyPerSecond * chickenState.healthPercent
+            local newAmount = chickenState.accumulatedMoney + (effectiveMoneyPerSecond * deltaTime)
+            -- Cap at max capacity
+            chickenState.accumulatedMoney = math.min(newAmount, chickenState.maxMoneyCapacity)
+          end
           updateMoneyIndicator(chickenState)
         end
       end
@@ -781,11 +832,30 @@ function ChickenVisuals.getAccumulatedMoney(chickenId: string): number
   return 0
 end
 
+-- Check if a chicken visual is at max capacity
+function ChickenVisuals.isAtMaxCapacity(chickenId: string): boolean
+  local state = activeChickens[chickenId]
+  if state then
+    return state.isAtMaxCapacity or false
+  end
+  return false
+end
+
+-- Get the max money capacity for a chicken visual
+function ChickenVisuals.getMaxCapacity(chickenId: string): number
+  local state = activeChickens[chickenId]
+  if state then
+    return state.maxMoneyCapacity or 0
+  end
+  return 0
+end
+
 -- Reset accumulated money for a chicken (called after server collection)
 function ChickenVisuals.resetAccumulatedMoney(chickenId: string, remainder: number?)
   local state = activeChickens[chickenId]
   if state then
     state.accumulatedMoney = remainder or 0
+    state.isAtMaxCapacity = false -- Reset capacity flag after collection
     -- Update the money display immediately
     updateMoneyIndicator(state)
 

@@ -181,6 +181,7 @@ end
 
 -- Update all placed chickens' accumulated money
 -- If a health registry is provided, damaged chickens generate less money proportionally
+-- Money generation stops when chicken reaches its max capacity (based on rarity)
 function MoneyCollection.updateAllChickenMoney(
   playerData: PlayerData.PlayerDataSchema,
   elapsedSeconds: number,
@@ -192,6 +193,13 @@ function MoneyCollection.updateAllChickenMoney(
   for _, chicken in ipairs(playerData.placedChickens) do
     local config = ChickenConfig.get(chicken.chickenType)
     if config then
+      -- Check if chicken is at max capacity - skip money generation if so
+      local maxCapacity = ChickenConfig.getMaxMoneyCapacityForType(chicken.chickenType)
+      if chicken.accumulatedMoney >= maxCapacity then
+        -- Chicken is at max capacity, don't generate more money
+        continue
+      end
+
       local baseMoneyGenerated = config.moneyPerSecond * elapsedSeconds
 
       -- Apply health multiplier if registry is provided
@@ -209,7 +217,15 @@ function MoneyCollection.updateAllChickenMoney(
       end
 
       local moneyGenerated = baseMoneyGenerated * healthMultiplier
-      chicken.accumulatedMoney = chicken.accumulatedMoney + moneyGenerated
+      local newTotal = chicken.accumulatedMoney + moneyGenerated
+
+      -- Cap at max capacity
+      if newTotal > maxCapacity then
+        moneyGenerated = maxCapacity - chicken.accumulatedMoney
+        newTotal = maxCapacity
+      end
+
+      chicken.accumulatedMoney = newTotal
       totalGenerated = totalGenerated + moneyGenerated
     end
   end
@@ -310,6 +326,41 @@ function MoneyCollection.estimateEarnings(
   seconds: number
 ): number
   return MoneyCollection.getTotalMoneyPerSecond(playerData) * seconds
+end
+
+-- Check if a specific chicken is at max money capacity
+function MoneyCollection.isAtMaxCapacity(
+  playerData: PlayerData.PlayerDataSchema,
+  chickenId: string
+): boolean
+  local ChickenConfig = require(script.Parent.ChickenConfig)
+  local chicken, _ = findPlacedChicken(playerData, chickenId)
+  if not chicken then
+    return false
+  end
+  local maxCapacity = ChickenConfig.getMaxMoneyCapacityForType(chicken.chickenType)
+  return chicken.accumulatedMoney >= maxCapacity
+end
+
+-- Get capacity info for a specific chicken
+function MoneyCollection.getCapacityInfo(
+  playerData: PlayerData.PlayerDataSchema,
+  chickenId: string
+): { current: number, max: number, percent: number, isFull: boolean }?
+  local ChickenConfig = require(script.Parent.ChickenConfig)
+  local chicken, _ = findPlacedChicken(playerData, chickenId)
+  if not chicken then
+    return nil
+  end
+  local maxCapacity = ChickenConfig.getMaxMoneyCapacityForType(chicken.chickenType)
+  local current = chicken.accumulatedMoney or 0
+  local percent = math.min(1, current / maxCapacity)
+  return {
+    current = current,
+    max = maxCapacity,
+    percent = percent,
+    isFull = current >= maxCapacity,
+  }
 end
 
 return MoneyCollection

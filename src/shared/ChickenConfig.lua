@@ -64,6 +64,17 @@ local RARITY_HEALTH_REGEN: { [Rarity]: number } = {
   Mythic = 30,
 }
 
+-- Maximum accumulated money before chicken stops generating (rarer = higher cap)
+-- This prevents AFK abuse while maintaining engagement
+local RARITY_MAX_MONEY_CAPACITY: { [Rarity]: number } = {
+  Common = 50,
+  Uncommon = 500,
+  Rare = 5000,
+  Epic = 50000,
+  Legendary = 500000,
+  Mythic = 5000000,
+}
+
 -- Time in seconds before health starts regenerating after taking damage
 local HEALTH_REGEN_DELAY = 3
 
@@ -324,6 +335,20 @@ end
 -- Get maximum chickens allowed per player area
 function ChickenConfig.getMaxChickensPerArea(): number
   return MAX_CHICKENS_PER_AREA
+end
+
+-- Get max money capacity for a rarity (chicken stops generating when reached)
+function ChickenConfig.getMaxMoneyCapacity(rarity: Rarity): number
+  return RARITY_MAX_MONEY_CAPACITY[rarity] or 50
+end
+
+-- Get max money capacity for a specific chicken type
+function ChickenConfig.getMaxMoneyCapacityForType(chickenType: string): number
+  local config = CHICKEN_TYPES[chickenType]
+  if not config then
+    return 50
+  end
+  return RARITY_MAX_MONEY_CAPACITY[config.rarity] or 50
 end
 
 return ChickenConfig
