@@ -18,7 +18,6 @@ local GoodSignal = require(Packages:WaitForChild("GoodSignal"))
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local PlayerData = require(Shared:WaitForChild("PlayerData"))
-local AreaShield = require(Shared:WaitForChild("AreaShield"))
 
 -- ProfileManager is required lazily to avoid circular dependency at load time
 local ProfileManager
@@ -69,21 +68,8 @@ function PlayerDataService:KnitStart()
       while waited < maxWait do
         local data = ProfileManager.getData(player.UserId)
         if data then
-          -- Check if this is a new player and auto-activate shield
-          local isNewPlayer = data.totalPlayTime == 0
-          if isNewPlayer and data.shieldState then
-            local currentTime = os.time()
-            -- Only activate if shield is not already active
-            if not AreaShield.isActive(data.shieldState, currentTime) then
-              local result = AreaShield.activate(data.shieldState, currentTime)
-              if result.success then
-                print(string.format("[PlayerDataService] Auto-activated 2-minute shield for new player %s", player.Name))
-                ProfileManager.updateData(player.UserId, data)
-              end
-            end
-          end
-
           -- Fire the loaded signal
+          local isNewPlayer = data.totalPlayTime == 0
           self.PlayerLoaded:Fire(player.UserId, data, isNewPlayer)
 
           -- Send initial data to client
