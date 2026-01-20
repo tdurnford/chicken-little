@@ -26,6 +26,7 @@ ChickenController.ChickenPickedUp = GoodSignal.new() -- Fires (data: {playerId, 
 ChickenController.ChickenMoved = GoodSignal.new() -- Fires (data: {playerId, chickenId, oldSpotIndex, newSpotIndex, chicken})
 ChickenController.ChickenSold = GoodSignal.new() -- Fires (data: {chickenId, message})
 ChickenController.MoneyCollected = GoodSignal.new() -- Fires (amount: number)
+ChickenController.ChickenPositionUpdated = GoodSignal.new() -- Fires (data: {playerId, chickenId, position, targetPosition, facingDirection, isIdle, walkSpeed})
 
 -- Reference to the server service
 local chickenService = nil
@@ -65,6 +66,10 @@ function ChickenController:KnitStart()
 
   chickenService.MoneyCollected:Connect(function(amount)
     self.MoneyCollected:Fire(amount)
+  end)
+
+  chickenService.ChickenPositionUpdated:Connect(function(data)
+    self.ChickenPositionUpdated:Fire(data)
   end)
 
   print("[ChickenController] Started")

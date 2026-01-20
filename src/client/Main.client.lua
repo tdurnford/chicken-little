@@ -1148,6 +1148,29 @@ ChickenController.ChickenSold:Connect(function(data)
   end
 end)
 
+-- Wire up ChickenController position updates to ChickenVisuals
+ChickenController.ChickenPositionUpdated:Connect(function(data)
+  local chickenId = data.chickenId
+  local position = data.position
+  local targetPosition = data.targetPosition
+  local facingDirection = data.facingDirection
+  local isIdle = data.isIdle
+  local walkSpeed = data.walkSpeed
+  
+  if chickenId and position and ChickenVisuals then
+    local pos = Vector3.new(position.X or position.x or 0, position.Y or position.y or 0, position.Z or position.z or 0)
+    local targetPos = nil
+    if targetPosition then
+      targetPos = Vector3.new(targetPosition.X or targetPosition.x or 0, targetPosition.Y or targetPosition.y or 0, targetPosition.Z or targetPosition.z or 0)
+    end
+    local facing = Vector3.new(0, 0, 1) -- Default facing
+    if facingDirection then
+      facing = Vector3.new(facingDirection.X or facingDirection.x or 0, facingDirection.Y or facingDirection.y or 0, facingDirection.Z or facingDirection.z or 1)
+    end
+    ChickenVisuals.updatePosition(chickenId, pos, targetPos, facing, walkSpeed, isIdle)
+  end
+end)
+
 -- Wire up EggController signals to EggVisuals
 EggController.EggHatched:Connect(function(data)
   local eggId = data.eggId

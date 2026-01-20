@@ -41,6 +41,7 @@ local ChickenService = Knit.CreateService({
     ChickenMoved = Knit.CreateSignal(), -- Fires to all clients when chicken moved
     ChickenSold = Knit.CreateSignal(), -- Fires to owner when chicken sold
     MoneyCollected = Knit.CreateSignal(), -- Fires to owner when money collected
+    ChickenPositionUpdated = Knit.CreateSignal(), -- Fires to all clients with position updates
   },
 })
 
@@ -190,6 +191,41 @@ function ChickenService:_onPlayerSectionAssigned(userId: number, sectionIndex: n
     end
 
     print(string.format("[ChickenService] Spawned %d chickens for player %s", #playerData.placedChickens, player and player.Name or tostring(userId)))
+  end
+end
+
+--[[
+	Update function called by GameLoopService every frame.
+	Handles chicken AI position updates for all players.
+	@param deltaTime number - Time since last frame
+]]
+function ChickenService:Update(deltaTime: number)
+  local currentTime = os.clock()
+  
+  for _, player in ipairs(Players:GetPlayers()) do
+    local userId = player.UserId
+    local state = playerChickenStates[userId]
+    
+    if state and state.aiState then
+      -- Update all chicken positions
+      ChickenAI.updateAll(state.aiState, deltaTime, currentTime)
+      
+      -- Get chickens that have changed state and broadcast to clients
+      local changedChickens = ChickenAI.getChangedChickens(state.aiState)
+      
+      for _, chickenData in ipairs(changedChickens) do
+        -- Fire position update to all clients
+        self.Client.ChickenPositionUpdated:FireAll({
+          playerId = userId,
+          chickenId = chickenData.id,
+          position = chickenData.position,
+          targetPosition = chickenData.target,
+          facingDirection = chickenData.facingDirection,
+          isIdle = chickenData.isIdle,
+          walkSpeed = chickenData.walkSpeed,
+        })
+      end
+    end
   end
 end
 
