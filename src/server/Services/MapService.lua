@@ -25,6 +25,9 @@ local MapGeneration = require(Shared:WaitForChild("MapGeneration"))
 -- SectionLabels is in server folder
 local SectionLabels = require(ServerScriptService:WaitForChild("SectionLabels"))
 
+-- Services will be retrieved after Knit starts
+local PlayerDataService
+
 -- Constants
 local NEW_PLAYER_PROTECTION_DURATION = 120 -- 2 minutes of protection for new players
 
@@ -69,6 +72,9 @@ end
 	Called automatically by Knit after all services are initialized.
 ]]
 function MapService:KnitStart()
+  -- Get reference to PlayerDataService for persisting sectionIndex
+  PlayerDataService = Knit.GetService("PlayerDataService")
+
   -- Setup player connections
   Players.PlayerAdded:Connect(function(player)
     self:_handlePlayerJoin(player)
@@ -113,6 +119,13 @@ function MapService:_handlePlayerJoin(player: Player)
 
   if sectionIndex then
     print(string.format("[MapService] Assigned section %d to %s", sectionIndex, player.Name))
+
+    -- Persist sectionIndex to player data so client can access it
+    local playerData = PlayerDataService:GetData(player.UserId)
+    if playerData then
+      playerData.sectionIndex = sectionIndex
+      PlayerDataService:UpdateData(player.UserId, playerData)
+    end
 
     -- Update section label with player's name
     SectionLabels.onPlayerJoined(player, sectionIndex)

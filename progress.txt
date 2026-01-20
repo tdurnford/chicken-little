@@ -3546,3 +3546,61 @@ local starterChickenId = "starter_egg_source_" .. tostring(userId) -- Unique per
   - `fix-weapon-arming-baseball-bat` (HIGH) - Can't arm weapons
   - `fix-tutorial-skip-button-regression` (HIGH) - Skip button regression
 - The pattern of appending userId for unique IDs should be followed for any player-specific identifiers
+
+---
+
+## Bug Fix: Fix 'Cannot hatch egg no section assigned' Warning (HIGH)
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-2.json
+
+### Summary
+Fixed the false positive warning "Cannot hatch egg: No section assigned" that appeared when players tried to hatch eggs, even though they had a section assigned.
+
+### Root Cause
+The `sectionIndex` was never persisted to PlayerData when MapService assigned sections. The client code at `Main.client.lua:421` checked `playerData.sectionIndex`, but this was always `nil` because:
+
+1. MapService assigns sections in `_handlePlayerJoin` using `MapGeneration.handlePlayerJoin`
+2. The section was stored only in MapGeneration's internal state
+3. The `SectionAssigned` signal was fired to clients but PlayerData.sectionIndex remained nil
+4. Client code checking `playerData.sectionIndex` always saw nil, triggering the false warning
+
+### Technical Flow (Before Fix)
+1. Player joins game
+2. `MapService._handlePlayerJoin` calls `MapGeneration.handlePlayerJoin(...)` → returns sectionIndex
+3. Section stored only in MapGeneration's internal `mapState`
+4. `SectionAssigned` signal fires to client with sectionIndex
+5. Client `SectionVisuals.buildSection` works (uses signal data)
+6. But `playerData.sectionIndex` remains nil (never set)
+7. When hatching egg, `playerData.sectionIndex` check fails → false warning
+
+### Fix Applied
+```lua
+-- In MapService._handlePlayerJoin, after sectionIndex is assigned:
+
+-- Persist sectionIndex to player data so client can access it
+local playerData = PlayerDataService:GetData(player.UserId)
+if playerData then
+  playerData.sectionIndex = sectionIndex
+  PlayerDataService:UpdateData(player.UserId, playerData)
+end
+```
+
+### Why This Works
+- PlayerDataService replicates data to clients automatically
+- Client now receives correct `sectionIndex` in `playerData`
+- The check at `Main.client.lua:421` now passes when player has a section
+- Warning only triggers when section is truly not assigned (edge case)
+
+### Modified Files
+- `src/server/Services/MapService.lua` - Persist sectionIndex to PlayerData after assignment
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- Remaining PRD-2 bugs:
+  - `fix-weapon-arming-baseball-bat` (HIGH) - Can't arm weapons
+  - `fix-tutorial-skip-button-regression` (HIGH) - Skip button regression
+- The pattern of persisting transient state to PlayerData should be followed when client code needs to access it
+- Be aware of the data flow: MapService → PlayerDataService → Client PlayerDataController
