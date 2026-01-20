@@ -4574,3 +4574,79 @@ end
 - The `ChickenPickedUp` event is now used for both manual pickup and predator kills
 - Death animation/effect could be added in the future by modifying `ChickenVisuals.destroy()` to play an animation before destruction
 - The `predator_kill` reason is passed to `UnregisterChicken` for tracking/analytics purposes
+
+
+---
+
+## Bug Fix: Fix PredatorHealthBar Fusion 'useAfterDestroy' Error
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-4.json
+
+### Summary
+Fixed the Fusion error `[Fusion] The use()-d Value is no longer valid - it was destroyed before the Computed` that appeared in the console when predator health bars were updated after destruction.
+
+### Root Cause
+In `PredatorHealthBar.create()`:
+1. A temporary Fusion scope (`tempScope`) was created for the `currentHealth` and `maxHealth` Value objects
+2. The billboard was created with its own separate scope that used these Values in Computeds
+3. **`Fusion.doCleanup(tempScope)` was called immediately**, destroying the Values before they could be used
+4. When `updateHealth()` was called later, it tried to call `:set()` on destroyed Values
+
+The Values were being destroyed immediately after creation, but the Computeds in the billboard scope still tried to use them.
+
+### Fix Applied
+
+**1. Moved Value creation into the billboard scope (createHealthBarBillboard):**
+```lua
+-- Create Fusion Values in this scope so they live as long as the billboard
+state.currentHealth = Value(scope, maxHealthValue)
+state.maxHealth = Value(scope, maxHealthValue)
+```
+
+**2. Added `destroyed` flag to HealthBarState type:**
+```lua
+destroyed: boolean?, -- Track if component has been destroyed
+```
+
+**3. Added guard checks in updateHealth() and applyDamage():**
+```lua
+-- Guard against calling :set() after the scope has been destroyed
+if state.destroyed then
+  return false
+end
+```
+
+**4. Improved cleanup order in destroy():**
+```lua
+-- Mark as destroyed BEFORE cleanup to prevent any in-flight updates
+state.destroyed = true
+-- Remove from active health bars first to prevent any lookups during cleanup
+activeHealthBars[predatorId] = nil
+-- Then cleanup the Fusion scope
+if state.scope then
+  Fusion.doCleanup(state.scope)
+end
+```
+
+### How It Works Now
+1. Values are created in the same scope as the billboard, so they share the same lifecycle
+2. When `destroy()` is called, the `destroyed` flag is set first
+3. Any in-flight calls to `updateHealth()` or `applyDamage()` check the `destroyed` flag and return early
+4. The state is removed from `activeHealthBars` before cleanup to prevent lookups during cleanup
+5. Finally, the Fusion scope is cleaned up, destroying all Values and Computeds together
+
+### Modified Files
+- `src/client/UI/Components/PredatorHealthBar.lua` - Fixed Fusion scope lifecycle and added destruction guards
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- PRD-4 remaining bugs (prioritized):
+  - `fix-store-buttons-disabled-when-sold-out` - Buy buttons still clickable when sold out
+  - `fix-tutorial-skip-animation` - Tutorial skip animation incorrect
+  - `add-chicken-money-collection-cap` - Money cap feature (lowest priority)
+- When working with Fusion, always create Values in the same scope as the Computeds that use them
+- Use a `destroyed` flag pattern to prevent use-after-free errors in reactive UI components
+- The cleanup order matters: set destroyed flag → remove from lookup table → cleanup scope

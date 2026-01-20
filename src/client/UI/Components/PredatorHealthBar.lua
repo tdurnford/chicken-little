@@ -30,6 +30,7 @@ export type HealthBarState = {
 	maxHealth: Fusion.Value<number>,
 	scope: Fusion.Scope?,
 	billboard: BillboardGui?,
+	destroyed: boolean?, -- Track if component has been destroyed
 }
 
 -- Health bar color thresholds
@@ -76,9 +77,13 @@ local function getThreatColor(threatLevel: string): Color3
 end
 
 -- Create the health bar billboard GUI using Fusion
-local function createHealthBarBillboard(parent: BasePart, state: HealthBarState): BillboardGui
+local function createHealthBarBillboard(parent: BasePart, state: HealthBarState, maxHealthValue: number): BillboardGui
 	local scope = Fusion.scoped({})
 	state.scope = scope
+
+	-- Create Fusion Values in this scope so they live as long as the billboard
+	state.currentHealth = Value(scope, maxHealthValue)
+	state.maxHealth = Value(scope, maxHealthValue)
 
 	-- Get predator config for display name
 	local config = PredatorConfig.get(state.predatorType)
@@ -214,25 +219,20 @@ function PredatorHealthBar.create(
 	-- Get max health from config
 	local maxHealthValue = PredatorConfig.getBatHitsRequired(predatorType)
 
-	-- Create a temporary scope for the Value objects
-	local tempScope = Fusion.scoped({})
-
-	-- Create state with Fusion Values
+	-- Create state with placeholder Values (will be set in createHealthBarBillboard)
 	local state: HealthBarState = {
 		predatorId = predatorId,
 		predatorType = predatorType,
 		threatLevel = threatLevel,
-		currentHealth = Value(tempScope, maxHealthValue),
-		maxHealth = Value(tempScope, maxHealthValue),
+		currentHealth = nil :: any, -- Will be set in createHealthBarBillboard
+		maxHealth = nil :: any, -- Will be set in createHealthBarBillboard
 		scope = nil,
 		billboard = nil,
+		destroyed = false, -- Track if component has been destroyed
 	}
 
-	-- Create billboard
-	state.billboard = createHealthBarBillboard(primaryPart, state)
-
-	-- Clean up temp scope
-	Fusion.doCleanup(tempScope)
+	-- Create billboard (this also creates the Values in the same scope)
+	state.billboard = createHealthBarBillboard(primaryPart, state, maxHealthValue)
 
 	activeHealthBars[predatorId] = state
 
@@ -246,6 +246,11 @@ function PredatorHealthBar.updateHealth(predatorId: string, newHealth: number): 
 		return false
 	end
 
+	-- Guard against calling :set() after the scope has been destroyed
+	if state.destroyed then
+		return false
+	end
+
 	state.currentHealth:set(newHealth)
 	return true
 end
@@ -254,6 +259,11 @@ end
 function PredatorHealthBar.applyDamage(predatorId: string, damage: number): boolean
 	local state = activeHealthBars[predatorId]
 	if not state then
+		return false
+	end
+
+	-- Guard against calling :set() after the scope has been destroyed
+	if state.destroyed then
 		return false
 	end
 
@@ -269,11 +279,16 @@ function PredatorHealthBar.destroy(predatorId: string): boolean
 		return false
 	end
 
+	-- Mark as destroyed BEFORE cleanup to prevent any in-flight updates
+	state.destroyed = true
+
+	-- Remove from active health bars first to prevent any lookups during cleanup
+	activeHealthBars[predatorId] = nil
+
 	if state.scope then
 		Fusion.doCleanup(state.scope)
 	end
 
-	activeHealthBars[predatorId] = nil
 	return true
 end
 
