@@ -29,6 +29,7 @@ local Value = Fusion.Value
 local ForPairs = Fusion.ForPairs
 local Spring = Fusion.Spring
 local Cleanup = Fusion.Cleanup
+local peek = Fusion.peek
 
 -- Types
 export type TabType = "eggs" | "chickens" | "traps"
@@ -726,7 +727,7 @@ function InventoryUI.create(props: InventoryUIProps?): boolean
   -- Handlers
   local function onSelect(stack: StackedItem)
     local key = stack.stackKey
-    local currentKey = (selectedStackKey :: Fusion.Value<string?>):get()
+    local currentKey = peek(selectedStackKey :: Fusion.Value<string?>)
 
     if currentKey == key then
       -- Deselect
@@ -736,7 +737,7 @@ function InventoryUI.create(props: InventoryUIProps?): boolean
       -- Select
       (selectedStackKey :: Fusion.Value<string?>):set(key)
       selectedItem = {
-        itemType = (currentTab :: Fusion.Value<TabType>):get(),
+        itemType = peek(currentTab :: Fusion.Value<TabType>),
         itemId = stack.itemIds[1],
         itemData = stack.representativeItem,
         stackCount = stack.count,
@@ -842,7 +843,7 @@ end
 ]]
 function InventoryUI.isVisible(): boolean
   if isVisible then
-    return isVisible:get()
+    return peek(isVisible)
   end
   return false
 end
@@ -876,7 +877,7 @@ end
 ]]
 function InventoryUI.getCurrentTab(): TabType
   if currentTab then
-    return currentTab:get()
+    return peek(currentTab)
   end
   return "eggs"
 end

@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Packages = ReplicatedStorage:WaitForChild("Packages")
 local Fusion = require(Packages:WaitForChild("Fusion"))
+local peek = Fusion.peek
 
 -- Create a persistent scope for state values
 local scope = Fusion.scoped(Fusion)
@@ -140,7 +141,7 @@ end
 	@return number - Game time (0-24)
 ]]
 function GameState.getGameTime(): number
-  return GameState.GameTime:get()
+  return peek(GameState.GameTime)
 end
 
 --[[
@@ -149,7 +150,7 @@ end
 	@return boolean
 ]]
 function GameState.isCurrentlyNight(): boolean
-  return GameState.IsNight:get()
+  return peek(GameState.IsNight)
 end
 
 --[[

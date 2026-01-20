@@ -18,6 +18,7 @@ local Children = Fusion.Children
 local Computed = Fusion.Computed
 local Value = Fusion.Value
 local Spring = Fusion.Spring
+local peek = Fusion.peek
 
 -- Types
 export type HealthBarState = {
@@ -209,7 +210,7 @@ function ChickenHealthBar.updateHealth(chickenId: string, newHealth: number): bo
 	state.currentHealth:set(newHealth)
 
 	-- Update visibility tracking
-	local maxHealthValue = state.maxHealth:get()
+	local maxHealthValue = peek(state.maxHealth)
 	state.isVisible = newHealth < maxHealthValue and newHealth > 0
 
 	return true
@@ -286,8 +287,8 @@ function ChickenHealthBar.getSummary(): {
 }
 	local healthBars = {}
 	for chickenId, state in pairs(activeHealthBars) do
-		local currentHealthValue = state.currentHealth:get()
-		local maxHealthValue = state.maxHealth:get()
+		local currentHealthValue = peek(state.currentHealth)
+		local maxHealthValue = peek(state.maxHealth)
 		table.insert(healthBars, {
 			chickenId = chickenId,
 			health = string.format("%d/%d", currentHealthValue, maxHealthValue),

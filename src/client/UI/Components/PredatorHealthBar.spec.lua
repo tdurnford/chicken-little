@@ -5,6 +5,8 @@
 
 return function()
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	local Packages = ReplicatedStorage:WaitForChild("Packages")
+	local Fusion = require(Packages:WaitForChild("Fusion"))
 
 	-- Module under test
 	local PredatorHealthBar
@@ -97,16 +99,16 @@ return function()
 
 			it("should reduce health correctly", function()
 				local state = PredatorHealthBar.create("predator1", "Wolf", "Moderate", mockModel)
-				local initialHealth = state.currentHealth:get()
+				local initialHealth = Fusion.peek(state.currentHealth)
 				PredatorHealthBar.applyDamage("predator1", 1)
-				local newHealth = state.currentHealth:get()
+				local newHealth = Fusion.peek(state.currentHealth)
 				expect(newHealth).to.equal(initialHealth - 1)
 			end)
 
 			it("should not go below 0 health", function()
 				local state = PredatorHealthBar.create("predator1", "Wolf", "Moderate", mockModel)
 				PredatorHealthBar.applyDamage("predator1", 1000)
-				expect(state.currentHealth:get()).to.equal(0)
+				expect(Fusion.peek(state.currentHealth)).to.equal(0)
 			end)
 		end)
 

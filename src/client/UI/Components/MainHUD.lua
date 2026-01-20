@@ -28,6 +28,7 @@ local Value = Fusion.Value
 local Spring = Fusion.Spring
 local Tween = Fusion.Tween
 local Cleanup = Fusion.Cleanup
+local peek = Fusion.peek
 
 -- Types
 export type MainHUDProps = {
@@ -639,7 +640,7 @@ end
 
 function MainHUD.isAtChickenLimit(): boolean
   -- Check against the reactive state
-  local total = State.Player.TotalChickens:get()
+  local total = peek(State.Player.TotalChickens)
   return total >= 15
 end
 

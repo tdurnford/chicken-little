@@ -5,6 +5,8 @@
 
 return function()
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	local Packages = ReplicatedStorage:WaitForChild("Packages")
+	local Fusion = require(Packages:WaitForChild("Fusion"))
 
 	-- Module under test
 	local ChickenHealthBar
@@ -98,7 +100,7 @@ return function()
 
 			it("should set isVisible to false at full health", function()
 				local state = ChickenHealthBar.create("chicken1", "Basic", mockModel)
-				local maxHealth = state.maxHealth:get()
+				local maxHealth = Fusion.peek(state.maxHealth)
 				ChickenHealthBar.updateHealth("chicken1", maxHealth)
 				expect(state.isVisible).to.equal(false)
 			end)

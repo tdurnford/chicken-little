@@ -1248,7 +1248,7 @@ end
 ]]
 function StoreUI.getCurrentTab(): TabType
   if currentTab then
-    return (currentTab :: Fusion.Value<TabType>):get()
+    return peek(currentTab :: Fusion.Value<TabType>)
   end
   return "eggs"
 end

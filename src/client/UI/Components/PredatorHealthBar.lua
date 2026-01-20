@@ -19,6 +19,7 @@ local Children = Fusion.Children
 local Computed = Fusion.Computed
 local Value = Fusion.Value
 local Spring = Fusion.Spring
+local peek = Fusion.peek
 
 -- Types
 export type HealthBarState = {
@@ -256,7 +257,7 @@ function PredatorHealthBar.applyDamage(predatorId: string, damage: number): bool
 		return false
 	end
 
-	local currentHealthValue = state.currentHealth:get()
+	local currentHealthValue = peek(state.currentHealth)
 	state.currentHealth:set(math.max(0, currentHealthValue - damage))
 	return true
 end
@@ -309,8 +310,8 @@ function PredatorHealthBar.getSummary(): {
 }
 	local healthBars = {}
 	for predatorId, state in pairs(activeHealthBars) do
-		local currentHealthValue = state.currentHealth:get()
-		local maxHealthValue = state.maxHealth:get()
+		local currentHealthValue = peek(state.currentHealth)
+		local maxHealthValue = peek(state.maxHealth)
 		table.insert(healthBars, {
 			predatorId = predatorId,
 			health = string.format("%d/%d", currentHealthValue, maxHealthValue),
