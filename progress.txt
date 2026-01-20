@@ -3007,3 +3007,57 @@ Two issues prevented predator spawning:
   - `fix-cooldown-timer-display` - Shield timer display missing
 - Predator spawn rate can be adjusted in `PredatorSpawning.lua` (BASE_SPAWN_INTERVAL)
 - For testing, use `PredatorService:ForceSpawnPredator(userId, predatorType, sectionCenter)`
+
+---
+
+## Bug Fix: Fix Money Counter Flash to Negative
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+
+### Summary
+Fixed the bug where the money counter would briefly flash a negative number (e.g., -1) when a purchase left the player with exactly $0.
+
+### Root Cause
+The MainHUD uses a Fusion Spring animation for smooth money counter transitions:
+```lua
+local animatedMoney = Spring(scope, State.Player.Money, 30, 0.8)
+```
+
+Spring animations can briefly overshoot their target value during the transition. When money transitions from $100 to $0 after a purchase, the Spring could momentarily overshoot to negative values before settling at 0.
+
+### Solution
+Added a `math.max(0, value)` clamp before formatting the money display in `src/client/UI/Components/MainHUD.lua`:
+
+**Before:**
+```lua
+local formattedMoney = Computed(scope, function(use)
+  local value = use(animatedMoney)
+  return MoneyScaling.formatCurrency(math.floor(value))
+end)
+```
+
+**After:**
+```lua
+local formattedMoney = Computed(scope, function(use)
+  local value = use(animatedMoney)
+  return MoneyScaling.formatCurrency(math.floor(math.max(0, value)))
+end)
+```
+
+### Modified Files
+- `src/client/UI/Components/MainHUD.lua` - Added math.max(0, value) clamp on line 53
+- `plans/bug-fixes-prd.json` - Marked feature as completed
+
+### Testing
+- Build verification passed (`make build`)
+- Logic verified: negative inputs clamp to 0, positive values unchanged
+- Edge cases tested: -1 → $0, -5.5 → $0, 0 → $0, 0.4 → $0, 99.9 → $99, 100 → $100
+
+### Notes for Next Developer
+- High priority bugs remaining:
+  - `fix-store-tabs-covered` - Store tabs covered by items (ZIndex issue)
+  - `fix-restock-timer-stuck` - Timer stuck on "Restocking..."
+  - `fix-tutorial-skip-button` - Skip button doesn't work
+  - `fix-cooldown-timer-display` - Shield timer display missing
+- The Spring animation parameters (30, 0.8) control speed/damping - don't change unless needed
+- Other money displays in StoreUI use comparison only, not display, so no fix needed there

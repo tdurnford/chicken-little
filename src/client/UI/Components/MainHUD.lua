@@ -47,10 +47,10 @@ local function createMoneyDisplay(scope: Fusion.Scope)
   -- Animated money value for smooth counting
   local animatedMoney = Spring(scope, State.Player.Money, 30, 0.8)
 
-  -- Format the animated money value
+  -- Format the animated money value (clamped to 0 to prevent negative flash during animation)
   local formattedMoney = Computed(scope, function(use)
     local value = use(animatedMoney)
-    return MoneyScaling.formatCurrency(math.floor(value))
+    return MoneyScaling.formatCurrency(math.floor(math.max(0, value)))
   end)
 
   return New(scope, "Frame")({
