@@ -3840,3 +3840,69 @@ end
   - `fix-predator-warning-background-stuck` (HIGH) - UI cleanup issue
 - The AreaShield module is well-designed - it has `canPredatorSpawn()` which was available but never used
 - The pattern of checking player data conditions before spawning enemies should be followed elsewhere
+
+
+---
+
+## Bug Fixes: Player Data Section Assignment Warning + Missing Starter Entities (CRITICAL)
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-3.json
+
+### Summary
+Fixed the race condition between MapService section assignment and ProfileManager data loading. This resolves two related bugs:
+1. `fix-player-data-section-assignment-warning` - The "[ChickenService] No player data for..." warning
+2. `fix-missing-starter-chicken-and-egg` - Starter chicken and egg not appearing for new players
+
+### Root Cause
+MapService was handling `PlayerAdded` events and immediately assigning sections, then firing `PlayerSectionAssigned` signal. However, ProfileManager also handles `PlayerAdded` asynchronously to load player data. This created a race condition where ChickenService and EggService would try to access player data before it was loaded.
+
+### Fix Applied (MapService.lua)
+
+**1. Added tracking for pending section assignments:**
+```lua
+-- Track pending section assignments waiting for player data to load
+local pendingSectionAssignments: { [number]: number } = {} -- userId -> sectionIndex
+```
+
+**2. Modified `_handlePlayerJoin` to defer server signal:**
+- Client signal `SectionAssigned` fires immediately (UI can show section)
+- Server signal `PlayerSectionAssigned` is deferred until player data is loaded
+- If data is already loaded, fires immediately
+- Otherwise, stores pending assignment in `pendingSectionAssignments`
+
+**3. Added listener for `PlayerDataService.PlayerLoaded` in `KnitStart`:**
+```lua
+PlayerDataService.PlayerLoaded:Connect(function(userId: number, data, isNewPlayer: boolean)
+  self:_onPlayerDataLoaded(userId)
+end)
+```
+
+**4. Added `_onPlayerDataLoaded` to complete pending assignments:**
+```lua
+function MapService:_onPlayerDataLoaded(userId: number)
+  local sectionIndex = pendingSectionAssignments[userId]
+  if not sectionIndex then return end
+  pendingSectionAssignments[userId] = nil
+  -- Update playerData.sectionIndex and fire PlayerSectionAssigned
+end
+```
+
+**5. Cleanup on player leave:**
+```lua
+pendingSectionAssignments[player.UserId] = nil
+```
+
+### Modified Files
+- `src/server/Services/MapService.lua` - Added pending assignment tracking and PlayerLoaded listener
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- PRD-3 remaining bugs:
+  - `fix-weapon-attack-nil-error` (HIGH) - Nil error on line 696 of Main.client.lua
+  - `fix-egg-hatch-no-section-warning` (HIGH) - Section assignment issue in egg hatching  
+  - `fix-predator-warning-background-stuck` (HIGH) - UI cleanup issue
+- This fix establishes a proper event ordering pattern: PlayerAdded → ProfileManager loads data → PlayerDataService.PlayerLoaded fires → MapService.PlayerSectionAssigned fires → ChickenService/EggService can safely access data
+- The `pendingSectionAssignments` table pattern can be used elsewhere if similar race conditions are found

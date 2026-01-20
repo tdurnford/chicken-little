@@ -29,6 +29,9 @@ local SectionLabels = require(ServerScriptService:WaitForChild("SectionLabels"))
 local PlayerDataService
 local CombatService
 
+-- Track pending section assignments waiting for player data to load
+local pendingSectionAssignments: { [number]: number } = {} -- userId -> sectionIndex
+
 -- Constants
 local NEW_PLAYER_PROTECTION_DURATION = 120 -- 2 minutes of protection for new players
 
@@ -86,6 +89,12 @@ function MapService:KnitStart()
     self:_handlePlayerLeave(player)
   end)
 
+  -- Listen for player data loaded to complete section assignment
+  -- This ensures ChickenService/EggService have access to player data when spawning entities
+  PlayerDataService.PlayerLoaded:Connect(function(userId: number, data, isNewPlayer: boolean)
+    self:_onPlayerDataLoaded(userId)
+  end)
+
   -- Handle players who joined before the service started
   for _, player in ipairs(Players:GetPlayers()) do
     task.spawn(function()
@@ -99,6 +108,8 @@ end
 --[[
 	Internal: Handle player joining.
 	Assigns section, updates labels, sets up spawning, and tracks protection.
+	Note: PlayerSectionAssigned signal is deferred until player data is loaded
+	to prevent race conditions with ChickenService/EggService.
 ]]
 function MapService:_handlePlayerJoin(player: Player)
   local currentTime = os.time()
@@ -122,13 +133,6 @@ function MapService:_handlePlayerJoin(player: Player)
   if sectionIndex then
     print(string.format("[MapService] Assigned section %d to %s", sectionIndex, player.Name))
 
-    -- Persist sectionIndex to player data so client can access it
-    local playerData = PlayerDataService:GetData(player.UserId)
-    if playerData then
-      playerData.sectionIndex = sectionIndex
-      PlayerDataService:UpdateData(player.UserId, playerData)
-    end
-
     -- Update section label with player's name
     SectionLabels.onPlayerJoined(player, sectionIndex)
 
@@ -147,15 +151,57 @@ function MapService:_handlePlayerJoin(player: Player)
       )
     end
 
-    -- Fire signals
+    -- Fire client signal immediately (UI can show section)
     self.Client.SectionAssigned:Fire(player, sectionIndex)
-    self.PlayerSectionAssigned:Fire(player.UserId, sectionIndex)
     self.MapStateChanged:Fire(mapState)
+
+    -- Check if player data is already loaded (e.g., for players who joined before service started)
+    local playerData = PlayerDataService:GetData(player.UserId)
+    if playerData then
+      -- Data is ready, update sectionIndex and fire signal now
+      playerData.sectionIndex = sectionIndex
+      PlayerDataService:UpdateData(player.UserId, playerData)
+      self.PlayerSectionAssigned:Fire(player.UserId, sectionIndex)
+      print(string.format("[MapService] Player data ready, fired PlayerSectionAssigned for %s", player.Name))
+    else
+      -- Data not ready yet, store pending assignment to be completed when PlayerLoaded fires
+      pendingSectionAssignments[player.UserId] = sectionIndex
+      print(string.format("[MapService] Waiting for player data before spawning entities for %s", player.Name))
+    end
   else
     warn(
       string.format("[MapService] Failed to assign section to %s - map may be full", player.Name)
     )
   end
+end
+
+--[[
+	Internal: Handle player data loaded.
+	Completes pending section assignment by firing PlayerSectionAssigned signal.
+	This ensures ChickenService/EggService have access to player data when spawning.
+]]
+function MapService:_onPlayerDataLoaded(userId: number)
+  local sectionIndex = pendingSectionAssignments[userId]
+  if not sectionIndex then
+    return -- No pending assignment for this player
+  end
+
+  -- Clear the pending assignment
+  pendingSectionAssignments[userId] = nil
+
+  -- Get player and update their data with sectionIndex
+  local player = Players:GetPlayerByUserId(userId)
+  local playerData = PlayerDataService:GetData(userId)
+
+  if playerData then
+    playerData.sectionIndex = sectionIndex
+    PlayerDataService:UpdateData(userId, playerData)
+  end
+
+  -- Now fire the server signal that ChickenService/EggService listen to
+  self.PlayerSectionAssigned:Fire(userId, sectionIndex)
+  print(string.format("[MapService] Player data loaded, fired PlayerSectionAssigned for %s (section %d)", 
+    player and player.Name or tostring(userId), sectionIndex))
 end
 
 --[[
@@ -183,6 +229,7 @@ function MapService:_handlePlayerLeave(player: Player)
   -- Clean up player tracking
   playerSpawnPoints[player.UserId] = nil
   playerJoinTimes[player.UserId] = nil
+  pendingSectionAssignments[player.UserId] = nil
 
   -- Fire state changed signal
   self.MapStateChanged:Fire(mapState)
