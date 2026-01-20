@@ -3954,3 +3954,65 @@ end
   - `fix-predator-warning-background-stuck` (HIGH) - UI cleanup issue
 - This is a defensive fix - ideally the script initialization order could be restructured to avoid the race condition entirely
 - The warning message will help debug if players report attacks not working on first try
+
+
+---
+
+## Bug Fix: Egg Hatch No Section Warning (HIGH)
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-3.json
+
+### Summary
+Fixed the 'Cannot hatch egg: No section assigned' warning that appeared when players tried to hatch eggs shortly after joining the game.
+
+### Root Cause
+Race condition between section assignment and player data synchronization:
+1. Player joins → MapService fires `SectionAssigned` signal to client
+2. SectionVisuals builds visuals and stores `currentSectionIndex`
+3. PlayerDataService later sends full player data to client via `DataChanged` signal
+4. MapService updates `playerData.sectionIndex` and fires another `DataChanged`
+
+If the player tries to hatch an egg between steps 2 and 4, `playerData.sectionIndex` is nil even though the section is already assigned and visuals are built.
+
+### Fix Applied (Main.client.lua)
+
+**1. Updated egg hatching section check (line ~421):**
+```lua
+-- Before: Only checked playerData.sectionIndex
+local sectionIndex = playerData and playerData.sectionIndex
+
+-- After: Falls back to SectionVisuals.getCurrentSection()
+local sectionIndex = (playerData and playerData.sectionIndex) or SectionVisuals.getCurrentSection()
+```
+
+**2. Updated trap placement section check (line ~313):**
+```lua
+-- Before: Only checked playerData.sectionIndex
+local sectionIndex = playerData.sectionIndex
+
+-- After: Falls back to SectionVisuals.getCurrentSection()
+local sectionIndex = playerData.sectionIndex or SectionVisuals.getCurrentSection()
+```
+
+**3. Updated TrapController.TrapPlaced handler (line ~1198):**
+```lua
+-- Before: Only checked playerData.sectionIndex
+if playerData and playerData.sectionIndex and TrapVisuals then
+
+-- After: Falls back to SectionVisuals.getCurrentSection()
+local sectionIndex = (playerData and playerData.sectionIndex) or SectionVisuals.getCurrentSection()
+if sectionIndex and TrapVisuals then
+```
+
+### Modified Files
+- `src/client/Main.client.lua` - Added SectionVisuals.getCurrentSection() fallback in 3 places
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- PRD-3 remaining bugs:
+  - `fix-predator-warning-background-stuck` (HIGH) - UI cleanup issue
+- This fix establishes a pattern: when checking sectionIndex on client, use `(playerData.sectionIndex) or SectionVisuals.getCurrentSection()` as fallback
+- The SectionVisuals module stores `currentSectionIndex` when `buildSection()` is called, which happens immediately when `MapService.SectionAssigned` signal is received

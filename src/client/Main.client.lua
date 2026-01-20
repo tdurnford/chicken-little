@@ -310,7 +310,8 @@ local function findNearbyAvailableTrapSpot(playerPosition: Vector3): number?
     return nil
   end
 
-  local sectionIndex = playerData.sectionIndex
+  -- Use playerData.sectionIndex first, fall back to SectionVisuals if data hasn't synced yet
+  local sectionIndex = playerData.sectionIndex or SectionVisuals.getCurrentSection()
   if not sectionIndex then
     return nil
   end
@@ -418,7 +419,8 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
 
   if selectedItem.itemType == "eggs" then
     if actionType == "place" then
-      local sectionIndex = playerData and playerData.sectionIndex
+      -- Use playerData.sectionIndex first, fall back to SectionVisuals if data hasn't synced yet
+      local sectionIndex = (playerData and playerData.sectionIndex) or SectionVisuals.getCurrentSection()
       if not sectionIndex then
         SoundEffects.play("uiError")
         warn("[Client] Cannot hatch egg: No section assigned")
@@ -1191,15 +1193,17 @@ end)
 
 -- Wire up TrapController signals to TrapVisuals
 TrapController.TrapPlaced:Connect(function(trapId, trapType, userId, spotIndex)
-  -- Get position from section
+  -- Get position from section (use SectionVisuals fallback if playerData not synced)
   local playerData = PlayerDataController:GetData()
-  if playerData and playerData.sectionIndex and TrapVisuals then
-    local sectionCenter = MapGeneration.getSectionPosition(playerData.sectionIndex)
+  local sectionIndex = (playerData and playerData.sectionIndex) or SectionVisuals.getCurrentSection()
+  if sectionIndex and TrapVisuals then
+    local sectionCenter = MapGeneration.getSectionPosition(sectionIndex)
     if sectionCenter then
       local spotPos = PlayerSection.getTrapSpotPosition(spotIndex, sectionCenter)
       if spotPos then
         local position = Vector3.new(spotPos.x, spotPos.y, spotPos.z)
         TrapVisuals.create(trapId, trapType, position, spotIndex)
+      end
       end
     end
   end
