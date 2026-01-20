@@ -3117,3 +3117,78 @@ Added a periodic shield timer update to the client game loop in `src/client/Main
 - Shield timer uses 1-second intervals (same as lock timers) for consistency
 - `AreaShield.getStatus()` handles all time calculations - no manual math needed
 - ShieldUI uses Fusion's reactive state - changes automatically propagate to UI
+
+---
+
+## Bug Fix: Fix Tutorial Skip Button Not Progressing
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+
+### Summary
+Fixed the bug where the tutorial skip button did not work. The tutorial would display but clicking "Skip" had no effect.
+
+### Root Cause
+The tutorial was **never started**! While `Tutorial.create()` was called during UI initialization, `Tutorial.start()` was never called anywhere in the codebase. This meant:
+
+1. `isActive` remained `false` (set to `Value(scope, false)` on creation)
+2. `frameVisible` remained `false` (tutorial frame positioned off-screen)
+3. When skip button was clicked, `Tutorial.skip()` would early-return due to `if not isActive or not peek(isActive) then return end`
+
+Additionally, there was no mechanism to persist tutorial completion to the server.
+
+### Solution
+Added three key pieces:
+
+1. **PlayerDataService.lua** - Added `CompleteTutorial` client-exposed method:
+   ```lua
+   function PlayerDataService.Client:CompleteTutorial(player: Player): boolean
+     local data = ProfileManager.getData(player.UserId)
+     if not data then return false end
+     data.tutorialComplete = true
+     return PlayerDataService:UpdateData(player.UserId, data)
+   end
+   ```
+
+2. **PlayerDataController.lua** - Added `CompleteTutorial` method for client access:
+   ```lua
+   function PlayerDataController:CompleteTutorial(): boolean
+     if cachedData then cachedData.tutorialComplete = true end
+     return playerDataService:CompleteTutorial()
+   end
+   ```
+
+3. **Main.client.lua** - Added tutorial startup logic when player data loads:
+   ```lua
+   if Tutorial.shouldShowTutorial(data) then
+     Tutorial.onComplete(function()
+       PlayerDataController:CompleteTutorial()
+     end)
+     Tutorial.onSkip(function()
+       PlayerDataController:CompleteTutorial()
+     end)
+     Tutorial.start()
+   end
+   ```
+
+### Modified Files
+- `src/server/Services/PlayerDataService.lua` - Added CompleteTutorial client method
+- `src/client/Controllers/PlayerDataController.lua` - Added CompleteTutorial method
+- `src/client/Main.client.lua` - Added tutorial startup and callback logic
+- `plans/bug-fixes-prd.json` - Marked feature as completed
+
+### Tutorial Flow After Fix
+1. Player joins game → `PlayerDataController.DataLoaded` fires
+2. `Tutorial.shouldShowTutorial(data)` checks if `tutorialComplete !== true`
+3. If new player: callbacks are set up, `Tutorial.start()` is called
+4. Tutorial frame slides in, arrow indicator appears
+5. Player can click "Skip" → `Tutorial.skip()` runs → `onSkipCallback()` fires
+6. `PlayerDataController:CompleteTutorial()` is called → server persists `tutorialComplete = true`
+7. Tutorial frame slides out, tutorial won't show on next join
+
+### Notes for Next Developer
+- High priority bugs remaining:
+  - `fix-store-tabs-covered` - Store tabs covered by items (ZIndex issue)
+  - `fix-restock-timer-stuck` - Timer stuck on "Restocking..."
+- Tutorial uses `shouldShowTutorial()` to check `tutorialComplete` field in player data
+- Both skip and complete callbacks save to server to prevent tutorial from showing again
+- The skip button click handler was already correctly implemented - it just never had a chance to run

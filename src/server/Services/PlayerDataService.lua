@@ -158,6 +158,23 @@ function PlayerDataService.Client:GetLevelInfo(player: Player): (number, number)
 end
 
 --[[
+	Marks the tutorial as completed for the player.
+	Called when player completes or skips the tutorial.
+	
+	@param player Player - The player completing the tutorial
+	@return boolean - Whether the update succeeded
+]]
+function PlayerDataService.Client:CompleteTutorial(player: Player): boolean
+  local data = ProfileManager.getData(player.UserId)
+  if not data then
+    return false
+  end
+
+  data.tutorialComplete = true
+  return PlayerDataService:UpdateData(player.UserId, data)
+end
+
+--[[
 	SERVER-ONLY: Gets data for any player by userId.
 	
 	@param userId number - The user ID

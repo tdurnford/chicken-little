@@ -181,6 +181,24 @@ PlayerDataController.DataLoaded:Connect(function(data)
     StoreUI.updateOwnedWeapons(data.ownedWeapons)
   end
 
+  -- Start tutorial for new players who haven't completed it
+  if Tutorial.shouldShowTutorial(data) then
+    -- Set up callbacks to mark tutorial as complete
+    Tutorial.onComplete(function()
+      PlayerDataController:CompleteTutorial()
+      print("[Client] Tutorial completed")
+    end)
+
+    Tutorial.onSkip(function()
+      PlayerDataController:CompleteTutorial()
+      print("[Client] Tutorial skipped")
+    end)
+
+    -- Start the tutorial
+    Tutorial.start()
+    print("[Client] Tutorial started for new player")
+  end
+
   print("[Client] Initial player data loaded via controller")
 end)
 

@@ -304,4 +304,17 @@ function PlayerDataController:GetShieldRemainingTime(): number
   return 0
 end
 
+--[[
+	Marks the tutorial as completed on the server.
+	Called when player completes or skips the tutorial.
+	
+	@return boolean - Whether the update succeeded
+]]
+function PlayerDataController:CompleteTutorial(): boolean
+  if cachedData then
+    cachedData.tutorialComplete = true
+  end
+  return playerDataService:CompleteTutorial()
+end
+
 return PlayerDataController
