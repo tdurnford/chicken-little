@@ -74,6 +74,9 @@ function ChickenService:KnitStart()
   -- Get reference to PlayerDataService
   PlayerDataService = Knit.GetService("PlayerDataService")
 
+  -- Get reference to MapService for section assignment events
+  local MapService = Knit.GetService("MapService")
+
   -- Setup player connections
   Players.PlayerAdded:Connect(function(player)
     self:_initializePlayerState(player.UserId)
@@ -87,6 +90,11 @@ function ChickenService:KnitStart()
   for _, player in ipairs(Players:GetPlayers()) do
     self:_initializePlayerState(player.UserId)
   end
+
+  -- Listen for section assignments to spawn player's chickens in the world
+  MapService.PlayerSectionAssigned:Connect(function(userId: number, sectionIndex: number)
+    self:_onPlayerSectionAssigned(userId, sectionIndex)
+  end)
 
   print("[ChickenService] Started")
 end
@@ -130,6 +138,57 @@ end
 ]]
 function ChickenService:_cleanupPlayerState(userId: number)
   playerChickenStates[userId] = nil
+end
+
+--[[
+	Internal: Handle player section assignment.
+	Initializes AI state and spawns all loaded chickens (including starter chicken).
+	@param userId number - The user ID
+	@param sectionIndex number - The assigned section index
+]]
+function ChickenService:_onPlayerSectionAssigned(userId: number, sectionIndex: number)
+  -- Initialize AI state for the player's section
+  self:InitializeAIState(userId, sectionIndex)
+
+  -- Get player data to spawn their chickens
+  local playerData = PlayerDataService:GetData(userId)
+  if not playerData then
+    warn(string.format("[ChickenService] No player data for userId %d during section assignment", userId))
+    return
+  end
+
+  -- Register all placed chickens (includes starter chicken for new players)
+  if playerData.placedChickens and #playerData.placedChickens > 0 then
+    local player = Players:GetPlayerByUserId(userId)
+    local state = playerChickenStates[userId]
+
+    for _, chicken in ipairs(playerData.placedChickens) do
+      -- Register chicken with health and AI systems
+      self:RegisterChicken(userId, chicken)
+
+      -- Get position from AI for the visual event
+      local position = nil
+      if state and state.aiState then
+        local aiPos = ChickenAI.getPosition(state.aiState, chicken.id)
+        if aiPos then
+          position = aiPos.currentPosition
+        end
+      end
+
+      -- Fire ChickenPlaced event to all clients so visuals are created
+      self.Client.ChickenPlaced:FireAll({
+        playerId = userId,
+        chicken = chicken,
+        spotIndex = nil,
+        position = position,
+      })
+
+      -- Fire server signal
+      self.ChickenAdded:Fire(userId, chicken)
+    end
+
+    print(string.format("[ChickenService] Spawned %d chickens for player %s", #playerData.placedChickens, player and player.Name or tostring(userId)))
+  end
 end
 
 --[[

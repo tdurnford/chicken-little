@@ -2811,3 +2811,56 @@ Created centralized UI initialization module that mounts all Fusion UI component
 - Import with: `local UI = require(ClientModules:WaitForChild("UI"))`
 - Access components: `UI.Components.MainHUD`, `UI.Components.InventoryUI`, etc.
 - Call `UI.initialize()` once after KnitClient.start()
+
+---
+
+## Bug Fix: Spawn Starter Egg and Chicken on Player Join
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+
+### Summary
+Fixed the issue where new players were not seeing their starter chicken or receiving a starter egg when joining the game. The problem was that `PlayerData.createDefault()` correctly defined the starter chicken in `placedChickens`, but nothing was listening for section assignment to spawn the entities into the world.
+
+### Root Cause
+- `MapService.PlayerSectionAssigned` signal was firing correctly
+- `ChickenService:InitializeAIState()` and `ChickenService:RegisterChicken()` existed but were never called
+- No code was connecting section assignment to chicken spawning
+- No starter egg was being spawned for new players
+
+### Solution
+1. **ChickenService**: Added listener for `MapService.PlayerSectionAssigned`
+   - Calls `InitializeAIState()` to set up AI for the player's section
+   - Iterates through `playerData.placedChickens` and calls `RegisterChicken()` for each
+   - Fires `ChickenPlaced` event to all clients for visual spawning
+   - Fires `ChickenAdded` server signal
+
+2. **EggService**: Added listener for `MapService.PlayerSectionAssigned`
+   - Checks if player is new (`totalPlayTime == 0`)
+   - Spawns a CommonEgg at a random position in their section
+   - Uses existing `SpawnWorldEgg()` method which fires `EggSpawned` to client
+
+### Modified Files
+- `src/server/Services/ChickenService.lua` - Added `_onPlayerSectionAssigned()` method and event listener
+- `src/server/Services/EggService.lua` - Added `_onPlayerSectionAssigned()` method and event listener
+- `plans/bug-fixes-prd.json` - Marked feature as completed
+
+### New Flow
+1. Player joins game
+2. `PlayerDataService` loads profile (with starter chicken in `placedChickens`)
+3. `MapService` assigns section and fires `PlayerSectionAssigned`
+4. `ChickenService` receives signal, initializes AI, registers chickens, fires client events
+5. `EggService` receives signal, spawns starter CommonEgg for new players
+6. Client receives events and renders visuals
+
+### Acceptance Criteria Met
+- ✅ Starter chicken appears in player's area on join
+- ✅ Starter egg spawns for new players
+- ✅ Visuals are triggered on the client
+- ✅ Build succeeds with `make build`
+
+### Notes for Next Developer
+- The other critical features in the PRD are:
+  - `fix-egg-hatching-experience` - Egg hatching animation not launching
+  - `enable-predator-spawning` - No predators spawning in game
+- The starter chicken is defined in `PlayerData.createDefault()` with type "BasicChick"
+- Starter egg is "CommonEgg" - same as the cheapest purchasable egg

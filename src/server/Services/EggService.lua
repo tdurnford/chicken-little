@@ -70,6 +70,11 @@ function EggService:KnitStart()
   -- Get reference to PlayerDataService
   PlayerDataService = Knit.GetService("PlayerDataService")
 
+  -- Get reference to MapService for section assignment events
+  local MapService = Knit.GetService("MapService")
+  local MapGeneration = require(Shared:WaitForChild("MapGeneration"))
+  local PlayerSection = require(Shared:WaitForChild("PlayerSection"))
+
   -- Setup player connections
   Players.PlayerAdded:Connect(function(player)
     self:_initializePlayerState(player.UserId)
@@ -83,6 +88,11 @@ function EggService:KnitStart()
   for _, player in ipairs(Players:GetPlayers()) do
     self:_initializePlayerState(player.UserId)
   end
+
+  -- Listen for section assignments to spawn starter egg for new players
+  MapService.PlayerSectionAssigned:Connect(function(userId: number, sectionIndex: number)
+    self:_onPlayerSectionAssigned(userId, sectionIndex, MapGeneration, PlayerSection)
+  end)
 
   print("[EggService] Started")
 end
@@ -105,6 +115,56 @@ end
 ]]
 function EggService:_cleanupPlayerState(userId: number)
   playerEggRegistries[userId] = nil
+end
+
+--[[
+	Internal: Handle player section assignment.
+	Spawns a starter egg for new players in their section.
+	@param userId number - The user ID
+	@param sectionIndex number - The assigned section index
+	@param MapGeneration module - Map generation module
+	@param PlayerSection module - Player section module
+]]
+function EggService:_onPlayerSectionAssigned(userId: number, sectionIndex: number, MapGeneration: any, PlayerSection: any)
+  -- Get player data to check if they're a new player
+  local playerData = PlayerDataService:GetData(userId)
+  if not playerData then
+    return
+  end
+
+  -- Only spawn starter egg for new players (totalPlayTime == 0)
+  local isNewPlayer = playerData.totalPlayTime == 0
+  if not isNewPlayer then
+    return
+  end
+
+  -- Get the section center for positioning
+  local sectionCenter = MapGeneration.getSectionPosition(sectionIndex)
+  if not sectionCenter then
+    warn(string.format("[EggService] Could not get section position for index %d", sectionIndex))
+    return
+  end
+
+  -- Get a random position within the player's section for the starter egg
+  local spawnPos = PlayerSection.getRandomPositionInSection(sectionCenter)
+  local position = {
+    x = spawnPos.x,
+    y = spawnPos.y,
+    z = spawnPos.z,
+  }
+
+  -- Spawn a starter Common Egg in the world
+  local starterEggType = "CommonEgg"
+  local starterChickenId = "starter_egg_source" -- Not from a real chicken
+  
+  local worldEgg = self:SpawnWorldEgg(userId, starterChickenId, starterEggType, position, nil)
+  
+  if worldEgg then
+    local player = Players:GetPlayerByUserId(userId)
+    print(string.format("[EggService] Spawned starter %s for new player %s", starterEggType, player and player.Name or tostring(userId)))
+  else
+    warn(string.format("[EggService] Failed to spawn starter egg for userId %d", userId))
+  end
 end
 
 --[[
