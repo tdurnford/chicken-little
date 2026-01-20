@@ -3504,3 +3504,45 @@ state.aiState = ChickenAI.createState(sectionCenterV3)
 - The pattern `Vector3.new(pos.x, pos.y, pos.z)` should be used when converting from shared module types
 
 ---
+
+---
+
+## Bug Fix: Add Unique ID to Starter Chicken (CRITICAL)
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-2.json
+
+### Summary
+Fixed the critical bug where starter egg source IDs were hardcoded as 'starter_egg_source', causing conflicts when multiple players were in the same server.
+
+### Root Cause
+In `EggService:_SpawnStarterEggForPlayer`, the `starterChickenId` was hardcoded as `"starter_egg_source"`. When multiple players joined, they all shared this same chicken ID, causing conflicts in the egg registry and potential data corruption.
+
+### Fix Applied
+```lua
+-- Before (broken):
+local starterChickenId = "starter_egg_source" -- Not from a real chicken
+
+-- After (fixed):
+local starterChickenId = "starter_egg_source_" .. tostring(userId) -- Unique per player to avoid conflicts
+```
+
+### Why This Works
+- Each player has a unique Roblox UserId that persists across sessions
+- Appending userId to the starter ID ensures uniqueness: "starter_egg_source_12345", "starter_egg_source_67890", etc.
+- No two players can have the same starter egg source ID
+- Compatible with existing player data (new format, backward compatible)
+
+### Modified Files
+- `src/server/Services/EggService.lua` - Added userId suffix to starterChickenId
+- `plans/bug-fixes-prd-2.json` - Marked feature as completed
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- Remaining PRD-2 bugs:
+  - `fix-egg-hatch-section-warning` (HIGH) - False positive section warning
+  - `fix-weapon-arming-baseball-bat` (HIGH) - Can't arm weapons
+  - `fix-tutorial-skip-button-regression` (HIGH) - Skip button regression
+- The pattern of appending userId for unique IDs should be followed for any player-specific identifiers

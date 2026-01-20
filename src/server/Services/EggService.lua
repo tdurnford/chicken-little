@@ -155,7 +155,7 @@ function EggService:_onPlayerSectionAssigned(userId: number, sectionIndex: numbe
 
   -- Spawn a starter Common Egg in the world
   local starterEggType = "CommonEgg"
-  local starterChickenId = "starter_egg_source" -- Not from a real chicken
+  local starterChickenId = "starter_egg_source_" .. tostring(userId) -- Unique per player to avoid conflicts
   
   local worldEgg = self:SpawnWorldEgg(userId, starterChickenId, starterEggType, position, nil)
   
