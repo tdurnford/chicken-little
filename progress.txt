@@ -2864,3 +2864,62 @@ Fixed the issue where new players were not seeing their starter chicken or recei
   - `enable-predator-spawning` - No predators spawning in game
 - The starter chicken is defined in `PlayerData.createDefault()` with type "BasicChick"
 - Starter egg is "CommonEgg" - same as the cheapest purchasable egg
+
+---
+
+## Bug Fix: Fix Egg Hatching Experience Not Launching
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+
+### Summary
+Fixed the critical bug where egg hatching from inventory was not working. When players selected an egg from their inventory and clicked "Hatch", nothing happened - the HatchPreviewUI never appeared.
+
+### Root Cause
+**String mismatch between InventoryUI and Main.client.lua:**
+- `InventoryUI` uses `TabType = "eggs" | "chickens" | "traps"` (plural forms)
+- `Main.client.lua` was checking for `"egg"`, `"chicken"`, `"trap"` (singular forms)
+- The condition `selectedItem.itemType == "egg"` never matched because the actual value was `"eggs"`
+
+### Solution
+Changed the string comparisons in `Main.client.lua` to use plural forms matching InventoryUI's TabType:
+- `"egg"` → `"eggs"`
+- `"chicken"` → `"chickens"`
+- `"trap"` → `"traps"`
+
+### Modified Files
+- `src/client/Main.client.lua` - Fixed itemType string comparisons in InventoryUI.onAction handler
+
+### Bug Location
+Lines 435, 475, 504 in Main.client.lua:
+```lua
+-- Before (broken):
+if selectedItem.itemType == "egg" then
+elseif selectedItem.itemType == "chicken" then
+elseif selectedItem.itemType == "trap" then
+
+-- After (fixed):
+if selectedItem.itemType == "eggs" then
+elseif selectedItem.itemType == "chickens" then
+elseif selectedItem.itemType == "traps" then
+```
+
+### Flow After Fix
+1. Player opens inventory and selects an egg
+2. Player clicks "🐣 Hatch" button
+3. `onAction("place", selectedItem)` fires with `itemType = "eggs"` ✓
+4. Condition `selectedItem.itemType == "eggs"` now matches ✓
+5. `HatchPreviewUI.show()` displays the hatch preview
+6. Player confirms with E key or Hatch button
+7. `EggController:HatchEgg(eggId)` is called
+8. `HatchPreviewUI.showResult()` displays the hatched chicken
+
+### Acceptance Criteria Met
+- ✅ Clicking Hatch on eggs now shows the HatchPreviewUI
+- ✅ Confirming hatch calls the server and shows results
+- ✅ Build verification passed
+- ✅ Also fixes chicken and trap actions which had the same bug
+
+### Notes for Next Developer
+- The remaining critical feature is `enable-predator-spawning` - no predators spawning in game
+- Be careful with string constants between UI components and handlers - always verify types match
+- InventoryUI.TabType is the canonical source: `"eggs" | "chickens" | "traps"`

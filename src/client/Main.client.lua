@@ -432,7 +432,7 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
   print("[Client] Inventory action:", actionType, selectedItem.itemType, selectedItem.itemId)
   local playerData = PlayerDataController:GetData()
 
-  if selectedItem.itemType == "egg" then
+  if selectedItem.itemType == "eggs" then
     if actionType == "place" then
       local sectionIndex = playerData and playerData.sectionIndex
       if not sectionIndex then
@@ -472,7 +472,7 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
         warn("[Client] Egg sell failed:", result and result.error or "Unknown error")
       end
     end
-  elseif selectedItem.itemType == "chicken" then
+  elseif selectedItem.itemType == "chickens" then
     if actionType == "place" then
       if MainHUD.isAtChickenLimit() then
         SoundEffects.play("uiError")
@@ -501,7 +501,7 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
         warn("[Client] Sell failed:", result and result.error or "Unknown error")
       end
     end
-  elseif selectedItem.itemType == "trap" then
+  elseif selectedItem.itemType == "traps" then
     if actionType == "place" then
       if selectedItem.itemData.spotIndex and selectedItem.itemData.spotIndex > 0 then
         SoundEffects.play("uiError")
