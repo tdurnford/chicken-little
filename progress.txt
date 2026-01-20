@@ -4650,3 +4650,61 @@ end
 - When working with Fusion, always create Values in the same scope as the Computeds that use them
 - Use a `destroyed` flag pattern to prevent use-after-free errors in reactive UI components
 - The cleanup order matters: set destroyed flag → remove from lookup table → cleanup scope
+
+
+---
+
+## Bug Fix: Fix Store Buttons Should Be Disabled When Out of Stock
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-4.json
+
+### Summary
+Fixed store buy buttons that remained clickable even when an item was sold out (stock = 0). The button visual state showed grey but clicks could still be registered.
+
+### Root Cause
+In `StoreUI.lua`, the `createCashButton` function created a `TextButton` with:
+1. Visual state correctly showing grey/disabled appearance via `bgColor` and `textTransparency` Computeds
+2. `OnEvent("MouseButton1Click")` handler that checked `isSoldOut` and `canAfford` via `peek()` before calling `onClick()`
+
+**However, the button's `Active` property was never set**, meaning the button remained interactive (responding to hovers, clicks, etc.) even when sold out.
+
+### Fix Applied
+
+**Added `isInteractable` Computed and bound it to the button's `Active` property:**
+```lua
+-- Computed for button interactivity - disabled when sold out or can't afford
+local isInteractable = Computed(scope, function(use)
+  return not use(isSoldOut) and use(canAfford)
+end)
+
+return New(scope, "TextButton")({
+  Name = "BuyButton",
+  -- ...
+  Active = isInteractable,  -- Button is now disabled when sold out or can't afford
+  -- ...
+})
+```
+
+### How It Works Now
+1. When an item is sold out OR the player can't afford it:
+   - The button appears grey/faded (visual feedback)
+   - The `Active` property is `false`, making the button completely non-interactive
+   - Mouse events are ignored by the engine (no hover effects, no click registration)
+2. When the item is in stock AND the player can afford it:
+   - The button appears green and interactive
+   - Clicking triggers the purchase callback
+
+### Modified Files
+- `src/client/UI/Components/StoreUI.lua` - Added `isInteractable` Computed and bound to `Active` property
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- PRD-4 remaining bugs (prioritized):
+  - `fix-tutorial-skip-animation` - Tutorial skip animation goes to bottom instead of hiding
+  - `add-chicken-money-collection-cap` - Money cap feature (lowest priority)
+- The `Active` property on Roblox `GuiButton` instances completely disables interactivity
+- Always pair visual disabled states with actual interactivity controls (`Active` property)
+- The existing `OnEvent` handler check is still there as a belt-and-suspenders safety

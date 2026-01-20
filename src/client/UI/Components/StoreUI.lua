@@ -150,12 +150,18 @@ local function createCashButton(
     return (use(isSoldOut) or not use(canAfford)) and 0.5 or 0
   end)
 
+  -- Computed for button interactivity - disabled when sold out or can't afford
+  local isInteractable = Computed(scope, function(use)
+    return not use(isSoldOut) and use(canAfford)
+  end)
+
   return New(scope, "TextButton")({
     Name = "BuyButton",
     Size = UDim2.new(0, 80, 0, 34),
     BackgroundColor3 = bgColor,
     Text = "",
     AutoButtonColor = false,
+    Active = isInteractable,
 
     [Children] = {
       New(scope, "UICorner")({
