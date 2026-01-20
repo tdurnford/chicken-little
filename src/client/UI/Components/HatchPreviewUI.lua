@@ -29,7 +29,6 @@ local Computed = Fusion.Computed
 local Value = Fusion.Value
 local Spring = Fusion.Spring
 local Cleanup = Fusion.Cleanup
-local Ref = Fusion.Ref
 
 -- Types
 export type PreviewConfig = {
@@ -304,40 +303,6 @@ local function createResultContent(scope: Fusion.Scope, chickenType: string, rar
   local moneyPerSecond = chickenConfig.moneyPerSecond or 1
   local cardSize = 160
 
-  -- Create stroke ref for animation
-  local strokeRef = Value(scope, nil :: UIStroke?)
-
-  -- Start pulse animation after brief delay
-  task.spawn(function()
-    task.wait(0.3)
-    local stroke = Fusion.peek(strokeRef)
-    if
-      stroke
-      and isVisible
-      and Fusion.peek(isVisible)
-      and showingResult
-      and Fusion.peek(showingResult)
-    then
-      while isVisible and Fusion.peek(isVisible) and showingResult and Fusion.peek(showingResult) do
-        if stroke and stroke.Parent then
-          TweenService:Create(stroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine), {
-            Transparency = 0.5,
-          }):Play()
-          task.wait(0.8)
-          if not stroke or not stroke.Parent then
-            break
-          end
-          TweenService:Create(stroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine), {
-            Transparency = 0,
-          }):Play()
-          task.wait(0.8)
-        else
-          break
-        end
-      end
-    end
-  end)
-
   return New(scope, "Frame")({
     Name = "ResultContent",
     Size = UDim2.new(1, 0, 1, 0),
@@ -350,7 +315,7 @@ local function createResultContent(scope: Fusion.Scope, chickenType: string, rar
         Size = UDim2.new(1, 0, 0, 40),
         Position = UDim2.new(0, 0, 0, 15),
         BackgroundTransparency = 1,
-        Text = "🎉 You Got! 🎉",
+        Text = "You Got!",
         TextSize = 24,
         TextColor3 = Color3.fromRGB(255, 220, 100),
         FontFace = Theme.Typography.PrimaryBold,
@@ -370,7 +335,6 @@ local function createResultContent(scope: Fusion.Scope, chickenType: string, rar
             Color = rarityColor,
             Thickness = 3,
             Transparency = 0,
-            [Ref] = strokeRef,
           }),
 
           -- Large chicken emoji
@@ -450,7 +414,7 @@ local function createResultContent(scope: Fusion.Scope, chickenType: string, rar
         Size = UDim2.new(0, 160, 0, 45),
         Position = UDim2.new(0.5, -80, 1, -60),
         BackgroundColor3 = Theme.Colors.Secondary,
-        Text = "Awesome! ✓",
+        Text = "Continue",
         TextColor3 = Theme.Colors.TextPrimary,
         TextSize = 18,
         FontFace = Theme.Typography.PrimaryBold,
@@ -500,41 +464,9 @@ local function animateIn()
     return
   end
 
-  -- Set initial values
-  backdropTransparency:set(1)
-  frameScale:set(0)
-
-  -- Animate to final values
-  task.spawn(function()
-    TweenService
-      :Create({ Value = 1 }, TweenInfo.new(FADE_DURATION, Enum.EasingStyle.Quad), { Value = 0.6 })
-      :Play()
-
-    for i = 1, 30 do
-      if not backdropTransparency then
-        break
-      end
-      backdropTransparency:set(1 - (0.4 * (i / 30)))
-      task.wait(FADE_DURATION / 30)
-    end
-  end)
-
-  task.spawn(function()
-    for i = 1, 25 do
-      if not frameScale then
-        break
-      end
-      -- Back ease out curve
-      local t = i / 25
-      local overshoot = 1.70158
-      local scale = 1 + overshoot * ((t - 1) ^ 3) + overshoot * ((t - 1) ^ 2)
-      frameScale:set(math.max(0, math.min(1.1, scale)))
-      task.wait(SCALE_DURATION / 25)
-    end
-    if frameScale then
-      frameScale:set(1)
-    end
-  end)
+  -- Set to visible immediately
+  frameScale:set(1)
+  backdropTransparency:set(0.6)
 end
 
 -- Animate popup disappearing
@@ -544,26 +476,10 @@ local function animateOut(callback: () -> ())
     return
   end
 
-  task.spawn(function()
-    for i = 1, 25 do
-      if not frameScale then
-        break
-      end
-      local t = 1 - (i / 25)
-      frameScale:set(t)
-      task.wait(SCALE_DURATION / 25)
-    end
-
-    for i = 1, 15 do
-      if not backdropTransparency then
-        break
-      end
-      backdropTransparency:set(0.6 - (0.6 * (i / 15)))
-      task.wait(FADE_DURATION / 30)
-    end
-
-    callback()
-  end)
+  -- Hide immediately
+  frameScale:set(0)
+  backdropTransparency:set(1)
+  callback()
 end
 
 -- Initialize the preview UI
@@ -781,13 +697,13 @@ function HatchPreviewUI.confirmHatch()
     return
   end
 
-  -- Call callback before hiding
+  -- Call callback (which will show result UI via showResult)
   if cachedCallbacks.onHatch then
     cachedCallbacks.onHatch(eggId, eggType)
   end
 
-  -- Hide the popup
-  HatchPreviewUI.hide()
+  -- Don't hide here - the result UI will be shown by showResult()
+  -- and will be dismissed when user clicks the dismiss button
 end
 
 -- Cancel without hatching
@@ -804,6 +720,9 @@ function HatchPreviewUI.showResult(chickenType: string, rarity: string, onDismis
     HatchPreviewUI.create()
   end
 
+  -- Check if already visible (transitioning from preview to result)
+  local alreadyVisible = isVisible and Fusion.peek(isVisible)
+
   -- Set result state
   if resultChickenType then
     resultChickenType:set(chickenType)
@@ -818,8 +737,10 @@ function HatchPreviewUI.showResult(chickenType: string, rarity: string, onDismis
     isVisible:set(true)
   end
 
-  -- Animate in
-  animateIn()
+  -- Only animate in if not already visible
+  if not alreadyVisible then
+    animateIn()
+  end
 end
 
 -- Check if preview is visible
