@@ -4016,3 +4016,57 @@ if sectionIndex and TrapVisuals then
   - `fix-predator-warning-background-stuck` (HIGH) - UI cleanup issue
 - This fix establishes a pattern: when checking sectionIndex on client, use `(playerData.sectionIndex) or SectionVisuals.getCurrentSection()` as fallback
 - The SectionVisuals module stores `currentSectionIndex` when `buildSection()` is called, which happens immediately when `MapService.SectionAssigned` signal is received
+
+
+---
+
+## Bug Fix: Predator Warning Background Stuck (HIGH)
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-3.json
+
+### Summary
+Fixed the predator warning background that never disappeared after showing, leaving a persistent black box on screen.
+
+### Root Cause
+In `PredatorWarning.lua`, the warning message TextLabel had its `BackgroundTransparency` set to a static value of `0.3`, while the `TextTransparency` was connected to a Spring animation that faded to 1 (invisible) when `showMessage` became false.
+
+This meant:
+- When warning shown: Text visible (0 transparency), Background visible (0.3 transparency) ✅
+- After 4 seconds: Text fades out (1 transparency), Background stays at 0.3 ❌
+
+### Fix Applied (PredatorWarning.lua)
+
+**Added animated backgroundTransparency Spring:**
+```lua
+-- Background transparency: animate from 0.3 (visible) to 1 (hidden)
+local backgroundTransparency = Spring(fusionScope, Computed(fusionScope, function(use)
+  return if use(showMessage :: any) then 0.3 else 1
+end), 20)
+```
+
+**Changed static transparency to animated:**
+```lua
+-- Before:
+BackgroundTransparency = 0.3,
+
+-- After:
+BackgroundTransparency = backgroundTransparency,
+```
+
+### Modified Files
+- `src/client/UI/Components/PredatorWarning.lua` - Added Spring animation for background transparency
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- PRD-3 is now COMPLETE - all 6 bug fixes have been implemented:
+  1. ✅ fix-player-data-section-assignment-warning
+  2. ✅ fix-weapon-attack-nil-error
+  3. ✅ fix-egg-hatch-no-section-warning
+  4. ✅ fix-missing-starter-chicken-and-egg
+  5. ✅ fix-shield-not-protecting-new-players
+  6. ✅ fix-predator-warning-background-stuck
+- The Fusion Spring animation pattern used here matches the existing text transparency animation (speed = 20)
+- All Fusion UI components in this codebase should use Spring animations for visibility changes to ensure smooth transitions
