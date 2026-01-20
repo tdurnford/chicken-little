@@ -973,13 +973,13 @@ local function createStoreFrame(
           }),
           New(scope, "TextLabel")({
             Name = "RestockTimer",
-            Size = UDim2.new(0, 120, 1, 0),
-            Position = UDim2.new(1, -160, 0, 0),
+            Size = UDim2.new(0, 140, 1, 0),
+            Position = UDim2.new(1, -180, 0, 0),
             BackgroundTransparency = 1,
             Text = restockText,
             TextColor3 = Theme.Colors.TextMuted,
-            TextSize = 12,
-            FontFace = Theme.Typography.Primary,
+            TextSize = 16,
+            FontFace = Theme.Typography.PrimaryBold,
             TextXAlignment = Enum.TextXAlignment.Right,
           }),
           New(scope, "TextButton")({

@@ -3387,3 +3387,29 @@ The following features used non-existent RemoteFunctions and need server-side im
 - The `worldEggVisuals` table tracks eggs for cleanup on collect/despawn
 
 ---
+
+## Bug Fix: Improve Restock Timer Styling
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+
+### Summary
+Improved the restock timer font size and weight for better readability in the store UI.
+
+### Changes Made
+Updated the RestockTimer TextLabel in StoreUI.lua:
+- **TextSize**: Changed from 12 to 16 (33% larger)
+- **FontFace**: Changed from `Theme.Typography.Primary` to `Theme.Typography.PrimaryBold`
+- **Size**: Increased from 120px to 140px width to accommodate larger text
+- **Position**: Adjusted from -160 to -180 offset to maintain right alignment with close button
+
+### Modified Files
+- `src/client/UI/Components/StoreUI.lua` - Updated RestockTimer styling
+- `plans/bug-fixes-prd.json` - Marked feature as completed
+
+### Notes for Next Developer
+- Remaining low priority bug:
+  - `remove-legacy-datastore-migration` - Clean up unused migration code in ProfileManager
+- The restock timer is positioned in the store header between the tab title and close button
+- Uses Theme.Typography constants for consistent styling across the UI
+
+---

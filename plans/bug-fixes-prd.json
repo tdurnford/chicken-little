@@ -146,7 +146,7 @@
       "title": "Improve Restock Timer Font Size and Weight",
       "description": "The restocking countdown timer's font size and weight could be slightly bigger for better readability.",
       "priority": "low",
-      "status": "not-started",
+      "status": "completed",
       "files": [
         "src/client/UI/Components/StoreUI.lua"
       ],
