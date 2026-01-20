@@ -4433,3 +4433,70 @@ end)
 - The `StoreUI.refreshInventory()` uses a tab toggle hack to force re-render - this works but could be improved with proper reactive state
 - All purchase callbacks (eggs, traps, weapons) now consistently call `refreshInventory()` on success
 - The underlying stock values are updated in the shared `Store` module when purchases succeed
+
+---
+
+## Bug Fix: Fix Tutorial Does Not Progress When User Buys an Egg
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-4.json
+
+### Summary
+Fixed the issue where the tutorial did not advance from the "buy_egg" step to the "place_egg" step when a player purchased an egg. Also added the missing "place_egg" completion trigger.
+
+### Root Cause
+The Tutorial system uses `completeStep(stepId)` to advance from steps that have `waitForAction=true`. The store purchase callback in `Main.client.lua` was missing the call to `Tutorial.completeStep("buy_egg")` after a successful purchase. Similarly, the egg placement code was missing the call to `Tutorial.completeStep("place_egg")`.
+
+The Tutorial module was already imported in Main.client.lua (line 50), so no additional imports were needed.
+
+### Fix Applied
+
+**1. Added Tutorial.completeStep("buy_egg") after successful egg purchase (line 1320):**
+```lua
+StoreUI.onPurchase(function(eggType: string, quantity: number)
+  StoreController:BuyEgg(eggType, quantity)
+    :andThen(function(result)
+      if result and result.success then
+        SoundEffects.play("purchase")
+        print("[Client] Purchased", quantity, "x", eggType, ":", result.message)
+        StoreUI.refreshInventory()
+        Tutorial.completeStep("buy_egg")  -- Added this line
+      else
+        -- error handling...
+      end
+    end)
+    -- ...
+end)
+```
+
+**2. Added Tutorial.completeStep("place_egg") after egg placement (line 468):**
+```lua
+placedEggData = { id = selectedItem.itemId, eggType = selectedItem.itemData.eggType }
+HatchPreviewUI.show(selectedItem.itemId, selectedItem.itemData.eggType)
+SoundEffects.play("eggPlace")
+InventoryUI.clearSelection()
+print("[Client] Egg placed, showing hatch preview")
+Tutorial.completeStep("place_egg")  -- Added this line
+```
+
+### How Tutorial.completeStep Works
+- The function checks if the tutorial is active and not paused
+- It compares the provided stepId with the current step's id
+- If they match and the step has `waitForAction=true`, it calls `nextStep()` to advance
+- This allows external systems (like store purchases) to drive tutorial progression
+
+### Modified Files
+- `src/client/Main.client.lua` - Added Tutorial.completeStep calls for both "buy_egg" and "place_egg" steps
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- PRD-4 remaining bugs (prioritized):
+  - `fix-store-buttons-disabled-when-sold-out` - Buy buttons still clickable when sold out
+  - `fix-tutorial-skip-animation` - Tutorial skip animation incorrect
+  - `add-chicken-money-collection-cap` - Money cap feature
+- The Tutorial system is designed for external triggers via `completeStep(stepId)`
+- When adding new tutorial steps with `waitForAction=true`, ensure the corresponding game action calls `Tutorial.completeStep()`
+- The Tutorial module reference is already available at the top of Main.client.lua
+
