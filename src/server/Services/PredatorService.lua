@@ -26,6 +26,7 @@ local XPConfig = require(Shared:WaitForChild("XPConfig"))
 local PlayerSection = require(Shared:WaitForChild("PlayerSection"))
 local DayNightCycle = require(Shared:WaitForChild("DayNightCycle"))
 local MapGeneration = require(Shared:WaitForChild("MapGeneration"))
+local AreaShield = require(Shared:WaitForChild("AreaShield"))
 
 -- Services will be retrieved after Knit starts
 local PlayerDataService
@@ -462,6 +463,14 @@ function PredatorService:ShouldSpawn(userId: number): boolean
   local state = playerPredatorStates[userId]
   if not state then
     return false
+  end
+
+  -- Check if player has an active shield - don't spawn predators while shielded
+  local playerData = PlayerDataService and PlayerDataService:GetData(userId)
+  if playerData and playerData.shieldState then
+    if AreaShield.isActive(playerData.shieldState, os.time()) then
+      return false
+    end
   end
 
   local currentTime = os.time()

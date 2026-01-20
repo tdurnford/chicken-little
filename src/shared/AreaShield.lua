@@ -22,7 +22,7 @@ export type ShieldResult = {
 }
 
 -- Configuration constants
-local SHIELD_DURATION = 60 -- Shield lasts 60 seconds
+local SHIELD_DURATION = 120 -- Shield lasts 120 seconds (2 minutes for new player protection)
 local SHIELD_COOLDOWN = 300 -- 5 minute cooldown before reuse
 
 -- Create default shield state

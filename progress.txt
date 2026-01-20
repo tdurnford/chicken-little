@@ -3752,3 +3752,91 @@ print("[Tutorial] Calling onSkipCallback")
 - Consider using fixed pixel widths instead of percentage-based widths when laying out adjacent UI elements
 - Debug logging in Tutorial.skip() can be removed once verified working in production
 
+
+---
+
+## Bug Fix: Fix Shield Not Protecting New Players (CRITICAL)
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-3.json
+
+### Summary
+Fixed the shield protection system so new players are protected from predator attacks for their first 2 minutes of gameplay.
+
+### Root Causes Identified
+
+**Issue 1: Shield duration was too short**
+- `SHIELD_DURATION` in AreaShield.lua was 60 seconds, not 120 seconds (2 minutes)
+
+**Issue 2: PredatorService never checked shield status**
+- `ShouldSpawn()` in PredatorService.lua didn't check if the player had an active shield
+- Predators could spawn regardless of shield status
+
+**Issue 3: Shield not auto-activated for new players**
+- PlayerDataService didn't activate the shield when a new player joined
+- New players started with `shieldState.isActive = false`
+
+### Fixes Applied
+
+**Fix 1 - Increase shield duration (AreaShield.lua):**
+```lua
+-- Before
+local SHIELD_DURATION = 60 -- Shield lasts 60 seconds
+
+-- After  
+local SHIELD_DURATION = 120 -- Shield lasts 120 seconds (2 minutes for new player protection)
+```
+
+**Fix 2 - Check shield in PredatorService.ShouldSpawn():**
+```lua
+function PredatorService:ShouldSpawn(userId: number): boolean
+  local state = playerPredatorStates[userId]
+  if not state then
+    return false
+  end
+
+  -- NEW: Check if player has an active shield - don't spawn predators while shielded
+  local playerData = PlayerDataService and PlayerDataService:GetData(userId)
+  if playerData and playerData.shieldState then
+    if AreaShield.isActive(playerData.shieldState, os.time()) then
+      return false
+    end
+  end
+
+  -- ... existing spawn logic
+end
+```
+
+**Fix 3 - Auto-activate shield for new players (PlayerDataService.lua):**
+```lua
+-- In KnitStart, when player data is loaded:
+local isNewPlayer = data.totalPlayTime == 0
+if isNewPlayer and data.shieldState then
+  local currentTime = os.time()
+  if not AreaShield.isActive(data.shieldState, currentTime) then
+    local result = AreaShield.activate(data.shieldState, currentTime)
+    if result.success then
+      print(string.format("[PlayerDataService] Auto-activated 2-minute shield for new player %s", player.Name))
+      ProfileManager.updateData(player.UserId, data)
+    end
+  end
+end
+```
+
+### Modified Files
+- `src/shared/AreaShield.lua` - Changed SHIELD_DURATION from 60 to 120 seconds
+- `src/server/Services/PredatorService.lua` - Added AreaShield require and shield check in ShouldSpawn()
+- `src/server/Services/PlayerDataService.lua` - Added AreaShield require and auto-activation for new players
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- PRD-3 remaining bugs:
+  - `fix-player-data-section-assignment-warning` (CRITICAL) - Race condition in section assignment
+  - `fix-weapon-attack-nil-error` (HIGH) - Nil error on line 696 of Main.client.lua
+  - `fix-egg-hatch-no-section-warning` (HIGH) - Section assignment issue in egg hatching
+  - `fix-missing-starter-chicken-and-egg` (CRITICAL) - Starter entities not appearing
+  - `fix-predator-warning-background-stuck` (HIGH) - UI cleanup issue
+- The AreaShield module is well-designed - it has `canPredatorSpawn()` which was available but never used
+- The pattern of checking player data conditions before spawning enemies should be followed elsewhere
