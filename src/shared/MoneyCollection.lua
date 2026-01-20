@@ -60,15 +60,20 @@ function MoneyCollection.collect(
     }
   end
 
-  -- Update chicken's accumulated money based on elapsed time
+  -- Calculate accumulated money based on elapsed time since last collection
   local now = currentTime or os.time()
-  if chicken.lastEggTime then
-    -- Use ChickenConfig to get money per second
-    local ChickenConfig = require(script.Parent.ChickenConfig)
-    local config = ChickenConfig.get(chicken.chickenType)
-    if config then
-      local lastUpdate = chicken.accumulatedMoney > 0 and now or (chicken.lastEggTime or now)
-      -- Money accumulates continuously, we just collect what's there
+  local ChickenConfig = require(script.Parent.ChickenConfig)
+  local config = ChickenConfig.get(chicken.chickenType)
+  
+  if config then
+    -- Use lastCollectTime if available, otherwise fall back to placedTime
+    local lastTime = chicken.lastCollectTime or chicken.placedTime
+    if lastTime then
+      local elapsedSeconds = now - lastTime
+      if elapsedSeconds > 0 then
+        local moneyEarned = config.moneyPerSecond * elapsedSeconds
+        chicken.accumulatedMoney = chicken.accumulatedMoney + moneyEarned
+      end
     end
   end
 
@@ -89,6 +94,7 @@ function MoneyCollection.collect(
 
   -- Keep the remainder (change) in the chicken, collect only whole dollars
   chicken.accumulatedMoney = remainder
+  chicken.lastCollectTime = now -- Update timestamp for next collection calculation
   playerData.money = playerData.money + amountCollected
 
   return {

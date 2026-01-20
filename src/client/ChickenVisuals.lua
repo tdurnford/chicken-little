@@ -474,7 +474,7 @@ function ChickenVisuals.createMoneyPopEffect(config: MoneyPopConfig)
 
   local billboard = Instance.new("BillboardGui")
   billboard.Name = "MoneyPopGui"
-  billboard.Size = UDim2.new(0, 100, 0, 40)
+  billboard.Size = UDim2.new(0, 150, 0, 50)
   billboard.StudsOffset = Vector3.new(0, 0, 0)
   billboard.AlwaysOnTop = true
   billboard.Adornee = part
@@ -485,9 +485,10 @@ function ChickenVisuals.createMoneyPopEffect(config: MoneyPopConfig)
   text.Size = UDim2.new(1, 0, 1, 0)
   text.BackgroundTransparency = 1
   text.Font = Enum.Font.GothamBold
-  text.TextSize = config.isLarge and 24 or 18
+  text.TextScaled = false
+  text.TextSize = config.isLarge and 28 or 22
   text.TextColor3 = config.isLarge and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(100, 255, 100)
-  text.TextStrokeTransparency = 0.5
+  text.TextStrokeTransparency = 0
   text.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
   text.Text = "+" .. formatMoney(config.amount)
   text.Parent = billboard

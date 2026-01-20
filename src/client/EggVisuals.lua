@@ -387,7 +387,7 @@ function EggVisuals.playShakeAnimation(eggId: string): boolean
 end
 
 -- Play hatch animation with particle effects
-function EggVisuals.playHatchAnimation(eggId: string, chickenType: string): boolean
+function EggVisuals.playHatchAnimation(eggId: string): boolean
   local state = activeEggs[eggId]
   if not state or not state.model or not state.model.PrimaryPart then
     return false

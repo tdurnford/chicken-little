@@ -13,6 +13,7 @@ export type ChickenData = {
   rarity: string,
   accumulatedMoney: number,
   lastEggTime: number,
+  lastCollectTime: number?, -- os.time() when money was last collected
   spotIndex: number?, -- nil if in inventory
   placedTime: number?, -- os.time() when placed in coop (for protection period)
 }
@@ -105,6 +106,7 @@ function PlayerData.createDefault(): PlayerDataSchema
         rarity = "Common",
         accumulatedMoney = 0,
         lastEggTime = currentTime,
+        lastCollectTime = currentTime,
         spotIndex = 1,
         placedTime = currentTime,
       },

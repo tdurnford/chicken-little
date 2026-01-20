@@ -79,6 +79,12 @@ end
 
 -- Get controllers for state management
 local PlayerDataController = Knit.GetController("PlayerDataController")
+local StoreController = Knit.GetController("StoreController")
+local ChickenController = Knit.GetController("ChickenController")
+local EggController = Knit.GetController("EggController")
+local TrapController = Knit.GetController("TrapController")
+local CombatController = Knit.GetController("CombatController")
+local PredatorController = Knit.GetController("PredatorController")
 
 -- Get MapService for section assignment
 local MapService = Knit.GetService("MapService")
@@ -356,9 +362,21 @@ end)
 
 -- Wire up server-side sale via ChickenController
 ChickenSelling.setPerformServerSale(function(chickenId: string)
-  local result = ChickenController:SellChicken(chickenId)
-  if result and result.success then
+  -- Get chicken position before selling (visual will be destroyed after)
+  local visualState = ChickenVisuals.get(chickenId)
+  local chickenPosition = visualState and visualState.position
+
+  local success, result = ChickenController:SellChicken(chickenId):await()
+  if success and result and result.success then
     SoundEffects.playMoneyCollect(result.sellPrice or 0)
+    -- Show money pop effect at chicken's last position
+    if chickenPosition and result.sellPrice and result.sellPrice > 0 then
+      ChickenVisuals.createMoneyPopEffect({
+        amount = result.sellPrice,
+        position = chickenPosition + Vector3.new(0, 2, 0),
+        isLarge = result.sellPrice >= 1000,
+      })
+    end
     return { success = true, message = result.message, sellPrice = result.sellPrice }
   else
     SoundEffects.play("uiError")
@@ -478,9 +496,19 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
         warn("[Client] Place failed:", result and result.message or "Unknown error")
       end
     elseif actionType == "sell" then
-      local result = ChickenController:SellChicken(selectedItem.itemId)
-      if result and result.success then
+      local success, result = ChickenController:SellChicken(selectedItem.itemId):await()
+      if success and result and result.success then
         SoundEffects.playMoneyCollect(result.sellPrice or 0)
+        -- Show money pop effect near player for inventory sales
+        local character = localPlayer.Character
+        local rootPart = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+        if rootPart and result.sellPrice and result.sellPrice > 0 then
+          ChickenVisuals.createMoneyPopEffect({
+            amount = result.sellPrice,
+            position = rootPart.Position + Vector3.new(0, 3, 0),
+            isLarge = result.sellPrice >= 1000,
+          })
+        end
         InventoryUI.clearSelection()
       else
         SoundEffects.play("uiError")
@@ -867,9 +895,10 @@ local function updateProximityPrompts()
         lastCollectedChickenTimes[chickenId] = currentTime
 
         task.spawn(function()
-          local result = ChickenController:CollectMoney(chickenId)
+          local success, result = ChickenController:CollectMoney(chickenId):await()
           if
-            result
+            success
+            and result
             and result.success
             and result.amountCollected
             and result.amountCollected > 0
@@ -985,14 +1014,6 @@ local function setupStoreInteraction()
 end
 
 task.delay(0.5, setupStoreInteraction)
-
--- Get controllers for store/game operations (uses Knit's built-in communication)
-local StoreController = Knit.GetController("StoreController")
-local ChickenController = Knit.GetController("ChickenController")
-local EggController = Knit.GetController("EggController")
-local TrapController = Knit.GetController("TrapController")
-local CombatController = Knit.GetController("CombatController")
-local PredatorController = Knit.GetController("PredatorController")
 
 -- Wire up PredatorController signals to PredatorVisuals
 PredatorController.PredatorSpawned:Connect(function(predatorId, predatorType, userId, position, targetPosition, threatLevel, health, targetChickenId)
@@ -1203,7 +1224,6 @@ TrapController.TrapPlaced:Connect(function(trapId, trapType, userId, spotIndex)
       if spotPos then
         local position = Vector3.new(spotPos.x, spotPos.y, spotPos.z)
         TrapVisuals.create(trapId, trapType, position, spotIndex)
-      end
       end
     end
   end
