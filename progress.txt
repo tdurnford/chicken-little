@@ -3976,3 +3976,56 @@ BackgroundTransparency = backgroundTransparency,
   - `fix-shield-not-protecting-new-players` (CRITICAL) - Shield not protecting new players
 - The Fusion Spring animation pattern used here matches the existing text transparency animation (speed = 20)
 - All Fusion UI components in this codebase should use Spring animations for visibility changes to ensure smooth transitions
+
+
+---
+
+## Bug Fix: InventoryUI 'attempt to call a string value' Error (CRITICAL)
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-4.json
+
+### Summary
+Fixed runtime error when clicking inventory tabs: "attempt to call a string value" at line 761.
+
+### Root Cause
+In `InventoryUI.lua`, the `onTabClick` function had incorrectly chained Fusion Value `:set()` calls:
+```lua
+(currentTab :: Fusion.Value<TabType>)
+  :set(tab)(selectedStackKey :: Fusion.Value<string?>)
+  :set(nil)
+```
+
+The `:set()` method returns the value that was set (a string), not the Value object itself. So `:set(tab)` returns `tab` (the string), and then trying to call `(selectedStackKey...)` on that string caused the "attempt to call a string value" error.
+
+### Fix Applied (InventoryUI.lua)
+
+**Changed chained calls to separate statements:**
+```lua
+-- Before:
+(currentTab :: Fusion.Value<TabType>)
+  :set(tab)(selectedStackKey :: Fusion.Value<string?>)
+  :set(nil)
+
+-- After:
+(currentTab :: Fusion.Value<TabType>):set(tab);
+(selectedStackKey :: Fusion.Value<string?>):set(nil)
+```
+
+### Modified Files
+- `src/client/UI/Components/InventoryUI.lua` - Fixed line 760-761 syntax error
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- PRD-4 remaining bugs (prioritized):
+  - `fix-predators-not-attacking-chickens` - Predators not executing attacks
+  - `fix-bat-not-damaging-predators` - Bat not damaging predators
+  - `fix-predators-not-damaging-players` - Predators not dealing damage to players
+  - `fix-store-item-count-not-updating` - Store stock not updating after purchase
+  - `fix-store-buttons-disabled-when-sold-out` - Buy buttons still clickable when sold out
+  - `fix-tutorial-skip-animation` - Tutorial skip animation incorrect
+  - `fix-tutorial-not-progressing-on-egg-buy` - Tutorial doesn't advance on egg purchase
+  - `fix-unknown-sound-purchase` - Missing 'purchase' sound
+- The Fusion `:set()` method returns the value set, NOT the Value object - do not chain `:set()` calls

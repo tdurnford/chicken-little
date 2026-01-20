@@ -757,9 +757,8 @@ function InventoryUI.create(props: InventoryUIProps?): boolean
   end
 
   local function onTabClick(tab: TabType)
-    (currentTab :: Fusion.Value<TabType>)
-      :set(tab)(selectedStackKey :: Fusion.Value<string?>)
-      :set(nil)
+    (currentTab :: Fusion.Value<TabType>):set(tab);
+    (selectedStackKey :: Fusion.Value<string?>):set(nil)
     selectedItem = nil
     if props.onItemSelected then
       props.onItemSelected(nil)
