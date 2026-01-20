@@ -397,10 +397,10 @@ local function createTutorialFrame(fusionScope: Fusion.Scope)
 				TextColor3 = COLORS.text,
 			}),
 
-			-- Title
+			-- Title (sized to not overlap with Skip button which starts at x=380)
 			New(fusionScope, "TextLabel")({
 				Name = "TitleLabel",
-				Size = UDim2.new(1, -90, 0, 28),
+				Size = UDim2.new(0, 290, 0, 28),
 				Position = UDim2.new(0, 75, 0, 12),
 				BackgroundTransparency = 1,
 				Text = titleText,
@@ -452,8 +452,10 @@ local function createTutorialFrame(fusionScope: Fusion.Scope)
 				FontFace = Theme.Typography.PrimarySemiBold,
 				BorderSizePixel = 0,
 				AutoButtonColor = true,
+				ZIndex = 10,
 
 				[OnEvent("MouseButton1Click")] = function()
+					print("[Tutorial] Skip button clicked")
 					Tutorial.skip()
 				end,
 
@@ -681,10 +683,13 @@ end
 
 -- Skip the tutorial
 function Tutorial.skip()
+	print("[Tutorial] skip() called, isActive =", isActive and peek(isActive) or "nil")
 	if not isActive or not peek(isActive) then
+		print("[Tutorial] skip() returning early - tutorial not active")
 		return
 	end
 
+	print("[Tutorial] Skipping tutorial...")
 	if isActive then isActive:set(false) end
 
 	if advanceConnection then
@@ -698,7 +703,10 @@ function Tutorial.skip()
 
 	task.delay(0.3, function()
 		if onSkipCallback then
+			print("[Tutorial] Calling onSkipCallback")
 			onSkipCallback()
+		else
+			print("[Tutorial] No onSkipCallback registered!")
 		end
 	end)
 end

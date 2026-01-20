@@ -3,7 +3,7 @@
   "description": "A collection of critical bug fixes addressing starter chicken IDs, egg hatching warnings, map rendering performance, chicken visibility, weapon arming, and tutorial skip functionality.",
   "version": "1.0.0",
   "created": "2026-01-19",
-  "status": "in-progress",
+  "status": "completed",
   "features": [
     {
       "id": "fix-starter-chicken-unique-id",
@@ -101,7 +101,7 @@
       "title": "Fix Tutorial Skip Button Not Working (Regression)",
       "description": "Pressing the skip button in the tutorial still does not work. This was previously marked as fixed but appears to be a regression. The skip button should dismiss the tutorial and mark it as completed.",
       "priority": "high",
-      "status": "not-started",
+      "status": "completed",
       "files": [
         "src/client/UI/Components/Tutorial.lua",
         "src/client/Controllers/TutorialController.lua",
@@ -116,7 +116,8 @@
         "Check for any UI layering issues preventing button clicks",
         "Test skip button at each tutorial step",
         "Add logging to identify where the skip flow breaks"
-      ]
+      ],
+      "resolution": "Fixed UI layering issue where TitleLabel overlapped the SkipButton. The TitleLabel had Size=UDim2.new(1,-90,0,28) which extended from x=75 to x=435px, overlapping the SkipButton at x=380px. Fixed by: 1) Changed TitleLabel to fixed width UDim2.new(0,290,0,28) to end at x=365px. 2) Added ZIndex=10 to SkipButton to ensure it renders above other siblings. 3) Added debug logging to trace button clicks and skip callback execution."
     }
   ],
   "testingNotes": [

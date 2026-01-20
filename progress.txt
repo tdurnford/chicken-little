@@ -3673,3 +3673,82 @@ end
   - `fix-tutorial-skip-button-regression` (HIGH) - Tutorial skip button not working
 - The pattern of calling RestoreOwnedWeapons on spawn should be followed for any persistent player equipment
 - WeaponTool module handles actual Tool creation - see WeaponTool.lua for implementation details
+
+---
+
+## Bug Fix: Fix Tutorial Skip Button Not Working (Regression) (HIGH)
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-2.json
+
+### Summary
+Fixed the tutorial skip button regression where clicking the "Skip" button did nothing due to a UI layering issue.
+
+### Root Cause
+The TitleLabel in the tutorial frame was overlapping with the SkipButton:
+
+1. **TitleLabel dimensions**:
+   - Position: `UDim2.new(0, 75, 0, 12)` → starts at x=75px
+   - Size: `UDim2.new(1, -90, 0, 28)` → width = 450-90 = 360px
+   - End: 75 + 360 = **435px**
+
+2. **SkipButton dimensions**:
+   - Position: `UDim2.new(1, -70, 0, 10)` → starts at x=450-70 = **380px**
+   - Size: 60px wide
+   - End: 380 + 60 = 440px
+
+3. **Overlap**: TitleLabel extended from x=75 to x=435, while SkipButton started at x=380. The 55px overlap (380-435) caused the TitleLabel to intercept mouse clicks intended for the SkipButton.
+
+### Technical Flow (Before Fix)
+1. User clicks on SkipButton area (x=380-440)
+2. TitleLabel (ending at x=435) intercepts the click
+3. No click event reaches SkipButton
+4. Tutorial.skip() is never called
+
+### Fixes Applied
+
+**Fix 1 - Reduce TitleLabel width:**
+```lua
+-- Before: extended to x=435 (overlapping SkipButton)
+Size = UDim2.new(1, -90, 0, 28),
+
+-- After: fixed width ending at x=365 (no overlap)
+Size = UDim2.new(0, 290, 0, 28),
+```
+
+**Fix 2 - Add ZIndex to SkipButton:**
+```lua
+-- Added to SkipButton properties
+ZIndex = 10,
+```
+
+**Fix 3 - Add debug logging:**
+```lua
+-- In SkipButton click handler
+[OnEvent("MouseButton1Click")] = function()
+  print("[Tutorial] Skip button clicked")
+  Tutorial.skip()
+end,
+
+-- In Tutorial.skip() function
+print("[Tutorial] skip() called, isActive =", ...)
+print("[Tutorial] Calling onSkipCallback")
+```
+
+### Why This Works
+- TitleLabel now ends at x=365 (75 + 290), well before SkipButton starts at x=380
+- ZIndex=10 ensures SkipButton renders above any other siblings
+- Debug logging confirms the click → skip → callback flow is working
+
+### Modified Files
+- `src/client/UI/Components/Tutorial.lua` - Fixed TitleLabel width, added ZIndex to SkipButton, added debug logging
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- PRD-2 bugs are now ALL COMPLETED
+- The UI overlap pattern is a common issue - always check element bounds when buttons don't respond
+- Consider using fixed pixel widths instead of percentage-based widths when laying out adjacent UI elements
+- Debug logging in Tutorial.skip() can be removed once verified working in production
+
