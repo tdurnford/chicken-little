@@ -4383,3 +4383,53 @@ purchase = {
   - `add-chicken-money-collection-cap` - Money cap feature
 - SoundEffects uses a config-driven approach: always add both SOUND_IDS entry and SOUND_CONFIGS entry
 - The `play()` function warns when a sound name doesn't exist in SOUND_CONFIGS
+
+---
+
+## Bug Fix: Fix Store Item Count Not Changing After Purchase
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-4.json
+
+### Summary
+Fixed the issue where store stock count did not update after purchasing eggs. The stock display remained static because `StoreUI.refreshInventory()` was not being called after egg purchases.
+
+### Root Cause
+In `Main.client.lua`, the `StoreUI.onPurchase` callback for egg purchases was missing the call to `StoreUI.refreshInventory()`. The trap and weapon purchase callbacks already had this call, but the egg purchase callback did not.
+
+The StoreUI uses a tab-based refresh mechanism where the content is rendered inside a `Computed` that depends on `activeTab`. When `refreshInventory()` is called, it toggles the tab briefly to force a re-render, which re-fetches the stock values from `Store.getAvailableEggsWithStock()`.
+
+### Fix Applied
+
+**Added `StoreUI.refreshInventory()` call after successful egg purchase:**
+```lua
+StoreUI.onPurchase(function(eggType: string, quantity: number)
+  StoreController:BuyEgg(eggType, quantity)
+    :andThen(function(result)
+      if result and result.success then
+        SoundEffects.play("purchase")
+        print("[Client] Purchased", quantity, "x", eggType, ":", result.message)
+        StoreUI.refreshInventory()  -- Added this line
+      else
+        -- error handling...
+      end
+    end)
+    -- ...
+end)
+```
+
+### Modified Files
+- `src/client/Main.client.lua` - Added `StoreUI.refreshInventory()` call after successful egg purchase (line 1318)
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- PRD-4 remaining bugs (prioritized):
+  - `fix-store-buttons-disabled-when-sold-out` - Buy buttons still clickable when sold out
+  - `fix-tutorial-skip-animation` - Tutorial skip animation incorrect
+  - `fix-tutorial-not-progressing-on-egg-buy` - Tutorial doesn't advance on egg purchase
+  - `add-chicken-money-collection-cap` - Money cap feature
+- The `StoreUI.refreshInventory()` uses a tab toggle hack to force re-render - this works but could be improved with proper reactive state
+- All purchase callbacks (eggs, traps, weapons) now consistently call `refreshInventory()` on success
+- The underlying stock values are updated in the shared `Store` module when purchases succeed

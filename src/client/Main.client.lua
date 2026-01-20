@@ -1315,6 +1315,7 @@ StoreUI.onPurchase(function(eggType: string, quantity: number)
       if result and result.success then
         SoundEffects.play("purchase")
         print("[Client] Purchased", quantity, "x", eggType, ":", result.message)
+        StoreUI.refreshInventory()
       else
         SoundEffects.play("uiError")
         warn("[Client] Purchase failed:", result and result.message or "Unknown error")
