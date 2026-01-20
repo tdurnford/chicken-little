@@ -4029,3 +4029,84 @@ The `:set()` method returns the value that was set (a string), not the Value obj
   - `fix-tutorial-not-progressing-on-egg-buy` - Tutorial doesn't advance on egg purchase
   - `fix-unknown-sound-purchase` - Missing 'purchase' sound
 - The Fusion `:set()` method returns the value set, NOT the Value object - do not chain `:set()` calls
+
+---
+
+## Bug Fix: Predators Not Attacking Chickens (CRITICAL)
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-4.json
+
+### Summary
+Fixed predators not executing attacks on chickens. Predators would spawn, approach, and enter the "attacking" state, but `PredatorAttack.executeAttack()` was never called, so no chickens were actually lost.
+
+### Root Cause
+In `PredatorService:Update()`, the game loop handled:
+1. Spawning predators ✅
+2. Updating predator positions ✅
+3. Transitioning predators to "attacking" state when entering section ✅
+4. ❌ **Missing: Calling `PredatorAttack.executeAttack()` for attacking predators**
+
+The attack execution logic was completely missing from the game loop.
+
+### Fix Applied
+
+**1. Added `lastAttackTime` field to PredatorInstance type (PredatorSpawning.lua):**
+```lua
+export type PredatorInstance = {
+  ...
+  lastAttackTime: number?, -- Time of last attack on chickens (for attack interval tracking)
+}
+```
+
+**2. Added attack interval checking functions (PredatorSpawning.lua):**
+- `PredatorSpawning.shouldAttack()` - Checks if predator should attack based on `attackIntervalSeconds` from config
+- `PredatorSpawning.setLastAttackTime()` - Updates the last attack time after successful attack
+
+**3. Added `ExecutePredatorAttacks()` method (PredatorService.lua):**
+- Iterates through all attacking predators
+- Checks if attack interval has elapsed using `shouldAttack()`
+- Calls `PredatorAttack.executeAttack()` to steal chickens
+- Updates player data with modified `placedChickens`
+- Fires `ChickensLost` client event for UI feedback
+- Fires `ChickensLostSignal` server signal for other services
+- Handles predator escape after attacks are exhausted
+
+**4. Integrated into game loop (PredatorService.lua):**
+```lua
+-- In Update():
+-- 4. Execute predator attacks on chickens (when in attacking state and interval elapsed)
+self:ExecutePredatorAttacks(userId, currentTime)
+```
+
+**5. Added new signals:**
+- `Client.ChickensLost` - Fires to owner when chickens are lost to predator attack
+- `ChickensLostSignal` - Server-side signal for other services to listen to
+
+### Attack Flow (Now Working)
+1. Predator spawns → state = "spawning"
+2. Predator approaches coop → state = "approaching"
+3. Predator enters player section → state = "attacking"
+4. **NEW: ExecutePredatorAttacks() checks shouldAttack()**
+5. **NEW: If interval elapsed, executeAttack() removes chickens from placedChickens**
+6. **NEW: ChickensLost event fires to client for UI feedback**
+7. After attacks exhausted → predator escapes
+
+### Modified Files
+- `src/shared/PredatorSpawning.lua` - Added lastAttackTime field, shouldAttack(), setLastAttackTime()
+- `src/server/Services/PredatorService.lua` - Added ExecutePredatorAttacks(), ChickensLost signal, integrated into Update loop
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- PRD-4 remaining bugs (prioritized):
+  - `fix-bat-not-damaging-predators` - Bat not damaging predators
+  - `fix-predators-not-damaging-players` - Predators not dealing damage to players
+  - `fix-store-item-count-not-updating` - Store stock not updating after purchase
+  - `fix-store-buttons-disabled-when-sold-out` - Buy buttons still clickable when sold out
+  - `fix-tutorial-skip-animation` - Tutorial skip animation incorrect
+  - `fix-tutorial-not-progressing-on-egg-buy` - Tutorial doesn't advance on egg purchase
+  - `fix-unknown-sound-purchase` - Missing 'purchase' sound
+- Attack intervals are defined per-threat-level in PredatorConfig.THREAT_ATTACK_INTERVALS
+- The executeAttack function respects predator resistance upgrades and 15-second protection for newly placed chickens

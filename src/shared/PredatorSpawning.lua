@@ -20,6 +20,7 @@ export type PredatorInstance = {
   state: "spawning" | "approaching" | "attacking" | "caught" | "escaped" | "defeated",
   attacksRemaining: number,
   health: number, -- bat hits to defeat
+  lastAttackTime: number?, -- Time of last attack on chickens (for attack interval tracking)
 }
 
 export type SpawnState = {
@@ -644,6 +645,52 @@ function PredatorSpawning.decreaseAttacks(
     attacksRemaining = predator.attacksRemaining,
     shouldEscape = shouldEscape,
   }
+end
+
+-- Check if a predator should attack based on attack interval
+function PredatorSpawning.shouldAttack(
+  spawnState: SpawnState,
+  predatorId: string,
+  currentTime: number
+): boolean
+  local predator = PredatorSpawning.findPredator(spawnState, predatorId)
+  if not predator then
+    return false
+  end
+
+  -- Only attacking predators can execute attacks
+  if predator.state ~= "attacking" then
+    return false
+  end
+
+  -- Get attack interval from config
+  local config = PredatorConfig.get(predator.predatorType)
+  if not config then
+    return false
+  end
+
+  -- If never attacked, attack immediately when in attacking state
+  if not predator.lastAttackTime then
+    return true
+  end
+
+  -- Check if enough time has passed since last attack
+  local timeSinceLastAttack = currentTime - predator.lastAttackTime
+  return timeSinceLastAttack >= config.attackIntervalSeconds
+end
+
+-- Update last attack time for a predator
+function PredatorSpawning.setLastAttackTime(
+  spawnState: SpawnState,
+  predatorId: string,
+  currentTime: number
+): boolean
+  local predator = PredatorSpawning.findPredator(spawnState, predatorId)
+  if not predator then
+    return false
+  end
+  predator.lastAttackTime = currentTime
+  return true
 end
 
 -- Reset spawn state (for new game or testing)

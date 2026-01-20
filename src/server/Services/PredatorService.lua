@@ -44,6 +44,7 @@ local PredatorService = Knit.CreateService({
     PredatorDefeated = Knit.CreateSignal(), -- Fires to all clients when predator defeated/escaped
     PredatorTargetChanged = Knit.CreateSignal(), -- Fires to all clients when predator re-targets
     PredatorAlert = Knit.CreateSignal(), -- Fires to owner with predator alerts
+    ChickensLost = Knit.CreateSignal(), -- Fires to owner when chickens are lost to predator attack
   },
 })
 
@@ -52,6 +53,7 @@ PredatorService.PredatorSpawnedSignal = GoodSignal.new() -- (userId: number, pre
 PredatorService.PredatorDefeatedSignal = GoodSignal.new() -- (userId: number, predatorId: string, reward: number)
 PredatorService.PredatorEscapedSignal = GoodSignal.new() -- (userId: number, predatorId: string)
 PredatorService.ChickenDamaged = GoodSignal.new() -- (userId: number, chickenId: string, damage: number, source: string)
+PredatorService.ChickensLostSignal = GoodSignal.new() -- (userId: number, predatorId: string, chickenIds: {string}, totalValueLost: number)
 PredatorService.XPAwarded = GoodSignal.new() -- (userId: number, amount: number, reason: string)
 
 -- Per-player predator state tracking
@@ -109,6 +111,8 @@ end
 	@param deltaTime number - Time since last frame
 ]]
 function PredatorService:Update(deltaTime: number)
+  local currentTime = os.time()
+  
   for _, player in ipairs(Players:GetPlayers()) do
     local userId = player.UserId
     local state = playerPredatorStates[userId]
@@ -169,7 +173,10 @@ function PredatorService:Update(deltaTime: number)
         self:CheckPredatorEnteredSection(userId, predator.id)
       end
       
-      -- 4. Periodic cleanup
+      -- 4. Execute predator attacks on chickens (when in attacking state and interval elapsed)
+      self:ExecutePredatorAttacks(userId, currentTime)
+      
+      -- 5. Periodic cleanup
       self:CleanupInactivePredators(userId)
     end
   end
@@ -777,6 +784,103 @@ function PredatorService:SendAlert(
   local player = Players:GetPlayerByUserId(userId)
   if player then
     self.Client.PredatorAlert:Fire(player, alert)
+  end
+end
+
+--[[
+	Execute predator attacks on chickens for a player.
+	Called during the game loop to check if attacking predators should steal chickens.
+	@param userId number - The user ID
+	@param currentTime number - Current time in seconds
+]]
+function PredatorService:ExecutePredatorAttacks(userId: number, currentTime: number)
+  local state = playerPredatorStates[userId]
+  if not state then
+    return
+  end
+
+  local player = Players:GetPlayerByUserId(userId)
+  if not player then
+    return
+  end
+
+  -- Get player data for attack execution
+  local playerData = PlayerDataService and PlayerDataService:GetData(userId)
+  if not playerData then
+    return
+  end
+
+  -- Check each active predator for attack execution
+  for _, predator in ipairs(PredatorSpawning.getActivePredators(state.spawnState)) do
+    -- Only process predators in attacking state
+    if predator.state == "attacking" then
+      -- Check if predator should attack based on interval
+      if PredatorSpawning.shouldAttack(state.spawnState, predator.id, currentTime) then
+        -- Execute the attack
+        local attackResult = PredatorAttack.executeAttack(
+          playerData,
+          state.spawnState,
+          predator.id,
+          currentTime
+        )
+
+        if attackResult.success then
+          -- Update last attack time
+          PredatorSpawning.setLastAttackTime(state.spawnState, predator.id, currentTime)
+
+          -- Update player data with modified placedChickens (already modified by executeAttack)
+          if attackResult.chickensLost > 0 then
+            PlayerDataService:UpdateData(userId, function(data)
+              data.placedChickens = playerData.placedChickens
+              return data
+            end)
+
+            -- Send alert to player about the attack
+            self:SendAlert(userId, predator.id, "attacking")
+
+            -- Fire client event for UI feedback
+            self.Client.ChickensLost:Fire(
+              player,
+              predator.id,
+              attackResult.chickenIds,
+              attackResult.chickensLost,
+              attackResult.totalValueLost,
+              attackResult.message
+            )
+
+            -- Fire server signal for other services
+            self.ChickensLostSignal:Fire(
+              userId,
+              predator.id,
+              attackResult.chickenIds,
+              attackResult.totalValueLost
+            )
+
+            print(string.format(
+              "[PredatorService] %s - %d chickens lost (value: %d)",
+              attackResult.message,
+              attackResult.chickensLost,
+              attackResult.totalValueLost
+            ))
+          end
+
+          -- Handle predator escape after attack
+          if attackResult.predatorEscaped then
+            -- Unregister from AI
+            PredatorAI.unregisterPredator(state.aiState, predator.id)
+
+            -- Send escape alert
+            self:SendAlert(userId, predator.id, "escaped")
+
+            -- Notify clients
+            self.Client.PredatorDefeated:FireAll(predator.id, false) -- false = escaped
+
+            -- Fire server signal
+            self.PredatorEscapedSignal:Fire(userId, predator.id)
+          end
+        end
+      end
+    end
   end
 end
 
