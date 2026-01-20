@@ -3230,3 +3230,69 @@ MainFrame (400x500)
   - `fix-store-button-text-centering` - Center text on store buttons
 - Store UI uses standard Roblox ZIndex for layering - higher values render on top
 - ContentScroll uses AutomaticCanvasSize for dynamic content height
+
+---
+
+## Bug Fix: Fix Restock Timer Stuck on 'Restocking...'
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+
+### Summary
+Fixed the bug where the store restock timer gets stuck displaying "Restocking..." instead of resetting after the store replenishes.
+
+### Root Cause
+The client-side timer was reading `lastReplenishTime` from the local `Store` module via `Store.getTimeUntilReplenish()`. When the server replenished the store:
+
+1. Server called `Store.replenishStore()` which updated `lastReplenishTime` on the server
+2. Server fired `StoreReplenished` signal with only `{ timeUntilNext = 300 }` 
+3. Client received the signal but never updated its local `Store` module's `lastReplenishTime`
+4. Client's `Store.getTimeUntilReplenish()` kept returning `0` (since elapsed time > interval)
+5. Timer displayed "Restocking..." indefinitely (when seconds <= 0)
+
+### Solution
+Two changes were needed:
+
+1. **StoreService.lua** - Send full inventory on replenish:
+   ```lua
+   self.Client.StoreReplenished:Fire(player, {
+     timeUntilNext = Store.getReplenishInterval(),
+     inventory = inventory,  -- NEW: send full inventory with updated lastReplenishTime
+   })
+   ```
+
+2. **StoreController.lua** - Sync local Store module with server inventory:
+   ```lua
+   storeService.StoreReplenished:Connect(function(data)
+     cachedInventory = nil
+     cachedAvailableItems = nil
+     -- NEW: Sync local Store module with server inventory
+     if data.inventory then
+       Store.setStoreInventory(data.inventory)
+     end
+     self.StoreReplenished:Fire(data)
+   end)
+   ```
+
+### Modified Files
+- `src/server/Services/StoreService.lua` - Added `inventory` to StoreReplenished payload
+- `src/client/Controllers/StoreController.lua` - Added Store import and inventory sync on replenish
+- `plans/bug-fixes-prd.json` - Marked feature as completed
+
+### Timer Flow After Fix
+1. Timer countdown reaches 0 → displays "Restocking..."
+2. Server replenishes store → updates `lastReplenishTime` to current time
+3. Server fires `StoreReplenished` with `{ timeUntilNext: 300, inventory: {...} }`
+4. Client receives signal → `StoreController` calls `Store.setStoreInventory(data.inventory)`
+5. Client's `Store.getTimeUntilReplenish()` now returns ~300 (full interval)
+6. Timer displays "Restocks in 5:00" and counts down normally
+
+### Notes for Next Developer
+- High priority bugs remaining: None
+- Medium priority:
+  - `remove-client-event-relay` - Migrate to Knit Controllers
+  - `fix-store-button-text-centering` - Center text on store buttons
+- Low priority:
+  - `remove-legacy-datastore-migration` - Clean up unused migration code
+  - `improve-restock-timer-styling` - Increase font size/weight
+- The Store module is shared but maintains separate state on client/server
+- When server state changes, it must explicitly sync to clients via signals

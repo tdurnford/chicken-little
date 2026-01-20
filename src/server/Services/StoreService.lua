@@ -619,10 +619,11 @@ end
 function StoreService:ReplenishStore(): Store.StoreInventory
   local inventory = Store.replenishStore()
 
-  -- Notify all players
+  -- Notify all players with updated inventory so client can sync lastReplenishTime
   for _, player in ipairs(Players:GetPlayers()) do
     self.Client.StoreReplenished:Fire(player, {
       timeUntilNext = Store.getReplenishInterval(),
+      inventory = inventory,
     })
   end
 

@@ -14,13 +14,16 @@ local Packages = ReplicatedStorage:WaitForChild("Packages")
 local Knit = require(Packages:WaitForChild("Knit"))
 local GoodSignal = require(Packages:WaitForChild("GoodSignal"))
 
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Store = require(Shared:WaitForChild("Store"))
+
 -- Create the controller
 local StoreController = Knit.CreateController({
   Name = "StoreController",
 })
 
 -- GoodSignal events for reactive UI
-StoreController.StoreReplenished = GoodSignal.new() -- Fires (data: {timeUntilNext: number})
+StoreController.StoreReplenished = GoodSignal.new() -- Fires (data: {timeUntilNext: number, inventory: StoreInventory})
 StoreController.ItemPurchased = GoodSignal.new() -- Fires (data: {itemType, itemId, quantity?, newBalance})
 StoreController.ItemSold = GoodSignal.new() -- Fires (data: {itemType, itemId, newBalance, message})
 StoreController.StockUpdated = GoodSignal.new() -- Fires (data: {itemType, itemId, newStock})
@@ -53,6 +56,10 @@ function StoreController:KnitStart()
     -- Invalidate cache on replenish
     cachedInventory = nil
     cachedAvailableItems = nil
+    -- Sync local Store module with server inventory (updates lastReplenishTime)
+    if data.inventory then
+      Store.setStoreInventory(data.inventory)
+    end
     self.StoreReplenished:Fire(data)
   end)
 

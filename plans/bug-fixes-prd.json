@@ -126,10 +126,11 @@
       "title": "Fix Restock Timer Stuck on 'Restocking...'",
       "description": "When the store restock counter hits zero, it gets stuck displaying 'Restocking...' instead of resetting and starting a new countdown cycle.",
       "priority": "high",
-      "status": "not-started",
+      "status": "completed",
       "files": [
         "src/client/UI/Components/StoreUI.lua",
         "src/server/Services/StoreService.lua",
+        "src/client/Controllers/StoreController.lua",
         "src/shared/Store.lua"
       ],
       "tasks": [
