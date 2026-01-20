@@ -3192,3 +3192,41 @@ Added three key pieces:
 - Tutorial uses `shouldShowTutorial()` to check `tutorialComplete` field in player data
 - Both skip and complete callbacks save to server to prevent tutorial from showing again
 - The skip button click handler was already correctly implemented - it just never had a chance to run
+
+---
+
+## Bug Fix: Fix Store Tabs Covered by Items
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+
+### Summary
+Fixed the bug where store tabs were being covered by the scrolling item cards.
+
+### Root Cause
+The ContentScroll (ScrollingFrame) was positioned at Y=52, which overlapped with the TabFrame that starts at Y=48 and has a height of 36px (ending at Y=84). This caused the content to render over the tabs.
+
+### Solution
+1. Added `ZIndex = 2` to TabFrame to ensure tabs render above content
+2. Moved ContentScroll position from Y=52 to Y=92 (header 48px + tabs 36px + padding 8px)
+3. Adjusted ContentScroll size from `-100` to `-108` to maintain proper bottom padding
+
+### Modified Files
+- `src/client/UI/Components/StoreUI.lua` - Fixed layout positions and ZIndex
+- `plans/bug-fixes-prd.json` - Marked feature as completed
+
+### Layout After Fix
+```
+MainFrame (400x500)
+├── Header (Y=0, Height=40)
+├── TabFrame (Y=48, Height=36, ZIndex=2)
+└── ContentScroll (Y=92, Height=1,-108)
+```
+
+### Notes for Next Developer
+- High priority bugs remaining:
+  - `fix-restock-timer-stuck` - Timer stuck on "Restocking..."
+- Medium priority:
+  - `remove-client-event-relay` - Migrate to Knit Controllers
+  - `fix-store-button-text-centering` - Center text on store buttons
+- Store UI uses standard Roblox ZIndex for layering - higher values render on top
+- ContentScroll uses AutomaticCanvasSize for dynamic content height

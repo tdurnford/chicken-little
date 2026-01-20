@@ -771,8 +771,8 @@ local function createContentFrame(
 )
   return New(scope, "ScrollingFrame")({
     Name = "ContentScroll",
-    Size = UDim2.new(1, -16, 1, -100),
-    Position = UDim2.new(0, 8, 0, 52),
+    Size = UDim2.new(1, -16, 1, -108),
+    Position = UDim2.new(0, 8, 0, 92),
     BackgroundColor3 = Color3.fromRGB(30, 30, 40),
     BorderSizePixel = 0,
     ScrollBarThickness = 6,
@@ -1007,6 +1007,7 @@ local function createStoreFrame(
         Size = UDim2.new(1, -16, 0, 36),
         Position = UDim2.new(0, 8, 0, 48),
         BackgroundTransparency = 1,
+        ZIndex = 2,
 
         [Children] = {
           createTabButton(scope, "🥚 Eggs", "eggs", UDim2.new(0, 0, 0, 0), activeTab, onTabClick),
