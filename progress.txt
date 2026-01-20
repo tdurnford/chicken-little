@@ -3296,3 +3296,39 @@ Two changes were needed:
   - `improve-restock-timer-styling` - Increase font size/weight
 - The Store module is shared but maintains separate state on client/server
 - When server state changes, it must explicitly sync to clients via signals
+
+---
+
+## Bug Fix: Center Text on Store Buttons
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+
+### Summary
+Fixed the text alignment on store buy buttons (Cash and Robux) to be properly centered both horizontally and vertically.
+
+### Root Cause
+The price text labels inside the buy buttons (`createCashButton` and `createRobuxButton` functions) had `TextXAlignment = Enum.TextXAlignment.Left` which caused the text to be left-aligned within the button's text area (positioned to the right of the icon).
+
+### Solution
+Updated both button types to use centered text alignment:
+
+1. **createCashButton** - Cash buy button (💵):
+   - Changed `TextXAlignment` from `Left` to `Center`
+   - Added `TextYAlignment = Enum.TextYAlignment.Center`
+
+2. **createRobuxButton** - Robux buy button (💎):
+   - Changed `TextXAlignment` from `Left` to `Center`
+   - Added `TextYAlignment = Enum.TextYAlignment.Center`
+
+### Modified Files
+- `src/client/UI/Components/StoreUI.lua` - Centered text on both button types
+- `plans/bug-fixes-prd.json` - Marked feature as completed
+
+### Notes for Next Developer
+- Remaining medium priority:
+  - `remove-client-event-relay` - Migrate to Knit Controllers
+- Remaining low priority:
+  - `remove-legacy-datastore-migration` - Clean up unused migration code
+  - `improve-restock-timer-styling` - Increase font size/weight
+- The store buttons use a layout with an emoji icon on the left and price text to the right
+- TextXAlignment/YAlignment control text positioning within a TextLabel's bounds

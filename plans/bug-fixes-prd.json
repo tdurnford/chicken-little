@@ -162,7 +162,7 @@
       "title": "Center Text on Store Buttons",
       "description": "The text on the buttons in the store is not properly centered. Update text alignment to be centered both horizontally and vertically.",
       "priority": "medium",
-      "status": "not-started",
+      "status": "completed",
       "files": [
         "src/client/UI/Components/StoreUI.lua"
       ],
