@@ -4110,3 +4110,70 @@ self:ExecutePredatorAttacks(userId, currentTime)
   - `fix-unknown-sound-purchase` - Missing 'purchase' sound
 - Attack intervals are defined per-threat-level in PredatorConfig.THREAT_ATTACK_INTERVALS
 - The executeAttack function respects predator resistance upgrades and 15-second protection for newly placed chickens
+
+---
+
+## Bug Fix: Bat Not Damaging Predators (CRITICAL)
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-4.json
+
+### Summary
+Fixed bat attacks not dealing damage to predators. When players swung their bat at predators, the swing animation played and client events fired, but no actual damage was applied to the predator's health.
+
+### Root Cause
+In `CombatService:_attackPredator()`, the method fired `DamageDealtSignal` for "other services to handle predator damage", but:
+1. **Nothing was listening** to the `DamageDealtSignal`
+2. `PredatorService.Client:AttackPredator()` existed and worked correctly, but was **never called**
+
+The flow was:
+1. Client calls `CombatController:Attack("predator", predatorId)` ✅
+2. CombatController calls `combatService:Attack()` ✅
+3. CombatService calls `_attackPredator()` ✅
+4. ❌ `_attackPredator()` fired signal but never called PredatorService to apply damage
+
+### Fix Applied
+
+**Modified `CombatService:_attackPredator()` to directly call PredatorService:**
+```lua
+-- Call PredatorService to apply damage to the predator
+local attackResult = nil
+if PredatorService then
+  attackResult = PredatorService.Client:AttackPredator(player, predatorId)
+end
+
+-- If PredatorService attack failed, return the error
+if attackResult and not attackResult.success then
+  return { success = false, message = attackResult.message }
+end
+```
+
+The fix:
+1. Calls `PredatorService.Client:AttackPredator()` which applies actual damage via `PredatorSpawning.applyBatHit()`
+2. Returns the attack result including `defeated`, `remainingHealth`, and `reward`
+3. Passes defeat/health info to client via `DamageDealt` signal for UI updates
+
+### Attack Flow (Now Working)
+1. Client: `CombatController:Attack("predator", predatorId)`
+2. Server: `CombatService:Attack()` → `_attackPredator()`
+3. Server: `PredatorService.Client:AttackPredator()` → `PredatorSpawning.applyBatHit()`
+4. Predator health decreases, client receives `DamageDealt` event with defeat status
+5. On defeat: money awarded, XP awarded, predator removed
+
+### Modified Files
+- `src/server/Services/CombatService.lua` - Fixed `_attackPredator()` to call PredatorService
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- PRD-4 remaining bugs (prioritized):
+  - `fix-predators-not-damaging-players` - Predators not dealing damage to players
+  - `fix-new-player-protection-not-working` - New player protection not preventing spawns
+  - `fix-store-item-count-not-updating` - Store stock not updating after purchase
+  - `fix-store-buttons-disabled-when-sold-out` - Buy buttons still clickable when sold out
+  - `fix-tutorial-skip-animation` - Tutorial skip animation incorrect
+  - `fix-tutorial-not-progressing-on-egg-buy` - Tutorial doesn't advance on egg purchase
+  - `fix-unknown-sound-purchase` - Missing 'purchase' sound
+- CombatService now correctly calls PredatorService for predator damage application
+- PredatorService.Client:AttackPredator is the authoritative method for predator damage

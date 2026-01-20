@@ -452,7 +452,21 @@ function CombatService:_attackPredator(
 
   local damage = weaponConfig.damage
 
-  -- Fire signal for other services to handle predator damage
+  -- Call PredatorService to apply damage to the predator
+  local attackResult = nil
+  if PredatorService then
+    attackResult = PredatorService.Client:AttackPredator(player, predatorId)
+  end
+
+  -- If PredatorService attack failed, return the error
+  if attackResult and not attackResult.success then
+    return {
+      success = false,
+      message = attackResult.message,
+    }
+  end
+
+  -- Fire signals for other services
   self.DamageDealtSignal:Fire(userId, predatorId, damage, "predator")
   self.AttackPerformedSignal:Fire(userId, "predator", predatorId, damage)
 
@@ -462,12 +476,16 @@ function CombatService:_attackPredator(
     targetId = predatorId,
     damage = damage,
     weaponType = weaponType,
+    defeated = attackResult and attackResult.defeated or false,
   })
 
   return {
     success = true,
-    message = string.format("Hit predator for %d damage", damage),
+    message = attackResult and attackResult.message or string.format("Hit predator for %d damage", damage),
     damage = damage,
+    defeated = attackResult and attackResult.defeated or false,
+    rewardMoney = attackResult and attackResult.reward or nil,
+    remainingHealth = attackResult and attackResult.remainingHealth or nil,
   }
 end
 
