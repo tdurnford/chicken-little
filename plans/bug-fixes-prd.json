@@ -1,0 +1,255 @@
+{
+  "title": "Bug Fixes and Code Cleanup",
+  "description": "A collection of bug fixes, code cleanup, and missing feature implementations to improve game stability and player experience.",
+  "version": "1.0.0",
+  "created": "2026-01-19",
+  "status": "not-started",
+  "features": [
+    {
+      "id": "remove-legacy-datastore-migration",
+      "title": "Remove Legacy DataStore Migration Code",
+      "description": "Remove the migrateFromLegacyDataStore function and related code from ProfileManager. This is a new game with no existing player data, so migration logic is unnecessary.",
+      "priority": "low",
+      "status": "not-started",
+      "files": [
+        "src/server/ProfileManager.lua"
+      ],
+      "tasks": [
+        "Remove migrateFromLegacyDataStore function definition",
+        "Remove LEGACY_DATA_STORE_NAME constant",
+        "Remove DataStoreService import if only used for migration",
+        "Remove call to migrateFromLegacyDataStore in loadProfile function",
+        "Update any related comments"
+      ]
+    },
+    {
+      "id": "spawn-starter-egg-and-chicken",
+      "title": "Spawn Starter Egg and Chicken on Player Join",
+      "description": "When a new player joins the game, they should have a starter egg and a starter chicken in their area. Currently these are missing. The starter chicken should be placed in the world, and a starter egg should be spawned.",
+      "priority": "critical",
+      "status": "completed",
+      "files": [
+        "src/server/Services/ChickenService.lua",
+        "src/server/Services/EggService.lua",
+        "src/server/Services/MapService.lua",
+        "src/shared/PlayerData.lua"
+      ],
+      "tasks": [
+        "Review PlayerData default schema for starter chicken configuration",
+        "Implement starter chicken placement in ChickenService when player section is assigned",
+        "Implement starter egg spawning in EggService when player section is assigned",
+        "Ensure visuals are triggered on the client for both starter entities",
+        "Add integration tests for starter entity spawning"
+      ]
+    },
+    {
+      "id": "fix-money-flash-negative",
+      "title": "Fix Money Counter Flash to Negative",
+      "description": "When a user has exactly $100 and buys an egg from the store, the money counter briefly flashes a negative number (e.g., -1) before showing zero. This is likely a timing issue with the UI update or animation.",
+      "priority": "high",
+      "status": "completed",
+      "files": [
+        "src/client/UI/Components/MainHUD.lua",
+        "src/client/UI/State/PlayerState.lua",
+        "src/client/Controllers/StoreController.lua"
+      ],
+      "tasks": [
+        "Investigate the money update flow when purchasing items",
+        "Check for race conditions between purchase confirmation and UI update",
+        "Ensure money is validated before display (clamp to minimum 0)",
+        "Test with exact purchase amounts to verify fix"
+      ]
+    },
+    {
+      "id": "remove-client-event-relay",
+      "title": "Remove ClientEventRelay and Migrate to Knit Controllers",
+      "description": "ClientEventRelay is a transitional module that should be deprecated. Migrate any remaining functionality to proper Knit controllers and remove the relay.",
+      "priority": "medium",
+      "status": "not-started",
+      "files": [
+        "src/client/ClientEventRelay.lua",
+        "src/client/Main.client.lua",
+        "src/client/KnitClient.lua",
+        "src/client/Controllers/"
+      ],
+      "tasks": [
+        "Audit all event handlers in ClientEventRelay",
+        "Identify which controllers are missing signal connections",
+        "Migrate each event handler to the appropriate Knit controller",
+        "Update Main.client.lua to remove ClientEventRelay configuration and start",
+        "Update any modules that import ClientEventRelay",
+        "Delete ClientEventRelay.lua after migration is complete",
+        "Test all game functionality to ensure no regressions"
+      ]
+    },
+    {
+      "id": "fix-egg-hatching-experience",
+      "title": "Fix Egg Hatching Experience Not Launching",
+      "description": "When a user tries to hatch an egg, the hatching experience/animation doesn't launch. The egg should show a hatching animation and reveal the chicken inside.",
+      "priority": "critical",
+      "status": "completed",
+      "files": [
+        "src/client/UI/Components/InventoryUI.lua",
+        "src/client/EggVisuals.lua",
+        "src/client/Controllers/EggController.lua",
+        "src/server/Services/EggService.lua"
+      ],
+      "tasks": [
+        "Trace the hatch button click from InventoryUI to the server",
+        "Verify EggService.HatchEgg is being called correctly",
+        "Check that EggHatched signal is being fired to the client",
+        "Verify EggController is connected to the EggHatched signal",
+        "Ensure EggVisuals.playHatchAnimation is being called with correct parameters",
+        "Debug any errors in the hatching flow",
+        "Add error handling and logging to identify future issues"
+      ]
+    },
+    {
+      "id": "fix-store-tabs-covered",
+      "title": "Fix Store Tabs Covered by Items",
+      "description": "The tabs in the store UI are being covered by the item cards. The tab bar should have proper z-indexing or layout to remain visible above the scrolling content.",
+      "priority": "high",
+      "status": "not-started",
+      "files": [
+        "src/client/UI/Components/StoreUI.lua"
+      ],
+      "tasks": [
+        "Identify the tab bar and content scroll frame elements",
+        "Adjust ZIndex of tab bar to be above content",
+        "Alternatively, adjust layout so content starts below tabs",
+        "Verify tabs remain clickable after fix",
+        "Test with different screen sizes"
+      ]
+    },
+    {
+      "id": "fix-restock-timer-stuck",
+      "title": "Fix Restock Timer Stuck on 'Restocking...'",
+      "description": "When the store restock counter hits zero, it gets stuck displaying 'Restocking...' instead of resetting and starting a new countdown cycle.",
+      "priority": "high",
+      "status": "not-started",
+      "files": [
+        "src/client/UI/Components/StoreUI.lua",
+        "src/server/Services/StoreService.lua",
+        "src/shared/Store.lua"
+      ],
+      "tasks": [
+        "Review the restock timer update logic in StoreUI",
+        "Check if the server is sending updated restock times after restocking completes",
+        "Verify StoreService properly resets the restock timer after replenishment",
+        "Ensure StockUpdated signal includes new restock time",
+        "Fix timer to fetch new restock time when countdown reaches zero"
+      ]
+    },
+    {
+      "id": "improve-restock-timer-styling",
+      "title": "Improve Restock Timer Font Size and Weight",
+      "description": "The restocking countdown timer's font size and weight could be slightly bigger for better readability.",
+      "priority": "low",
+      "status": "not-started",
+      "files": [
+        "src/client/UI/Components/StoreUI.lua"
+      ],
+      "tasks": [
+        "Locate the restock timer text label",
+        "Increase font size (suggest 16-18px from current size)",
+        "Change to bold font weight using Theme.Typography.PrimaryBold",
+        "Verify readability on different screen sizes"
+      ]
+    },
+    {
+      "id": "fix-store-button-text-centering",
+      "title": "Center Text on Store Buttons",
+      "description": "The text on the buttons in the store is not properly centered. Update text alignment to be centered both horizontally and vertically.",
+      "priority": "medium",
+      "status": "not-started",
+      "files": [
+        "src/client/UI/Components/StoreUI.lua"
+      ],
+      "tasks": [
+        "Identify all buy/action buttons in the store",
+        "Set TextXAlignment to Center for button text labels",
+        "Set TextYAlignment to Center for button text labels",
+        "Verify buttons with icons have proper text positioning",
+        "Test across all store tabs (eggs, supplies, powerups, weapons)"
+      ]
+    },
+    {
+      "id": "fix-tutorial-skip-button",
+      "title": "Fix Tutorial Skip Button Not Progressing",
+      "description": "The skip button in the tutorial carousel doesn't progress or close the tutorial. Clicking skip should either advance to the end or dismiss the tutorial entirely.",
+      "priority": "high",
+      "status": "not-started",
+      "files": [
+        "src/client/UI/Components/Tutorial.lua"
+      ],
+      "tasks": [
+        "Review Tutorial.skip() function implementation",
+        "Verify skip button OnEvent handler is properly connected",
+        "Ensure skip function properly updates tutorial state",
+        "Check if tutorial completion is being saved to player data",
+        "Test skip functionality at different tutorial steps"
+      ]
+    },
+    {
+      "id": "fix-cooldown-timer-display",
+      "title": "Fix Shield Cooldown Timer Display",
+      "description": "The cooldown timer shown when the player joins is missing. There is an empty box with a slightly transparent black background where the timer should be displayed. The timer text or component is not rendering properly.",
+      "priority": "high",
+      "status": "completed",
+      "files": [
+        "src/client/UI/Components/ShieldUI.lua",
+        "src/client/UI/State/PlayerState.lua",
+        "src/client/Main.client.lua"
+      ],
+      "tasks": [
+        "Check ShieldUI timer label rendering logic",
+        "Verify timer text is being set when cooldown is active",
+        "Check if cooldown state is properly initialized on player join",
+        "Ensure formatTime function returns valid string for display",
+        "Debug why timer background shows but text doesn't",
+        "Verify PlayerState.ShieldCooldownEnd is being set on join"
+      ]
+    },
+    {
+      "id": "enable-predator-spawning",
+      "title": "Enable Predator Spawning",
+      "description": "There are no predators spawning in the game. The predator spawning system needs to be enabled or fixed so predators appear and attack player chickens.",
+      "priority": "critical",
+      "status": "completed",
+      "files": [
+        "src/server/Services/PredatorService.lua",
+        "src/server/Services/GameLoopService.lua",
+        "src/shared/PredatorSpawning.lua",
+        "src/shared/PredatorConfig.lua"
+      ],
+      "tasks": [
+        "Verify PredatorService is being started by Knit",
+        "Check if predator spawn loop is running in GameLoopService",
+        "Review spawn conditions (player level requirements, cooldowns)",
+        "Check if PredatorSpawning.spawnPredator is being called",
+        "Verify predator visuals are being created on the client",
+        "Check PredatorSpawned signal is firing to clients",
+        "Debug spawn timing and wave management",
+        "Test predator AI movement and attack behavior"
+      ]
+    }
+  ],
+  "testingNotes": [
+    "Test new player join flow to verify starter egg and chicken appear",
+    "Test purchasing items with exact money amounts to verify no negative flash",
+    "Test egg hatching from inventory to verify animation plays",
+    "Test store UI tab visibility when scrolling through items",
+    "Test store restock timer cycles through multiple restocks",
+    "Verify tutorial can be skipped at any step",
+    "Test shield cooldown timer appears correctly on join",
+    "Verify predators spawn and attack after appropriate time/level conditions",
+    "Test all functionality after ClientEventRelay removal"
+  ],
+  "dependencies": [],
+  "estimatedEffort": "high",
+  "breakingChanges": true,
+  "breakingChangeNotes": [
+    "Removing ClientEventRelay may require updates to any code that depends on it",
+    "Removing legacy DataStore migration removes ability to migrate old player data (not needed for new game)"
+  ]
+}

@@ -3061,3 +3061,59 @@ end)
   - `fix-cooldown-timer-display` - Shield timer display missing
 - The Spring animation parameters (30, 0.8) control speed/damping - don't change unless needed
 - Other money displays in StoreUI use comparison only, not display, so no fix needed there
+
+---
+
+## Bug Fix: Fix Shield Cooldown Timer Display
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+
+### Summary
+Fixed the bug where the shield cooldown timer would not display or update when a player joins the game with an existing cooldown.
+
+### Root Cause
+The ShieldUI timer was only updated when:
+1. Initial data loaded (`PlayerDataController.InitialDataLoaded`)
+2. Data changed (`PlayerDataController.DataChanged`)
+
+There was **no continuous tick loop** to decrement the `remainingCooldown` value every second. Once the initial value was set, it would never countdown because `AreaShield.getStatus()` calculates remaining time based on `os.time()`, but was never called periodically.
+
+The timer labels had `Visible = showLabels` where `showLabels = isActive or isOnCooldown`. When `isOnCooldown = true`, labels would show but display stale values.
+
+### Solution
+Added a periodic shield timer update to the client game loop in `src/client/Main.client.lua`:
+
+1. Added `SHIELD_TIMER_UPDATE_INTERVAL = 1.0` constant
+2. Added `lastShieldTimerUpdateTime = 0` tracking variable  
+3. Added `updateShieldTimerDisplay()` function that:
+   - Gets current player data via `PlayerDataController:GetData()`
+   - Calculates current status via `AreaShield.getStatus(playerData.shieldState, os.time())`
+   - Updates ShieldUI via `ShieldUI.updateStatus(status)`
+4. Added interval check in `RunService.Heartbeat` to call update every second
+
+### Modified Files
+- `src/client/Main.client.lua` - Added shield timer update loop (15+ lines)
+- `plans/bug-fixes-prd.json` - Marked feature as completed
+
+### Timer Update Flow After Fix
+1. Player joins game
+2. `InitialDataLoaded` fires → `ShieldUI.updateStatus()` called with initial values
+3. Every 1 second, game loop calls `updateShieldTimerDisplay()`
+4. `AreaShield.getStatus()` recalculates `remainingCooldown = cooldownEndTime - os.time()`
+5. `ShieldUI.updateStatus()` sets new values to Fusion reactive state
+6. Timer text updates via Fusion's computed value: `formatTime(cooldown)`
+7. When cooldown reaches 0, `isOnCooldown` becomes false, labels hide
+
+### Testing
+- Build verification passed (`make build`)
+- Logic verified: Timer now decrements every second
+- State transitions verified: Active → Cooldown → Ready
+
+### Notes for Next Developer
+- High priority bugs remaining:
+  - `fix-store-tabs-covered` - Store tabs covered by items (ZIndex issue)
+  - `fix-restock-timer-stuck` - Timer stuck on "Restocking..."
+  - `fix-tutorial-skip-button` - Skip button doesn't work
+- Shield timer uses 1-second intervals (same as lock timers) for consistency
+- `AreaShield.getStatus()` handles all time calculations - no manual math needed
+- ShieldUI uses Fusion's reactive state - changes automatically propagate to UI

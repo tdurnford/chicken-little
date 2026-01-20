@@ -255,11 +255,13 @@ end)
 -- Configuration for game loop updates
 local PROXIMITY_CHECK_INTERVAL = 0.1
 local LOCK_TIMER_UPDATE_INTERVAL = 1.0
+local SHIELD_TIMER_UPDATE_INTERVAL = 1.0
 local MONEY_COLLECTION_COOLDOWN = 0.5
 
 -- Tracking variables
 local lastProximityCheckTime = 0
 local lastLockTimerUpdateTime = 0
+local lastShieldTimerUpdateTime = 0
 local isNearChicken = false
 local nearestChickenId: string? = nil
 local nearestChickenType: string? = nil
@@ -919,6 +921,18 @@ local function updateProximityPrompts()
 end
 
 --[[
+	Update shield timer display.
+	Called periodically to decrement the cooldown/duration timer.
+]]
+local function updateShieldTimerDisplay()
+  local playerData = PlayerDataController:GetData()
+  if playerData and playerData.shieldState then
+    local status = AreaShield.getStatus(playerData.shieldState, os.time())
+    ShieldUI.updateStatus(status)
+  end
+end
+
+--[[
 	Client game loop - runs every frame via Heartbeat.
 ]]
 RunService.Heartbeat:Connect(function(deltaTime: number)
@@ -932,6 +946,11 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
   if currentTime - lastLockTimerUpdateTime >= LOCK_TIMER_UPDATE_INTERVAL then
     lastLockTimerUpdateTime = currentTime
     updateLockTimerDisplay()
+  end
+
+  if currentTime - lastShieldTimerUpdateTime >= SHIELD_TIMER_UPDATE_INTERVAL then
+    lastShieldTimerUpdateTime = currentTime
+    updateShieldTimerDisplay()
   end
 end)
 
