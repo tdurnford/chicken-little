@@ -240,13 +240,6 @@ PlayerDataController.DataChanged:Connect(function(data)
     print("[Client] Section visuals built from DataChanged for section", data.sectionIndex)
     SectionVisuals.buildCentralStore()
   end
-
-  -- Update chicken money indicators from placed chickens
-  if data.placedChickens then
-    for _, chicken in ipairs(data.placedChickens) do
-      ChickenVisuals.updateMoney(chicken.id, chicken.accumulatedMoney or 0)
-    end
-  end
 end)
 
 --[[ Client Game Loop ]]
@@ -579,17 +572,17 @@ HatchPreviewUI.onHatch(function(eggId: string, eggType: string)
     end
   end
 
-  local result = EggController:HatchEgg(eggId)
-  if result and result.success then
-    SoundEffects.playEggHatch(result.rarity or "Common")
-    print("[Client] Egg hatched successfully:", result.chickenType, result.rarity)
-    HatchPreviewUI.showResult(result.chickenType, result.rarity)
-  elseif result and result.atLimit then
+  local success, result = EggController:HatchEgg(eggId):await()
+  if success and result and result.success then
+    SoundEffects.playEggHatch(result.chickenRarity or "Common")
+    print("[Client] Egg hatched successfully:", result.chickenType, result.chickenRarity)
+    HatchPreviewUI.showResult(result.chickenType, result.chickenRarity)
+  elseif success and result and result.atLimit then
     SoundEffects.play("uiError")
     warn("[Client] Cannot hatch egg:", result.message)
   else
     SoundEffects.play("uiError")
-    warn("[Client] Hatch failed:", result and result.message or "Unknown error")
+    warn("[Client] Hatch failed:", success and result and result.message or (not success and tostring(result)) or "Unknown error")
   end
 
   placedEggData = nil
@@ -1080,8 +1073,14 @@ ChickenController.ChickenPlaced:Connect(function(data)
   if chicken and position and ChickenVisuals then
     local pos = Vector3.new(position.X or position.x or 0, position.Y or position.y or 0, position.Z or position.z or 0)
     local visualState = ChickenVisuals.create(chicken.id, chicken.chickenType, pos, true)
-    if visualState and visualState.model and ChickenHealthBar then
-      ChickenHealthBar.create(chicken.id, chicken.chickenType, visualState.model)
+    if visualState then
+      -- Initialize with accumulated money from server data
+      if chicken.accumulatedMoney and chicken.accumulatedMoney > 0 then
+        ChickenVisuals.updateMoney(chicken.id, chicken.accumulatedMoney)
+      end
+      if visualState.model and ChickenHealthBar then
+        ChickenHealthBar.create(chicken.id, chicken.chickenType, visualState.model)
+      end
     end
   end
   if SoundEffects then
