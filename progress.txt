@@ -3332,3 +3332,58 @@ Updated both button types to use centered text alignment:
   - `improve-restock-timer-styling` - Increase font size/weight
 - The store buttons use a layout with an emoji icon on the left and price text to the right
 - TextXAlignment/YAlignment control text positioning within a TextLabel's bounds
+
+---
+
+## Bug Fix: Remove ClientEventRelay and Migrate to Knit Controllers
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+
+### Summary
+Removed the ClientEventRelay transitional module and migrated all visual module connections to use Knit controller signals directly in Main.client.lua.
+
+### Root Cause Analysis
+ClientEventRelay was designed to listen to RemoteEvents in a "Remotes" folder, but:
+1. The server uses only Knit signals, not RemoteEvents
+2. No Remotes folder exists in ReplicatedStorage
+3. ClientEventRelay was effectively dead code that never received any events
+4. The visual updates it was supposed to trigger were not happening
+
+### Solution
+1. **Deleted ClientEventRelay.lua** - Removed the entire dead code module
+2. **Connected visual modules to controller signals** - Added proper connections in Main.client.lua for:
+   - ChickenController → ChickenVisuals, ChickenHealthBar, SoundEffects
+   - EggController → EggVisuals, SoundEffects (with ProximityPrompt for world eggs)
+   - TrapController → TrapVisuals, SoundEffects
+   - (PredatorController was already properly connected)
+3. **Removed legacy getFunction helper** - Replaced calls with "not implemented" warnings since those features need server-side implementation
+4. **Updated Main.client.lua header** - Updated architecture comment to reflect new design
+
+### Modified Files
+- `src/client/Main.client.lua` - Added controller signal connections, removed ClientEventRelay imports
+- `src/client/ClientEventRelay.lua` - **DELETED**
+- `plans/bug-fixes-prd.json` - Marked feature as completed
+
+### New Architecture
+```
+Server Knit Service → fires signal → Client Knit Controller → fires GoodSignal → Main.client.lua handler → Visual Module
+```
+
+This is cleaner than the old RemoteEvent-based approach and uses Knit's built-in client-server communication.
+
+### Features Marked as Not Implemented
+The following features used non-existent RemoteFunctions and need server-side implementation:
+- ClaimRandomChicken - needs RandomChickenService
+- ReplenishStoreWithRobux - needs Robux product integration
+- BuyItemWithRobux - needs Robux product integration
+- BuyPowerUp - needs PowerUpService
+
+### Notes for Next Developer
+- Remaining low priority bugs:
+  - `remove-legacy-datastore-migration` - Clean up unused migration code
+  - `improve-restock-timer-styling` - Increase font size/weight
+- All visual updates now go through Knit controller signals
+- World egg proximity prompts are created in Main.client.lua when EggSpawned fires
+- The `worldEggVisuals` table tracks eggs for cleanup on collect/despawn
+
+---

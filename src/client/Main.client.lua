@@ -4,7 +4,7 @@
 	
 	Architecture:
 	- KnitClient loads and starts all controllers (handle state/server communication)
-	- ClientEventRelay handles server RemoteEvents -> visual module updates
+	- Controller signals are connected to visual modules for rendering updates
 	- UI modules handle rendering and user interaction
 ]]
 
@@ -50,9 +50,6 @@ local OfflineEarningsUI = UI.Components.OfflineEarningsUI
 local Tutorial = UI.Components.Tutorial
 local PredatorWarning = UI.Components.PredatorWarning
 
--- Load the event relay for bridging server events to visual modules
-local ClientEventRelay = require(ClientModules:WaitForChild("ClientEventRelay"))
-
 -- Get Knit for accessing controllers
 local Packages = ReplicatedStorage:WaitForChild("Packages")
 local Knit = require(Packages:WaitForChild("Knit"))
@@ -80,25 +77,6 @@ else
   warn("[Client] UI system initialized with some failures")
 end
 
--- Configure and start the event relay (bridges server events to visual modules)
-ClientEventRelay.configure({
-  soundEffects = SoundEffects,
-  chickenVisuals = ChickenVisuals,
-  chickenHealthBar = ChickenHealthBar,
-  predatorVisuals = PredatorVisuals,
-  predatorHealthBar = PredatorHealthBar,
-  predatorWarning = PredatorWarning,
-  eggVisuals = EggVisuals,
-  trapVisuals = TrapVisuals,
-  damageUI = DamageUI,
-  shieldUI = ShieldUI,
-  mainHUD = MainHUD,
-  storeUI = StoreUI,
-  sectionVisuals = SectionVisuals,
-})
-ClientEventRelay.start()
-print("[Client] ClientEventRelay started")
-
 -- Get controllers for state management
 local PlayerDataController = Knit.GetController("PlayerDataController")
 
@@ -120,11 +98,8 @@ end)
 -- Track placed egg for hatching flow
 local placedEggData: { id: string, eggType: string }? = nil
 
--- Helper to get RemoteFunction safely (used for legacy/unimplemented features)
--- TODO: Remove once all features are migrated to Knit services
-local function getFunction(name: string): RemoteFunction?
-  return ClientEventRelay.getFunction(name)
-end
+-- World egg visuals tracking for proximity prompts
+local worldEggVisuals: { [string]: { model: Model, prompt: ProximityPrompt } } = {}
 
 -- Connect to PlayerDataController for reactive UI updates
 PlayerDataController.DataLoaded:Connect(function(data)
@@ -406,20 +381,9 @@ end)
 -- Wire up ChickenVisuals claim prompt to handle collecting random chickens
 -- TODO: Add ClaimRandomChicken to ChickenController when implemented on server
 ChickenVisuals.setOnClaimPromptTriggered(function(chickenId: string)
-  local claimFunc = getFunction("ClaimRandomChicken")
-  if claimFunc then
-    task.spawn(function()
-      local result = claimFunc:InvokeServer()
-      if result and result.success then
-        SoundEffects.play("chickenClaim")
-        ChickenVisuals.destroy(chickenId)
-        print("[Client] Claimed random chicken:", result.chicken and result.chicken.chickenType)
-      else
-        SoundEffects.play("uiError")
-        warn("[Client] Failed to claim random chicken:", result and result.message)
-      end
-    end)
-  end
+  -- Feature not yet implemented - needs server-side RandomChickenService
+  warn("[Client] ClaimRandomChicken feature not implemented yet")
+  SoundEffects.play("uiError")
 end)
 
 print("[Client] ChickenSelling system initialized")
@@ -1080,6 +1044,180 @@ PredatorController.PredatorAlert:Connect(function(alert)
   end
 end)
 
+-- Wire up ChickenController signals to ChickenVisuals
+ChickenController.ChickenPlaced:Connect(function(data)
+  local chicken = data.chicken
+  local position = data.position
+  if chicken and position and ChickenVisuals then
+    local pos = Vector3.new(position.X or position.x or 0, position.Y or position.y or 0, position.Z or position.z or 0)
+    local visualState = ChickenVisuals.create(chicken.id, chicken.chickenType, pos, true)
+    if visualState and visualState.model and ChickenHealthBar then
+      ChickenHealthBar.create(chicken.id, chicken.chickenType, visualState.model)
+    end
+  end
+  if SoundEffects then
+    SoundEffects.play("chickenPlace")
+  end
+end)
+
+ChickenController.ChickenPickedUp:Connect(function(data)
+  local chickenId = data.chickenId
+  if chickenId then
+    if ChickenVisuals then
+      ChickenVisuals.destroy(chickenId)
+    end
+    if ChickenHealthBar then
+      ChickenHealthBar.destroy(chickenId)
+    end
+    if SoundEffects then
+      SoundEffects.play("chickenPickup")
+    end
+  end
+end)
+
+ChickenController.ChickenSold:Connect(function(data)
+  local chickenId = data.chickenId
+  if chickenId then
+    if ChickenVisuals then
+      ChickenVisuals.destroy(chickenId)
+    end
+    if ChickenHealthBar then
+      ChickenHealthBar.destroy(chickenId)
+    end
+  end
+end)
+
+-- Wire up EggController signals to EggVisuals
+EggController.EggHatched:Connect(function(data)
+  local eggId = data.eggId
+  local rarity = data.chickenRarity or data.rarity or "Common"
+  if eggId and EggVisuals then
+    EggVisuals.playHatchAnimation(eggId)
+  end
+  if SoundEffects then
+    SoundEffects.playEggHatch(rarity)
+  end
+end)
+
+EggController.EggSpawned:Connect(function(data)
+  local eggId = data.id
+  local eggType = data.eggType
+  local chickenId = data.chickenId
+  local position = data.position
+
+  -- Play chicken laying animation if we know which chicken laid it
+  if chickenId and ChickenVisuals then
+    ChickenVisuals.playLayingAnimation(chickenId)
+  end
+
+  -- Create egg visual with proximity prompt for collection
+  if eggId and position and EggVisuals then
+    local eggPosition = Vector3.new(position.x, position.y, position.z)
+    local eggVisualState = EggVisuals.create(eggId, eggType, eggPosition)
+
+    if eggVisualState and eggVisualState.model then
+      local primaryPart = eggVisualState.model.PrimaryPart
+      if primaryPart then
+        local prompt = Instance.new("ProximityPrompt")
+        prompt.ObjectText = "Egg"
+        prompt.ActionText = "Collect"
+        prompt.HoldDuration = 0
+        prompt.MaxActivationDistance = 8
+        prompt.RequiresLineOfSight = false
+        prompt.Parent = primaryPart
+
+        prompt.Triggered:Connect(function(playerWhoTriggered: Player)
+          if playerWhoTriggered == localPlayer then
+            local result = EggController:CollectWorldEgg(eggId)
+            if result and result.success then
+              if SoundEffects then
+                SoundEffects.play("eggCollect")
+              end
+            end
+          end
+        end)
+
+        -- Track for cleanup
+        worldEggVisuals[eggId] = {
+          model = eggVisualState.model,
+          prompt = prompt,
+        }
+      end
+    end
+  end
+
+  if SoundEffects then
+    SoundEffects.play("eggPlace")
+  end
+end)
+
+EggController.EggCollected:Connect(function(data)
+  local eggId = data.eggId
+  if eggId then
+    local eggVisual = worldEggVisuals[eggId]
+    if eggVisual then
+      if eggVisual.prompt then
+        eggVisual.prompt:Destroy()
+      end
+      if EggVisuals then
+        EggVisuals.destroy(eggId)
+      end
+      worldEggVisuals[eggId] = nil
+    end
+  end
+end)
+
+EggController.EggDespawned:Connect(function(data)
+  local eggId = data.eggId
+  if eggId then
+    local eggVisual = worldEggVisuals[eggId]
+    if eggVisual then
+      if eggVisual.prompt then
+        eggVisual.prompt:Destroy()
+      end
+      if EggVisuals then
+        EggVisuals.destroy(eggId)
+      end
+      worldEggVisuals[eggId] = nil
+    end
+  end
+end)
+
+-- Wire up TrapController signals to TrapVisuals
+TrapController.TrapPlaced:Connect(function(trapId, trapType, userId, spotIndex)
+  -- Get position from section
+  local playerData = PlayerDataController:GetData()
+  if playerData and playerData.sectionIndex and TrapVisuals then
+    local sectionCenter = MapGeneration.getSectionPosition(playerData.sectionIndex)
+    if sectionCenter then
+      local spotPos = PlayerSection.getTrapSpotPosition(spotIndex, sectionCenter)
+      if spotPos then
+        local position = Vector3.new(spotPos.x, spotPos.y, spotPos.z)
+        TrapVisuals.create(trapId, trapType, position, spotIndex)
+      end
+    end
+  end
+  if SoundEffects then
+    SoundEffects.play("trapPlace")
+  end
+end)
+
+TrapController.TrapPickedUp:Connect(function(trapId, userId)
+  if TrapVisuals then
+    TrapVisuals.destroy(trapId)
+  end
+end)
+
+TrapController.TrapCaught:Connect(function(trapId, predatorType, catchProbability)
+  if TrapVisuals then
+    TrapVisuals.updateStatus(trapId, false, true)
+    TrapVisuals.playCaughtAnimation(trapId)
+  end
+  if SoundEffects then
+    SoundEffects.play("trapCatch")
+  end
+end)
+
 -- Wire up store purchase callback
 StoreUI.onPurchase(function(eggType: string, quantity: number)
   local result = StoreController:BuyEgg(eggType, quantity)
@@ -1097,66 +1235,25 @@ end)
 -- Wire up store Robux replenish callback
 -- TODO: Add ReplenishStoreWithRobux to StoreController/StoreService when implemented
 StoreUI.onReplenish(function()
-  local replenishFunc = getFunction("ReplenishStoreWithRobux")
-  if not replenishFunc then
-    warn("[Client] ReplenishStoreWithRobux RemoteFunction not found")
-    return
-  end
-
-  local result = replenishFunc:InvokeServer()
-  if result then
-    if result.success then
-      SoundEffects.play("purchase")
-      print("[Client] Store replenish initiated:", result.message)
-    else
-      SoundEffects.play("uiError")
-      warn("[Client] Store replenish failed:", result.message)
-    end
-  end
+  -- Feature not yet implemented - needs Robux product integration
+  warn("[Client] ReplenishStoreWithRobux feature not implemented yet")
+  SoundEffects.play("uiError")
 end)
 
 -- Wire up store Robux item purchase callback
 -- TODO: Add BuyItemWithRobux to StoreController/StoreService when implemented
 StoreUI.onRobuxPurchase(function(itemType: string, itemId: string)
-  local buyItemFunc = getFunction("BuyItemWithRobux")
-  if not buyItemFunc then
-    warn("[Client] BuyItemWithRobux RemoteFunction not found")
-    return
-  end
-
-  local result = buyItemFunc:InvokeServer(itemType, itemId)
-  if result then
-    if result.success then
-      SoundEffects.play("purchase")
-      print("[Client] Robux item purchase initiated:", result.message)
-      StoreUI.refreshInventory()
-    else
-      SoundEffects.play("uiError")
-      warn("[Client] Robux item purchase failed:", result.message)
-    end
-  end
+  -- Feature not yet implemented - needs Robux product integration
+  warn("[Client] BuyItemWithRobux feature not implemented yet")
+  SoundEffects.play("uiError")
 end)
 
 -- Wire up store power-up purchase callback
 -- TODO: Add BuyPowerUp to StoreController/StoreService when implemented
 StoreUI.onPowerUpPurchase(function(powerUpId: string)
-  local buyPowerUpFunc = getFunction("BuyPowerUp")
-  if not buyPowerUpFunc then
-    warn("[Client] BuyPowerUp RemoteFunction not found")
-    return
-  end
-
-  local result = buyPowerUpFunc:InvokeServer(powerUpId)
-  if result then
-    if result.success then
-      SoundEffects.play("purchase")
-      print("[Client] Power-up purchase initiated:", result.message)
-      StoreUI.refreshInventory()
-    else
-      SoundEffects.play("uiError")
-      warn("[Client] Power-up purchase failed:", result.message)
-    end
-  end
+  -- Feature not yet implemented - needs power-up service
+  warn("[Client] BuyPowerUp feature not implemented yet")
+  SoundEffects.play("uiError")
 end)
 
 -- Wire up store trap/supply purchase callback

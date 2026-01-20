@@ -65,7 +65,7 @@
       "title": "Remove ClientEventRelay and Migrate to Knit Controllers",
       "description": "ClientEventRelay is a transitional module that should be deprecated. Migrate any remaining functionality to proper Knit controllers and remove the relay.",
       "priority": "medium",
-      "status": "not-started",
+      "status": "completed",
       "files": [
         "src/client/ClientEventRelay.lua",
         "src/client/Main.client.lua",
