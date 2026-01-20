@@ -689,6 +689,12 @@ local function onWeaponActivated(tool: Tool)
   SoundEffects.playBatSwing("miss")
   task.spawn(playSwingAnimation, tool)
 
+  -- CombatController is assigned later in the script, so check if it's available
+  if not CombatController then
+    warn("[Client] CombatController not yet initialized, skipping attack")
+    return
+  end
+
   local predatorId, _ = findNearbyPredator()
 
   local result

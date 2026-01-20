@@ -3906,3 +3906,51 @@ pendingSectionAssignments[player.UserId] = nil
   - `fix-predator-warning-background-stuck` (HIGH) - UI cleanup issue
 - This fix establishes a proper event ordering pattern: PlayerAdded → ProfileManager loads data → PlayerDataService.PlayerLoaded fires → MapService.PlayerSectionAssigned fires → ChickenService/EggService can safely access data
 - The `pendingSectionAssignments` table pattern can be used elsewhere if similar race conditions are found
+
+
+---
+
+## Bug Fix: Weapon Attack Nil Error (HIGH)
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-3.json
+
+### Summary
+Fixed the 'attempt to index nil with Attack' error in Main.client.lua that was occurring when players tried to attack with weapons.
+
+### Root Cause
+Race condition in Main.client.lua script initialization order:
+- `setupBackpackWatcher()` and `setupCharacterToolWatcher()` are called at lines 802-803
+- These connect `onWeaponActivated` to tool activation events
+- But `CombatController = Knit.GetController("CombatController")` happens later at line 986
+- If a player activates a weapon before line 986 executes, `CombatController` is nil
+
+### Fix Applied (Main.client.lua)
+
+**Added nil check in onWeaponActivated function:**
+```lua
+local function onWeaponActivated(tool: Tool)
+  SoundEffects.playBatSwing("miss")
+  task.spawn(playSwingAnimation, tool)
+
+  -- CombatController is assigned later in the script, so check if it's available
+  if not CombatController then
+    warn("[Client] CombatController not yet initialized, skipping attack")
+    return
+  end
+  -- ... rest of function
+end
+```
+
+### Modified Files
+- `src/client/Main.client.lua` - Added nil check for CombatController in onWeaponActivated
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- PRD-3 remaining bugs:
+  - `fix-egg-hatch-no-section-warning` (HIGH) - Section assignment issue in egg hatching  
+  - `fix-predator-warning-background-stuck` (HIGH) - UI cleanup issue
+- This is a defensive fix - ideally the script initialization order could be restructured to avoid the race condition entirely
+- The warning message will help debug if players report attacks not working on first try
