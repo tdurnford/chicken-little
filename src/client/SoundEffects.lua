@@ -81,6 +81,7 @@ local SOUND_IDS = {
   menuClose = "rbxassetid://5853855836", -- Menu close
   tradeRequest = "rbxassetid://4590657391", -- Trade notification
   tradeComplete = "rbxassetid://4612373808", -- Trade successful
+  purchase = "rbxassetid://6895079853", -- Purchase success (cash register)
   error = "rbxassetid://4590628823", -- Error beep
   xpGain = "rbxassetid://6895079853", -- XP gain ding
   levelUp = "rbxassetid://5628226610", -- Level up fanfare
@@ -309,6 +310,12 @@ local SOUND_CONFIGS: { [string]: SoundConfig } = {
     name = "Trade Complete",
     category = "ui",
     volume = 0.9,
+  },
+  purchase = {
+    id = SOUND_IDS.purchase,
+    name = "Purchase",
+    category = "ui",
+    volume = 0.7,
   },
   error = {
     id = SOUND_IDS.error,

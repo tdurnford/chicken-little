@@ -4332,3 +4332,54 @@ end
 - MapService already had full protection implementation (IsPlayerProtected, GetProtectionRemaining)
 - Client UI receives protection status via ProtectionStatusChanged signal
 - Protection duration is 120 seconds (configurable in MapService.NEW_PLAYER_PROTECTION_DURATION)
+
+---
+
+## Bug Fix: Fix 'Unknown sound: purchase' Warning in Console
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-4.json
+
+### Summary
+Fixed the 'Unknown sound: purchase' warning that appeared in the console when making purchases. The SoundEffects module was missing a 'purchase' entry in both SOUND_IDS and SOUND_CONFIGS tables.
+
+### Root Cause
+`Main.client.lua` calls `SoundEffects.play("purchase")` in 3 places (lines 1316, 1359, 1377) when purchases are made, but the "purchase" sound key was never defined in `SoundEffects.lua`. This caused the warning message to appear every time a purchase was made.
+
+### Fix Applied
+
+**1. Added 'purchase' to SOUND_IDS table:**
+```lua
+purchase = "rbxassetid://6895079853", -- Purchase success (cash register)
+```
+
+**2. Added 'purchase' config to SOUND_CONFIGS table:**
+```lua
+purchase = {
+  id = SOUND_IDS.purchase,
+  name = "Purchase",
+  category = "ui",
+  volume = 0.7,
+},
+```
+
+### Sound Selection Rationale
+- Used the same asset ID as `buttonClick` and `chickenSell` (cash register sound)
+- Volume set to 0.7 for clear but not overwhelming feedback
+- Category set to "ui" to group with other interface sounds
+
+### Modified Files
+- `src/client/SoundEffects.lua` - Added purchase sound ID and config
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- PRD-4 remaining bugs (prioritized):
+  - `fix-store-item-count-not-updating` - Store stock not updating after purchase
+  - `fix-store-buttons-disabled-when-sold-out` - Buy buttons still clickable when sold out
+  - `fix-tutorial-skip-animation` - Tutorial skip animation incorrect
+  - `fix-tutorial-not-progressing-on-egg-buy` - Tutorial doesn't advance on egg purchase
+  - `add-chicken-money-collection-cap` - Money cap feature
+- SoundEffects uses a config-driven approach: always add both SOUND_IDS entry and SOUND_CONFIGS entry
+- The `play()` function warns when a sound name doesn't exist in SOUND_CONFIGS
