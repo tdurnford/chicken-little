@@ -4254,3 +4254,81 @@ self:ApplyPredatorDamageToPlayer(userId, deltaTime)
 - Shield protection now properly prevents predator damage
 - Player health regenerates at 10 HP/second after 3 seconds out of combat
 - Knockback triggers at 0 health (1.5 second stun, restores to 25% HP after)
+
+---
+
+## Bug Fix: New Player Protection Not Preventing Predator Spawns
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-4.json
+
+### Summary
+Fixed new player protection not preventing predator spawns. New players have a 2-minute protection period during which predators should not spawn or attack. MapService had the protection logic implemented (`IsPlayerProtected()`, `GetProtectionRemaining()`) but PredatorService never called it.
+
+### Root Cause
+The `PredatorService:ShouldSpawn()` function checked various spawning conditions (spawn state, time multipliers) but **never checked if the player was protected**. Additionally, `ExecutePredatorAttacks()` and `ApplyPredatorDamageToPlayer()` could still harm protected players if predators had somehow spawned.
+
+### Fix Applied
+
+**1. Added protection check in ShouldSpawn():**
+```lua
+function PredatorService:ShouldSpawn(userId: number): boolean
+  -- Check new player protection first - protected players can't have predators spawn
+  if MapService:IsPlayerProtected(userId) then
+    return false
+  end
+  -- ... rest of spawning logic
+end
+```
+
+**2. Added fallback protection check in ExecutePredatorAttacks():**
+```lua
+function PredatorService:ExecutePredatorAttacks(userId: number, currentTime: number)
+  -- ... early returns ...
+  
+  -- Check new player protection - protected players' chickens don't get attacked
+  if MapService:IsPlayerProtected(userId) then
+    return
+  end
+  -- ... rest of attack logic
+end
+```
+
+**3. Added fallback protection check in ApplyPredatorDamageToPlayer():**
+```lua
+function PredatorService:ApplyPredatorDamageToPlayer(userId: number, deltaTime: number)
+  -- ... early returns ...
+  
+  -- Check new player protection - protected players don't take predator damage
+  if MapService:IsPlayerProtected(userId) then
+    return
+  end
+  -- ... rest of damage logic
+end
+```
+
+### Protection Flow (Now Working)
+1. Player joins → `MapService` tracks join time in `playerJoinTimes[userId]`
+2. Client receives `ProtectionStatusChanged` signal with 120 second duration
+3. `PredatorService:Update()` calls `ShouldSpawn()` → returns `false` if protected
+4. `ExecutePredatorAttacks()` → skips attack if protected (fallback)
+5. `ApplyPredatorDamageToPlayer()` → skips damage if protected (fallback)
+6. After 120 seconds, protection expires, predators can spawn normally
+
+### Modified Files
+- `src/server/Services/PredatorService.lua` - Added 3 protection checks
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- PRD-4 remaining bugs (prioritized):
+  - `fix-store-item-count-not-updating` - Store stock not updating after purchase
+  - `fix-store-buttons-disabled-when-sold-out` - Buy buttons still clickable when sold out
+  - `fix-tutorial-skip-animation` - Tutorial skip animation incorrect
+  - `fix-tutorial-not-progressing-on-egg-buy` - Tutorial doesn't advance on egg purchase
+  - `fix-unknown-sound-purchase` - Missing 'purchase' sound
+  - `add-chicken-money-collection-cap` - Money cap feature
+- MapService already had full protection implementation (IsPlayerProtected, GetProtectionRemaining)
+- Client UI receives protection status via ProtectionStatusChanged signal
+- Protection duration is 120 seconds (configurable in MapService.NEW_PLAYER_PROTECTION_DURATION)

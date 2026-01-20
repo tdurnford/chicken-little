@@ -471,6 +471,11 @@ end
 	@return boolean
 ]]
 function PredatorService:ShouldSpawn(userId: number): boolean
+  -- Check new player protection first - protected players can't have predators spawn
+  if MapService:IsPlayerProtected(userId) then
+    return false
+  end
+
   local state = playerPredatorStates[userId]
   if not state then
     return false
@@ -809,6 +814,11 @@ function PredatorService:ExecutePredatorAttacks(userId: number, currentTime: num
     return
   end
 
+  -- Check new player protection - protected players' chickens don't get attacked
+  if MapService:IsPlayerProtected(userId) then
+    return
+  end
+
   -- Get player data for attack execution
   local playerData = PlayerDataService and PlayerDataService:GetData(userId)
   if not playerData then
@@ -903,6 +913,11 @@ function PredatorService:ApplyPredatorDamageToPlayer(userId: number, deltaTime: 
 
   local player = Players:GetPlayerByUserId(userId)
   if not player then
+    return
+  end
+
+  -- Check new player protection - protected players don't take predator damage
+  if MapService:IsPlayerProtected(userId) then
     return
   end
 
