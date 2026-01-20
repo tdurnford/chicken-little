@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Packages = ReplicatedStorage:WaitForChild("Packages")
 local Knit = require(Packages:WaitForChild("Knit"))
 local GoodSignal = require(Packages:WaitForChild("GoodSignal"))
+local Promise = require(Packages:WaitForChild("Promise"))
 
 -- Create the controller
 local ChickenController = Knit.CreateController({
@@ -77,9 +78,13 @@ end
 ]]
 function ChickenController:PlaceChicken(chickenId: string)
   if not chickenService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return chickenService:PlaceChicken(chickenId)
+    :catch(function(err)
+      warn("[ChickenController] PlaceChicken failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[
@@ -90,9 +95,13 @@ end
 ]]
 function ChickenController:PickupChicken(chickenId: string)
   if not chickenService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return chickenService:PickupChicken(chickenId)
+    :catch(function(err)
+      warn("[ChickenController] PickupChicken failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[
@@ -104,9 +113,13 @@ end
 ]]
 function ChickenController:MoveChicken(chickenId: string, newSpotIndex: number)
   if not chickenService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return chickenService:MoveChicken(chickenId, newSpotIndex)
+    :catch(function(err)
+      warn("[ChickenController] MoveChicken failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[
@@ -117,9 +130,13 @@ end
 ]]
 function ChickenController:SellChicken(chickenId: string)
   if not chickenService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return chickenService:SellChicken(chickenId)
+    :catch(function(err)
+      warn("[ChickenController] SellChicken failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[
@@ -130,9 +147,13 @@ end
 ]]
 function ChickenController:CollectMoney(chickenId: string?)
   if not chickenService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return chickenService:CollectMoney(chickenId)
+    :catch(function(err)
+      warn("[ChickenController] CollectMoney failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 return ChickenController

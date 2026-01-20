@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Packages = ReplicatedStorage:WaitForChild("Packages")
 local Knit = require(Packages:WaitForChild("Knit"))
 local GoodSignal = require(Packages:WaitForChild("GoodSignal"))
+local Promise = require(Packages:WaitForChild("Promise"))
 
 -- Type for trade item
 export type TradeItem = {
@@ -115,37 +116,49 @@ end
 --[[
 	Get the current trade session from server.
 	
-	@return TradeSession?
+	@return Promise<TradeSession?>
 ]]
 function TradeController:GetCurrentTrade()
   if not tradeService then
-    return nil
+    return Promise.resolve(nil)
   end
   return tradeService:GetCurrentTrade()
+    :catch(function(err)
+      warn("[TradeController] GetCurrentTrade failed:", tostring(err))
+      return nil
+    end)
 end
 
 --[[
 	Check for pending trade request.
 	
-	@return { hasPending: boolean, fromPlayerId: number?, fromPlayerName: string? }
+	@return Promise<{ hasPending: boolean, fromPlayerId: number?, fromPlayerName: string? }>
 ]]
 function TradeController:GetPendingRequest()
   if not tradeService then
-    return { hasPending = false }
+    return Promise.resolve({ hasPending = false })
   end
   return tradeService:GetPendingRequest()
+    :catch(function(err)
+      warn("[TradeController] GetPendingRequest failed:", tostring(err))
+      return { hasPending = false }
+    end)
 end
 
 --[[
 	Get trade partner info for current trade.
 	
-	@return { partnerId: number?, partnerName: string? }?
+	@return Promise<{ partnerId: number?, partnerName: string? }?>
 ]]
 function TradeController:GetTradePartnerInfo()
   if not tradeService then
-    return nil
+    return Promise.resolve(nil)
   end
   return tradeService:GetTradePartnerInfo()
+    :catch(function(err)
+      warn("[TradeController] GetTradePartnerInfo failed:", tostring(err))
+      return nil
+    end)
 end
 
 -- ============================================================================
@@ -156,39 +169,51 @@ end
 	Request a trade with another player.
 	
 	@param targetPlayerId number - The target player's user ID
-	@return { success: boolean, message: string }
+	@return Promise<{ success: boolean, message: string }>
 ]]
 function TradeController:RequestTrade(targetPlayerId: number)
   if not tradeService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return tradeService:RequestTrade(targetPlayerId)
+    :catch(function(err)
+      warn("[TradeController] RequestTrade failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[
 	Accept an incoming trade request.
 	
 	@param fromPlayerId number - The player who sent the request
-	@return { success: boolean, message: string, tradeId: string? }
+	@return Promise<{ success: boolean, message: string, tradeId: string? }>
 ]]
 function TradeController:AcceptTrade(fromPlayerId: number)
   if not tradeService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return tradeService:AcceptTrade(fromPlayerId)
+    :catch(function(err)
+      warn("[TradeController] AcceptTrade failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[
 	Decline an incoming trade request.
 	
 	@param fromPlayerId number - The player who sent the request
-	@return { success: boolean, message: string }
+	@return Promise<{ success: boolean, message: string }>
 ]]
 function TradeController:DeclineTrade(fromPlayerId: number)
   if not tradeService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return tradeService:DeclineTrade(fromPlayerId)
+    :catch(function(err)
+      warn("[TradeController] DeclineTrade failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 -- ============================================================================
@@ -199,39 +224,51 @@ end
 	Add an item to your trade offer.
 	
 	@param item TradeItem - The item to add
-	@return { success: boolean, message: string }
+	@return Promise<{ success: boolean, message: string }>
 ]]
 function TradeController:AddItemToOffer(item: TradeItem)
   if not tradeService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return tradeService:AddItemToOffer(item)
+    :catch(function(err)
+      warn("[TradeController] AddItemToOffer failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[
 	Remove an item from your trade offer.
 	
 	@param itemId string - The item ID to remove
-	@return { success: boolean, message: string }
+	@return Promise<{ success: boolean, message: string }>
 ]]
 function TradeController:RemoveItemFromOffer(itemId: string)
   if not tradeService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return tradeService:RemoveItemFromOffer(itemId)
+    :catch(function(err)
+      warn("[TradeController] RemoveItemFromOffer failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[
 	Set your confirmation status.
 	
 	@param confirmed boolean - Whether to confirm or unconfirm
-	@return { success: boolean, message: string }
+	@return Promise<{ success: boolean, message: string }>
 ]]
 function TradeController:SetConfirmation(confirmed: boolean)
   if not tradeService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return tradeService:SetConfirmation(confirmed)
+    :catch(function(err)
+      warn("[TradeController] SetConfirmation failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[
@@ -255,13 +292,17 @@ end
 --[[
 	Cancel the current trade.
 	
-	@return { success: boolean, message: string }
+	@return Promise<{ success: boolean, message: string }>
 ]]
 function TradeController:CancelTrade()
   if not tradeService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return tradeService:CancelTrade()
+    :catch(function(err)
+      warn("[TradeController] CancelTrade failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 return TradeController

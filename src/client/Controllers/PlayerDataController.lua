@@ -111,23 +111,26 @@ function PlayerDataController:KnitStart()
   end)
 
   -- Request initial data from server
-  task.spawn(function()
-    local data = playerDataService:GetData()
-    if data and not isDataLoaded then
-      cachedData = data
-      isDataLoaded = true
-      self.DataLoaded:Fire(data)
-      self.DataChanged:Fire(data)
-      self.MoneyChanged:Fire(data.money)
-      self.InventoryChanged:Fire(data.inventory)
+  playerDataService:GetData()
+    :andThen(function(data)
+      if data and not isDataLoaded then
+        cachedData = data
+        isDataLoaded = true
+        self.DataLoaded:Fire(data)
+        self.DataChanged:Fire(data)
+        self.MoneyChanged:Fire(data.money)
+        self.InventoryChanged:Fire(data.inventory)
 
-      local level = PlayerData.getLevel(data)
-      local xp = PlayerData.getXP(data)
-      self.LevelChanged:Fire(level, xp)
+        local level = PlayerData.getLevel(data)
+        local xp = PlayerData.getXP(data)
+        self.LevelChanged:Fire(level, xp)
 
-      print("[PlayerDataController] Initial data loaded from request")
-    end
-  end)
+        print("[PlayerDataController] Initial data loaded from request")
+      end
+    end)
+    :catch(function(err)
+      warn("[PlayerDataController] Failed to load initial data:", err)
+    end)
 
   print("[PlayerDataController] Started")
 end
@@ -308,13 +311,20 @@ end
 	Marks the tutorial as completed on the server.
 	Called when player completes or skips the tutorial.
 	
-	@return boolean - Whether the update succeeded
+	@return Promise<boolean> - Promise resolving to whether the update succeeded
 ]]
-function PlayerDataController:CompleteTutorial(): boolean
+function PlayerDataController:CompleteTutorial()
   if cachedData then
     cachedData.tutorialComplete = true
   end
   return playerDataService:CompleteTutorial()
+    :andThen(function(success)
+      return success
+    end)
+    :catch(function(err)
+      warn("[PlayerDataController] CompleteTutorial failed:", err)
+      return false
+    end)
 end
 
 return PlayerDataController

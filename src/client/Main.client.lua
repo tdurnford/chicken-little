@@ -167,11 +167,17 @@ PlayerDataController.DataLoaded:Connect(function(data)
     -- Set up callbacks to mark tutorial as complete
     Tutorial.onComplete(function()
       PlayerDataController:CompleteTutorial()
+        :catch(function(err)
+          warn("[Client] Failed to complete tutorial:", tostring(err))
+        end)
       print("[Client] Tutorial completed")
     end)
 
     Tutorial.onSkip(function()
       PlayerDataController:CompleteTutorial()
+        :catch(function(err)
+          warn("[Client] Failed to complete tutorial:", tostring(err))
+        end)
       print("[Client] Tutorial skipped")
     end)
 
@@ -460,14 +466,20 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
       InventoryUI.clearSelection()
       print("[Client] Egg placed, showing hatch preview")
     elseif actionType == "sell" then
-      local result = EggController:SellEgg(selectedItem.itemId)
-      if result and result.success then
-        SoundEffects.playMoneyCollect(result.sellPrice or 0)
-        InventoryUI.clearSelection()
-      else
-        SoundEffects.play("uiError")
-        warn("[Client] Egg sell failed:", result and result.error or "Unknown error")
-      end
+      EggController:SellEgg(selectedItem.itemId)
+        :andThen(function(result)
+          if result and result.success then
+            SoundEffects.playMoneyCollect(result.sellPrice or 0)
+            InventoryUI.clearSelection()
+          else
+            SoundEffects.play("uiError")
+            warn("[Client] Egg sell failed:", result and result.message or "Unknown error")
+          end
+        end)
+        :catch(function(err)
+          SoundEffects.play("uiError")
+          warn("[Client] Egg sell failed:", tostring(err))
+        end)
     end
   elseif selectedItem.itemType == "chickens" then
     if actionType == "place" then
@@ -477,17 +489,23 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
         return
       end
 
-      local result = ChickenController:PlaceChicken(selectedItem.itemId)
-      if result and result.success then
-        SoundEffects.play("chickenPlace")
-        InventoryUI.clearSelection()
-      elseif result and result.atLimit then
-        SoundEffects.play("uiError")
-        warn("[Client] Cannot place chicken:", result.message)
-      else
-        SoundEffects.play("uiError")
-        warn("[Client] Place failed:", result and result.message or "Unknown error")
-      end
+      ChickenController:PlaceChicken(selectedItem.itemId)
+        :andThen(function(result)
+          if result and result.success then
+            SoundEffects.play("chickenPlace")
+            InventoryUI.clearSelection()
+          elseif result and result.atLimit then
+            SoundEffects.play("uiError")
+            warn("[Client] Cannot place chicken:", result.message)
+          else
+            SoundEffects.play("uiError")
+            warn("[Client] Place failed:", result and result.message or "Unknown error")
+          end
+        end)
+        :catch(function(err)
+          SoundEffects.play("uiError")
+          warn("[Client] Place failed:", tostring(err))
+        end)
     elseif actionType == "sell" then
       local success, result = ChickenController:SellChicken(selectedItem.itemId):await()
       if success and result and result.success then
@@ -522,15 +540,21 @@ InventoryUI.onAction(function(actionType: string, selectedItem)
         if rootPart then
           local spotIndex = findNearbyAvailableTrapSpot(rootPart.Position)
           if spotIndex then
-            local result = TrapController:PlaceTrapFromInventory(selectedItem.itemId, spotIndex)
-            if result and result.success then
-              SoundEffects.play("trapPlace")
-              InventoryUI.clearSelection()
-              print("[Client] Trap placed at spot:", spotIndex)
-            else
-              SoundEffects.play("uiError")
-              warn("[Client] Trap place failed:", result and result.message or "Unknown error")
-            end
+            TrapController:PlaceTrapFromInventory(selectedItem.itemId, spotIndex)
+              :andThen(function(result)
+                if result and result.success then
+                  SoundEffects.play("trapPlace")
+                  InventoryUI.clearSelection()
+                  print("[Client] Trap placed at spot:", spotIndex)
+                else
+                  SoundEffects.play("uiError")
+                  warn("[Client] Trap place failed:", result and result.message or "Unknown error")
+                end
+              end)
+              :catch(function(err)
+                SoundEffects.play("uiError")
+                warn("[Client] Trap place failed:", tostring(err))
+              end)
           else
             SoundEffects.play("uiError")
             warn("[Client] All trap spots are occupied (max 8 traps)")
@@ -720,29 +744,38 @@ local function onWeaponActivated(tool: Tool)
 
   local predatorId, _ = findNearbyPredator()
 
-  local result
   if predatorId then
-    result = CombatController:Attack("predator", predatorId)
-    if result and result.success then
-      if result.remainingHealth ~= nil then
-        PredatorHealthBar.updateHealth(predatorId, result.remainingHealth)
-      end
-      if result.damage and result.damage > 0 then
-        PredatorHealthBar.showDamageNumber(predatorId, result.damage)
-      end
-      if result.defeated then
-        SoundEffects.playBatSwing("predator")
-        print("[Client] Predator defeated! Reward:", result.rewardMoney)
-      else
-        SoundEffects.playBatSwing("hit")
-        print("[Client] Hit predator:", predatorId, "Damage:", result.damage)
-      end
-    end
+    CombatController:Attack("predator", predatorId)
+      :andThen(function(result)
+        if result and result.success then
+          if result.remainingHealth ~= nil then
+            PredatorHealthBar.updateHealth(predatorId, result.remainingHealth)
+          end
+          if result.damage and result.damage > 0 then
+            PredatorHealthBar.showDamageNumber(predatorId, result.damage)
+          end
+          if result.defeated then
+            SoundEffects.playBatSwing("predator")
+            print("[Client] Predator defeated! Reward:", result.rewardMoney)
+          else
+            SoundEffects.playBatSwing("hit")
+            print("[Client] Hit predator:", predatorId, "Damage:", result.damage)
+          end
+        end
+      end)
+      :catch(function(err)
+        warn("[Client] Attack failed:", tostring(err))
+      end)
   else
-    result = CombatController:Attack(nil, nil)
-    if result and result.success then
-      SoundEffects.playBatSwing("miss")
-    end
+    CombatController:Attack(nil, nil)
+      :andThen(function(result)
+        if result and result.success then
+          SoundEffects.playBatSwing("miss")
+        end
+      end)
+      :catch(function(err)
+        warn("[Client] Attack failed:", tostring(err))
+      end)
   end
 end
 
@@ -1156,12 +1189,17 @@ EggController.EggSpawned:Connect(function(data)
 
         prompt.Triggered:Connect(function(playerWhoTriggered: Player)
           if playerWhoTriggered == localPlayer then
-            local result = EggController:CollectWorldEgg(eggId)
-            if result and result.success then
-              if SoundEffects then
-                SoundEffects.play("eggCollect")
-              end
-            end
+            EggController:CollectWorldEgg(eggId)
+              :andThen(function(result)
+                if result and result.success then
+                  if SoundEffects then
+                    SoundEffects.play("eggCollect")
+                  end
+                end
+              end)
+              :catch(function(err)
+                warn("[Client] CollectWorldEgg failed:", tostring(err))
+              end)
           end
         end)
 
@@ -1249,16 +1287,20 @@ end)
 
 -- Wire up store purchase callback
 StoreUI.onPurchase(function(eggType: string, quantity: number)
-  local result = StoreController:BuyEgg(eggType, quantity)
-  if result then
-    if result.success then
-      SoundEffects.play("purchase")
-      print("[Client] Purchased", quantity, "x", eggType, ":", result.message)
-    else
+  StoreController:BuyEgg(eggType, quantity)
+    :andThen(function(result)
+      if result and result.success then
+        SoundEffects.play("purchase")
+        print("[Client] Purchased", quantity, "x", eggType, ":", result.message)
+      else
+        SoundEffects.play("uiError")
+        warn("[Client] Purchase failed:", result and result.message or "Unknown error")
+      end
+    end)
+    :catch(function(err)
       SoundEffects.play("uiError")
-      warn("[Client] Purchase failed:", result.message)
-    end
-  end
+      warn("[Client] Purchase failed:", tostring(err))
+    end)
 end)
 
 -- Wire up store Robux replenish callback
@@ -1288,44 +1330,56 @@ end)
 -- Wire up store trap/supply purchase callback
 StoreUI.onTrapPurchase(function(trapType: string)
   print("[Client] onTrapPurchase callback invoked with trapType:", trapType)
-  local result = StoreController:BuyTrap(trapType)
-  if result then
-    if result.success then
-      SoundEffects.play("purchase")
-      print("[Client] Trap purchased:", result.message)
-      StoreUI.refreshInventory()
-    else
+  StoreController:BuyTrap(trapType)
+    :andThen(function(result)
+      if result and result.success then
+        SoundEffects.play("purchase")
+        print("[Client] Trap purchased:", result.message)
+        StoreUI.refreshInventory()
+      else
+        SoundEffects.play("uiError")
+        warn("[Client] Trap purchase failed:", result and result.message or "Unknown error")
+      end
+    end)
+    :catch(function(err)
       SoundEffects.play("uiError")
-      warn("[Client] Trap purchase failed:", result.message)
-    end
-  end
+      warn("[Client] Trap purchase failed:", tostring(err))
+    end)
 end)
 
 StoreUI.onWeaponPurchase(function(weaponType: string)
-  local result = StoreController:BuyWeapon(weaponType)
-  if result then
-    if result.success then
-      SoundEffects.play("purchase")
-      print("[Client] Weapon purchased:", result.message)
-      StoreUI.refreshInventory()
-    else
+  StoreController:BuyWeapon(weaponType)
+    :andThen(function(result)
+      if result and result.success then
+        SoundEffects.play("purchase")
+        print("[Client] Weapon purchased:", result.message)
+        StoreUI.refreshInventory()
+      else
+        SoundEffects.play("uiError")
+        warn("[Client] Weapon purchase failed:", result and result.message or "Unknown error")
+      end
+    end)
+    :catch(function(err)
       SoundEffects.play("uiError")
-      warn("[Client] Weapon purchase failed:", result.message)
-    end
-  end
+      warn("[Client] Weapon purchase failed:", tostring(err))
+    end)
 end)
 
 -- Wire ShieldUI activation callback to server
 ShieldUI.onActivate(function()
-  local result = CombatController:ActivateShield()
-  if result then
-    if result.success then
-      print("[Client] Shield activation successful:", result.message)
-    else
-      ShieldUI.showActivationFeedback(false, result.message)
-      print("[Client] Shield activation failed:", result.message)
-    end
-  end
+  CombatController:ActivateShield()
+    :andThen(function(result)
+      if result and result.success then
+        print("[Client] Shield activation successful:", result.message)
+      else
+        ShieldUI.showActivationFeedback(false, result and result.message or "Unknown error")
+        print("[Client] Shield activation failed:", result and result.message or "Unknown error")
+      end
+    end)
+    :catch(function(err)
+      ShieldUI.showActivationFeedback(false, tostring(err))
+      warn("[Client] Shield activation failed:", tostring(err))
+    end)
 end)
 
 --[[

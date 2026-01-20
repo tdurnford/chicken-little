@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Packages = ReplicatedStorage:WaitForChild("Packages")
 local Knit = require(Packages:WaitForChild("Knit"))
 local GoodSignal = require(Packages:WaitForChild("GoodSignal"))
+local Promise = require(Packages:WaitForChild("Promise"))
 
 -- Create the controller
 local PredatorController = Knit.CreateController({
@@ -137,16 +138,27 @@ end
 ]]
 function PredatorController:AttackPredator(predatorId: string)
   if not predatorService then
-    return {
+    return Promise.resolve({
       success = false,
       message = "Service not available",
       defeated = false,
       remainingHealth = 0,
       reward = nil,
       xpAwarded = nil,
-    }
+    })
   end
   return predatorService:AttackPredator(predatorId)
+    :catch(function(err)
+      warn("[PredatorController] AttackPredator failed:", tostring(err))
+      return {
+        success = false,
+        message = tostring(err),
+        defeated = false,
+        remainingHealth = 0,
+        reward = nil,
+        xpAwarded = nil,
+      }
+    end)
 end
 
 --[[
@@ -156,9 +168,13 @@ end
 ]]
 function PredatorController:GetActivePredators()
   if not predatorService then
-    return {}
+    return Promise.resolve({})
   end
   return predatorService:GetActivePredators()
+    :catch(function(err)
+      warn("[PredatorController] GetActivePredators failed:", tostring(err))
+      return {}
+    end)
 end
 
 --[[
@@ -168,7 +184,7 @@ end
 ]]
 function PredatorController:GetSpawnSummary()
   if not predatorService then
-    return {
+    return Promise.resolve({
       waveNumber = 0,
       activePredators = 0,
       maxPredators = 1,
@@ -178,9 +194,23 @@ function PredatorController:GetSpawnSummary()
       dominantThreat = "Minor",
       timeOfDayMultiplier = 1,
       playerLevel = 1,
-    }
+    })
   end
   return predatorService:GetSpawnSummary()
+    :catch(function(err)
+      warn("[PredatorController] GetSpawnSummary failed:", tostring(err))
+      return {
+        waveNumber = 0,
+        activePredators = 0,
+        maxPredators = 1,
+        predatorsSpawned = 0,
+        timeUntilNextSpawn = 60,
+        difficultyMultiplier = 1,
+        dominantThreat = "Minor",
+        timeOfDayMultiplier = 1,
+        playerLevel = 1,
+      }
+    end)
 end
 
 --[[

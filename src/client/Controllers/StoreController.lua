@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Packages = ReplicatedStorage:WaitForChild("Packages")
 local Knit = require(Packages:WaitForChild("Knit"))
 local GoodSignal = require(Packages:WaitForChild("GoodSignal"))
+local Promise = require(Packages:WaitForChild("Promise"))
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Store = require(Shared:WaitForChild("Store"))
@@ -89,36 +90,52 @@ end
 	Get the current store inventory.
 	
 	@param forceRefresh boolean? - Force refresh from server
-	@return StoreInventory
+	@return Promise<StoreInventory>
 ]]
 function StoreController:GetStoreInventory(forceRefresh: boolean?)
   if not storeService then
-    return {}
+    return Promise.resolve({})
   end
 
   if forceRefresh or cachedInventory == nil then
-    cachedInventory = storeService:GetStoreInventory()
+    return storeService:GetStoreInventory()
+      :andThen(function(inventory)
+        cachedInventory = inventory
+        return inventory
+      end)
+      :catch(function(err)
+        warn("[StoreController] GetStoreInventory failed:", tostring(err))
+        return {}
+      end)
   end
 
-  return cachedInventory
+  return Promise.resolve(cachedInventory)
 end
 
 --[[
 	Get available items with stock info.
 	
 	@param forceRefresh boolean? - Force refresh from server
-	@return { eggs: {}, chickens: {}, traps: {}, weapons: {} }
+	@return Promise<{ eggs: {}, chickens: {}, traps: {}, weapons: {} }>
 ]]
 function StoreController:GetAvailableItems(forceRefresh: boolean?)
   if not storeService then
-    return { eggs = {}, chickens = {}, traps = {}, weapons = {} }
+    return Promise.resolve({ eggs = {}, chickens = {}, traps = {}, weapons = {} })
   end
 
   if forceRefresh or cachedAvailableItems == nil then
-    cachedAvailableItems = storeService:GetAvailableItems()
+    return storeService:GetAvailableItems()
+      :andThen(function(items)
+        cachedAvailableItems = items
+        return items
+      end)
+      :catch(function(err)
+        warn("[StoreController] GetAvailableItems failed:", tostring(err))
+        return { eggs = {}, chickens = {}, traps = {}, weapons = {} }
+      end)
   end
 
-  return cachedAvailableItems
+  return Promise.resolve(cachedAvailableItems)
 end
 
 --[[
@@ -142,13 +159,17 @@ end
 --[[
 	Get time until next store replenish.
 	
-	@return number - Seconds until replenish
+	@return Promise<number> - Seconds until replenish
 ]]
-function StoreController:GetTimeUntilReplenish(): number
+function StoreController:GetTimeUntilReplenish()
   if not storeService then
-    return 0
+    return Promise.resolve(0)
   end
   return storeService:GetTimeUntilReplenish()
+    :catch(function(err)
+      warn("[StoreController] GetTimeUntilReplenish failed:", tostring(err))
+      return 0
+    end)
 end
 
 --[[
@@ -168,13 +189,17 @@ end
 	
 	@param eggType string - The egg type to buy
 	@param quantity number? - Optional quantity (default 1)
-	@return TransactionResult
+	@return Promise<TransactionResult>
 ]]
 function StoreController:BuyEgg(eggType: string, quantity: number?)
   if not storeService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return storeService:BuyEgg(eggType, quantity)
+    :catch(function(err)
+      warn("[StoreController] BuyEgg failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[
@@ -182,39 +207,51 @@ end
 	
 	@param chickenType string - The chicken type to buy
 	@param quantity number? - Optional quantity (default 1)
-	@return TransactionResult
+	@return Promise<TransactionResult>
 ]]
 function StoreController:BuyChicken(chickenType: string, quantity: number?)
   if not storeService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return storeService:BuyChicken(chickenType, quantity)
+    :catch(function(err)
+      warn("[StoreController] BuyChicken failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[
 	Buy a trap from the store.
 	
 	@param trapType string - The trap type to buy
-	@return TransactionResult
+	@return Promise<TransactionResult>
 ]]
 function StoreController:BuyTrap(trapType: string)
   if not storeService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return storeService:BuyTrap(trapType)
+    :catch(function(err)
+      warn("[StoreController] BuyTrap failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[
 	Buy a weapon from the store.
 	
 	@param weaponType string - The weapon type to buy
-	@return TransactionResult
+	@return Promise<TransactionResult>
 ]]
 function StoreController:BuyWeapon(weaponType: string)
   if not storeService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return storeService:BuyWeapon(weaponType)
+    :catch(function(err)
+      warn("[StoreController] BuyWeapon failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 -- ============================================================================
@@ -225,65 +262,85 @@ end
 	Sell an egg from inventory.
 	
 	@param eggId string - The egg's ID
-	@return TransactionResult
+	@return Promise<TransactionResult>
 ]]
 function StoreController:SellEgg(eggId: string)
   if not storeService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return storeService:SellEgg(eggId)
+    :catch(function(err)
+      warn("[StoreController] SellEgg failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[
 	Sell a chicken from inventory or placed.
 	
 	@param chickenId string - The chicken's ID
-	@return TransactionResult
+	@return Promise<TransactionResult>
 ]]
 function StoreController:SellChicken(chickenId: string)
   if not storeService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return storeService:SellChicken(chickenId)
+    :catch(function(err)
+      warn("[StoreController] SellChicken failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[
 	Sell a trapped predator.
 	
 	@param trapId string - The trap's ID containing the predator
-	@return TransactionResult
+	@return Promise<TransactionResult>
 ]]
 function StoreController:SellPredator(trapId: string)
   if not storeService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return storeService:SellPredator(trapId)
+    :catch(function(err)
+      warn("[StoreController] SellPredator failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[
 	Sell a trap.
 	
 	@param trapId string - The trap's ID
-	@return TransactionResult
+	@return Promise<TransactionResult>
 ]]
 function StoreController:SellTrap(trapId: string)
   if not storeService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return storeService:SellTrap(trapId)
+    :catch(function(err)
+      warn("[StoreController] SellTrap failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[
 	Sell a weapon.
 	
 	@param weaponType string - The weapon type to sell
-	@return TransactionResult
+	@return Promise<TransactionResult>
 ]]
 function StoreController:SellWeapon(weaponType: string)
   if not storeService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return storeService:SellWeapon(weaponType)
+    :catch(function(err)
+      warn("[StoreController] SellWeapon failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 return StoreController

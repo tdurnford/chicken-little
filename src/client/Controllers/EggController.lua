@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Packages = ReplicatedStorage:WaitForChild("Packages")
 local Knit = require(Packages:WaitForChild("Knit"))
 local GoodSignal = require(Packages:WaitForChild("GoodSignal"))
+local Promise = require(Packages:WaitForChild("Promise"))
 
 -- Create the controller
 local EggController = Knit.CreateController({
@@ -102,7 +103,7 @@ end
 ]]
 function EggController:HatchEgg(eggId: string)
   if not eggService then
-    return {
+    return Promise.resolve({
       success = false,
       message = "Service not available",
       chickenType = nil,
@@ -110,9 +111,21 @@ function EggController:HatchEgg(eggId: string)
       chickenId = nil,
       isRareHatch = false,
       celebrationTier = 0,
-    }
+    })
   end
   return eggService:HatchEgg(eggId)
+    :catch(function(err)
+      warn("[EggController] HatchEgg failed:", tostring(err))
+      return {
+        success = false,
+        message = tostring(err),
+        chickenType = nil,
+        chickenRarity = nil,
+        chickenId = nil,
+        isRareHatch = false,
+        celebrationTier = 0,
+      }
+    end)
 end
 
 --[[
@@ -123,9 +136,13 @@ end
 ]]
 function EggController:CollectWorldEgg(eggId: string)
   if not eggService then
-    return { success = false, message = "Service not available", egg = nil }
+    return Promise.resolve({ success = false, message = "Service not available", egg = nil })
   end
   return eggService:CollectWorldEgg(eggId)
+    :catch(function(err)
+      warn("[EggController] CollectWorldEgg failed:", tostring(err))
+      return { success = false, message = tostring(err), egg = nil }
+    end)
 end
 
 --[[
@@ -137,9 +154,13 @@ end
 ]]
 function EggController:BuyEgg(eggType: string, quantity: number?)
   if not eggService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return eggService:BuyEgg(eggType, quantity)
+    :catch(function(err)
+      warn("[EggController] BuyEgg failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[
@@ -150,9 +171,13 @@ end
 ]]
 function EggController:SellEgg(eggId: string)
   if not eggService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return eggService:SellEgg(eggId)
+    :catch(function(err)
+      warn("[EggController] SellEgg failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[

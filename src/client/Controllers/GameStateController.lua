@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Packages = ReplicatedStorage:WaitForChild("Packages")
 local Knit = require(Packages:WaitForChild("Knit"))
 local GoodSignal = require(Packages:WaitForChild("GoodSignal"))
+local Promise = require(Packages:WaitForChild("Promise"))
 
 -- Type for time info
 export type TimeInfo = {
@@ -58,12 +59,17 @@ function GameStateController:KnitStart()
   gameStateService = Knit.GetService("GameStateService")
 
   -- Get initial time info
-  local initialInfo = gameStateService:GetTimeInfo()
-  if initialInfo then
-    cachedTimeInfo = initialInfo
-    cachedPeriod = initialInfo.timeOfDay
-    cachedIsNight = initialInfo.isNight
-  end
+  gameStateService:GetTimeInfo()
+    :andThen(function(initialInfo)
+      if initialInfo then
+        cachedTimeInfo = initialInfo
+        cachedPeriod = initialInfo.timeOfDay
+        cachedIsNight = initialInfo.isNight
+      end
+    end)
+    :catch(function(err)
+      warn("[GameStateController] Failed to get initial time info:", tostring(err))
+    end)
 
   -- Connect to server signals
   gameStateService.TimeChanged:Connect(function(timeInfo)
@@ -156,75 +162,101 @@ end
 --[[
 	Get full time info from server.
 	
-	@return TimeInfo
+	@return Promise<TimeInfo>
 ]]
-function GameStateController:GetTimeInfo(): TimeInfo
+function GameStateController:GetTimeInfo()
   if not gameStateService then
-    return {
+    return Promise.resolve({
       gameTime = 12,
       timeOfDay = "day",
       isNight = false,
       predatorMultiplier = 1,
-    }
+    })
   end
 
-  local info = gameStateService:GetTimeInfo()
-  if info then
-    -- Update cache
-    cachedTimeInfo = info
-    cachedPeriod = info.timeOfDay
-    cachedIsNight = info.isNight
-  end
-
-  return info
+  return gameStateService:GetTimeInfo()
+    :andThen(function(info)
+      if info then
+        -- Update cache
+        cachedTimeInfo = info
+        cachedPeriod = info.timeOfDay
+        cachedIsNight = info.isNight
+      end
+      return info
+    end)
+    :catch(function(err)
+      warn("[GameStateController] GetTimeInfo failed:", tostring(err))
+      return {
+        gameTime = 12,
+        timeOfDay = "day",
+        isNight = false,
+        predatorMultiplier = 1,
+      }
+    end)
 end
 
 --[[
 	Get current game time from server.
 	
-	@return number - Game time (0-24)
+	@return Promise<number> - Game time (0-24)
 ]]
-function GameStateController:GetGameTime(): number
+function GameStateController:GetGameTime()
   if not gameStateService then
-    return 12
+    return Promise.resolve(12)
   end
   return gameStateService:GetGameTime()
+    :catch(function(err)
+      warn("[GameStateController] GetGameTime failed:", tostring(err))
+      return 12
+    end)
 end
 
 --[[
 	Get current time of day from server.
 	
-	@return string - "day", "night", "dawn", or "dusk"
+	@return Promise<string> - "day", "night", "dawn", or "dusk"
 ]]
-function GameStateController:GetTimeOfDay(): string
+function GameStateController:GetTimeOfDay()
   if not gameStateService then
-    return "day"
+    return Promise.resolve("day")
   end
   return gameStateService:GetTimeOfDay()
+    :catch(function(err)
+      warn("[GameStateController] GetTimeOfDay failed:", tostring(err))
+      return "day"
+    end)
 end
 
 --[[
 	Check if it's currently night from server.
 	
-	@return boolean
+	@return Promise<boolean>
 ]]
-function GameStateController:IsNight(): boolean
+function GameStateController:IsNight()
   if not gameStateService then
-    return false
+    return Promise.resolve(false)
   end
   return gameStateService:IsNight()
+    :catch(function(err)
+      warn("[GameStateController] IsNight failed:", tostring(err))
+      return false
+    end)
 end
 
 --[[
 	Get predator spawn multiplier from server.
 	
-	@return number - Spawn multiplier (0.5 - 2.0)
+	@return Promise<number> - Spawn multiplier (0.5 - 2.0)
 ]]
-function GameStateController:GetPredatorMultiplier(): number
+function GameStateController:GetPredatorMultiplier()
   if not gameStateService then
-    return 1
+    return Promise.resolve(1)
   end
   return gameStateService:GetPredatorMultiplier()
+    :catch(function(err)
+      warn("[GameStateController] GetPredatorMultiplier failed:", tostring(err))
+      return 1
+    end)
 end
 
 -- ============================================================================

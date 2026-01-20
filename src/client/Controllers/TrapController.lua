@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Packages = ReplicatedStorage:WaitForChild("Packages")
 local Knit = require(Packages:WaitForChild("Knit"))
 local GoodSignal = require(Packages:WaitForChild("GoodSignal"))
+local Promise = require(Packages:WaitForChild("Promise"))
 
 -- Create the controller
 local TrapController = Knit.CreateController({
@@ -152,98 +153,138 @@ end
 --[[
 	Get all placed traps from server.
 	
-	@return {TrapData}
+	@return Promise<{TrapData}>
 ]]
 function TrapController:GetPlacedTraps()
   if not trapService then
-    return {}
+    return Promise.resolve({})
   end
   return trapService:GetPlacedTraps()
+    :catch(function(err)
+      warn("[TrapController] GetPlacedTraps failed:", tostring(err))
+      return {}
+    end)
 end
 
 --[[
 	Get trap summary from server.
 	
-	@return TrapSummary
+	@return Promise<TrapSummary>
 ]]
 function TrapController:GetTrapSummary()
   if not trapService then
-    return {
+    return Promise.resolve({
       totalTraps = 0,
       availableSpots = 0,
       readyTraps = 0,
       trapsWithPredators = 0,
       trapsOnCooldown = 0,
-    }
+    })
   end
   return trapService:GetTrapSummary()
+    :catch(function(err)
+      warn("[TrapController] GetTrapSummary failed:", tostring(err))
+      return {
+        totalTraps = 0,
+        availableSpots = 0,
+        readyTraps = 0,
+        trapsWithPredators = 0,
+        trapsOnCooldown = 0,
+      }
+    end)
 end
 
 --[[
 	Get catching summary from server.
 	
-	@return CatchingSummary
+	@return Promise<CatchingSummary>
 ]]
 function TrapController:GetCatchingSummary()
   if not trapService then
-    return {
+    return Promise.resolve({
       totalTraps = 0,
       readyTraps = 0,
       trapsOnCooldown = 0,
       caughtPredators = 0,
       pendingReward = 0,
-    }
+    })
   end
   return trapService:GetCatchingSummary()
+    :catch(function(err)
+      warn("[TrapController] GetCatchingSummary failed:", tostring(err))
+      return {
+        totalTraps = 0,
+        readyTraps = 0,
+        trapsOnCooldown = 0,
+        caughtPredators = 0,
+        pendingReward = 0,
+      }
+    end)
 end
 
 --[[
 	Get available trap spots from server.
 	
-	@return {number}
+	@return Promise<{number}>
 ]]
 function TrapController:GetAvailableSpots()
   if not trapService then
-    return {}
+    return Promise.resolve({})
   end
   return trapService:GetAvailableSpots()
+    :catch(function(err)
+      warn("[TrapController] GetAvailableSpots failed:", tostring(err))
+      return {}
+    end)
 end
 
 --[[
 	Get pending reward total from server.
 	
-	@return number
+	@return Promise<number>
 ]]
-function TrapController:GetPendingReward(): number
+function TrapController:GetPendingReward()
   if not trapService then
-    return 0
+    return Promise.resolve(0)
   end
   return trapService:GetPendingReward()
+    :catch(function(err)
+      warn("[TrapController] GetPendingReward failed:", tostring(err))
+      return 0
+    end)
 end
 
 --[[
 	Get trap config by type.
 	
 	@param trapType string - The trap type
-	@return TrapTypeConfig?
+	@return Promise<TrapTypeConfig?>
 ]]
 function TrapController:GetTrapConfig(trapType: string)
   if not trapService then
-    return nil
+    return Promise.resolve(nil)
   end
   return trapService:GetTrapConfig(trapType)
+    :catch(function(err)
+      warn("[TrapController] GetTrapConfig failed:", tostring(err))
+      return nil
+    end)
 end
 
 --[[
 	Get all trap configs sorted.
 	
-	@return {TrapTypeConfig}
+	@return Promise<{TrapTypeConfig}>
 ]]
 function TrapController:GetAllTrapConfigs()
   if not trapService then
-    return {}
+    return Promise.resolve({})
   end
   return trapService:GetAllTrapConfigs()
+    :catch(function(err)
+      warn("[TrapController] GetAllTrapConfigs failed:", tostring(err))
+      return {}
+    end)
 end
 
 --[[
@@ -251,26 +292,34 @@ end
 	
 	@param trapType string - The trap type
 	@param predatorType string - The predator type
-	@return number
+	@return Promise<number>
 ]]
-function TrapController:GetCatchProbability(trapType: string, predatorType: string): number
+function TrapController:GetCatchProbability(trapType: string, predatorType: string)
   if not trapService then
-    return 0
+    return Promise.resolve(0)
   end
   return trapService:GetCatchProbability(trapType, predatorType)
+    :catch(function(err)
+      warn("[TrapController] GetCatchProbability failed:", tostring(err))
+      return 0
+    end)
 end
 
 --[[
 	Check if can place more of a trap type.
 	
 	@param trapType string - The trap type
-	@return boolean
+	@return Promise<boolean>
 ]]
-function TrapController:CanPlaceMoreOfType(trapType: string): boolean
+function TrapController:CanPlaceMoreOfType(trapType: string)
   if not trapService then
-    return false
+    return Promise.resolve(false)
   end
   return trapService:CanPlaceMoreOfType(trapType)
+    :catch(function(err)
+      warn("[TrapController] CanPlaceMoreOfType failed:", tostring(err))
+      return false
+    end)
 end
 
 -- ============================================================================
@@ -282,13 +331,17 @@ end
 	
 	@param trapType string - The trap type to place
 	@param spotIndex number - The spot index
-	@return PlacementResult
+	@return Promise<PlacementResult>
 ]]
 function TrapController:PlaceTrap(trapType: string, spotIndex: number)
   if not trapService then
-    return { success = false, message = "Service not available", trap = nil }
+    return Promise.resolve({ success = false, message = "Service not available", trap = nil })
   end
   return trapService:PlaceTrap(trapType, spotIndex)
+    :catch(function(err)
+      warn("[TrapController] PlaceTrap failed:", tostring(err))
+      return { success = false, message = tostring(err), trap = nil }
+    end)
 end
 
 --[[
@@ -296,26 +349,34 @@ end
 	
 	@param trapId string - The trap ID
 	@param spotIndex number - The spot index
-	@return PlacementResult
+	@return Promise<PlacementResult>
 ]]
 function TrapController:PlaceTrapFromInventory(trapId: string, spotIndex: number)
   if not trapService then
-    return { success = false, message = "Service not available", trap = nil }
+    return Promise.resolve({ success = false, message = "Service not available", trap = nil })
   end
   return trapService:PlaceTrapFromInventory(trapId, spotIndex)
+    :catch(function(err)
+      warn("[TrapController] PlaceTrapFromInventory failed:", tostring(err))
+      return { success = false, message = tostring(err), trap = nil }
+    end)
 end
 
 --[[
 	Pick up (sell) a trap.
 	
 	@param trapId string - The trap ID
-	@return PlacementResult
+	@return Promise<PlacementResult>
 ]]
 function TrapController:PickupTrap(trapId: string)
   if not trapService then
-    return { success = false, message = "Service not available", trap = nil }
+    return Promise.resolve({ success = false, message = "Service not available", trap = nil })
   end
   return trapService:PickupTrap(trapId)
+    :catch(function(err)
+      warn("[TrapController] PickupTrap failed:", tostring(err))
+      return { success = false, message = tostring(err), trap = nil }
+    end)
 end
 
 --[[
@@ -323,38 +384,50 @@ end
 	
 	@param trapId string - The trap ID
 	@param newSpotIndex number - The new spot index
-	@return PlacementResult
+	@return Promise<PlacementResult>
 ]]
 function TrapController:MoveTrap(trapId: string, newSpotIndex: number)
   if not trapService then
-    return { success = false, message = "Service not available", trap = nil }
+    return Promise.resolve({ success = false, message = "Service not available", trap = nil })
   end
   return trapService:MoveTrap(trapId, newSpotIndex)
+    :catch(function(err)
+      warn("[TrapController] MoveTrap failed:", tostring(err))
+      return { success = false, message = tostring(err), trap = nil }
+    end)
 end
 
 --[[
 	Collect reward from a caught predator.
 	
 	@param trapId string - The trap ID
-	@return CatchResult
+	@return Promise<CatchResult>
 ]]
 function TrapController:CollectTrap(trapId: string)
   if not trapService then
-    return { success = false, message = "Service not available" }
+    return Promise.resolve({ success = false, message = "Service not available" })
   end
   return trapService:CollectTrap(trapId)
+    :catch(function(err)
+      warn("[TrapController] CollectTrap failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[
 	Collect all caught predators.
 	
-	@return {totalReward: number, count: number}
+	@return Promise<{totalReward: number, count: number}>
 ]]
 function TrapController:CollectAllTraps()
   if not trapService then
-    return { totalReward = 0, count = 0 }
+    return Promise.resolve({ totalReward = 0, count = 0 })
   end
   return trapService:CollectAllTraps()
+    :catch(function(err)
+      warn("[TrapController] CollectAllTraps failed:", tostring(err))
+      return { totalReward = 0, count = 0 }
+    end)
 end
 
 return TrapController

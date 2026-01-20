@@ -16,6 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Packages = ReplicatedStorage:WaitForChild("Packages")
 local Knit = require(Packages:WaitForChild("Knit"))
 local GoodSignal = require(Packages:WaitForChild("GoodSignal"))
+local Promise = require(Packages:WaitForChild("Promise"))
 
 -- Create the controller
 local CombatController = Knit.CreateController({
@@ -122,28 +123,36 @@ end
 	Equip a weapon.
 	
 	@param weaponType string - The weapon type to equip
-	@return EquipResult
+	@return Promise<EquipResult>
 ]]
 function CombatController:EquipWeapon(weaponType: string)
   if not combatService then
-    return {
+    return Promise.resolve({
       success = false,
       message = "Service not available",
-    }
+    })
   end
   return combatService:EquipWeapon(weaponType)
+    :catch(function(err)
+      warn("[CombatController] EquipWeapon failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[
 	Get the currently equipped weapon.
 	
-	@return string? - The equipped weapon type or nil
+	@return Promise<string?> - The equipped weapon type or nil
 ]]
-function CombatController:GetEquippedWeapon(): string?
+function CombatController:GetEquippedWeapon()
   if not combatService then
-    return equippedWeapon
+    return Promise.resolve(equippedWeapon)
   end
   return combatService:GetEquippedWeapon()
+    :catch(function(err)
+      warn("[CombatController] GetEquippedWeapon failed:", tostring(err))
+      return equippedWeapon
+    end)
 end
 
 --[[
@@ -159,62 +168,82 @@ end
 	Get weapon configuration.
 	
 	@param weaponType string - The weapon type
-	@return WeaponConfig?
+	@return Promise<WeaponConfig?>
 ]]
-function CombatController:GetWeaponConfig(weaponType: string): any
+function CombatController:GetWeaponConfig(weaponType: string)
   if not combatService then
-    return nil
+    return Promise.resolve(nil)
   end
   return combatService:GetWeaponConfig(weaponType)
+    :catch(function(err)
+      warn("[CombatController] GetWeaponConfig failed:", tostring(err))
+      return nil
+    end)
 end
 
 --[[
 	Get all weapon configurations.
 	
-	@return table - All weapon configs
+	@return Promise<table> - All weapon configs
 ]]
-function CombatController:GetAllWeaponConfigs(): any
+function CombatController:GetAllWeaponConfigs()
   if not combatService then
-    return {}
+    return Promise.resolve({})
   end
   return combatService:GetAllWeaponConfigs()
+    :catch(function(err)
+      warn("[CombatController] GetAllWeaponConfigs failed:", tostring(err))
+      return {}
+    end)
 end
 
 --[[
 	Get purchasable weapons.
 	
-	@return table - Purchasable weapon configs
+	@return Promise<table> - Purchasable weapon configs
 ]]
-function CombatController:GetPurchasableWeapons(): any
+function CombatController:GetPurchasableWeapons()
   if not combatService then
-    return {}
+    return Promise.resolve({})
   end
   return combatService:GetPurchasableWeapons()
+    :catch(function(err)
+      warn("[CombatController] GetPurchasableWeapons failed:", tostring(err))
+      return {}
+    end)
 end
 
 --[[
 	Get player's owned weapons.
 	
-	@return table - List of owned weapon types
+	@return Promise<table> - List of owned weapon types
 ]]
-function CombatController:GetOwnedWeapons(): { string }
+function CombatController:GetOwnedWeapons()
   if not combatService then
-    return {}
+    return Promise.resolve({})
   end
   return combatService:GetOwnedWeapons()
+    :catch(function(err)
+      warn("[CombatController] GetOwnedWeapons failed:", tostring(err))
+      return {}
+    end)
 end
 
 --[[
 	Check if player owns a weapon.
 	
 	@param weaponType string - The weapon type
-	@return boolean
+	@return Promise<boolean>
 ]]
-function CombatController:PlayerOwnsWeapon(weaponType: string): boolean
+function CombatController:PlayerOwnsWeapon(weaponType: string)
   if not combatService then
-    return false
+    return Promise.resolve(false)
   end
   return combatService:PlayerOwnsWeapon(weaponType)
+    :catch(function(err)
+      warn("[CombatController] PlayerOwnsWeapon failed:", tostring(err))
+      return false
+    end)
 end
 
 -- =============================================================================
@@ -226,16 +255,20 @@ end
 	
 	@param targetType string? - "predator" | "player" | nil
 	@param targetId string? - Target identifier
-	@return AttackResult
+	@return Promise<AttackResult>
 ]]
 function CombatController:Attack(targetType: string?, targetId: string?)
   if not combatService then
-    return {
+    return Promise.resolve({
       success = false,
       message = "Service not available",
-    }
+    })
   end
   return combatService:Attack(targetType, targetId)
+    :catch(function(err)
+      warn("[CombatController] Attack failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 -- =============================================================================
@@ -245,28 +278,36 @@ end
 --[[
 	Activate the area shield.
 	
-	@return ShieldResult
+	@return Promise<ShieldResult>
 ]]
 function CombatController:ActivateShield()
   if not combatService then
-    return {
+    return Promise.resolve({
       success = false,
       message = "Service not available",
-    }
+    })
   end
   return combatService:ActivateShield()
+    :catch(function(err)
+      warn("[CombatController] ActivateShield failed:", tostring(err))
+      return { success = false, message = tostring(err) }
+    end)
 end
 
 --[[
 	Get shield status.
 	
-	@return ShieldStatus?
+	@return Promise<ShieldStatus?>
 ]]
-function CombatController:GetShieldStatus(): any
+function CombatController:GetShieldStatus()
   if not combatService then
-    return nil
+    return Promise.resolve(nil)
   end
   return combatService:GetShieldStatus()
+    :catch(function(err)
+      warn("[CombatController] GetShieldStatus failed:", tostring(err))
+      return nil
+    end)
 end
 
 -- =============================================================================
@@ -276,53 +317,73 @@ end
 --[[
 	Check if the player can move.
 	
-	@return boolean
+	@return Promise<boolean>
 ]]
-function CombatController:CanMove(): boolean
+function CombatController:CanMove()
   if not combatService then
-    return true
+    return Promise.resolve(true)
   end
   return combatService:CanMove()
+    :catch(function(err)
+      warn("[CombatController] CanMove failed:", tostring(err))
+      return true
+    end)
 end
 
 --[[
 	Get combat state.
 	
-	@return CombatState?
+	@return Promise<CombatState?>
 ]]
-function CombatController:GetCombatState(): any
+function CombatController:GetCombatState()
   if not combatService then
-    return nil
+    return Promise.resolve(nil)
   end
   return combatService:GetCombatState()
+    :catch(function(err)
+      warn("[CombatController] GetCombatState failed:", tostring(err))
+      return nil
+    end)
 end
 
 --[[
 	Get health display info for UI.
 	
-	@return HealthDisplayInfo?
+	@return Promise<HealthDisplayInfo?>
 ]]
-function CombatController:GetHealthDisplayInfo(): any
+function CombatController:GetHealthDisplayInfo()
   if not combatService then
-    return nil
+    return Promise.resolve(nil)
   end
   return combatService:GetHealthDisplayInfo()
+    :catch(function(err)
+      warn("[CombatController] GetHealthDisplayInfo failed:", tostring(err))
+      return nil
+    end)
 end
 
 --[[
 	Get combat constants for UI calculations.
 	
-	@return table - Combat constants
+	@return Promise<table> - Combat constants
 ]]
-function CombatController:GetCombatConstants(): any
+function CombatController:GetCombatConstants()
   if not combatService then
-    return {
+    return Promise.resolve({
       health = {},
       shield = {},
       incapacitate = {},
-    }
+    })
   end
   return combatService:GetCombatConstants()
+    :catch(function(err)
+      warn("[CombatController] GetCombatConstants failed:", tostring(err))
+      return {
+        health = {},
+        shield = {},
+        incapacitate = {},
+      }
+    end)
 end
 
 --[[
