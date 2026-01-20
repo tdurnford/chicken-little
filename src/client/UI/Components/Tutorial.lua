@@ -62,6 +62,7 @@ local currentStepIndex: Fusion.Value<number>? = nil
 local isActive: Fusion.Value<boolean>? = nil
 local isPaused: Fusion.Value<boolean>? = nil
 local frameVisible: Fusion.Value<boolean>? = nil
+local isSkipping: Fusion.Value<boolean>? = nil  -- Track skip state for faster fade animation
 
 -- Callbacks
 local onCompleteCallback: (() -> ())? = nil
@@ -271,7 +272,7 @@ local function stopArrowUpdates()
 end
 
 -- Create progress dots
-local function createProgressDots(fusionScope: Fusion.Scope, totalSteps: number)
+local function createProgressDots(fusionScope: Fusion.Scope, totalSteps: number, transparency: Fusion.Computed<number>?)
 	local dots = {}
 
 	for i = 1, totalSteps do
@@ -286,10 +287,16 @@ local function createProgressDots(fusionScope: Fusion.Scope, totalSteps: number)
 			end
 		end)
 
+		-- Compute dot transparency from the passed transparency value
+		local dotTransparency = transparency and Computed(fusionScope, function(use)
+			return use(transparency)
+		end) or nil
+
 		table.insert(dots, New(fusionScope, "Frame")({
 			Name = "Dot_" .. i,
 			Size = UDim2.new(0, 8, 0, 8),
 			BackgroundColor3 = dotColor,
+			BackgroundTransparency = dotTransparency or 0,
 			BorderSizePixel = 0,
 
 			[Children] = {
@@ -326,6 +333,37 @@ local function createTutorialFrame(fusionScope: Fusion.Scope)
 		local visible = use(frameVisible :: any)
 		return if visible then UDim2.new(0.5, 0, 0.75, 0) else UDim2.new(0.5, 0, 1, 0)
 	end), 15, 0.8)
+
+	-- Animated transparency for fade-out effect (faster when skipping)
+	local frameTransparency = Spring(fusionScope, Computed(fusionScope, function(use)
+		local visible = use(frameVisible :: any)
+		local skipping = use(isSkipping :: any)
+		-- When not visible, fade to fully transparent
+		-- Skipping uses same target, but the Spring speed below handles the speed difference
+		return if visible then 0 else 1
+	end), Computed(fusionScope, function(use)
+		local skipping = use(isSkipping :: any)
+		-- Use faster speed (40) when skipping, normal speed (15) otherwise
+		return if skipping then 40 else 15
+	end), 0.8)
+
+	-- Computed for background transparency (combines base transparency with fade)
+	local bgTransparency = Computed(fusionScope, function(use)
+		local fade = use(frameTransparency)
+		-- Base transparency is 0.1, blend towards 1 (fully transparent)
+		return 0.1 + (fade * 0.9)
+	end)
+
+	-- Computed for content transparency (text, icons, etc.)
+	local contentTransparency = Computed(fusionScope, function(use)
+		return use(frameTransparency)
+	end)
+
+	-- Computed for stroke transparency
+	local strokeTransparency = Computed(fusionScope, function(use)
+		local fade = use(frameTransparency)
+		return 0.3 + (fade * 0.7)
+	end)
 
 	-- Step content
 	local iconText = Computed(fusionScope, function(use)
@@ -370,7 +408,7 @@ local function createTutorialFrame(fusionScope: Fusion.Scope)
 		Position = framePosition,
 		Size = UDim2.new(0, 450, 0, 140),
 		BackgroundColor3 = COLORS.background,
-		BackgroundTransparency = 0.1,
+		BackgroundTransparency = bgTransparency,
 		BorderSizePixel = 0,
 
 		[Children] = {
@@ -383,7 +421,7 @@ local function createTutorialFrame(fusionScope: Fusion.Scope)
 			New(fusionScope, "UIStroke")({
 				Color = COLORS.stroke,
 				Thickness = 2,
-				Transparency = 0.3,
+				Transparency = strokeTransparency,
 			}),
 
 			-- Icon
@@ -395,6 +433,7 @@ local function createTutorialFrame(fusionScope: Fusion.Scope)
 				Text = iconText,
 				TextSize = 36,
 				TextColor3 = COLORS.text,
+				TextTransparency = contentTransparency,
 			}),
 
 			-- Title (sized to not overlap with Skip button which starts at x=380)
@@ -406,6 +445,7 @@ local function createTutorialFrame(fusionScope: Fusion.Scope)
 				Text = titleText,
 				TextSize = 20,
 				TextColor3 = COLORS.text,
+				TextTransparency = contentTransparency,
 				FontFace = Theme.Typography.PrimaryBold,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextTruncate = Enum.TextTruncate.AtEnd,
@@ -420,6 +460,7 @@ local function createTutorialFrame(fusionScope: Fusion.Scope)
 				Text = messageText,
 				TextSize = 14,
 				TextColor3 = COLORS.textSecondary,
+				TextTransparency = contentTransparency,
 				FontFace = Theme.Typography.Primary,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextYAlignment = Enum.TextYAlignment.Top,
@@ -435,6 +476,7 @@ local function createTutorialFrame(fusionScope: Fusion.Scope)
 				Text = actionText,
 				TextSize = 12,
 				TextColor3 = COLORS.action,
+				TextTransparency = contentTransparency,
 				FontFace = Theme.Typography.PrimarySemiBold,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				Visible = showAction,
@@ -446,9 +488,11 @@ local function createTutorialFrame(fusionScope: Fusion.Scope)
 				Size = UDim2.new(0, 60, 0, 26),
 				Position = UDim2.new(1, -70, 0, 10),
 				BackgroundColor3 = COLORS.skipButton,
+				BackgroundTransparency = contentTransparency,
 				Text = "Skip",
 				TextSize = 12,
 				TextColor3 = COLORS.textSecondary,
+				TextTransparency = contentTransparency,
 				FontFace = Theme.Typography.PrimarySemiBold,
 				BorderSizePixel = 0,
 				AutoButtonColor = true,
@@ -472,9 +516,11 @@ local function createTutorialFrame(fusionScope: Fusion.Scope)
 				Size = UDim2.new(0, 100, 0, 30),
 				Position = UDim2.new(1, -115, 1, -45),
 				BackgroundColor3 = COLORS.continueButton,
+				BackgroundTransparency = contentTransparency,
 				Text = "Continue →",
 				TextSize = 14,
 				TextColor3 = COLORS.text,
+				TextTransparency = contentTransparency,
 				FontFace = Theme.Typography.PrimaryBold,
 				BorderSizePixel = 0,
 				AutoButtonColor = true,
@@ -492,7 +538,7 @@ local function createTutorialFrame(fusionScope: Fusion.Scope)
 			}),
 
 			-- Progress dots
-			createProgressDots(fusionScope, #currentConfig.steps),
+			createProgressDots(fusionScope, #currentConfig.steps, contentTransparency),
 		},
 	})
 end
@@ -544,6 +590,7 @@ function Tutorial.create(config: TutorialConfig?): boolean
 	isActive = Value(scope, false)
 	isPaused = Value(scope, false)
 	frameVisible = Value(scope, false)
+	isSkipping = Value(scope, false)
 
 	-- Create ScreenGui
 	screenGui = New(scope, "ScreenGui")({
@@ -584,6 +631,7 @@ function Tutorial.destroy()
 	isActive = nil
 	isPaused = nil
 	frameVisible = nil
+	isSkipping = nil
 	onCompleteCallback = nil
 	onSkipCallback = nil
 	onStepCompleteCallback = nil
@@ -602,6 +650,7 @@ function Tutorial.start()
 
 	if isActive then isActive:set(true) end
 	if isPaused then isPaused:set(false) end
+	if isSkipping then isSkipping:set(false) end
 	if currentStepIndex then currentStepIndex:set(1) end
 	if frameVisible then frameVisible:set(true) end
 
@@ -699,9 +748,13 @@ function Tutorial.skip()
 
 	stopArrowUpdates()
 
+	-- Set isSkipping BEFORE frameVisible to trigger fast fade animation
+	if isSkipping then isSkipping:set(true) end
 	if frameVisible then frameVisible:set(false) end
 
 	task.delay(0.3, function()
+		-- Reset skipping state after animation completes
+		if isSkipping then isSkipping:set(false) end
 		if onSkipCallback then
 			print("[Tutorial] Calling onSkipCallback")
 			onSkipCallback()

@@ -4708,3 +4708,93 @@ return New(scope, "TextButton")({
 - The `Active` property on Roblox `GuiButton` instances completely disables interactivity
 - Always pair visual disabled states with actual interactivity controls (`Active` property)
 - The existing `OnEvent` handler check is still there as a belt-and-suspenders safety
+
+---
+
+## Bug Fix: Fix Tutorial Skip Animation Goes to Bottom Instead of Hiding
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-4.json
+
+### Summary
+Fixed the tutorial skip animation so that when the player skips the tutorial, the frame fades out smoothly instead of awkwardly sliding down to the bottom of the screen.
+
+### Root Cause
+In `Tutorial.lua`, when skipping the tutorial:
+1. `frameVisible:set(false)` was set, which triggered the `framePosition` Spring
+2. The Spring animated position from `UDim2.new(0.5, 0, 0.75, 0)` to `UDim2.new(0.5, 0, 1, 0)` (sliding down)
+3. This created an awkward visual where the tutorial frame slid to the bottom rather than gracefully disappearing
+
+### Fix Applied
+
+**1. Added `isSkipping` reactive state:**
+```lua
+local isSkipping: Fusion.Value<boolean>? = nil  -- Track skip state for faster fade animation
+```
+
+**2. Added `frameTransparency` Spring with dynamic speed:**
+```lua
+-- Animated transparency for fade-out effect (faster when skipping)
+local frameTransparency = Spring(fusionScope, Computed(fusionScope, function(use)
+  local visible = use(frameVisible :: any)
+  return if visible then 0 else 1
+end), Computed(fusionScope, function(use)
+  local skipping = use(isSkipping :: any)
+  -- Use faster speed (40) when skipping, normal speed (15) otherwise
+  return if skipping then 40 else 15
+end), 0.8)
+```
+
+**3. Created transparency Computeds for different UI elements:**
+```lua
+-- Computed for background transparency (combines base transparency with fade)
+local bgTransparency = Computed(fusionScope, function(use)
+  local fade = use(frameTransparency)
+  return 0.1 + (fade * 0.9)  -- Base 0.1 → 1.0 (fully transparent)
+end)
+
+-- Computed for content transparency (text, icons, buttons)
+local contentTransparency = Computed(fusionScope, function(use)
+  return use(frameTransparency)
+end)
+
+-- Computed for stroke transparency
+local strokeTransparency = Computed(fusionScope, function(use)
+  local fade = use(frameTransparency)
+  return 0.3 + (fade * 0.7)  -- Base 0.3 → 1.0
+end)
+```
+
+**4. Applied transparency to all UI elements:**
+- Frame background: `BackgroundTransparency = bgTransparency`
+- UIStroke: `Transparency = strokeTransparency`
+- All TextLabels: `TextTransparency = contentTransparency`
+- Buttons: `BackgroundTransparency` and `TextTransparency = contentTransparency`
+- Progress dots: Added transparency parameter to `createProgressDots()`
+
+**5. Updated `skip()` function to trigger fast fade:**
+```lua
+-- Set isSkipping BEFORE frameVisible to trigger fast fade animation
+if isSkipping then isSkipping:set(true) end
+if frameVisible then frameVisible:set(false) end
+```
+
+### How It Works Now
+1. When skipping, `isSkipping` is set to `true` before `frameVisible` is set to `false`
+2. The `frameTransparency` Spring detects `isSkipping=true` and uses speed 40 (fast)
+3. All UI elements fade out quickly (transparency → 1) while also sliding down
+4. The fast fade (40 speed) completes in ~0.1s, making the slide-down barely noticeable
+5. After 0.3s delay, the skip callback is fired and `isSkipping` is reset
+
+### Modified Files
+- `src/client/UI/Components/Tutorial.lua` - Added fade animation on skip
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- PRD-4 remaining bugs:
+  - `add-chicken-money-collection-cap` - Money cap feature (last remaining item)
+- When using Fusion Springs for hide animations, consider combining position with transparency
+- A fast transparency fade can mask awkward position animations
+- The `isSkipping` pattern allows different animation speeds for skip vs normal completion
