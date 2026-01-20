@@ -27,6 +27,7 @@ local SectionLabels = require(ServerScriptService:WaitForChild("SectionLabels"))
 
 -- Services will be retrieved after Knit starts
 local PlayerDataService
+local CombatService
 
 -- Constants
 local NEW_PLAYER_PROTECTION_DURATION = 120 -- 2 minutes of protection for new players
@@ -74,6 +75,7 @@ end
 function MapService:KnitStart()
   -- Get reference to PlayerDataService for persisting sectionIndex
   PlayerDataService = Knit.GetService("PlayerDataService")
+  CombatService = Knit.GetService("CombatService")
 
   -- Setup player connections
   Players.PlayerAdded:Connect(function(player)
@@ -214,6 +216,14 @@ function MapService:_setupCharacterSpawning(
         )
       )
     end
+
+    -- Restore player's owned weapons to their backpack after spawn
+    task.defer(function()
+      local weaponsRestored = CombatService:RestoreOwnedWeapons(player)
+      if weaponsRestored > 0 then
+        print(string.format("[MapService] Restored %d weapon(s) for %s", weaponsRestored, player.Name))
+      end
+    end)
   end)
 
   -- If character already exists, teleport immediately

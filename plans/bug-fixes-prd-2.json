@@ -1,0 +1,134 @@
+{
+  "title": "Bug Fixes - January 2026 (Batch 2)",
+  "description": "A collection of critical bug fixes addressing starter chicken IDs, egg hatching warnings, map rendering performance, chicken visibility, weapon arming, and tutorial skip functionality.",
+  "version": "1.0.0",
+  "created": "2026-01-19",
+  "status": "in-progress",
+  "features": [
+    {
+      "id": "fix-starter-chicken-unique-id",
+      "title": "Add Unique ID to Starter Chicken",
+      "description": "The starter chicken id is hardcoded as 'starter_egg_source'. This causes conflicts when multiple users are in the same server as they all share the same chicken ID. Add a random component to the ID to ensure uniqueness per player.",
+      "priority": "critical",
+      "status": "completed",
+      "files": [
+        "src/shared/PlayerData.lua",
+        "src/server/Services/ChickenService.lua",
+        "src/server/Services/EggService.lua"
+      ],
+      "tasks": [
+        "Identify where 'starter_egg_source' ID is being created/assigned",
+        "Add a unique identifier component (e.g., player UserId or GUID) to the starter chicken ID",
+        "Update any code that references the hardcoded 'starter_egg_source' ID",
+        "Ensure the unique ID is persisted in player data",
+        "Test with multiple players to verify no ID collisions occur"
+      ],
+      "resolution": "Changed starterChickenId from hardcoded 'starter_egg_source' to 'starter_egg_source_' .. tostring(userId) in EggService.lua. Each player now has a unique starter egg source ID based on their Roblox UserId, preventing ID collisions in multiplayer servers."
+    },
+    {
+      "id": "fix-egg-hatch-section-warning",
+      "title": "Fix 'Cannot hatch egg no section assigned' Warning",
+      "description": "When hatching an egg, a 'Cannot hatch egg no section assigned' warning appears in the console even though the user has a section assigned. This is a false positive warning that needs to be investigated and fixed.",
+      "priority": "high",
+      "status": "completed",
+      "files": [
+        "src/server/Services/EggService.lua",
+        "src/server/Services/MapService.lua",
+        "src/shared/EggHatching.lua"
+      ],
+      "tasks": [
+        "Locate where the 'Cannot hatch egg no section assigned' warning is logged",
+        "Trace the section assignment check logic",
+        "Verify the section assignment data is being passed correctly to the hatch function",
+        "Check for race conditions between section assignment and egg hatching",
+        "Fix the section lookup or validation logic",
+        "Remove or update the warning to only trigger when section is truly not assigned",
+        "Test egg hatching with properly assigned sections"
+      ],
+      "resolution": "The sectionIndex was never persisted to PlayerData when MapService assigned sections. The client code checked playerData.sectionIndex but this was always nil. Fixed by updating MapService._handlePlayerJoin to persist sectionIndex to PlayerData via PlayerDataService after assigning a section. Now the client receives the correct sectionIndex through the normal PlayerData replication."
+    },
+    {
+      "id": "fix-chicken-visibility",
+      "title": "Fix Chickens Not Visible in Player Area",
+      "description": "Chickens are not visible in the player's area even though they should be rendered. This could be a visual/rendering issue, replication issue, or the chickens are being placed in the wrong location.",
+      "priority": "critical",
+      "status": "completed",
+      "files": [
+        "src/client/ChickenVisuals.lua",
+        "src/server/Services/ChickenService.lua",
+        "src/shared/ChickenPlacement.lua",
+        "src/client/Controllers/ChickenController.lua"
+      ],
+      "tasks": [
+        "Verify chicken data is being sent from server to client",
+        "Check ChickenVisuals is receiving and processing chicken spawn events",
+        "Verify chicken models are being created at the correct positions",
+        "Check if chicken models exist in the workspace but are not visible (transparency, size, position)",
+        "Verify the chicken model assets are loading correctly",
+        "Check for errors in the ChickenController signal connections",
+        "Debug the chicken replication flow from server to client",
+        "Ensure chickens are placed within the player's assigned section bounds",
+        "Test with fresh player data and existing player data"
+      ],
+      "resolution": "Fixed type mismatch in ChickenService:InitializeAIState. MapGeneration.getSectionPosition returns a plain {x,y,z} table but ChickenAI.createState expects a Roblox Vector3. Added conversion: Vector3.new(sectionCenter.x, sectionCenter.y, sectionCenter.z)"
+    },
+    {
+      "id": "fix-weapon-arming-baseball-bat",
+      "title": "Fix Player Unable to Arm Weapons - Baseball Bat Missing",
+      "description": "Players are not able to arm weapons. The baseball bat appears to be missing from the Roblox inventory/backpack. The weapon should be added to the player's inventory and be equippable.",
+      "priority": "high",
+      "status": "completed",
+      "files": [
+        "src/server/Services/WeaponService.lua",
+        "src/shared/BaseballBat.lua",
+        "src/server/Services/StoreService.lua",
+        "src/client/Controllers/WeaponController.lua"
+      ],
+      "tasks": [
+        "Verify the baseball bat Tool exists in ReplicatedStorage or ServerStorage",
+        "Check if WeaponService is properly giving tools to players",
+        "Verify the weapon purchase flow adds the weapon to inventory",
+        "Check if the Tool is being parented to the player's Backpack correctly",
+        "Verify weapon data is saved and loaded correctly in player data",
+        "Check for errors when equipping weapons",
+        "Ensure the baseball bat model and scripts are properly configured",
+        "Test weapon purchase, inventory, and equipping flow end-to-end"
+      ],
+      "resolution": "Weapons were stored in player data but never converted to actual Roblox Tool objects. Fixed by: 1) MapService now calls CombatService:RestoreOwnedWeapons(player) on CharacterAdded to give players their owned weapons on spawn/respawn. 2) StoreService now calls CombatService:EquipWeapon() after a successful weapon purchase to immediately give the weapon to the player's backpack."
+    },
+    {
+      "id": "fix-tutorial-skip-button-regression",
+      "title": "Fix Tutorial Skip Button Not Working (Regression)",
+      "description": "Pressing the skip button in the tutorial still does not work. This was previously marked as fixed but appears to be a regression. The skip button should dismiss the tutorial and mark it as completed.",
+      "priority": "high",
+      "status": "not-started",
+      "files": [
+        "src/client/UI/Components/Tutorial.lua",
+        "src/client/Controllers/TutorialController.lua",
+        "src/server/Services/PlayerDataService.lua"
+      ],
+      "tasks": [
+        "Review the current Tutorial.lua skip button implementation",
+        "Verify the skip button OnActivated/OnEvent callback is connected",
+        "Check if the skip function is being called when button is pressed",
+        "Debug the skip function to ensure it completes the tutorial",
+        "Verify tutorial completion state is being saved to player data",
+        "Check for any UI layering issues preventing button clicks",
+        "Test skip button at each tutorial step",
+        "Add logging to identify where the skip flow breaks"
+      ]
+    }
+  ],
+  "testingNotes": [
+    "Test starter chicken with multiple players in the same server to verify unique IDs",
+    "Test egg hatching and verify no false section warnings appear",
+    "Verify chickens are visible immediately after section assignment",
+    "Test purchasing and equipping the baseball bat from the store",
+    "Test tutorial skip button at every tutorial step to ensure it dismisses properly",
+    "Test all fixes in combination with multiple players"
+  ],
+  "dependencies": [],
+  "estimatedEffort": "high",
+  "breakingChanges": false,
+  "breakingChangeNotes": []
+}

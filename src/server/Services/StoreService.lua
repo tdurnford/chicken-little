@@ -22,6 +22,7 @@ local PlayerData = require(Shared:WaitForChild("PlayerData"))
 
 -- Services will be retrieved after Knit starts
 local PlayerDataService
+local CombatService
 
 -- Create the service
 local StoreService = Knit.CreateService({
@@ -59,6 +60,7 @@ end
 function StoreService:KnitStart()
   -- Get reference to PlayerDataService
   PlayerDataService = Knit.GetService("PlayerDataService")
+  CombatService = Knit.GetService("CombatService")
 
   print("[StoreService] Started")
 end
@@ -376,6 +378,21 @@ function StoreService:BuyWeapon(userId: number, weaponType: string): Store.Trans
         itemId = weaponType,
         newBalance = result.newBalance,
       })
+
+      -- Give the purchased weapon to the player's backpack as a Tool
+      local equipResult = CombatService:EquipWeapon(player, weaponType)
+      if equipResult.success then
+        print(string.format("[StoreService] Equipped %s for %s after purchase", weaponType, player.Name))
+      else
+        warn(
+          string.format(
+            "[StoreService] Failed to equip %s for %s: %s",
+            weaponType,
+            player.Name,
+            equipResult.message
+          )
+        )
+      end
     end
 
     -- Update player data

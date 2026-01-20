@@ -3604,3 +3604,72 @@ end
   - `fix-tutorial-skip-button-regression` (HIGH) - Skip button regression
 - The pattern of persisting transient state to PlayerData should be followed when client code needs to access it
 - Be aware of the data flow: MapService → PlayerDataService → Client PlayerDataController
+
+---
+
+## Bug Fix: Fix Player Unable to Arm Weapons - Baseball Bat Missing (HIGH)
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-2.json
+
+### Summary
+Fixed the bug where players could not arm weapons because the baseball bat (and other owned weapons) were never actually given to players as Roblox Tool objects.
+
+### Root Cause
+Weapons were stored in player data (`ownedWeapons = { "BaseballBat" }`) but never converted to actual Roblox Tool objects in the player's Backpack:
+
+1. **On spawn/respawn**: `CombatService:RestoreOwnedWeapons()` was never called, so players spawned with no tools
+2. **On weapon purchase**: `StoreService:BuyWeapon()` only added the weapon to player data, never created a Tool object
+
+### Technical Flow (Before Fix)
+1. Player spawns → CharacterAdded fires
+2. MapService positions player at section
+3. Player has NO weapons in Backpack (weapons only in data)
+4. Player buys weapon → Added to PlayerData.ownedWeapons
+5. Still NO Tool in Backpack (data only)
+
+### Fixes Applied
+
+**Fix 1 - MapService.lua (Restore weapons on spawn):**
+```lua
+-- In _setupCharacterSpawning, after CharacterAdded handler positions player:
+
+-- Restore player's owned weapons to their backpack after spawn
+task.defer(function()
+  local weaponsRestored = CombatService:RestoreOwnedWeapons(player)
+  if weaponsRestored > 0 then
+    print(string.format("[MapService] Restored %d weapon(s) for %s", weaponsRestored, player.Name))
+  end
+end)
+```
+
+**Fix 2 - StoreService.lua (Equip weapon after purchase):**
+```lua
+-- In BuyWeapon, after purchase succeeds and client events fire:
+
+-- Give the purchased weapon to the player's backpack as a Tool
+local equipResult = CombatService:EquipWeapon(player, weaponType)
+if equipResult.success then
+  print(string.format("[StoreService] Equipped %s for %s after purchase", weaponType, player.Name))
+else
+  warn(string.format("[StoreService] Failed to equip %s for %s: %s", weaponType, player.Name, equipResult.message))
+end
+```
+
+### Why This Works
+- `CombatService:RestoreOwnedWeapons()` iterates through player's `ownedWeapons` and creates Tool objects via `WeaponTool.restoreOwnedWeapons()`
+- `CombatService:EquipWeapon()` creates a single Tool object via `WeaponTool.equipWeapon()`
+- Tools are parented to player's Backpack, making them usable in-game
+
+### Modified Files
+- `src/server/Services/MapService.lua` - Added CombatService reference and RestoreOwnedWeapons call on CharacterAdded
+- `src/server/Services/StoreService.lua` - Added CombatService reference and EquipWeapon call after weapon purchase
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+
+### Notes for Next Developer
+- Remaining PRD-2 bugs:
+  - `fix-tutorial-skip-button-regression` (HIGH) - Tutorial skip button not working
+- The pattern of calling RestoreOwnedWeapons on spawn should be followed for any persistent player equipment
+- WeaponTool module handles actual Tool creation - see WeaponTool.lua for implementation details
