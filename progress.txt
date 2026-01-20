@@ -3450,3 +3450,57 @@ Removed the unused legacy DataStore migration code from ProfileManager. This was
 - If legacy data migration is ever needed in the future, it would need to be re-implemented
 
 ---
+
+---
+
+## Bug Fix: Fix Chickens Not Visible in Player Area (CRITICAL)
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
+**PRD**: bug-fixes-prd-2.json
+
+### Summary
+Fixed the critical bug where chickens were not visible in the player's area after section assignment.
+
+### Root Cause
+In `ChickenService:InitializeAIState`, the code passed a plain table `{x, y, z}` from `MapGeneration.getSectionPosition` directly to `ChickenAI.createState`, which expects a Roblox `Vector3`.
+
+When ChickenAI tries to use the position (in functions like `generateRandomTarget`, `isWithinBounds`, `clampToBounds`), it accesses properties like `.X` and `.Z` which don't exist on a plain table (they use lowercase `.x` and `.z`). This caused the AI to fail silently, resulting in `nil` positions being sent to the client, which skipped chicken visual creation.
+
+### Technical Flow (Before Fix)
+1. `MapService.PlayerSectionAssigned` fires with `sectionIndex`
+2. `ChickenService._onPlayerSectionAssigned` calls `InitializeAIState(userId, sectionIndex)`
+3. `MapGeneration.getSectionPosition(sectionIndex)` returns `{x: number, y: number, z: number}` (plain table)
+4. `ChickenAI.createState(sectionCenter)` receives plain table, stores it as `neutralZoneCenter`
+5. `ChickenAI.registerChicken` → `generateRandomTargetWithBounds` tries to access `center.X` (undefined on plain table)
+6. Position calculation fails, chicken position is nil
+7. `ChickenPlaced` event fires with `position = nil`
+8. Client's `Main.client.lua` checks `if chicken and position` → fails, visual not created
+
+### Fix Applied
+```lua
+-- Before (broken):
+state.aiState = ChickenAI.createState(sectionCenter)
+
+-- After (fixed):
+local sectionCenterV3 = Vector3.new(sectionCenter.x, sectionCenter.y, sectionCenter.z)
+state.aiState = ChickenAI.createState(sectionCenterV3)
+```
+
+### Modified Files
+- `src/server/Services/ChickenService.lua` - Convert plain table to Vector3 in InitializeAIState
+- `plans/bug-fixes-prd-2.json` - Marked feature as completed
+
+### Build Verification
+- Build: ✅ `make build` passed successfully
+- Type checking: Selene unavailable due to CPU architecture, but build validates syntax
+
+### Notes for Next Developer
+- Remaining PRD-2 bugs:
+  - `fix-starter-chicken-unique-id` (CRITICAL) - Starter chicken ID conflicts
+  - `fix-egg-hatch-section-warning` (HIGH) - False positive section warning
+  - `fix-weapon-arming-baseball-bat` (HIGH) - Can't arm weapons
+  - `fix-tutorial-skip-button-regression` (HIGH) - Skip button regression
+- Be careful with type mismatches between `PlayerSection.Vector3` (plain table) and Roblox `Vector3`
+- The pattern `Vector3.new(pos.x, pos.y, pos.z)` should be used when converting from shared module types
+
+---

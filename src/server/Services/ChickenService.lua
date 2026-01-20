@@ -128,7 +128,9 @@ function ChickenService:InitializeAIState(userId: number, sectionIndex: number)
 
   local sectionCenter = MapGeneration.getSectionPosition(sectionIndex)
   if sectionCenter then
-    state.aiState = ChickenAI.createState(sectionCenter)
+    -- Convert PlayerSection.Vector3 table {x,y,z} to Roblox Vector3
+    local sectionCenterV3 = Vector3.new(sectionCenter.x, sectionCenter.y, sectionCenter.z)
+    state.aiState = ChickenAI.createState(sectionCenterV3)
   end
 end
 
