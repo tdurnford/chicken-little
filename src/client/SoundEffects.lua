@@ -323,6 +323,12 @@ local SOUND_CONFIGS: { [string]: SoundConfig } = {
     category = "ui",
     volume = 0.5,
   },
+  uiError = {
+    id = SOUND_IDS.error,
+    name = "UI Error",
+    category = "ui",
+    volume = 0.5,
+  },
   xpGain = {
     id = SOUND_IDS.xpGain,
     name = "XP Gain",

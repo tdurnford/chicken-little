@@ -197,7 +197,7 @@ function EggService:_awardXP(player: Player, playerData: any, amount: number, re
   if newLevel then
     -- Get unlock info for new level
     local maxPredators = LevelConfig.getMaxPredatorsForLevel(newLevel)
-    local threatLevel = LevelConfig.getUnlockedThreatLevel(newLevel)
+    local threatLevel = LevelConfig.getMaxThreatLevel(newLevel)
     local unlocks = {
       maxPredators = maxPredators,
       threatLevel = threatLevel,

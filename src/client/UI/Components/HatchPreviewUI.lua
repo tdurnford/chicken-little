@@ -79,6 +79,7 @@ local backdropTransparency: Fusion.Value<number>? = nil
 local frameScale: Fusion.Value<number>? = nil
 local inputConnection: RBXScriptConnection? = nil
 local cachedCallbacks: HatchPreviewUIProps = {}
+local isHatching: boolean = false -- Debounce flag to prevent multiple hatch attempts
 
 -- Helper: Get display name for egg
 local function getEggDisplayName(eggType: string): string
@@ -623,6 +624,7 @@ function HatchPreviewUI.destroy()
   backdropTransparency = nil
   frameScale = nil
   cachedCallbacks = {}
+  isHatching = false
 end
 
 -- Show the preview for a specific egg
@@ -637,6 +639,9 @@ function HatchPreviewUI.show(eggId: string, eggType: string)
     warn("HatchPreviewUI: Invalid egg type: " .. eggType)
     return
   end
+
+  -- Reset hatching state for new egg
+  isHatching = false
 
   -- Set state
   if currentEggId then
@@ -662,6 +667,9 @@ function HatchPreviewUI.hide()
     return
   end
 
+  -- Reset hatching state
+  isHatching = false
+
   animateOut(function()
     if isVisible then
       isVisible:set(false)
@@ -686,6 +694,11 @@ end
 
 -- Confirm the hatch and trigger callback
 function HatchPreviewUI.confirmHatch()
+  -- Prevent multiple hatch attempts
+  if isHatching then
+    return
+  end
+
   if not currentEggId or not currentEggType then
     return
   end
@@ -696,6 +709,9 @@ function HatchPreviewUI.confirmHatch()
   if not eggId or not eggType then
     return
   end
+
+  -- Set debounce flag
+  isHatching = true
 
   -- Call callback (which will show result UI via showResult)
   if cachedCallbacks.onHatch then
