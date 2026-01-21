@@ -276,12 +276,13 @@ function ChickenPlacement.pickupChicken(
   -- Remove from placed chickens
   table.remove(playerData.placedChickens, placedIndex)
 
-  -- Remove spot index and add to inventory
+  -- Remove spot index and add to inventory with zero accumulated money
+  -- (accumulated money should be collected before pickup)
   local inventoryChicken: PlayerData.ChickenData = {
     id = chicken.id,
     chickenType = chicken.chickenType,
     rarity = chicken.rarity,
-    accumulatedMoney = chicken.accumulatedMoney,
+    accumulatedMoney = 0, -- Reset to 0, money was collected on pickup
     lastEggTime = chicken.lastEggTime,
     spotIndex = nil,
   }

@@ -28,7 +28,6 @@ local SoundEffects = require(ClientModules:WaitForChild("SoundEffects"))
 local ChickenVisuals = require(ClientModules:WaitForChild("ChickenVisuals"))
 local PredatorVisuals = require(ClientModules:WaitForChild("PredatorVisuals"))
 local EggVisuals = require(ClientModules:WaitForChild("EggVisuals"))
-local ChickenSelling = require(ClientModules:WaitForChild("ChickenSelling"))
 local MobileTouchControls = require(ClientModules:WaitForChild("MobileTouchControls"))
 local SectionVisuals = require(ClientModules:WaitForChild("SectionVisuals"))
 local TrapVisuals = require(ClientModules:WaitForChild("TrapVisuals"))
@@ -349,51 +348,22 @@ local function findNearbyAvailableTrapSpot(playerPosition: Vector3): number?
   return nearestSpot
 end
 
--- Wire up ChickenSelling callbacks for proximity checking
-ChickenSelling.create()
-ChickenSelling.setGetNearbyChicken(function(position: Vector3)
-  local chickenId, chickenType, rarity, accumulatedMoney = findNearbyPlacedChicken(position)
-  return chickenId, nil, chickenType, rarity, accumulatedMoney
-end)
-ChickenSelling.setGetPlayerData(function()
-  return PlayerDataController:GetData()
-end)
-
--- Wire up server-side sale via ChickenController
-ChickenSelling.setPerformServerSale(function(chickenId: string)
-  -- Get chicken position before selling (visual will be destroyed after)
-  local visualState = ChickenVisuals.get(chickenId)
-  local chickenPosition = visualState and visualState.position
-
-  local success, result = ChickenController:SellChicken(chickenId):await()
-  if success and result and result.success then
-    SoundEffects.playMoneyCollect(result.sellPrice or 0)
-    -- Show money pop effect at chicken's last position
-    if chickenPosition and result.sellPrice and result.sellPrice > 0 then
-      ChickenVisuals.createMoneyPopEffect({
-        amount = result.sellPrice,
-        position = chickenPosition + Vector3.new(0, 2, 0),
-        isLarge = result.sellPrice >= 1000,
-      })
-    end
-    return { success = true, message = result.message, sellPrice = result.sellPrice }
-  else
-    SoundEffects.play("uiError")
-    return { success = false, error = result and result.message or "Unknown error" }
-  end
-end)
-
--- Wire up ChickenVisuals sell prompt to trigger ChickenSelling confirmation
-ChickenVisuals.setOnSellPromptTriggered(function(chickenId: string)
-  local visualState = ChickenVisuals.get(chickenId)
-  if visualState then
-    ChickenSelling.startSell(
-      chickenId,
-      visualState.chickenType,
-      visualState.rarity,
-      visualState.accumulatedMoney
-    )
-  end
+-- Wire up ChickenVisuals pickup prompt to return chicken to inventory
+ChickenVisuals.setOnPickupPromptTriggered(function(chickenId: string)
+  ChickenController:PickupChicken(chickenId)
+    :andThen(function(result)
+      if result and result.success then
+        SoundEffects.play("chickenPickup")
+        print("[Client] Chicken picked up and returned to inventory:", chickenId)
+      else
+        SoundEffects.play("uiError")
+        warn("[Client] Failed to pick up chicken:", result and result.message or "Unknown error")
+      end
+    end)
+    :catch(function(err)
+      SoundEffects.play("uiError")
+      warn("[Client] Failed to pick up chicken:", tostring(err))
+    end)
 end)
 
 -- Wire up ChickenVisuals claim prompt to handle collecting random chickens
@@ -404,20 +374,35 @@ ChickenVisuals.setOnClaimPromptTriggered(function(chickenId: string)
   SoundEffects.play("uiError")
 end)
 
-print("[Client] ChickenSelling system initialized")
+print("[Client] Chicken pickup system initialized")
 
--- Initialize MobileTouchControls and wire up button actions
+-- Initialize MobileTouchControls and wire up pickup action
 MobileTouchControls.create()
-MobileTouchControls.setAction("cancel", function()
-  if ChickenSelling.isConfirming() then
-    ChickenSelling.touchCancel()
+MobileTouchControls.setAction("pickup", function()
+  -- Find nearby chicken and pick it up
+  local character = localPlayer.Character
+  if not character then
+    return
   end
-end)
-MobileTouchControls.setAction("sell", function()
-  ChickenSelling.touchSell()
-end)
-MobileTouchControls.setAction("confirm", function()
-  ChickenSelling.touchSell()
+  local rootPart = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+  if not rootPart then
+    return
+  end
+  local chickenId = findNearbyPlacedChicken(rootPart.Position)
+  if chickenId then
+    ChickenController:PickupChicken(chickenId)
+      :andThen(function(result)
+        if result and result.success then
+          SoundEffects.play("chickenPickup")
+          MobileTouchControls.hideAllButtons()
+        else
+          SoundEffects.play("uiError")
+        end
+      end)
+      :catch(function()
+        SoundEffects.play("uiError")
+      end)
+  end
 end)
 print("[Client] MobileTouchControls initialized")
 
@@ -902,11 +887,6 @@ local function updateProximityPrompts()
 
   local playerPosition = rootPart.Position
 
-  if ChickenSelling.isConfirming() then
-    MobileTouchControls.showSellConfirmContext()
-    return
-  end
-
   local chickenId, chickenType, _, accumulatedMoney = findNearbyPlacedChicken(playerPosition)
 
   if chickenId then
@@ -940,13 +920,12 @@ local function updateProximityPrompts()
                 isLarge = result.amountCollected >= 1000,
               })
             end
-            ChickenVisuals.updateSellPromptPrice(chickenId)
           end
         end)
       end
     end
 
-    MobileTouchControls.showSellContext()
+    MobileTouchControls.showPickupContext()
   else
     if isNearChicken then
       MobileTouchControls.hideAllButtons()
@@ -1124,7 +1103,13 @@ end)
 
 ChickenController.ChickenPickedUp:Connect(function(data)
   local chickenId = data.chickenId
+  local collectedMoney = data.collectedMoney
+  
   if chickenId then
+    -- Get chicken position before destroying for money effect
+    local visualState = ChickenVisuals and ChickenVisuals.get(chickenId)
+    local chickenPosition = visualState and visualState.position
+    
     if ChickenVisuals then
       ChickenVisuals.destroy(chickenId)
     end
@@ -1133,6 +1118,16 @@ ChickenController.ChickenPickedUp:Connect(function(data)
     end
     if SoundEffects then
       SoundEffects.play("chickenPickup")
+    end
+    
+    -- Show money collection effect if money was collected
+    if collectedMoney and collectedMoney > 0 and chickenPosition then
+      SoundEffects.playMoneyCollect(collectedMoney)
+      ChickenVisuals.createMoneyPopEffect({
+        amount = collectedMoney,
+        position = chickenPosition + Vector3.new(0, 2, 0),
+        isLarge = collectedMoney >= 1000,
+      })
     end
   end
 end)

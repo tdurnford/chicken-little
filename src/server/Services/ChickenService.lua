@@ -341,6 +341,7 @@ end
 
 --[[
 	SERVER: Pick up a placed chicken back to inventory.
+	Collects any accumulated money and gives it to the player.
 	
 	@param userId number - The user ID
 	@param chickenId string - The chicken's ID
@@ -355,13 +356,26 @@ function ChickenService:PickupChicken(
     return { success = false, message = "Player data not found" }
   end
 
-  -- Get the spot index before pickup for the event (legacy)
+  -- Get the chicken before pickup to collect accumulated money
   local chicken, _ = ChickenPlacement.findPlacedChicken(playerData, chickenId)
   local spotIndex = chicken and chicken.spotIndex or nil
+  local collectedMoney = 0
+
+  -- Collect accumulated money before pickup
+  if chicken and chicken.accumulatedMoney and chicken.accumulatedMoney >= 1 then
+    collectedMoney = math.floor(chicken.accumulatedMoney)
+    playerData.money = (playerData.money or 0) + collectedMoney
+    chicken.accumulatedMoney = chicken.accumulatedMoney - collectedMoney -- Keep the remainder
+  end
 
   local result = ChickenPlacement.pickupChicken(playerData, chickenId)
   if result.success then
     local state = playerChickenStates[userId]
+
+    -- Reset accumulated money on the inventory chicken (remainder was kept above)
+    if result.chicken then
+      result.chicken.accumulatedMoney = 0
+    end
 
     -- Unregister chicken from health system
     if state then
@@ -373,11 +387,12 @@ function ChickenService:PickupChicken(
       ChickenAI.unregisterChicken(state.aiState, chickenId)
     end
 
-    -- Fire event to all clients
+    -- Fire event to all clients with collected money info
     self.Client.ChickenPickedUp:FireAll({
       playerId = userId,
       chickenId = chickenId,
       spotIndex = spotIndex,
+      collectedMoney = collectedMoney,
     })
 
     -- Update player data

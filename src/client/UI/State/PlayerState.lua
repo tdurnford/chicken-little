@@ -110,6 +110,11 @@ function PlayerState.initFromData(data: PlayerData.PlayerDataSchema)
     PlayerState.InventoryChickens:set(data.inventory.chickens or {})
   end
   PlayerState.PlacedChickens:set(data.placedChickens or {})
+  
+  -- Debug: Log chicken counts
+  local placedCount = data.placedChickens and #data.placedChickens or 0
+  local inventoryCount = data.inventory and data.inventory.chickens and #data.inventory.chickens or 0
+  print("[PlayerState] initFromData - Placed:", placedCount, "Inventory:", inventoryCount, "Total:", placedCount + inventoryCount)
 
   -- Combat
   PlayerState.EquippedWeapon:set(PlayerData.getEquippedWeapon(data))
