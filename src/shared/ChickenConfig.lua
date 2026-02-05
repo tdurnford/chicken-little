@@ -67,8 +67,8 @@ local RARITY_HEALTH_REGEN: { [Rarity]: number } = {
 -- Maximum accumulated money before chicken stops generating (rarer = higher cap)
 -- This prevents AFK abuse while maintaining engagement
 local RARITY_MAX_MONEY_CAPACITY: { [Rarity]: number } = {
-  Common = 50,
-  Uncommon = 500,
+  Common = 1000,
+  Uncommon = 1000,
   Rare = 5000,
   Epic = 50000,
   Legendary = 500000,
