@@ -57,6 +57,12 @@ export type ShieldState = {
   cooldownEndTime: number?,
 }
 
+export type GameRecord = {
+  totalWins: number, -- Total predators defeated
+  totalLosses: number, -- Total chickens lost to predators
+  totalSteals: number, -- Total chickens stolen from other players
+}
+
 export type PlayerDataSchema = {
   money: number,
   inventory: InventoryData,
@@ -73,6 +79,7 @@ export type PlayerDataSchema = {
   tutorialComplete: boolean?,
   level: number?, -- Player's current level (calculated from XP)
   xp: number?, -- Total experience points earned
+  gameRecord: GameRecord?, -- Player's game record (wins, losses, steals)
 }
 
 -- Rarity tiers for validation
@@ -132,6 +139,11 @@ function PlayerData.createDefault(): PlayerDataSchema
     tutorialComplete = false,
     level = 1,
     xp = 0,
+    gameRecord = {
+      totalWins = 0,
+      totalLosses = 0,
+      totalSteals = 0,
+    },
   }
 end
 
@@ -259,6 +271,23 @@ function PlayerData.validateActivePowerUp(powerUp: any): boolean
     return false
   end
   if not validateNumber(powerUp.expiresAt, 0) then
+    return false
+  end
+  return true
+end
+
+-- Validates game record structure
+function PlayerData.validateGameRecord(gameRecord: any): boolean
+  if type(gameRecord) ~= "table" then
+    return false
+  end
+  if not validateNumber(gameRecord.totalWins, 0) then
+    return false
+  end
+  if not validateNumber(gameRecord.totalLosses, 0) then
+    return false
+  end
+  if not validateNumber(gameRecord.totalSteals, 0) then
     return false
   end
   return true
@@ -403,6 +432,10 @@ function PlayerData.validate(data: any): boolean
   end
   -- xp is optional number (0+)
   if data.xp ~= nil and not validateNumber(data.xp, 0) then
+    return false
+  end
+  -- gameRecord is optional, but if present must be valid
+  if data.gameRecord ~= nil and not PlayerData.validateGameRecord(data.gameRecord) then
     return false
   end
 
@@ -633,6 +666,70 @@ function PlayerData.setLevelAndXP(data: PlayerDataSchema, level: number, xp: num
   data.level = math.floor(level)
   data.xp = math.floor(xp)
   return true
+end
+
+-- Get player's game record (returns default if not set)
+function PlayerData.getGameRecord(data: PlayerDataSchema): GameRecord
+  if data.gameRecord then
+    return data.gameRecord
+  end
+  return {
+    totalWins = 0,
+    totalLosses = 0,
+    totalSteals = 0,
+  }
+end
+
+-- Initialize game record if not present
+local function ensureGameRecord(data: PlayerDataSchema)
+  if not data.gameRecord then
+    data.gameRecord = {
+      totalWins = 0,
+      totalLosses = 0,
+      totalSteals = 0,
+    }
+  end
+end
+
+-- Increment total wins (predators defeated)
+function PlayerData.incrementWins(data: PlayerDataSchema, amount: number?): number
+  ensureGameRecord(data)
+  local increment = math.floor(amount or 1)
+  if increment > 0 then
+    data.gameRecord.totalWins = data.gameRecord.totalWins + increment
+  end
+  return data.gameRecord.totalWins
+end
+
+-- Increment total losses (chickens lost to predators)
+function PlayerData.incrementLosses(data: PlayerDataSchema, amount: number?): number
+  ensureGameRecord(data)
+  local increment = math.floor(amount or 1)
+  if increment > 0 then
+    data.gameRecord.totalLosses = data.gameRecord.totalLosses + increment
+  end
+  return data.gameRecord.totalLosses
+end
+
+-- Increment total steals (chickens stolen from other players)
+function PlayerData.incrementSteals(data: PlayerDataSchema, amount: number?): number
+  ensureGameRecord(data)
+  local increment = math.floor(amount or 1)
+  if increment > 0 then
+    data.gameRecord.totalSteals = data.gameRecord.totalSteals + increment
+  end
+  return data.gameRecord.totalSteals
+end
+
+-- Get game record summary string
+function PlayerData.getGameRecordSummary(data: PlayerDataSchema): string
+  local record = PlayerData.getGameRecord(data)
+  return string.format(
+    "Wins: %d | Losses: %d | Steals: %d",
+    record.totalWins,
+    record.totalLosses,
+    record.totalSteals
+  )
 end
 
 return PlayerData
