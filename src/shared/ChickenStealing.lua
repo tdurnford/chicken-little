@@ -225,6 +225,10 @@ end
 
 -- Complete the steal and transfer the chicken
 -- This modifies both player data structures
+-- Note: Streak behavior for stealing the pot:
+--   - Thief's potStreak stays the same (no increase, no reset)
+--   - Target's potStreak stays the same (they didn't lose by having chicken stolen)
+-- The player who "captures the pot" (collects accumulated money) gets their streak increased
 function ChickenStealing.completeSteal(
   stealState: StealState,
   targetPlayerData: PlayerData.PlayerDataSchema,

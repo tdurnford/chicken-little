@@ -580,6 +580,24 @@ return function()
         data.tutorialComplete = "not a boolean"
         expect(PlayerData.validate(data)).to.equal(false)
       end)
+
+      it("should return false for negative potStreak", function()
+        local data = PlayerData.createDefault()
+        data.potStreak = -1
+        expect(PlayerData.validate(data)).to.equal(false)
+      end)
+
+      it("should return true for valid potStreak", function()
+        local data = PlayerData.createDefault()
+        data.potStreak = 10
+        expect(PlayerData.validate(data)).to.equal(true)
+      end)
+
+      it("should return true for nil potStreak", function()
+        local data = PlayerData.createDefault()
+        data.potStreak = nil
+        expect(PlayerData.validate(data)).to.equal(true)
+      end)
     end)
 
     describe("clone", function()
@@ -1102,6 +1120,71 @@ return function()
       it("should have non-bankrupt default data", function()
         local data = PlayerData.createDefault()
         expect(PlayerData.isBankrupt(data)).to.equal(false)
+      end)
+    end)
+
+    describe("potStreak", function()
+      it("should have default potStreak of 0", function()
+        local data = PlayerData.createDefault()
+        expect(data.potStreak).to.equal(0)
+      end)
+
+      it("should get potStreak correctly", function()
+        local data = PlayerData.createDefault()
+        expect(PlayerData.getPotStreak(data)).to.equal(0)
+      end)
+
+      it("should increase potStreak and return new value", function()
+        local data = PlayerData.createDefault()
+        local newStreak = PlayerData.increasePotStreak(data)
+        expect(newStreak).to.equal(1)
+        expect(data.potStreak).to.equal(1)
+      end)
+
+      it("should increase potStreak multiple times", function()
+        local data = PlayerData.createDefault()
+        PlayerData.increasePotStreak(data)
+        PlayerData.increasePotStreak(data)
+        PlayerData.increasePotStreak(data)
+        expect(PlayerData.getPotStreak(data)).to.equal(3)
+      end)
+
+      it("should reset potStreak to 0", function()
+        local data = PlayerData.createDefault()
+        PlayerData.increasePotStreak(data)
+        PlayerData.increasePotStreak(data)
+        expect(data.potStreak).to.equal(2)
+        PlayerData.resetPotStreak(data)
+        expect(data.potStreak).to.equal(0)
+      end)
+
+      it("should set potStreak directly", function()
+        local data = PlayerData.createDefault()
+        local result = PlayerData.setPotStreak(data, 10)
+        expect(result).to.equal(true)
+        expect(data.potStreak).to.equal(10)
+      end)
+
+      it("should reject negative potStreak values", function()
+        local data = PlayerData.createDefault()
+        data.potStreak = 5
+        local result = PlayerData.setPotStreak(data, -1)
+        expect(result).to.equal(false)
+        expect(data.potStreak).to.equal(5)
+      end)
+
+      it("should handle nil potStreak gracefully in getPotStreak", function()
+        local data = PlayerData.createDefault()
+        data.potStreak = nil
+        expect(PlayerData.getPotStreak(data)).to.equal(0)
+      end)
+
+      it("should handle nil potStreak gracefully in increasePotStreak", function()
+        local data = PlayerData.createDefault()
+        data.potStreak = nil
+        local newStreak = PlayerData.increasePotStreak(data)
+        expect(newStreak).to.equal(1)
+        expect(data.potStreak).to.equal(1)
       end)
     end)
   end)
