@@ -734,11 +734,4 @@ function RandomChickenSpawn.updatePotStreakOnCapture(
   return PlayerData.increasePotStreak(playerData)
 end
 
--- Get the current pot streak for a player
-function RandomChickenSpawn.getPotStreak(
-  playerData: PlayerData.PlayerDataSchema
-): number
-  return PlayerData.getPotStreak(playerData)
-end
-
 return RandomChickenSpawn

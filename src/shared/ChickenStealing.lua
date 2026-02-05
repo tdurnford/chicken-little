@@ -454,18 +454,4 @@ function ChickenStealing.getSummary(
   }
 end
 
--- Note: When a player steals a chicken (pot), their potStreak stays the same.
--- This is intentional - stealing doesn't increase or reset the streak.
--- Only "capturing" (claiming a spawned chicken via RandomChickenSpawn) increases the streak.
--- This function exists for documentation and potential future use.
-function ChickenStealing.getPotStreakBehavior(): {
-  thiefStreakChange: string,
-  victimStreakChange: string,
-}
-  return {
-    thiefStreakChange = "unchanged", -- Thief's streak stays the same
-    victimStreakChange = "unchanged", -- Victim's streak stays the same
-  }
-end
-
 return ChickenStealing
