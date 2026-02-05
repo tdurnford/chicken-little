@@ -73,6 +73,7 @@ export type PlayerDataSchema = {
   tutorialComplete: boolean?,
   level: number?, -- Player's current level (calculated from XP)
   xp: number?, -- Total experience points earned
+  potStreak: number?, -- Consecutive pot captures (collecting accumulated money)
 }
 
 -- Rarity tiers for validation
@@ -132,6 +133,7 @@ function PlayerData.createDefault(): PlayerDataSchema
     tutorialComplete = false,
     level = 1,
     xp = 0,
+    potStreak = 0, -- Consecutive pot captures
   }
 end
 
@@ -405,6 +407,10 @@ function PlayerData.validate(data: any): boolean
   if data.xp ~= nil and not validateNumber(data.xp, 0) then
     return false
   end
+  -- potStreak is optional number (0+)
+  if data.potStreak ~= nil and not validateNumber(data.potStreak, 0) then
+    return false
+  end
 
   return true
 end
@@ -632,6 +638,32 @@ function PlayerData.setLevelAndXP(data: PlayerDataSchema, level: number, xp: num
 
   data.level = math.floor(level)
   data.xp = math.floor(xp)
+  return true
+end
+
+-- Get player's current pot streak
+function PlayerData.getPotStreak(data: PlayerDataSchema): number
+  return data.potStreak or 0
+end
+
+-- Increase player's pot streak by 1 (when capturing the pot)
+function PlayerData.increasePotStreak(data: PlayerDataSchema): number
+  local newStreak = (data.potStreak or 0) + 1
+  data.potStreak = newStreak
+  return newStreak
+end
+
+-- Reset player's pot streak to 0
+function PlayerData.resetPotStreak(data: PlayerDataSchema): ()
+  data.potStreak = 0
+end
+
+-- Set player's pot streak directly (for admin/testing)
+function PlayerData.setPotStreak(data: PlayerDataSchema, streak: number): boolean
+  if streak < 0 then
+    return false
+  end
+  data.potStreak = math.floor(streak)
   return true
 end
 

@@ -2,9 +2,15 @@
 	RandomChickenSpawn Module
 	Handles periodic spawning of rare chickens in a neutral area
 	for players to compete over. First player to grab the chicken claims it.
+	
+	Pot/Streak behavior:
+	- When a player "captures the pot" (claims a spawned chicken), their potStreak increases
+	- When a player "steals the pot" (steals chicken from another player via ChickenStealing),
+	  their potStreak stays the same (doesn't increase or reset)
 ]]
 
 local ChickenConfig = require(script.Parent.ChickenConfig)
+local PlayerData = require(script.Parent.PlayerData)
 
 local RandomChickenSpawn = {}
 
@@ -717,6 +723,22 @@ function RandomChickenSpawn.getSummary(state: SpawnEventState, currentTime: numb
     state.totalSpawns,
     state.totalClaims
   )
+end
+
+-- Update player's pot streak after successfully capturing a spawned chicken
+-- This should be called after claimChicken returns success=true
+-- Returns the new streak value
+function RandomChickenSpawn.updatePotStreakOnCapture(
+  playerData: PlayerData.PlayerDataSchema
+): number
+  return PlayerData.increasePotStreak(playerData)
+end
+
+-- Get the current pot streak for a player
+function RandomChickenSpawn.getPotStreak(
+  playerData: PlayerData.PlayerDataSchema
+): number
+  return PlayerData.getPotStreak(playerData)
 end
 
 return RandomChickenSpawn

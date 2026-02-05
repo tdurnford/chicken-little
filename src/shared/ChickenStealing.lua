@@ -225,6 +225,10 @@ end
 
 -- Complete the steal and transfer the chicken
 -- This modifies both player data structures
+-- Note: Streak behavior for stealing the pot:
+--   - Thief's potStreak stays the same (no increase, no reset)
+--   - Target's potStreak stays the same (they didn't lose by having chicken stolen)
+-- The player who "captures the pot" (collects accumulated money) gets their streak increased
 function ChickenStealing.completeSteal(
   stealState: StealState,
   targetPlayerData: PlayerData.PlayerDataSchema,
@@ -447,6 +451,20 @@ function ChickenStealing.getSummary(
     remainingTime = ChickenStealing.getRemainingTime(stealState, currentTime),
     targetChickenId = stealState.targetChickenId,
     targetOwnerId = stealState.targetOwnerId,
+  }
+end
+
+-- Note: When a player steals a chicken (pot), their potStreak stays the same.
+-- This is intentional - stealing doesn't increase or reset the streak.
+-- Only "capturing" (claiming a spawned chicken via RandomChickenSpawn) increases the streak.
+-- This function exists for documentation and potential future use.
+function ChickenStealing.getPotStreakBehavior(): {
+  thiefStreakChange: string,
+  victimStreakChange: string,
+}
+  return {
+    thiefStreakChange = "unchanged", -- Thief's streak stays the same
+    victimStreakChange = "unchanged", -- Victim's streak stays the same
   }
 end
 
